@@ -16,6 +16,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Health'
+  /foundation/welcome:
+    get:
+      operationId: getWelcomeFlow
+      security: []
+      responses:
+        '200':
+          description: Splash and welcome flow content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WelcomeFlow'
   /posts:
     get:
       operationId: listCommunityPosts
@@ -46,7 +57,7 @@ paths:
   /admin/automations:
     get:
       operationId: listAutomationOperations
-      description: Requires the trusted SUPER_ADMIN role from JWT app_metadata.
+      description: Requires the trusted SUPER_ADMIN role from JWT app_metadata unless the temporary public admin override is enabled.
       responses:
         '200':
           description: Available automation operations
@@ -60,7 +71,7 @@ paths:
   /admin/automations/{operationId}/executions:
     post:
       operationId: executeAutomation
-      description: Dispatches an allow-listed workflow. High-impact operations require confirmation.
+      description: Dispatches an allow-listed workflow. High-impact operations require confirmation. Requires SUPER_ADMIN unless the temporary public admin override is enabled.
       parameters:
         - name: operationId
           in: path
@@ -94,6 +105,38 @@ components:
       properties:
         status: { type: string }
         service: { type: string }
+    WelcomeFlow:
+      type: object
+      additionalProperties: false
+      required: [splash, steps]
+      properties:
+        splash:
+          $ref: '#/components/schemas/SplashContent'
+        steps:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/WelcomeStep'
+    SplashContent:
+      type: object
+      additionalProperties: false
+      required: [brand, tagline, logoUrl]
+      properties:
+        brand: { type: string, minLength: 1 }
+        tagline: { type: string, minLength: 1 }
+        logoUrl: { type: string, format: uri }
+    WelcomeStep:
+      type: object
+      additionalProperties: false
+      required: [id, title, body, imageUrl, actionLabel]
+      properties:
+        id: { type: string, minLength: 1 }
+        title: { type: string, minLength: 1 }
+        body: { type: string, minLength: 1 }
+        imageUrl: { type: string, format: uri }
+        actionLabel: { type: string, minLength: 1 }
+        secondaryActionLabel: { type: string }
     CreatePostInput:
       type: object
       additionalProperties: false

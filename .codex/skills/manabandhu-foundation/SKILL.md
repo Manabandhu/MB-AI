@@ -9,4 +9,5 @@ description: Maintain ManaBandhu foundation journeys including splash, welcome, 
 2. Keep shell routes thin, adaptive, accessible, deep-linkable, and authorization-aware across native and web.
 3. Delegate authentication, notifications, and business data to their owning modules; foundation may aggregate but not duplicate ownership.
 4. Keep screen IDs and routes unique and module-qualified. Catalog entries describe scope, not implementation status.
-5. Run frontend checks, Expo web export, and skill verification after changes.
+5. The root route `/` starts the public splash/welcome journey; the backend-status home screen is `/home`.
+6. Run frontend checks, Expo web export, and skill verification after changes.

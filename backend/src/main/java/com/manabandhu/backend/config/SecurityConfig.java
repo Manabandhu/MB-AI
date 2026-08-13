@@ -26,14 +26,29 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            @Value("${app.admin.public-access-enabled:false}") boolean adminPublicAccessEnabled) throws Exception {
+        var publicGetEndpoints = new String[] {
+                "/api/v1/health",
+                "/api/v1/foundation/welcome",
+                "/actuator/health/**"
+        };
+
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/api/v1/health", "/actuator/health/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, publicGetEndpoints).permitAll()
                         .requestMatchers("/actuator/info").permitAll()
+                        .requestMatchers("/api/v1/admin/automations/**").access(
+                                (authentication, context) -> {
+                                    var candidate = authentication.get();
+                                    return new org.springframework.security.authorization.AuthorizationDecision(
+                                            adminPublicAccessEnabled
+                                                    || (candidate != null && candidate.isAuthenticated()));
+                                })
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .build();

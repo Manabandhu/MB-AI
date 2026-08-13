@@ -10,6 +10,7 @@ description: Maintain ManaBandhu's canonical OpenAPI, GraphQL, and AsyncAPI cont
 3. Prefer additive changes. Version breaking REST paths, GraphQL behavior, and event names explicitly.
 4. Specify authentication, authorization expectations, validation, nullability, limits, errors, pagination, and idempotency.
 5. Keep `packages/api-contracts/graphql/schema.graphqls` byte-identical to the backend runtime schema.
-6. The Super Admin REST surface is `/api/v1/admin/automations`; changes require synchronized frontend types and backend records plus explicit 401, 403, confirmation, and provider failure responses.
-7. Run `pnpm verify:contracts`, then validate every affected producer and consumer.
-8. Update this skill when contract locations, generators, compatibility policy, or validation commands change.
+6. The Super Admin REST surface is `/api/v1/admin/automations`; changes require synchronized frontend types and backend records plus explicit 401, 403, confirmation, provider failure, and temporary public-admin override documentation.
+7. Public foundation content is exposed through additive REST endpoints under `/api/v1/foundation` and must not require authentication or expose user data.
+8. Run `pnpm verify:contracts`, then validate every affected producer and consumer.
+9. Update this skill when contract locations, generators, compatibility policy, or validation commands change.

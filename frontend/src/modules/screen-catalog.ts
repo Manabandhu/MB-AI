@@ -19,13 +19,13 @@ export const screenCatalog = [
   {
     module: 'foundation',
     screens: [
-      screen('foundation', 'splash', 'Splash', '/splash'),
+      screen('foundation', 'splash', 'Splash', '/'),
       screen('foundation', 'welcome', 'Welcome', '/welcome'),
       screen('auth', 'sign-in', 'Sign In', '/sign-in'),
       screen('auth', 'sign-up', 'Sign Up', '/sign-up'),
       screen('auth', 'forgot-password', 'Forgot Password', '/forgot-password'),
       screen('foundation', 'onboarding', 'Onboarding', '/onboarding'),
-      screen('foundation', 'home', 'Home', '/'),
+      screen('foundation', 'home', 'Home', '/home'),
       screen('foundation', 'explore', 'Explore', '/explore'),
       screen('foundation', 'search', 'Global Search', '/search'),
       screen('foundation', 'saved', 'Saved', '/saved'),

@@ -40,7 +40,7 @@ export default function SuperAdminScreen() {
         <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
           <View style={styles.header}>
             <View>
-              <Text style={styles.eyebrow}>Restricted · SUPER_ADMIN</Text>
+              <Text style={styles.eyebrow}>Temporary public access</Text>
               <Text style={styles.title}>Operations control plane</Text>
               <Text style={styles.body}>
                 Dispatch audited workflows. Infrastructure credentials remain on the backend and CI.
@@ -54,7 +54,8 @@ export default function SuperAdminScreen() {
           {operations.isError ? (
             <View style={styles.errorPanel}>
               <Text style={styles.errorText}>
-                Access denied or control plane unavailable. Sign in with a trusted SUPER_ADMIN role.
+                Control plane unavailable. Check that the backend is running and public admin access
+                is enabled.
               </Text>
             </View>
           ) : (
