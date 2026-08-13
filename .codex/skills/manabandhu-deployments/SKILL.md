@@ -14,4 +14,6 @@ description: Maintain ManaBandhu build, CI/CD, environments, releases, migration
 7. Current workflows build web/backend/mobile artifacts, run migrations and AI evaluations, and expose provider command boundaries. Provider secrets and commands must be configured per GitHub Environment before production use.
 8. Keep CI single-purpose and clearly named: Frontend, Backend, API Contracts, Governance, Dependency Review, Security Analysis, and Workflow Validation. Use path filters, least-privilege permissions, concurrency cancellation, timeouts, and short-lived artifacts where applicable.
 9. Use Checkout 7, Setup Node 7, Setup Java 5, Setup Go 7, pnpm Setup 6, Upload Artifact 7, Dependency Review 5, CodeQL 4, and actionlint 1.7.9 until a deliberate verified upgrade.
-10. Update this skill when providers, environments, pipeline paths, commands, action baselines, or release policy change.
+10. Use quoted heredocs for multiline Ruby or other embedded languages in `run` blocks so actionlint and ShellCheck parse the shell boundary correctly.
+11. Grant CodeQL `actions: read`, `contents: read`, and `security-events: write`; SARIF upload reads workflow-run metadata before publishing results.
+12. Update this skill when providers, environments, pipeline paths, commands, action baselines, or release policy change.
