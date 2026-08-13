@@ -16,7 +16,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 9. Do not create watch or TV placeholder folders until those targets are activated.
 10. Use Zustand 5 for shared client state; dependency resolutions must satisfy the workspace supply-chain release-age policy.
 11. Treat `frontend/src/modules/screen-catalog.ts` as the canonical screen and route inventory. Keep Expo Router entries thin and use module-qualified IDs for repeated screen names.
-12. The public launch flow begins at `/`, hides the native Expo splash after JS mounts, auto-advances the visible Stitch splash into `/welcome`, and keeps the backend-status home surface at `/home`.
+12. The public launch flow begins at `/`, hides the native Expo splash after JS mounts, auto-advances the visible Stitch splash into `/welcome`, supports temporary demo sign-in to `/home`, and keeps the backend-status home surface at `/home`.
 13. Keep reusable foundation constants, typed welcome API shapes, step helpers, and repeated welcome UI under `frontend/src/modules/foundation` rather than in Expo Router files.
 14. First-batch Stitch routes through catalog screen 27 use thin Expo Router entries and module-owned screen components for auth, foundation, notifications, rooms, and rides.
 15. Local Stitch HTML under `stitch/screens/01_*` through `27_*` is the reference for the native first-batch implementation; do not satisfy this requirement by rendering screenshots as the app UI.

@@ -34,6 +34,11 @@ const welcomeImages = {
   life: 'https://lh3.googleusercontent.com/aida/AP1WRLsnX0Z0wRXO1bksJlF36mVKcxGpWmLHDKh29_dDO-daHA-WP1kZN6-es7SZecpR_E9zdLoffF80G3fOX9M0i3_caLaWhTKfh0-eg85lYLp4mxvpEOp4DdqjjekgMhByhMLrJggPuIra_sofSIGmHJ6DnTE4EOKEaGGD04XoInVhxLtiYar_nTsvhPklWvpaxQOZ_9-FLtTUoVx71PxgUfThSVk0lbXBgQ0v1ODZt0a9mZ_Z62QyFc52xCs',
 };
 
+const demoUser = {
+  email: 'demo@manabandhu.local',
+  password: 'DemoPass123',
+};
+
 export function StitchSplashScreen() {
   useEffect(() => {
     const timer = setTimeout(() => router.replace('/welcome'), 1400);
@@ -232,6 +237,14 @@ export function StitchAuthScreen({ kind }: { kind: AuthKind }) {
             <TextInput placeholder={`Enter your ${field.toLowerCase()}`} style={styles.input} />
           </View>
         ))}
+        {kind === 'sign-in' ? (
+          <View style={styles.demoCredentials}>
+            <Text style={styles.demoTitle}>Test user</Text>
+            <Text style={styles.demoLine}>Email: {demoUser.email}</Text>
+            <Text style={styles.demoLine}>Password: {demoUser.password}</Text>
+            <Button label="Use demo account" route="/home" secondary />
+          </View>
+        ) : null}
         {kind === 'choose' ? (
           <View style={styles.socialStack}>
             <Button label="Continue with Google" route="/email-login" secondary />
@@ -252,7 +265,6 @@ export function StitchAuthScreen({ kind }: { kind: AuthKind }) {
         />
       </View>
       <View style={styles.privacyChip}>
-        <Text style={styles.privacyIcon}>verified_user</Text>
         <Text style={styles.privacyText}>Your data is safe and private.</Text>
       </View>
     </ScreenChrome>
@@ -824,6 +836,14 @@ const styles = StyleSheet.create({
     minHeight: 56,
     paddingHorizontal: space.x4,
   },
+  demoCredentials: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: 16,
+    gap: space.x2,
+    padding: space.x4,
+  },
+  demoTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  demoLine: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   forgot: { alignSelf: 'flex-end', color: colors.primary, fontSize: 12, fontWeight: '700' },
   actionButton: {
     alignItems: 'center',
@@ -854,7 +874,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.x4,
     paddingVertical: space.x2,
   },
-  privacyIcon: { color: colors.teal, fontSize: 10, fontWeight: '900' },
   privacyText: { color: colors.muted, fontSize: 12, fontWeight: '700' },
   progressRow: {
     alignItems: 'center',
