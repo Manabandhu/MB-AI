@@ -1,5 +1,5 @@
-import { CatalogContentScreen } from '@/modules/foundation/screens/CatalogContentScreen';
+import { StitchAppShellScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
 
 export default function ProfileRoute() {
-  return <CatalogContentScreen screenId="profile" />;
+  return <StitchAppShellScreen kind="profile" />;
 }

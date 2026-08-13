@@ -1,3 +1,5 @@
-import HomeScreen from '@/modules/foundation/screens/HomeScreen';
+import { StitchAppShellScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
 
-export default HomeScreen;
+export default function HomeRoute() {
+  return <StitchAppShellScreen kind="home" />;
+}

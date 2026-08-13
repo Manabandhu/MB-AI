@@ -1,5 +1,5 @@
-import { CatalogContentScreen } from '@/modules/foundation/screens/CatalogContentScreen';
+import { StitchOnboardingScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
 
 export default function OnboardingRoute() {
-  return <CatalogContentScreen screenId="onboarding" />;
+  return <StitchOnboardingScreen kind="about" />;
 }

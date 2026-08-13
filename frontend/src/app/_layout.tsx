@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function RootLayout() {
   const [queryClient] = useState(
@@ -12,6 +13,10 @@ export default function RootLayout() {
         },
       }),
   );
+
+  useEffect(() => {
+    ExpoSplashScreen.hideAsync().catch(() => undefined);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -1,5 +1,5 @@
-import { AuthScreen } from '@/modules/auth/screens/AuthScreen';
+import { StitchAuthScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
 
 export default function ForgotPasswordRoute() {
-  return <AuthScreen mode="forgot-password" />;
+  return <StitchAuthScreen kind="forgot" />;
 }

@@ -1,5 +1,5 @@
 import { StitchAppShellScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
 
-export default function ExploreRoute() {
-  return <StitchAppShellScreen kind="explore" />;
+export default function CommunityRoute() {
+  return <StitchAppShellScreen kind="community" />;
 }
