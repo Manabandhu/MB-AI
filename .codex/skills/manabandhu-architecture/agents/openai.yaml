@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Architecture"
+  short_description: "Maintain platform boundaries and decisions"
+  default_prompt: "Use $manabandhu-architecture to evolve the platform architecture."

@@ -1,0 +1,30 @@
+asyncapi: 3.0.0
+info:
+  title: ManaBandhu Events
+  version: 1.0.0
+channels:
+  notificationRequested:
+    address: notification.requested.v1
+    messages:
+      notificationRequested:
+        $ref: '#/components/messages/NotificationRequested'
+operations:
+  consumeNotificationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/notificationRequested'
+components:
+  messages:
+    NotificationRequested:
+      payload:
+        type: object
+        additionalProperties: false
+        required: [eventId, userId, template, channels, occurredAt]
+        properties:
+          eventId: { type: string, format: uuid }
+          userId: { type: string, format: uuid }
+          template: { type: string }
+          channels:
+            type: array
+            items: { enum: [in_app, push, email, sms] }
+          occurredAt: { type: string, format: date-time }

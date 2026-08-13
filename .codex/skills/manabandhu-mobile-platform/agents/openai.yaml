@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Mobile Platform"
+  short_description: "Build adaptive Expo client surfaces"
+  default_prompt: "Use $manabandhu-mobile-platform to update the adaptive Expo client safely."

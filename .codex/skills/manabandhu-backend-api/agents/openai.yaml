@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Backend API"
+  short_description: "Maintain Spring REST and GraphQL APIs"
+  default_prompt: "Use $manabandhu-backend-api to update the Spring backend safely."

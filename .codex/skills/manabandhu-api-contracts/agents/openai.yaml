@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu API Contracts"
+  short_description: "Maintain REST GraphQL and event contracts"
+  default_prompt: "Use $manabandhu-api-contracts to make a contract-first API change."

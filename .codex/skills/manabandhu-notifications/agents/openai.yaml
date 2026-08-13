@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Notifications"
+  short_description: "Maintain all notification channels"
+  default_prompt: "Use $manabandhu-notifications to add a notification flow safely."

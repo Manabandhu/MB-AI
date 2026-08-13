@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu AI"
+  short_description: "Maintain AI assistant and safety layers"
+  default_prompt: "Use $manabandhu-ai to evolve AI capabilities safely."

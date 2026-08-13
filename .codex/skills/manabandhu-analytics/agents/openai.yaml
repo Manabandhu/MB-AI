@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Analytics"
+  short_description: "Maintain privacy-aware product analytics"
+  default_prompt: "Use $manabandhu-analytics to add measurable product behavior."

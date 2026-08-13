@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Observability"
+  short_description: "Maintain logs metrics traces and alerts"
+  default_prompt: "Use $manabandhu-observability to improve production visibility."

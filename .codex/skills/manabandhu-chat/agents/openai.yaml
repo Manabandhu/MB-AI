@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Chat"
+  short_description: "Maintain realtime human and bot chat"
+  default_prompt: "Use $manabandhu-chat to update messaging capabilities."

@@ -1,6 +1,6 @@
 # ManaBandhu
 
-ManaBandhu is a mobile-first community platform built as a small monorepo. The repository contains an Expo application, a Spring Boot API, and the original Stitch design export.
+ManaBandhu is an adaptive community platform built as a governed monorepo. Its current Expo client targets native phones, tablets, foldables, mobile/tablet browsers, and desktop web. Watch and TV shells are explicit future boundaries, not active runtimes.
 
 ## Stack
 
@@ -11,6 +11,26 @@ ManaBandhu is a mobile-first community platform built as a small monorepo. The r
 - APIs: versioned REST under `/api/v1` and GraphQL at `/graphql`
 - Database: Supabase Postgres 17 with Flyway migrations
 - Quality: pnpm workspaces, Biome, TypeScript strict mode, Maven tests
+
+## Platform modules
+
+- `services/ai-orchestrator`: AI assistant/chatbot, model routing, tools, safety, evaluations, and cost boundaries
+- `services/chat-realtime`: human, group, support, and bot conversations
+- `services/notification-worker`: in-app, push, web push, email, and SMS delivery boundary
+- `services/analytics-pipeline`: privacy-aware event validation and delivery
+- `packages/api-contracts`: canonical OpenAPI, GraphQL, and AsyncAPI contracts
+- `packages/design-system`: cross-platform tokens and adaptive breakpoints
+- `infra/deployments`: separate native, web, and backend delivery boundaries
+- `infra/observability`: logs, metrics, traces, SLOs, alerts, and runbook boundary
+- `apps/future/watch` and `apps/future/tv`: future shells with no current runtime dependencies
+
+Architecture is documented in `docs/architecture/platform.md` and its ADRs.
+
+## AI maintenance skills
+
+Every governed module has a repo-local skill under `.codex/skills`. Root `AGENTS.md` tells AI agents which skill to load. Any behavioral, dependency, contract, path, or invariant change must update the matching `SKILL.md` in the same commit.
+
+`pnpm verify:skills` enforces that coupling locally and in CI. `pnpm verify:contracts` ensures the canonical and runtime GraphQL schemas remain identical.
 
 ## Requirements
 

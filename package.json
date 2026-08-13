@@ -9,9 +9,12 @@
   "scripts": {
     "dev:mobile": "pnpm --filter mobile start",
     "dev:backend": "./apps/backend/mvnw -f apps/backend/pom.xml spring-boot:run",
-    "lint": "biome check . && pnpm --filter mobile typecheck",
+    "lint": "biome check apps/mobile/src package.json pnpm-workspace.yaml biome.json && pnpm --filter mobile typecheck",
     "format": "biome format --write .",
-    "test": "pnpm --filter mobile test && ./apps/backend/mvnw -f apps/backend/pom.xml test"
+    "test": "pnpm --filter mobile test && ./apps/backend/mvnw -f apps/backend/pom.xml test",
+    "verify:contracts": "node scripts/verify-contracts.mjs",
+    "verify:skills": "node scripts/verify-module-skills.mjs",
+    "verify": "pnpm lint && pnpm verify:contracts && pnpm verify:skills"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.8"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Deployments"
+  short_description: "Maintain CI CD and release infrastructure"
+  default_prompt: "Use $manabandhu-deployments to update delivery infrastructure."

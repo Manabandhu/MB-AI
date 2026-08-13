@@ -1,0 +1,76 @@
+openapi: 3.1.0
+info:
+  title: ManaBandhu REST API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /posts:
+    get:
+      operationId: listCommunityPosts
+      responses:
+        '200':
+          description: Community posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommunityPost'
+    post:
+      operationId: createCommunityPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostInput'
+      responses:
+        '201':
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityPost'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Health:
+      type: object
+      required: [status, service]
+      properties:
+        status: { type: string }
+        service: { type: string }
+    CreatePostInput:
+      type: object
+      additionalProperties: false
+      required: [title, body]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        body: { type: string, minLength: 1, maxLength: 4000 }
+    CommunityPost:
+      allOf:
+        - $ref: '#/components/schemas/CreatePostInput'
+        - type: object
+          required: [id, ownerId, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            ownerId: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+security:
+  - bearerAuth: []
