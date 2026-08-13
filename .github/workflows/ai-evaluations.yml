@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Require evaluation harness before dispatch
         run: test -x services/ai-orchestrator/scripts/evaluate
       - run: services/ai-orchestrator/scripts/evaluate
