@@ -1,0 +1,19 @@
+{
+  "name": "manabandhu",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev:mobile": "pnpm --filter mobile start",
+    "dev:backend": "./apps/backend/mvnw -f apps/backend/pom.xml spring-boot:run",
+    "lint": "biome check . && pnpm --filter mobile typecheck",
+    "format": "biome format --write .",
+    "test": "pnpm --filter mobile test && ./apps/backend/mvnw -f apps/backend/pom.xml test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.8"
+  }
+}

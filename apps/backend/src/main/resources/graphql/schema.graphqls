@@ -1,0 +1,20 @@
+type CommunityPost {
+  id: ID!
+  ownerId: ID!
+  title: String!
+  body: String!
+  createdAt: String!
+}
+
+input CreatePostInput {
+  title: String!
+  body: String!
+}
+
+type Query {
+  communityPosts: [CommunityPost!]!
+}
+
+type Mutation {
+  createCommunityPost(input: CreatePostInput!): CommunityPost!
+}
