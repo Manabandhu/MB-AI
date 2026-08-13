@@ -6,7 +6,7 @@ description: Maintain ManaBandhu community capabilities including posts, profile
 # Community
 
 1. Read `frontend/src/modules/community/MODULE.md` and the affected REST or GraphQL contract before implementation.
-2. Keep community screens, components, queries, mutations, schemas, and state inside `frontend/src/modules/community`; keep Spring domain logic in its owning backend package.
+2. Keep Community Home, Discover, Joined Communities, Community Details, Create Post, Post Details, queries, mutations, schemas, and state inside `frontend/src/modules/community`; keep Spring domain logic in its owning backend package.
 3. Derive ownership from authenticated identity, enforce visibility and moderation server-side, and avoid exposing unnecessary personal data.
 4. Design loading, empty, error, pagination, optimistic update, offline, accessibility, and responsive states.
 5. Prefer additive contracts and bounded queries with stable pagination and indexes.

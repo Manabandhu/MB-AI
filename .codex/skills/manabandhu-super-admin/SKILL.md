@@ -6,7 +6,7 @@ description: Maintain ManaBandhu's privileged operations control plane across th
 # Super Admin control plane
 
 1. Read `docs/architecture/decisions/0002-super-admin-control-plane.md`, the REST contract, and affected deployment workflow.
-2. Keep `frontend/src/app/admin.tsx` as a thin route and implementation under `frontend/src/modules/super-admin`; it is an adaptive operator UI, never a credential or arbitrary-command executor.
+2. Keep `frontend/src/app/admin.tsx` as a thin route and implementation under `frontend/src/modules/admin`; it is an adaptive operator UI, never a credential or arbitrary-command executor.
 3. Keep the backend allow-list under `backend/src/main/java/com/manabandhu/backend/admin`. Do not accept workflow names, URLs, shell commands, or secrets from the client.
 4. Authorize every endpoint with `ROLE_SUPER_ADMIN` sourced only from signed JWT `app_metadata.roles`. Never trust editable user metadata.
 5. Require a meaningful reason for every execution and explicit confirmation for medium/high-impact operations. Production uses protected GitHub Environments with reviewer approval.

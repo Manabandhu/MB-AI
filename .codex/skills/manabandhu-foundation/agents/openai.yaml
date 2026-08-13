@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Foundation"
+  short_description: "Maintain application shell and core journeys"
+  default_prompt: "Maintain this ManaBandhu module and keep its screens, contracts, and skill synchronized."

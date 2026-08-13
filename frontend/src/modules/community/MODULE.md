@@ -1,3 +1,3 @@
 # Community
 
-Owns community discovery, posts, profiles, relationships, requests for help, skill exchanges, and their adaptive screens.
+Owns Community Home, Discover, Joined Communities, Community Details, Create Post, Post Details, relationships, help requests, and skill exchanges.

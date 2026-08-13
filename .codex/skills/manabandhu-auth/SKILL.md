@@ -6,7 +6,7 @@ description: Maintain ManaBandhu authentication, registration, sessions, account
 # Authentication
 
 1. Read `frontend/src/modules/auth/MODULE.md`, backend security configuration, and affected contracts.
-2. Keep auth UI, hooks, schemas, state, and adapters inside `frontend/src/modules/auth`; expose only intentional public APIs.
+2. Keep Sign In, Sign Up, Forgot Password, auth UI, hooks, schemas, state, and adapters inside `frontend/src/modules/auth`; expose only intentional public APIs.
 3. Store native sessions with Secure Store and use supported browser persistence on web. Never log tokens or place service credentials in the client.
 4. Derive authorization from verified server-side JWT claims. Never trust client state or editable user metadata for privileged roles.
 5. Cover sign-in, sign-out, refresh, expiry, recovery, verification, cancellation, offline, and deep-link behavior across native and web.

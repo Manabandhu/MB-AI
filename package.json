@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev:frontend": "pnpm --filter @manabandhu/frontend start",
-    "dev:backend": "./backend/mvnw -f backend/pom.xml spring-boot:run",
+    "dev:backend": "node scripts/dev-backend.mjs",
     "lint": "biome check frontend/src package.json pnpm-workspace.yaml biome.json scripts && pnpm --filter @manabandhu/frontend typecheck",
     "format": "biome format --write .",
     "test": "pnpm --filter @manabandhu/frontend test && ./backend/mvnw -f backend/pom.xml test",

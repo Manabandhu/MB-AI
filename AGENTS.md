@@ -13,6 +13,17 @@ Use the narrowest applicable skills:
 - AI assistant/bot: `manabandhu-ai`
 - Authentication and sessions: `manabandhu-auth`
 - Community and posts: `manabandhu-community`
+- App shell and core journeys: `manabandhu-foundation`
+- Rooms: `manabandhu-rooms`
+- Rides: `manabandhu-rides`
+- Jobs: `manabandhu-jobs`
+- Referrals: `manabandhu-referrals`
+- Immigration resources: `manabandhu-immigration`
+- Shared expenses: `manabandhu-expenses`
+- Events: `manabandhu-events`
+- Marketplace: `manabandhu-marketplace`
+- Utilities: `manabandhu-utilities`
+- Safety: `manabandhu-safety`
 - Human or bot chat: `manabandhu-chat`
 - Analytics: `manabandhu-analytics`
 - CI/CD and releases: `manabandhu-deployments`

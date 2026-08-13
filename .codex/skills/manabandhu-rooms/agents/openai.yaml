@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Rooms"
+  short_description: "Maintain room discovery and listing journeys"
+  default_prompt: "Maintain this ManaBandhu module and keep its screens, contracts, and skill synchronized."

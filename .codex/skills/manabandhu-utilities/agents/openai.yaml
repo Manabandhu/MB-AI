@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Utilities"
+  short_description: "Maintain utility service journeys"
+  default_prompt: "Maintain this ManaBandhu module and keep its screens, contracts, and skill synchronized."

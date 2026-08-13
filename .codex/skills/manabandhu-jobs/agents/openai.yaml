@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Jobs"
+  short_description: "Maintain jobs and employment journeys"
+  default_prompt: "Maintain this ManaBandhu module and keep its screens, contracts, and skill synchronized."

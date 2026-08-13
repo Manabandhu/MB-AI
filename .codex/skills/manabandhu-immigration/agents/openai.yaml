@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Immigration"
+  short_description: "Maintain immigration information journeys"
+  default_prompt: "Maintain this ManaBandhu module and keep its screens, contracts, and skill synchronized."

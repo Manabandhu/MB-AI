@@ -12,5 +12,7 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 5. Keep REST under `/api/v1`; keep GraphQL schema compatible with the canonical contract.
 6. Privileged automation lives in the `admin` package: require the trusted `SUPER_ADMIN` role, map stable operation IDs to an allow-list, require reasons/confirmations, and keep provider credentials server-side.
 7. Add tests for authorization, validation, failure behavior, and persistence boundaries.
-8. Run Maven tests on Java 25.
-9. Update this skill when backend structure, dependencies, security, contracts, or commands change.
+8. Baseline existing Supabase schemas at Flyway version `0` so repository migrations still run from `V1`.
+9. Use `pnpm dev:backend` for local backend startup; it loads `backend/.env` when present while preserving shell environment overrides, then runs the Maven wrapper.
+10. Run Maven tests on Java 25.
+11. Update this skill when backend structure, dependencies, security, contracts, or commands change.

@@ -22,6 +22,8 @@ Begin as a modular monolith. Extract a service only when scaling, isolation, sec
 
 Watch and TV remain possible later targets, but no placeholder application folders or runtime dependencies are maintained until activation.
 
+The canonical product inventory contains 102 screens across foundation, rooms, rides, jobs, referrals, community, chat, immigration, expenses, events, marketplace, utilities, safety, and admin. Authentication and notifications retain dedicated technical ownership while appearing in foundation journeys.
+
 ## Cross-cutting requirements
 
 - Supabase Auth is the identity provider; Spring validates user JWTs.

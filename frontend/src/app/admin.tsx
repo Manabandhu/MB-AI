@@ -1,1 +1,1 @@
-export { default } from '@/modules/super-admin/screens/SuperAdminScreen';
+export { default } from '@/modules/admin/screens/SuperAdminScreen';

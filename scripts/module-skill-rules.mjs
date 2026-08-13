@@ -1,6 +1,14 @@
 export const moduleSkillRules = [
   ['manabandhu-mobile-platform', ['frontend/']],
+  [
+    'manabandhu-foundation',
+    ['frontend/src/modules/foundation/', 'frontend/src/modules/screen-catalog.ts'],
+  ],
   ['manabandhu-auth', ['frontend/src/modules/auth/']],
+  ['manabandhu-rooms', ['frontend/src/modules/rooms/']],
+  ['manabandhu-rides', ['frontend/src/modules/rides/']],
+  ['manabandhu-jobs', ['frontend/src/modules/jobs/']],
+  ['manabandhu-referrals', ['frontend/src/modules/referrals/']],
   [
     'manabandhu-community',
     ['frontend/src/modules/community/', 'backend/src/main/java/com/manabandhu/backend/post/'],
@@ -10,7 +18,7 @@ export const moduleSkillRules = [
     'manabandhu-super-admin',
     [
       'frontend/src/app/admin',
-      'frontend/src/modules/super-admin/',
+      'frontend/src/modules/admin/',
       'backend/src/main/java/com/manabandhu/backend/admin/',
     ],
   ],
@@ -30,6 +38,12 @@ export const moduleSkillRules = [
     ['frontend/src/modules/ai-assistant/', 'platform/ai/', 'services/ai-orchestrator/'],
   ],
   ['manabandhu-chat', ['frontend/src/modules/chat/', 'platform/chat/', 'services/chat-realtime/']],
+  ['manabandhu-immigration', ['frontend/src/modules/immigration/']],
+  ['manabandhu-expenses', ['frontend/src/modules/expenses/']],
+  ['manabandhu-events', ['frontend/src/modules/events/']],
+  ['manabandhu-marketplace', ['frontend/src/modules/marketplace/']],
+  ['manabandhu-utilities', ['frontend/src/modules/utilities/']],
+  ['manabandhu-safety', ['frontend/src/modules/safety/']],
   [
     'manabandhu-analytics',
     ['frontend/src/modules/analytics/', 'platform/analytics/', 'services/analytics-pipeline/'],

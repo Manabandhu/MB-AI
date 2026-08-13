@@ -9,7 +9,7 @@ import {
   type AutomationOperation,
   executeAutomation,
   listAutomationOperations,
-} from '@/modules/super-admin/api';
+} from '@/modules/admin/api';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export default function SuperAdminScreen() {

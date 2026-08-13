@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Expenses"
+  short_description: "Maintain shared expense journeys"
+  default_prompt: "Maintain this ManaBandhu module and keep its screens, contracts, and skill synchronized."

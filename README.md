@@ -4,7 +4,7 @@ ManaBandhu is an adaptive community platform built as a governed monorepo. Its c
 
 ## Stack
 
-- Mobile: Expo SDK 57, React Native 0.86, React 19.2, Expo Router, TypeScript 6
+- Mobile: Expo SDK 54, React Native 0.81, React 19.1, Expo Router 6, TypeScript 5.9
 - Client data: TanStack Query, GraphQL Request, Zod, Zustand, React Hook Form
 - Authentication: Supabase Auth with sessions stored in Expo Secure Store
 - Backend: Java 25, Spring Boot 4.1, Spring Security, Spring Data JPA
@@ -26,6 +26,8 @@ ManaBandhu is an adaptive community platform built as a governed monorepo. Its c
 - `frontend`: the Expo workspace, with business capabilities separated under `frontend/src/modules`
 
 Architecture is documented in `docs/architecture/platform.md` and its ADRs.
+
+The canonical screen inventory is `frontend/src/modules/screen-catalog.ts`. It currently defines 102 unique screens across 14 product groups without treating planned routes as completed UI.
 
 ## AI maintenance skills
 
@@ -56,15 +58,14 @@ For Android emulators, replace `localhost` in `frontend/.env.local` with `10.0.2
 
 ## Start the backend
 
-Copy `backend/.env.example` to a local secret file or export the values in your shell. The database password must never be committed.
+Copy `backend/.env.example` to `backend/.env`, set the database password, then start the backend. The database password must never be committed. Shell environment variables override values from `backend/.env`.
 
 ```bash
-export DATABASE_PASSWORD='your-supabase-database-password'
-export DATABASE_URL='jdbc:postgresql://db.qctfthanswbkqagytnst.supabase.co:5432/postgres?sslmode=require'
-export DATABASE_USERNAME='postgres'
-export SUPABASE_JWKS_URI='https://qctfthanswbkqagytnst.supabase.co/auth/v1/.well-known/jwks.json'
+cp backend/.env.example backend/.env
 pnpm dev:backend
 ```
+
+Flyway baselines existing Supabase schemas at version `0`, then applies repository migrations starting with `V1`.
 
 For production or serverless deployments, prefer Supabase's transaction pooler connection string instead of the direct database host and keep the Hikari pool small.
 

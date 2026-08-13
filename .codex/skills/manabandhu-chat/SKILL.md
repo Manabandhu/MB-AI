@@ -7,6 +7,8 @@ description: Maintain ManaBandhu direct, group, support, and AI chat, including 
 
 Frontend conversation experiences belong to `frontend/src/modules/chat`; realtime service ownership remains under `services/chat-realtime` and `platform/chat`.
 
+The owned screen set is Chat List, New Chat, Conversation, and Conversation Info.
+
 1. Read `platform/chat/MODULE.md` and `services/chat-realtime/MODULE.md`.
 2. Use one conversation model with typed participants and message kinds for humans, support agents, and bots.
 3. Enforce membership and block/report rules on every read/write; never rely only on UI visibility.

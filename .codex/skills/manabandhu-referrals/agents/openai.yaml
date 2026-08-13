@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Referrals"
+  short_description: "Maintain referral journeys"
+  default_prompt: "Maintain this ManaBandhu module and keep its screens, contracts, and skill synchronized."

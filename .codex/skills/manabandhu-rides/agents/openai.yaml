@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Rides"
+  short_description: "Maintain ride sharing journeys"
+  default_prompt: "Maintain this ManaBandhu module and keep its screens, contracts, and skill synchronized."
