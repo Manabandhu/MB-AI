@@ -29,16 +29,26 @@ type FeatureScreenProps = {
   title: string;
   subtitle: string;
   eyebrow?: string;
+  currentRoute?: string;
   metrics?: readonly FeatureMetric[];
   cards?: readonly FeatureCard[];
   actions?: readonly FeatureAction[];
   children?: React.ReactNode;
 };
 
+const primaryNav = [
+  { label: 'Home', route: '/home' },
+  { label: 'Explore', route: '/explore' },
+  { label: 'Search', route: '/search' },
+  { label: 'Saved', route: '/saved' },
+  { label: 'Profile', route: '/profile' },
+] as const;
+
 export function FeatureScreen({
   title,
   subtitle,
   eyebrow = 'ManaBandhu',
+  currentRoute,
   metrics = [],
   cards = [],
   actions = [],
@@ -51,6 +61,25 @@ export function FeatureScreen({
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.container, { maxWidth }]}>
+          <View style={styles.navBar}>
+            {primaryNav.map((item) => {
+              const isActive = item.route === currentRoute;
+              return (
+                <Link key={item.route} href={item.route as Href} asChild>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                    style={[styles.navItem, isActive && styles.navItemActive]}
+                  >
+                    <Text style={[styles.navText, isActive && styles.navTextActive]}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                </Link>
+              );
+            })}
+          </View>
+
           <View style={styles.header}>
             <Text style={styles.eyebrow}>{eyebrow}</Text>
             <Text style={styles.title}>{title}</Text>
@@ -120,6 +149,25 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
   container: { alignSelf: 'center', gap: space.x6, width: '100%' },
+  navBar: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.x1,
+    padding: space.x1,
+  },
+  navItem: {
+    borderRadius: radius.pill,
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: space.x3,
+  },
+  navItemActive: { backgroundColor: colors.primarySoft },
+  navText: { color: colors.muted, fontSize: 13, fontWeight: '800' },
+  navTextActive: { color: colors.primary },
   header: { gap: space.x3, paddingTop: space.x6 },
   eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
   title: { color: colors.ink, fontSize: 32, fontWeight: '800', lineHeight: 38 },

@@ -20,40 +20,40 @@ class RidesContentService {
                     "Rides",
                     List.of(new CatalogMetric("Open rides", "18"), new CatalogMetric("Seats", "42")),
                     List.of(
-                            item("airport", "DFW airport ride", "Saturday - 8:30 AM - two seats open.", "$18 contribution"),
-                            item("grocery", "Grocery run", "Plano to Patel Brothers this evening.", "Local trip")));
+                            item("airport", "DFW airport ride", "Saturday - 8:30 AM - two seats open.", "$18 contribution", "/rides/search"),
+                            item("grocery", "Grocery run", "Plano to Patel Brothers this evening.", "Local trip", "/rides/map")));
             case "search" -> content(
                     "Search rides",
                     "Find rides by pickup area, destination, time window, seats, contribution, and driver trust signals.",
                     "Rides",
                     List.of(new CatalogMetric("Filters", "8"), new CatalogMetric("Saved searches", "3")),
                     List.of(
-                            item("route", "Route and time", "Search by broad pickup area, destination, and flexible departure time.", "Core filter"),
-                            item("seats", "Seats and luggage", "Match capacity, luggage, child seat, and contribution expectations.", "Trip fit")));
+                            item("route", "Route and time", "Search by broad pickup area, destination, and flexible departure time.", "Core filter", "/rides/map"),
+                            item("seats", "Seats and luggage", "Match capacity, luggage, child seat, and contribution expectations.", "Trip fit", "/rides/filters")));
             case "map" -> content(
                     "Ride map",
                     "See pickup and drop-off areas with privacy-preserving location approximations.",
                     "Rides",
                     List.of(new CatalogMetric("Pickup zones", "5"), new CatalogMetric("Routes", "9")),
                     List.of(
-                            item("zones", "Approximate pickup zones", "Exact pickup is shared only after a ride request is accepted.", "Privacy protected"),
-                            item("routes", "Common routes", "Airport, campuses, grocery corridors, and commute paths.", "Discovery")));
+                            item("zones", "Approximate pickup zones", "Exact pickup is shared only after a ride request is accepted.", "Privacy protected", "/rides/search"),
+                            item("routes", "Common routes", "Airport, campuses, grocery corridors, and commute paths.", "Discovery", "/rides/filters")));
             case "filters" -> content(
                     "Ride filters",
                     "Narrow ride discovery by schedule, seats, safety preference, contribution, and pickup flexibility.",
                     "Rides",
                     List.of(new CatalogMetric("Active filters", "3"), new CatalogMetric("Matches", "8")),
                     List.of(
-                            item("time", "Departure window", "Morning, afternoon, evening, or custom trip windows.", "Timing"),
-                            item("safety", "Safety preferences", "Verified drivers, known communities, ratings, and shared trip status.", "Safety")));
+                            item("time", "Departure window", "Morning, afternoon, evening, or custom trip windows.", "Timing", "/rides/search"),
+                            item("safety", "Safety preferences", "Verified drivers, known communities, ratings, and shared trip status.", "Safety", "/rides/search")));
             case "offer" -> content(
                     "Offer a ride",
                     "Post a ride with route, time, seats, contribution, luggage, and safe contact expectations.",
                     "Rides",
                     List.of(new CatalogMetric("Steps", "4"), new CatalogMetric("Required fields", "7")),
                     List.of(
-                            item("trip", "Trip basics", "Pickup area, destination, date, time, seats, and route flexibility.", "Step 1"),
-                            item("safety", "Safety and visibility", "Set who can request, confirmation flow, and trip sharing options.", "Step 2")));
+                            item("trip", "Trip basics", "Pickup area, destination, date, time, seats, and route flexibility.", "Step 1", "/rides"),
+                            item("safety", "Safety and visibility", "Set who can request, confirmation flow, and trip sharing options.", "Step 2", "/rides/search")));
             default -> throw new UnknownCatalogScreenException(screenId);
         };
     }
@@ -62,7 +62,7 @@ class RidesContentService {
         return new CatalogScreenContent(title, subtitle, eyebrow, metrics, items);
     }
 
-    private static CatalogItem item(String id, String title, String body, String meta) {
-        return new CatalogItem(id, title, body, meta, null, null);
+    private static CatalogItem item(String id, String title, String body, String meta, String route) {
+        return new CatalogItem(id, title, body, meta, route, null);
     }
 }

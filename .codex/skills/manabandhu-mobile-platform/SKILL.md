@@ -19,5 +19,6 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 12. The public launch flow begins at `/`, continues through `/welcome`, and keeps the backend-status home surface at `/home`.
 13. Keep reusable foundation constants, typed welcome API shapes, step helpers, and repeated welcome UI under `frontend/src/modules/foundation` rather than in Expo Router files.
 14. First-batch Stitch routes through catalog screen 27 use thin Expo Router entries and module-owned screen components for auth, foundation, notifications, rooms, and rides.
-15. Keep Expo SDK 54 aligned through `expo install --fix`: React Native 0.81, React 19.1, React Native Web 0.21, and Node 20.19.4 or newer. Prefer a development build when a current physical-iOS Expo Go no longer supports SDK 54.
-16. Update this skill when targets, breakpoints, routing, commands, dependencies, or invariants change.
+15. Shared catalog screens must expose connected navigation through `FeatureScreen` primary nav, screen actions, and routed cards so route files are reachable through UI.
+16. Keep Expo SDK 54 aligned through `expo install --fix`: React Native 0.81, React 19.1, React Native Web 0.21, and Node 20.19.4 or newer. Prefer a development build when a current physical-iOS Expo Go no longer supports SDK 54.
+17. Update this skill when targets, breakpoints, routing, commands, dependencies, or invariants change.

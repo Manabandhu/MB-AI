@@ -11,4 +11,5 @@ description: Maintain ManaBandhu foundation journeys including splash, welcome, 
 4. Keep screen IDs and routes unique and module-qualified. Catalog entries describe scope, not implementation status.
 5. The root route `/` starts the public splash/welcome journey; the backend-status home screen is `/home`.
 6. Keep foundation route/query keys and welcome fallback content in `frontend/src/modules/foundation/foundationConstants.ts`; keep welcome API shapes in `welcomeTypes.ts`, step helpers in `welcomeUtils.ts`, local imagery in `welcomeAssets.ts`, repeated welcome UI in `components/`, and catalog-backed foundation screens in `catalogApi.ts`, `screenDataTypes.ts`, `foundationScreenFallbacks.ts`, and `screens/CatalogContentScreen.tsx`.
-7. Run frontend checks, Expo web export, and skill verification after changes.
+7. Foundation home and catalog screens must connect forward into onboarding, explore, search, saved, notifications, profile, settings, rooms, rides, and auth routes without requiring manual URL entry.
+8. Run frontend checks, Expo web export, and skill verification after changes.

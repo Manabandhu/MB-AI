@@ -72,9 +72,21 @@ export default function HomeScreen() {
               <Text style={styles.primaryButtonText}>Replay welcome flow</Text>
             </Pressable>
           </Link>
-          <Pressable accessibilityRole="button" style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>I already have an account</Text>
-          </Pressable>
+          <View style={styles.quickGrid}>
+            {homeCards.map((card) => (
+              <Link key={card.route} href={card.route} asChild>
+                <Pressable accessibilityRole="button" style={styles.quickCard}>
+                  <Text style={styles.quickTitle}>{card.title}</Text>
+                  <Text style={styles.quickBody}>{card.body}</Text>
+                </Pressable>
+              </Link>
+            ))}
+          </View>
+          <Link href="/sign-in" asChild>
+            <Pressable accessibilityRole="button" style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>I already have an account</Text>
+            </Pressable>
+          </Link>
           <Link href="/admin" style={styles.adminLink}>
             Super Admin
           </Link>
@@ -83,6 +95,29 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+
+const homeCards = [
+  {
+    title: 'Start setup',
+    body: 'Set your area, interests, and privacy preferences.',
+    route: '/onboarding',
+  },
+  {
+    title: 'Explore',
+    body: 'Open rooms, rides, notifications, and nearby help.',
+    route: '/explore',
+  },
+  {
+    title: 'Find rooms',
+    body: 'Search, filter, save, and review room details.',
+    route: '/rooms',
+  },
+  {
+    title: 'Find rides',
+    body: 'Search ride offers or post a ride for others.',
+    route: '/rides',
+  },
+] as const;
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
@@ -137,5 +172,19 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   secondaryButton: { alignItems: 'center', minHeight: 48, justifyContent: 'center' },
   secondaryButtonText: { color: colors.primary, fontSize: 15, fontWeight: '700' },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  quickCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexBasis: 220,
+    flexGrow: 1,
+    gap: 8,
+    minHeight: 118,
+    padding: 16,
+  },
+  quickTitle: { color: colors.ink, fontSize: 17, fontWeight: '800' },
+  quickBody: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   adminLink: { alignSelf: 'center', color: colors.muted, fontSize: 13, padding: 10 },
 });
