@@ -7,8 +7,8 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 
 1. Read Stitch design-system sources and `packages/design-system/src/index.ts`.
 2. Put platform-neutral tokens in `packages/design-system`; keep native/web implementation details in client components.
-3. Support compact, medium, expanded, and wide windows; large text; safe areas; keyboard/pointer/touch; reduced motion; and WCAG contrast.
-4. Use semantic tokens. Avoid screen-local hardcoded colors, spacing, and breakpoints.
-5. Test representative phone, tablet/foldable, and browser widths.
-6. Update this skill when tokens, breakpoints, component conventions, or accessibility rules change.
-
+3. Put reusable Expo/RN UI primitives in `frontend/src/modules/shared/ui`; prefer Gluestack-backed primitives such as `AppButton`, generated components under `shared/ui/gluestack`, and `AppIcon` over screen-local controls. `AppIcon` wraps `iconoir-react-native` so icon choice and sizing stay centralized.
+4. Support compact, medium, expanded, and wide windows; large text; safe areas; keyboard/pointer/touch; reduced motion; and WCAG contrast.
+5. Use semantic tokens. Avoid screen-local hardcoded colors, spacing, and breakpoints.
+6. Test representative phone, tablet/foldable, and browser widths.
+7. Update this skill when tokens, breakpoints, component conventions, icon libraries, or accessibility rules change.

@@ -4,6 +4,7 @@ import { Link } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppButton } from '@/modules/shared/ui/AppButton';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export type FeatureAction = {
@@ -100,11 +101,7 @@ export function FeatureScreen({
           {actions.length ? (
             <View style={styles.actions}>
               {actions.map((action) => (
-                <Link key={action.route} href={action.route as Href} asChild>
-                  <Pressable accessibilityRole="button" style={styles.actionButton}>
-                    <Text style={styles.actionText}>{action.label}</Text>
-                  </Pressable>
-                </Link>
+                <AppButton key={action.route} label={action.label} route={action.route} />
               ))}
             </View>
           ) : null}
@@ -185,14 +182,6 @@ const styles = StyleSheet.create({
   metricValue: { color: colors.primary, fontSize: 24, fontWeight: '800' },
   metricLabel: { color: colors.muted, fontSize: 13, fontWeight: '700', marginTop: space.x1 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3 },
-  actionButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.control,
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: space.x4,
-  },
-  actionText: { color: colors.surface, fontSize: 14, fontWeight: '800' },
   cardGrid: { gap: space.x3 },
   cardGridWide: { flexDirection: 'row', flexWrap: 'wrap' },
   card: {

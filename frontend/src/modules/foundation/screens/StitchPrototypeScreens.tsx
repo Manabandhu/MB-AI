@@ -2,19 +2,14 @@ import { color as baseColors, space } from '@manabandhu/design-system';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import {
-  Image,
-  PanResponder,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
+import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
 const colors = {
   ...baseColors,
@@ -234,7 +229,12 @@ export function StitchAuthScreen({ kind }: { kind: AuthKind }) {
         {copy.fields.map((field) => (
           <View key={field} style={styles.inputGroup}>
             <Text style={styles.inputLabel}>{field}</Text>
-            <TextInput placeholder={`Enter your ${field.toLowerCase()}`} style={styles.input} />
+            <Input className="min-h-14 rounded-xl bg-secondary/70">
+              <InputField
+                placeholder={`Enter your ${field.toLowerCase()}`}
+                secureTextEntry={field.toLowerCase().includes('password')}
+              />
+            </Input>
           </View>
         ))}
         {kind === 'sign-in' ? (
@@ -387,7 +387,9 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingKind }) {
         {step.inputs.map((input) => (
           <View key={input} style={styles.inputGroup}>
             <Text style={styles.inputLabel}>{input}</Text>
-            <TextInput placeholder={input} style={styles.input} />
+            <Input className="min-h-14 rounded-xl bg-secondary/70">
+              <InputField placeholder={input} />
+            </Input>
           </View>
         ))}
         {step.options.length ? (
@@ -410,11 +412,17 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingKind }) {
 type ShellKind = 'home' | 'chat' | 'explore' | 'community' | 'profile';
 
 const tabs = [
-  { key: 'home', label: 'Home', route: '/home', shortLabel: 'Home' },
-  { key: 'chat', label: 'Chat', route: '/chat', shortLabel: 'Chat' },
-  { key: 'explore', label: 'Explore', route: '/explore', shortLabel: 'Explore' },
-  { key: 'community', label: 'Community', route: '/community', shortLabel: 'Community' },
-  { key: 'profile', label: 'Profile', route: '/profile', shortLabel: 'Profile' },
+  { key: 'home', label: 'Home', route: '/home', shortLabel: 'Home', icon: 'home' },
+  { key: 'chat', label: 'Chat', route: '/chat', shortLabel: 'Chat', icon: 'message' },
+  { key: 'explore', label: 'Explore', route: '/explore', shortLabel: 'Explore', icon: 'search' },
+  {
+    key: 'community',
+    label: 'Community',
+    route: '/community',
+    shortLabel: 'Community',
+    icon: 'community',
+  },
+  { key: 'profile', label: 'Profile', route: '/profile', shortLabel: 'Profile', icon: 'user' },
 ] as const;
 
 export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
@@ -426,12 +434,16 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
           <Text style={styles.shellTitle}>{titleCase(kind)}</Text>
         </View>
         <View style={styles.headerActions}>
-          <Link href="/notifications">
-            <Text style={styles.headerLink}>Alerts</Text>
-          </Link>
-          <View style={styles.avatarSmall}>
-            <Text style={styles.avatarText}>MB</Text>
-          </View>
+          <Pressable
+            accessibilityLabel="Open notifications"
+            onPress={() => router.push('/notifications')}
+            style={styles.headerIconButton}
+          >
+            <AppIcon color={colors.primary} name="bell" size={20} />
+          </Pressable>
+          <Avatar className="h-8 w-8 bg-primary">
+            <AvatarFallbackText className="text-primary-foreground">MB</AvatarFallbackText>
+          </Avatar>
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.shellContent}>
@@ -445,6 +457,11 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
         {tabs.map((tab) => (
           <Link key={tab.key} href={tab.route} asChild>
             <Pressable style={styles.tab}>
+              <AppIcon
+                color={tab.key === kind ? colors.appPrimary : colors.muted}
+                name={tab.icon}
+                size={20}
+              />
               <Text style={[styles.tabLabel, tab.key === kind && styles.tabActive]}>
                 {tab.shortLabel}
               </Text>
@@ -471,9 +488,9 @@ function ScreenChrome({
           <Image source={welcomeLogo} style={styles.headerLogo} />
           <Text style={styles.headerTitle}>{title}</Text>
         </View>
-        <View style={styles.avatarSmall}>
-          <Text style={styles.avatarText}>MB</Text>
-        </View>
+        <Avatar className="h-8 w-8 bg-primary">
+          <AvatarFallbackText className="text-primary-foreground">MB</AvatarFallbackText>
+        </Avatar>
       </View>
       <ScrollView contentContainerStyle={styles.authContent}>{children}</ScrollView>
     </SafeAreaView>
@@ -484,21 +501,20 @@ function Button({
   label,
   route,
   secondary = false,
+  icon,
 }: {
   label: string;
   route: string;
   secondary?: boolean;
+  icon?: AppIconName;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => router.push(route as Href)}
-      style={[styles.actionButton, secondary && styles.secondaryButton]}
-    >
-      <Text style={[styles.actionButtonText, secondary && styles.secondaryButtonText]}>
-        {label}
-      </Text>
-    </Pressable>
+    <AppButton
+      icon={icon}
+      label={label}
+      route={route}
+      variant={secondary ? 'secondary' : 'primary'}
+    />
   );
 }
 
@@ -512,12 +528,13 @@ function HomeShell() {
       <View style={styles.bentoGrid}>
         <Link href="/rooms" asChild>
           <Pressable style={styles.largeAction}>
+            <AppIcon color="#d7cfff" name="bed" size={24} />
             <Text style={styles.largeActionTitle}>Find a Room</Text>
             <Text style={styles.largeActionBody}>Browse shared spaces & apartments</Text>
           </Pressable>
         </Link>
-        <MiniAction label="Offer a Ride" route="/rides/offer" />
-        <MiniAction label="Ask a Question" route="/community" />
+        <MiniAction icon="car" label="Offer a Ride" route="/rides/offer" />
+        <MiniAction icon="help" label="Ask a Question" route="/community" />
       </View>
       <SectionTitle title="For You" />
       <View style={styles.horizontalCards}>
@@ -535,10 +552,12 @@ function HomeShell() {
       </View>
       <SectionTitle title="Trending in your area" />
       <FeedItem
+        icon="car"
         title="Ride offered to SF"
         body="Driving from SJ to SF this Friday at 5 PM. Have 2 seats available."
       />
       <FeedItem
+        icon="message"
         title="Kiran asked a question"
         body="Does anyone know a good, affordable moving service for a 1BHK?"
       />
@@ -550,7 +569,8 @@ function ChatShell() {
   return (
     <>
       <View style={styles.searchBox}>
-        <Text style={styles.muted}>search</Text>
+        <AppIcon color={colors.muted} name="search" size={18} />
+        <Text style={styles.muted}>Search conversations</Text>
       </View>
       <View style={styles.segmentRow}>
         {['All', 'Groups', 'Support'].map((item, index) => (
@@ -565,7 +585,7 @@ function ChatShell() {
         ['Marcus Chen', 'Thanks for the help yesterday!', 'Mon'],
         ['Dog Walkers Club', 'Elena: We are meeting at the park at 8am!', 'Sun'],
       ].map(([title, body, time]) => (
-        <FeedItem key={title} title={title} body={body} meta={time} />
+        <FeedItem key={title} icon="message" title={title} body={body} meta={time} />
       ))}
     </>
   );
@@ -575,30 +595,63 @@ function ExploreShell() {
   return (
     <>
       <View style={styles.searchBox}>
-        <Text style={styles.muted}>search</Text>
+        <AppIcon color={colors.muted} name="search" size={18} />
+        <Text style={styles.muted}>Search services, communities, and support</Text>
       </View>
-      <View style={styles.categoryGrid}>
-        <MiniAction label="Rooms" route="/rooms" />
-        <MiniAction label="Rides" route="/rides" />
-        <MiniAction label="Jobs" route="/jobs" />
-        <MiniAction label="Services" route="/utilities" />
+
+      <View style={styles.quickRail}>
+        <SuperTile featured icon="home" label="Rooms" route="/rooms" />
+        <SuperTile featured icon="car" label="Rides" route="/rides" />
+        <SuperTile featured icon="briefcase" label="Jobs" route="/jobs" />
+        <SuperTile featured icon="message" label="Chat" route="/chat" />
       </View>
-      <SectionTitle title="Featured Opportunities" />
-      <InfoCard
-        title="UX Designer - Contract"
-        body="TechFlow Inc. • Downtown"
-        meta="Job • 2h ago"
+
+      <ServiceGroup
+        title="Daily Needs"
+        items={[
+          { icon: 'home', label: 'Rooms', route: '/rooms' },
+          { icon: 'car', label: 'Rides', route: '/rides' },
+          { icon: 'wrench', label: 'Services', route: '/search' },
+          { icon: 'package', label: 'Packages', route: '/search' },
+        ]}
       />
-      <InfoCard
-        title="Community Tech Meetup"
-        body="Central Library • 6:00 PM"
-        meta="Event • Tomorrow"
+      <ServiceGroup
+        title="Community"
+        items={[
+          { icon: 'community', label: 'Groups', route: '/community' },
+          { icon: 'message', label: 'Chat', route: '/chat' },
+          { icon: 'calendar', label: 'Events', route: '/search' },
+          { icon: 'shield', label: 'Safety', route: '/search' },
+        ]}
       />
-      <InfoCard
-        title="Master Bedroom in 2BHK"
-        body="$1,200/mo • Mission District"
-        meta="Room • 1d ago"
+      <ServiceGroup
+        title="Growth"
+        items={[
+          { icon: 'briefcase', label: 'Jobs', route: '/search' },
+          { icon: 'verified-user', label: 'Referrals', route: '/search' },
+          { icon: 'book', label: 'Immigration', route: '/search' },
+          { icon: 'wallet', label: 'Expenses', route: '/search' },
+        ]}
       />
+      <ServiceGroup
+        title="Marketplace"
+        items={[
+          { icon: 'marketplace', label: 'Buy & Sell', route: '/search' },
+          { icon: 'map', label: 'Nearby', route: '/search' },
+          { icon: 'delivery', label: 'Delivery', route: '/search' },
+          { icon: 'plus', label: 'Post', route: '/community' },
+        ]}
+      />
+
+      <SectionTitle title="For You" />
+      <View style={styles.recommendationStrip}>
+        <InfoCard
+          title="Sunny room in Irving"
+          body="$850/mo • verified host notes"
+          meta="Room match"
+        />
+        <InfoCard title="Tech meetup tonight" body="Central Library • 6:00 PM" meta="Near you" />
+      </View>
     </>
   );
 }
@@ -607,7 +660,8 @@ function CommunityShell() {
   return (
     <>
       <View style={styles.searchBox}>
-        <Text style={styles.muted}>search</Text>
+        <AppIcon color={colors.muted} name="search" size={18} />
+        <Text style={styles.muted}>Search communities</Text>
       </View>
       <View style={styles.segmentRow}>
         {['All', 'Tech & Career', 'Culture', 'Sports'].map((item, index) => (
@@ -618,9 +672,9 @@ function CommunityShell() {
       </View>
       <SectionTitle title="Your Hubs" />
       <View style={styles.categoryGrid}>
-        <MiniAction label="Bay Area Indians" route="/community" />
-        <MiniAction label="Telugu Techies" route="/community" />
-        <MiniAction label="Create Hub" route="/community" />
+        <MiniAction icon="community" label="Bay Area Indians" route="/community" />
+        <MiniAction icon="message" label="Telugu Techies" route="/community" />
+        <MiniAction icon="plus" label="Create Hub" route="/community" />
       </View>
       <SectionTitle title="Activity Feed" />
       <InfoCard
@@ -655,6 +709,13 @@ function ProfileShell() {
         (item) => (
           <FeedItem
             key={item}
+            icon={
+              item === 'Account Settings'
+                ? 'user'
+                : item === 'Trust & Safety'
+                  ? 'shield'
+                  : 'chevron-right'
+            }
             title={item}
             body={
               item === 'Account Settings'
@@ -672,11 +733,46 @@ function SectionTitle({ title }: { title: string }) {
   return <Text style={styles.sectionTitle}>{title}</Text>;
 }
 
-function MiniAction({ label, route }: { label: string; route: string }) {
+function MiniAction({ icon, label, route }: { icon: AppIconName; label: string; route: string }) {
   return (
     <Link href={route as Href} asChild>
       <Pressable style={styles.miniAction}>
+        <AppIcon color={colors.primary} name={icon} size={20} />
         <Text style={styles.miniLabel}>{label}</Text>
+      </Pressable>
+    </Link>
+  );
+}
+
+type ServiceItem = { icon: AppIconName; label: string; route: string };
+
+function ServiceGroup({ title, items }: { title: string; items: ServiceItem[] }) {
+  return (
+    <View style={styles.serviceGroup}>
+      <View style={styles.serviceGroupHeader}>
+        <Text style={styles.serviceGroupTitle}>{title}</Text>
+        <Text style={styles.serviceGroupMore}>View all</Text>
+      </View>
+      <View style={styles.serviceGrid}>
+        {items.map((item) => (
+          <SuperTile key={`${title}-${item.label}`} {...item} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function SuperTile({ icon, label, route, featured = false }: ServiceItem & { featured?: boolean }) {
+  return (
+    <Link href={route as Href} asChild>
+      <Pressable
+        accessibilityRole="button"
+        style={[styles.superTile, featured && styles.superTileFeatured]}
+      >
+        <View style={[styles.superIcon, featured && styles.superIconFeatured]}>
+          <AppIcon color={featured ? colors.surface : colors.primary} name={icon} size={24} />
+        </View>
+        <Text style={styles.superLabel}>{label}</Text>
       </Pressable>
     </Link>
   );
@@ -712,9 +808,24 @@ function InfoCard({
   );
 }
 
-function FeedItem({ title, body, meta }: { title: string; body: string; meta?: string }) {
+function FeedItem({
+  icon,
+  title,
+  body,
+  meta,
+}: {
+  icon?: AppIconName;
+  title: string;
+  body: string;
+  meta?: string;
+}) {
   return (
     <View style={styles.feedItem}>
+      {icon ? (
+        <View style={styles.feedIcon}>
+          <AppIcon color={colors.primary} name={icon} size={20} />
+        </View>
+      ) : null}
       <View style={styles.feedCopy}>
         <View style={styles.feedTop}>
           <Text style={styles.feedTitle}>{title}</Text>
@@ -813,7 +924,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 32,
   },
-  avatarText: { color: colors.surface, fontSize: 11, fontWeight: '900' },
   authContent: { flexGrow: 1, justifyContent: 'center', padding: space.x4 },
   authHero: { alignItems: 'center', gap: space.x2, marginBottom: space.x6 },
   authLogo: { borderRadius: 16, height: 64, width: 64 },
@@ -845,16 +955,6 @@ const styles = StyleSheet.create({
   demoTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
   demoLine: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   forgot: { alignSelf: 'flex-end', color: colors.primary, fontSize: 12, fontWeight: '700' },
-  actionButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    minHeight: 56,
-    justifyContent: 'center',
-  },
-  secondaryButton: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
-  actionButtonText: { color: colors.surface, fontSize: 14, fontWeight: '800' },
-  secondaryButtonText: { color: colors.ink },
   socialStack: { gap: space.x3 },
   orText: {
     color: colors.muted,
@@ -922,7 +1022,16 @@ const styles = StyleSheet.create({
   },
   shellTitle: { color: colors.appPrimary, fontSize: 20, fontWeight: '700' },
   headerActions: { alignItems: 'center', flexDirection: 'row', gap: space.x3 },
-  headerLink: { color: colors.primary, fontSize: 13, fontWeight: '800' },
+  headerIconButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
   shellContent: { gap: space.x6, padding: space.x4, paddingBottom: 96 },
   heroBlock: { gap: space.x2 },
   display: { color: colors.ink, fontSize: 36, fontWeight: '800', lineHeight: 44 },
@@ -948,7 +1057,56 @@ const styles = StyleSheet.create({
     padding: space.x3,
   },
   miniLabel: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  quickRail: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: space.x3,
+  },
+  serviceGroup: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: space.x3,
+    padding: space.x4,
+  },
+  serviceGroupHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  serviceGroupTitle: { color: colors.ink, fontSize: 17, fontWeight: '800' },
+  serviceGroupMore: { color: colors.primary, fontSize: 12, fontWeight: '800' },
+  serviceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: space.x4,
+  },
+  superTile: {
+    alignItems: 'center',
+    flexBasis: '25%',
+    gap: space.x2,
+    minHeight: 88,
+    minWidth: 74,
+    paddingHorizontal: space.x1,
+  },
+  superTileFeatured: { minHeight: 96 },
+  superIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.primarySoft,
+    borderRadius: 18,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  superIconFeatured: { backgroundColor: colors.primary, borderRadius: 20, height: 58, width: 58 },
+  superLabel: { color: colors.ink, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   sectionTitle: { color: colors.ink, fontSize: 24, fontWeight: '800', lineHeight: 32 },
+  recommendationStrip: { flexDirection: 'row', gap: space.x3 },
   horizontalCards: { flexDirection: 'row', gap: space.x4 },
   imageCard: {
     backgroundColor: colors.surface,
@@ -983,13 +1141,24 @@ const styles = StyleSheet.create({
     gap: space.x3,
     padding: space.x3,
   },
+  feedIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.primarySoft,
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
   feedCopy: { flex: 1, gap: space.x1 },
   feedTop: { flexDirection: 'row', justifyContent: 'space-between', gap: space.x2 },
   feedTitle: { color: colors.ink, flex: 1, fontSize: 14, fontWeight: '800' },
   feedMeta: { color: colors.muted, fontSize: 12, fontWeight: '700' },
   searchBox: {
+    alignItems: 'center',
     backgroundColor: colors.surfaceContainerLow,
     borderRadius: 18,
+    flexDirection: 'row',
+    gap: space.x2,
     minHeight: 52,
     justifyContent: 'center',
     paddingHorizontal: space.x4,

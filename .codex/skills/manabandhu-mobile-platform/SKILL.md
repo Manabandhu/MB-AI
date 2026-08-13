@@ -19,7 +19,8 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 12. The public launch flow begins at `/`, hides the native Expo splash after JS mounts, auto-advances the visible Stitch splash into `/welcome`, supports temporary demo sign-in to `/home`, and keeps the backend-status home surface at `/home`.
 13. Keep reusable foundation constants, typed welcome API shapes, step helpers, and repeated welcome UI under `frontend/src/modules/foundation` rather than in Expo Router files.
 14. First-batch Stitch routes through catalog screen 27 use thin Expo Router entries and module-owned screen components for auth, foundation, notifications, rooms, and rides.
-15. Local Stitch HTML under `stitch/screens/01_*` through `27_*` is the reference for the native first-batch implementation; do not satisfy this requirement by rendering screenshots as the app UI.
+15. The old local `stitch/` export folder has been removed; use a fresh MCP export as the source for the next Stitch implementation pass. Do not satisfy Stitch requirements by rendering screenshots as the app UI.
 16. Shared catalog or Stitch-derived screens must expose connected navigation through primary nav, screen actions, and routed cards so route files are reachable through UI.
-17. Keep Expo SDK 54 aligned through `expo install --fix`: React Native 0.81, React 19.1, React Native Web 0.21, and Node 20.19.4 or newer. Prefer a development build when a current physical-iOS Expo Go no longer supports SDK 54.
-18. Update this skill when targets, breakpoints, routing, commands, dependencies, or invariants change.
+17. Shared UI primitives live under `frontend/src/modules/shared/ui`; use Gluestack-backed app wrappers such as `AppButton`, generated components under `shared/ui/gluestack`, and `AppIcon` before adding screen-local controls. Icons use `iconoir-react-native` with `react-native-svg`.
+18. Keep Expo SDK 54 aligned through `expo install --fix`: React Native 0.81, React 19.1, React Native Web 0.21, and Node 20.19.4 or newer. Prefer a development build when a current physical-iOS Expo Go no longer supports SDK 54.
+19. Update this skill when targets, breakpoints, routing, commands, dependencies, or invariants change.

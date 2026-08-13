@@ -3,6 +3,12 @@ import { Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import '../../global.css';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaListener } from 'react-native-safe-area-context';
+import { Uniwind } from 'uniwind';
+
+import { GluestackUIProvider } from '@/modules/shared/ui/gluestack/gluestack-ui-provider';
 
 export default function RootLayout() {
   const [queryClient] = useState(
@@ -19,9 +25,19 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </QueryClientProvider>
+    <SafeAreaListener
+      onChange={({ insets }) => {
+        Uniwind.updateInsets(insets);
+      }}
+    >
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <GluestackUIProvider mode="light">
+          <QueryClientProvider client={queryClient}>
+            <StatusBar style="dark" />
+            <Stack screenOptions={{ headerShown: false }} />
+          </QueryClientProvider>
+        </GluestackUIProvider>
+      </GestureHandlerRootView>
+    </SafeAreaListener>
   );
 }
