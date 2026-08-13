@@ -6,7 +6,7 @@ description: Maintain ManaBandhu build, CI/CD, environments, releases, migration
 # Deployments
 
 1. Read `platform/deployments/MODULE.md` and the affected `infra/deployments/*/MODULE.md`.
-2. Keep native mobile, web, backend, migration, and worker pipelines independently releasable.
+2. Keep native mobile and web builds rooted at `frontend/`; keep backend, migration, and worker pipelines independently releasable.
 3. Pin tools and dependencies; use reproducible builds, previews, tests, contract checks, security scans, and provenance.
 4. Reference secrets from the deployment platform. Never commit credentials or signing material.
 5. Use staged/canary rollout, health and observability gates, backward-compatible migrations, and tested rollback.

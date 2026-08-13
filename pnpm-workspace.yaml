@@ -1,5 +1,5 @@
 packages:
-  - frontend/universal
+  - frontend
   - packages/*
 
 onlyBuiltDependencies:

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Auth"
+  short_description: "Maintain authentication and session boundaries"
+  default_prompt: "Maintain the ManaBandhu authentication module and keep its security contracts synchronized."

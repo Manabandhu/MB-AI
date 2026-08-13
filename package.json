@@ -7,11 +7,11 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev:frontend": "pnpm --filter mobile start",
+    "dev:frontend": "pnpm --filter @manabandhu/frontend start",
     "dev:backend": "./backend/mvnw -f backend/pom.xml spring-boot:run",
-    "lint": "biome check frontend/universal/src package.json pnpm-workspace.yaml biome.json scripts && pnpm --filter mobile typecheck",
+    "lint": "biome check frontend/src package.json pnpm-workspace.yaml biome.json scripts && pnpm --filter @manabandhu/frontend typecheck",
     "format": "biome format --write .",
-    "test": "pnpm --filter mobile test && ./backend/mvnw -f backend/pom.xml test",
+    "test": "pnpm --filter @manabandhu/frontend test && ./backend/mvnw -f backend/pom.xml test",
     "verify:contracts": "node scripts/verify-contracts.mjs",
     "verify:skills": "node scripts/verify-module-skills.mjs",
     "verify": "pnpm lint && pnpm verify:contracts && pnpm verify:skills",

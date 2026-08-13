@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Community"
+  short_description: "Maintain community product capabilities"
+  default_prompt: "Maintain the ManaBandhu community module and keep its contracts and behavior synchronized."

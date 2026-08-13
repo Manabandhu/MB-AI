@@ -5,7 +5,11 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { type AutomationOperation, executeAutomation, listAutomationOperations } from '@/lib/api';
+import {
+  type AutomationOperation,
+  executeAutomation,
+  listAutomationOperations,
+} from '@/modules/super-admin/api';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export default function SuperAdminScreen() {

@@ -5,6 +5,8 @@ description: Maintain ManaBandhu notifications across in-app inbox, mobile push,
 
 # Notifications
 
+Frontend notification center, preferences, permissions, badges, and deep-link behavior belong to `frontend/src/modules/notifications`.
+
 1. Read `platform/notifications/MODULE.md` and the AsyncAPI contract.
 2. Emit versioned, idempotent notification requests; never call providers from business transactions.
 3. Evaluate authorization, consent, preference, locale, timezone, quiet hours, urgency, deduplication, and rate limits.
@@ -12,4 +14,3 @@ description: Maintain ManaBandhu notifications across in-app inbox, mobile push,
 5. Design in-app and push now; keep email/SMS adapters explicit. Preserve future watch delivery compatibility.
 6. Test duplicate events, retries, disabled channels, quiet hours, and provider failure.
 7. Update this skill when channels, event fields, providers, policies, or paths change.
-

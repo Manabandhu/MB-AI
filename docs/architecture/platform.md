@@ -9,8 +9,8 @@ ManaBandhu is a multi-surface platform, not a phone-only application.
 
 ## System boundaries
 
-- `frontend/universal`: adaptive Expo shell for native and web experiences.
-- `frontend/future`: reserved watch and TV application shells.
+- `frontend`: adaptive Expo workspace for native and web experiences.
+- `frontend/src/modules`: one ownership boundary per business capability. Router files delegate to module screens and public APIs.
 - `backend`: Spring Boot modular monolith exposing authenticated REST and GraphQL plus the audited automation control plane.
 - `packages/api-contracts`: canonical HTTP, GraphQL, and event schemas.
 - `packages/design-system`: platform-neutral tokens and adaptive layout rules.
@@ -19,6 +19,8 @@ ManaBandhu is a multi-surface platform, not a phone-only application.
 - `.codex/skills`: executable maintenance knowledge for each governed module.
 
 Begin as a modular monolith. Extract a service only when scaling, isolation, security, or deployment cadence justifies the operational cost.
+
+Watch and TV remain possible later targets, but no placeholder application folders or runtime dependencies are maintained until activation.
 
 ## Cross-cutting requirements
 

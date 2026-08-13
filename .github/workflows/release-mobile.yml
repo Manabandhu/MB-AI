@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter mobile typecheck
+      - run: pnpm --filter @manabandhu/frontend typecheck
       - name: Build with EAS
         run: pnpm dlx eas-cli@latest build --platform all --profile "$ENVIRONMENT" --non-interactive
         env:

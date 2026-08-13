@@ -11,6 +11,8 @@ Use the narrowest applicable skills:
 - Tokens and components: `manabandhu-design-system`
 - Notifications: `manabandhu-notifications`
 - AI assistant/bot: `manabandhu-ai`
+- Authentication and sessions: `manabandhu-auth`
+- Community and posts: `manabandhu-community`
 - Human or bot chat: `manabandhu-chat`
 - Analytics: `manabandhu-analytics`
 - CI/CD and releases: `manabandhu-deployments`

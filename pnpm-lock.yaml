@@ -12,7 +12,7 @@ importers:
         specifier: 2.5.8
         version: 2.5.8
 
-  frontend/universal:
+  frontend:
     dependencies:
       '@expo/ui':
         specifier: ~57.0.10
@@ -22,7 +22,7 @@ importers:
         version: 5.7.1(@sinclair/typebox@0.27.12)(react-hook-form@7.85.0(react@19.2.3))(zod@4.4.3)
       '@manabandhu/design-system':
         specifier: workspace:*
-        version: link:../../packages/design-system
+        version: link:../packages/design-system
       '@supabase/supabase-js':
         specifier: ^2.112.3
         version: 2.112.3

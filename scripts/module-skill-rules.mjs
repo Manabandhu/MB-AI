@@ -1,17 +1,39 @@
 export const moduleSkillRules = [
-  ['manabandhu-mobile-platform', ['frontend/universal/', 'frontend/future/']],
+  ['manabandhu-mobile-platform', ['frontend/']],
+  ['manabandhu-auth', ['frontend/src/modules/auth/']],
+  [
+    'manabandhu-community',
+    ['frontend/src/modules/community/', 'backend/src/main/java/com/manabandhu/backend/post/'],
+  ],
   ['manabandhu-backend-api', ['backend/']],
   [
     'manabandhu-super-admin',
-    ['frontend/universal/src/app/admin', 'backend/src/main/java/com/manabandhu/backend/admin/'],
+    [
+      'frontend/src/app/admin',
+      'frontend/src/modules/super-admin/',
+      'backend/src/main/java/com/manabandhu/backend/admin/',
+    ],
   ],
   ['manabandhu-api-contracts', ['packages/api-contracts/']],
   ['manabandhu-architecture', ['docs/architecture/']],
   ['manabandhu-design-system', ['packages/design-system/', 'stitch/']],
-  ['manabandhu-notifications', ['platform/notifications/', 'services/notification-worker/']],
-  ['manabandhu-ai', ['platform/ai/', 'services/ai-orchestrator/']],
-  ['manabandhu-chat', ['platform/chat/', 'services/chat-realtime/']],
-  ['manabandhu-analytics', ['platform/analytics/', 'services/analytics-pipeline/']],
+  [
+    'manabandhu-notifications',
+    [
+      'frontend/src/modules/notifications/',
+      'platform/notifications/',
+      'services/notification-worker/',
+    ],
+  ],
+  [
+    'manabandhu-ai',
+    ['frontend/src/modules/ai-assistant/', 'platform/ai/', 'services/ai-orchestrator/'],
+  ],
+  ['manabandhu-chat', ['frontend/src/modules/chat/', 'platform/chat/', 'services/chat-realtime/']],
+  [
+    'manabandhu-analytics',
+    ['frontend/src/modules/analytics/', 'platform/analytics/', 'services/analytics-pipeline/'],
+  ],
   ['manabandhu-deployments', ['platform/deployments/', 'infra/deployments/', '.github/workflows/']],
   ['manabandhu-observability', ['platform/observability/', 'infra/observability/']],
 ];
