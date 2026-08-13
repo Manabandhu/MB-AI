@@ -1,19 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
-
-const rules = [
-  ['manabandhu-mobile-platform', ['apps/mobile/', 'apps/future/']],
-  ['manabandhu-backend-api', ['apps/backend/']],
-  ['manabandhu-api-contracts', ['packages/api-contracts/']],
-  ['manabandhu-architecture', ['docs/architecture/']],
-  ['manabandhu-design-system', ['packages/design-system/', 'stitch/']],
-  ['manabandhu-notifications', ['platform/notifications/', 'services/notification-worker/']],
-  ['manabandhu-ai', ['platform/ai/', 'services/ai-orchestrator/']],
-  ['manabandhu-chat', ['platform/chat/', 'services/chat-realtime/']],
-  ['manabandhu-analytics', ['platform/analytics/', 'services/analytics-pipeline/']],
-  ['manabandhu-deployments', ['platform/deployments/', 'infra/deployments/', '.github/workflows/']],
-  ['manabandhu-observability', ['platform/observability/', 'infra/observability/']],
-];
+import { moduleSkillRules as rules, requiredSkillChanges } from './module-skill-rules.mjs';
 
 function gitLines(args) {
   try {
@@ -35,19 +22,15 @@ const changed = new Set([
 ]);
 
 const errors = [];
-for (const [skill, prefixes] of rules) {
+for (const [skill] of rules) {
   const path = `.codex/skills/${skill}/SKILL.md`;
   const body = readFileSync(path, 'utf8');
   if (!body.startsWith(`---\nname: ${skill}\ndescription:`) || body.includes('TODO')) {
     errors.push(`${path} has invalid or incomplete metadata`);
   }
-  const moduleChanged = [...changed].some((file) =>
-    prefixes.some((prefix) => file.startsWith(prefix)),
-  );
-  if (moduleChanged && !changed.has(path)) {
-    errors.push(`${skill} must change because governed files changed: ${prefixes.join(', ')}`);
-  }
 }
+for (const { skill, prefixes } of requiredSkillChanges(changed))
+  errors.push(`${skill} must change because governed files changed: ${prefixes.join(', ')}`);
 
 const skillCount = readdirSync('.codex/skills', { withFileTypes: true }).filter((entry) =>
   entry.isDirectory(),

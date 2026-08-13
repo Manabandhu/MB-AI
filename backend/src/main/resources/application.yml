@@ -43,3 +43,7 @@ management:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:19006}
+  automation:
+    github:
+      repository: ${AUTOMATION_GITHUB_REPOSITORY:}
+      token: ${AUTOMATION_GITHUB_TOKEN:}

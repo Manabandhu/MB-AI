@@ -15,6 +15,7 @@ Use the narrowest applicable skills:
 - Analytics: `manabandhu-analytics`
 - CI/CD and releases: `manabandhu-deployments`
 - Logs, metrics, traces, alerts: `manabandhu-observability`
+- Super Admin and automation control plane: `manabandhu-super-admin`
 
 Run `pnpm verify:skills` before handing off changes. Contract changes must also run `pnpm verify:contracts`.
 

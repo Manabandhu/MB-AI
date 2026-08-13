@@ -1,5 +1,6 @@
 import { color as colors } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'expo-router';
 import {
   ActivityIndicator,
   Platform,
@@ -71,6 +72,7 @@ export default function HomeScreen() {
           <Pressable accessibilityRole="button" style={styles.secondaryButton}>
             <Text style={styles.secondaryButtonText}>I already have an account</Text>
           </Pressable>
+          <Link href="/admin" style={styles.adminLink}>Super Admin</Link>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -130,4 +132,5 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   secondaryButton: { alignItems: 'center', minHeight: 48, justifyContent: 'center' },
   secondaryButtonText: { color: colors.primary, fontSize: 15, fontWeight: '700' },
+  adminLink: { alignSelf: 'center', color: colors.muted, fontSize: 13, padding: 10 },
 });

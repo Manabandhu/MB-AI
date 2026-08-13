@@ -1,19 +1,28 @@
 package com.manabandhu.backend.config;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
@@ -26,8 +35,32 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/info").permitAll()
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {}))
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .build();
+    }
+
+    @Bean
+    JwtAuthenticationConverter jwtAuthenticationConverter() {
+        var scopeConverter = new JwtGrantedAuthoritiesConverter();
+        var converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            var scopeAuthorities = scopeConverter.convert(jwt).stream();
+            var metadata = jwt.getClaimAsMap("app_metadata");
+            var roles = metadata == null ? List.of() : rolesFrom(metadata);
+            Stream<GrantedAuthority> roleAuthorities = roles.stream()
+                    .map(role -> "ROLE_" + role.toUpperCase(Locale.ROOT))
+                    .map(SimpleGrantedAuthority::new);
+            return Stream.concat(scopeAuthorities, roleAuthorities).distinct().toList();
+        });
+        converter.setPrincipalClaimName("sub");
+        return converter;
+    }
+
+    private static List<String> rolesFrom(Map<String, Object> metadata) {
+        var value = metadata.get("roles");
+        if (value instanceof List<?> roles) return roles.stream().map(String::valueOf).toList();
+        if (value instanceof String role && !role.isBlank()) return List.of(role);
+        return List.of();
     }
 
     @Bean

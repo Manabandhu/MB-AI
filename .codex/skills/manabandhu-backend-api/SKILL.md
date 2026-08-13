@@ -1,6 +1,6 @@
 ---
 name: manabandhu-backend-api
-description: Maintain ManaBandhu's Java 25 Spring Boot modular backend, including REST, GraphQL, security, persistence, migrations, health endpoints, and extraction-ready module boundaries. Use for any change under apps/backend or backend-facing service logic.
+description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, including REST, GraphQL, security, persistence, migrations, health endpoints, automation control plane, and extraction-ready module boundaries. Use for any change under backend or backend-facing service logic.
 ---
 
 # Backend API
@@ -13,4 +13,3 @@ description: Maintain ManaBandhu's Java 25 Spring Boot modular backend, includin
 6. Add tests for authorization, validation, failure behavior, and persistence boundaries.
 7. Run Maven tests on Java 25.
 8. Update this skill when backend structure, dependencies, security, contracts, or commands change.
-

@@ -22,7 +22,7 @@ ManaBandhu is an adaptive community platform built as a governed monorepo. Its c
 - `packages/design-system`: cross-platform tokens and adaptive breakpoints
 - `infra/deployments`: separate native, web, and backend delivery boundaries
 - `infra/observability`: logs, metrics, traces, SLOs, alerts, and runbook boundary
-- `apps/future/watch` and `apps/future/tv`: future shells with no current runtime dependencies
+- `frontend/future/watch` and `frontend/future/tv`: future shells with no current runtime dependencies
 
 Architecture is documented in `docs/architecture/platform.md` and its ADRs.
 
@@ -51,11 +51,11 @@ pnpm install
 pnpm dev:mobile
 ```
 
-For Android emulators, replace `localhost` in `apps/mobile/.env.local` with `10.0.2.2`. For a physical device, use the development machine's LAN address.
+For Android emulators, replace `localhost` in `frontend/universal/.env.local` with `10.0.2.2`. For a physical device, use the development machine's LAN address.
 
 ## Start the backend
 
-Copy `apps/backend/.env.example` to a local secret file or export the values in your shell. The database password must never be committed.
+Copy `backend/.env.example` to a local secret file or export the values in your shell. The database password must never be committed.
 
 ```bash
 export DATABASE_PASSWORD='your-supabase-database-password'

@@ -43,6 +43,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommunityPost'
+  /admin/automations:
+    get:
+      operationId: listAutomationOperations
+      description: Requires the trusted SUPER_ADMIN role from JWT app_metadata.
+      responses:
+        '200':
+          description: Available automation operations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AutomationOperation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/automations/{operationId}/executions:
+    post:
+      operationId: executeAutomation
+      description: Dispatches an allow-listed workflow. High-impact operations require confirmation.
+      parameters:
+        - name: operationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExecuteAutomationInput' }
+      responses:
+        '202':
+          description: Automation dispatch accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutomationExecution' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Explicit confirmation is required }
+        '503': { description: Automation provider is not configured }
 components:
   securitySchemes:
     bearerAuth:
@@ -72,5 +110,40 @@ components:
             id: { type: string, format: uuid }
             ownerId: { type: string, format: uuid }
             createdAt: { type: string, format: date-time }
+    AutomationOperation:
+      type: object
+      additionalProperties: false
+      required: [id, label, description, category, risk, requiresConfirmation, configured]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        description: { type: string }
+        category: { type: string }
+        risk: { type: string, enum: [low, medium, high, critical] }
+        requiresConfirmation: { type: boolean }
+        configured: { type: boolean }
+    ExecuteAutomationInput:
+      type: object
+      additionalProperties: false
+      required: [environment, ref, reason, confirmed]
+      properties:
+        environment: { type: string, enum: [development, staging, production] }
+        ref: { type: string, minLength: 1, maxLength: 200 }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+        confirmed: { type: boolean }
+    AutomationExecution:
+      type: object
+      additionalProperties: false
+      required: [executionId, operationId, status, environment, ref, requestedAt]
+      properties:
+        executionId: { type: string, format: uuid }
+        operationId: { type: string }
+        status: { type: string, enum: [accepted] }
+        environment: { type: string }
+        ref: { type: string }
+        requestedAt: { type: string, format: date-time }
+  responses:
+    Unauthorized: { description: Authentication is required }
+    Forbidden: { description: SUPER_ADMIN role is required }
 security:
   - bearerAuth: []

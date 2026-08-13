@@ -9,8 +9,9 @@ ManaBandhu is a multi-surface platform, not a phone-only application.
 
 ## System boundaries
 
-- `apps/mobile`: adaptive Expo shell and native/web experiences.
-- `apps/backend`: Spring Boot modular monolith exposing authenticated REST and GraphQL.
+- `frontend/universal`: adaptive Expo shell for native and web experiences.
+- `frontend/future`: reserved watch and TV application shells.
+- `backend`: Spring Boot modular monolith exposing authenticated REST and GraphQL plus the audited automation control plane.
 - `packages/api-contracts`: canonical HTTP, GraphQL, and event schemas.
 - `packages/design-system`: platform-neutral tokens and adaptive layout rules.
 - `services`: extraction-ready AI, chat, notification, and analytics boundaries.

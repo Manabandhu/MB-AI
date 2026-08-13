@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Super Admin"
+  short_description: "Maintain the secure automation control plane"
+  default_prompt: "Use $manabandhu-super-admin to update audited Super Admin operations safely."

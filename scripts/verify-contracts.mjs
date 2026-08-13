@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 const canonical = readFileSync('packages/api-contracts/graphql/schema.graphqls', 'utf8');
-const runtime = readFileSync('apps/backend/src/main/resources/graphql/schema.graphqls', 'utf8');
+const runtime = readFileSync('backend/src/main/resources/graphql/schema.graphqls', 'utf8');
 
 if (canonical !== runtime) {
   console.error(
