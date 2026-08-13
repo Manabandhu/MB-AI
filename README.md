@@ -102,4 +102,6 @@ pnpm verify
 pnpm review:history
 ```
 
+Pull requests run independently named CI pipelines for Frontend, Backend, API Contracts, Governance, Dependency Review, Security Analysis, and Workflow Validation. Path filters avoid unrelated builds; security analysis also runs weekly.
+
 The Stitch source screens and catalog remain under `stitch/` for implementation reference.

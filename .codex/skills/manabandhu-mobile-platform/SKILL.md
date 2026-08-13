@@ -12,6 +12,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 5. Keep the Expo workspace directly under `frontend`. Keep routes thin and organize every business capability under `frontend/src/modules/<module>`.
 6. Keep the restricted adaptive operations surface at `/admin`; it may request allow-listed operations but must never receive infrastructure credentials or arbitrary execution capability.
 7. Address the workspace as `@manabandhu/frontend`; validate with `pnpm lint` and an Expo export for affected platforms.
-8. Do not create watch or TV placeholder folders until those targets are activated.
-9. Use Zustand 5 for shared client state; dependency resolutions must satisfy the workspace supply-chain release-age policy.
-10. Update this skill when targets, breakpoints, routing, commands, dependencies, or invariants change.
+8. Keep Expo export output (`dist/`, `dist-*`, and `web-build/`) ignored; CI uploads build artifacts rather than committing them.
+9. Do not create watch or TV placeholder folders until those targets are activated.
+10. Use Zustand 5 for shared client state; dependency resolutions must satisfy the workspace supply-chain release-age policy.
+11. Update this skill when targets, breakpoints, routing, commands, dependencies, or invariants change.
