@@ -1,0 +1,26 @@
+name: deploy-backend
+on:
+  workflow_dispatch:
+    inputs:
+      environment: { description: Target environment, required: true, type: environment }
+      reason: { description: Operator reason, required: true, type: string }
+      actor_id: { description: Requesting user, required: true, type: string }
+      execution_id: { description: Audit correlation ID, required: true, type: string }
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '25', cache: maven }
+      - run: ./mvnw verify
+        working-directory: backend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-${{ inputs.execution_id }}
+          path: backend/target/*.jar
+      - name: Deploy through configured provider
+        run: test -n "$BACKEND_DEPLOY_COMMAND" && sh -c "$BACKEND_DEPLOY_COMMAND"
+        env:
+          BACKEND_DEPLOY_COMMAND: ${{ secrets.BACKEND_DEPLOY_COMMAND }}

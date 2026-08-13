@@ -6,6 +6,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -22,7 +23,9 @@ class AutomationService {
     private static final Logger log = LoggerFactory.getLogger(AutomationService.class);
 
     private final AutomationCatalog catalog;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
     private final String repository;
     private final String token;
 
@@ -72,6 +75,7 @@ class AutomationService {
                 .header("Authorization", "Bearer " + token)
                 .header("X-GitHub-Api-Version", "2022-11-28")
                 .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(20))
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
         try {

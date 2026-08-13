@@ -1,0 +1,28 @@
+name: deploy-web
+on:
+  workflow_dispatch:
+    inputs:
+      environment: { description: Target environment, required: true, type: environment }
+      reason: { description: Operator reason, required: true, type: string }
+      actor_id: { description: Requesting user, required: true, type: string }
+      execution_id: { description: Audit correlation ID, required: true, type: string }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.21.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter mobile exec expo export --platform web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-${{ inputs.execution_id }}
+          path: frontend/universal/dist
+      - name: Deploy through configured provider
+        run: test -n "$WEB_DEPLOY_COMMAND" && sh -c "$WEB_DEPLOY_COMMAND"
+        env:
+          WEB_DEPLOY_COMMAND: ${{ secrets.WEB_DEPLOY_COMMAND }}

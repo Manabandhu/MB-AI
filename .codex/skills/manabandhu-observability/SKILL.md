@@ -11,5 +11,5 @@ description: Maintain ManaBandhu observability across structured logs, OpenTelem
 4. Use structured events and bounded labels. Redact tokens, secrets, message bodies, prompts, and sensitive profile values at source.
 5. Add dashboards, actionable alerts, ownership, and runbooks with new critical paths.
 6. Test telemetry failure as non-fatal and verify redaction.
-7. Update this skill when telemetry schemas, tooling, SLOs, alerts, or paths change.
-
+7. Automation events must carry operation, actor, environment, ref, and execution ID. Never log tokens, workflow secrets, or request authorization headers.
+8. Update this skill when telemetry schemas, tooling, SLOs, alerts, or paths change.

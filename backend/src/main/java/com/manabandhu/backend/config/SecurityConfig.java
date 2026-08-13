@@ -44,7 +44,8 @@ public class SecurityConfig {
         var scopeConverter = new JwtGrantedAuthoritiesConverter();
         var converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            var scopeAuthorities = scopeConverter.convert(jwt).stream();
+            var convertedScopes = scopeConverter.convert(jwt);
+            var scopeAuthorities = convertedScopes == null ? Stream.<GrantedAuthority>empty() : convertedScopes.stream();
             var metadata = jwt.getClaimAsMap("app_metadata");
             var roles = metadata == null ? List.of() : rolesFrom(metadata);
             Stream<GrantedAuthority> roleAuthorities = roles.stream()

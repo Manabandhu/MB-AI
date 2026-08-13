@@ -72,7 +72,9 @@ export default function HomeScreen() {
           <Pressable accessibilityRole="button" style={styles.secondaryButton}>
             <Text style={styles.secondaryButtonText}>I already have an account</Text>
           </Pressable>
-          <Link href="/admin" style={styles.adminLink}>Super Admin</Link>
+          <Link href="/admin" style={styles.adminLink}>
+            Super Admin
+          </Link>
         </View>
       </ScrollView>
     </SafeAreaView>

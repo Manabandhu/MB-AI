@@ -1,0 +1,17 @@
+name: ai-evaluations
+on:
+  workflow_dispatch:
+    inputs:
+      environment: { description: Evaluation environment, required: true, type: environment }
+      reason: { description: Operator reason, required: true, type: string }
+      actor_id: { description: Requesting user, required: true, type: string }
+      execution_id: { description: Audit correlation ID, required: true, type: string }
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require evaluation harness before dispatch
+        run: test -x services/ai-orchestrator/scripts/evaluate
+      - run: services/ai-orchestrator/scripts/evaluate

@@ -28,3 +28,7 @@ Begin as a modular monolith. Extract a service only when scaling, isolation, sec
 - AI output is untrusted until policy, authorization, privacy, moderation, and audit checks complete.
 - Analytics events contain no message bodies, secrets, access tokens, or unnecessary personal data.
 - Every production request carries correlation and trace identifiers.
+
+## Operations control plane
+
+The adaptive `/admin` route is the single operator surface for quality review, releases, migrations, AI evaluations, and recovery. The browser holds no infrastructure credentials. Spring authorizes a trusted `SUPER_ADMIN` role, maps an operation ID to an allow-listed workflow, records correlation fields, and dispatches GitHub Actions. GitHub Environments provide the final secret and human-approval boundary.

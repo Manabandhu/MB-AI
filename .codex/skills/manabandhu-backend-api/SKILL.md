@@ -10,6 +10,7 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 3. Validate Supabase JWTs and derive user identity from the verified subject. Never trust client-supplied owner IDs.
 4. Use Flyway for schema evolution, bounded queries, explicit indexes, UTC timestamps, validation, and transactions.
 5. Keep REST under `/api/v1`; keep GraphQL schema compatible with the canonical contract.
-6. Add tests for authorization, validation, failure behavior, and persistence boundaries.
-7. Run Maven tests on Java 25.
-8. Update this skill when backend structure, dependencies, security, contracts, or commands change.
+6. Privileged automation lives in the `admin` package: require the trusted `SUPER_ADMIN` role, map stable operation IDs to an allow-list, require reasons/confirmations, and keep provider credentials server-side.
+7. Add tests for authorization, validation, failure behavior, and persistence boundaries.
+8. Run Maven tests on Java 25.
+9. Update this skill when backend structure, dependencies, security, contracts, or commands change.

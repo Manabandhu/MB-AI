@@ -11,6 +11,7 @@ ManaBandhu is an adaptive community platform built as a governed monorepo. Its c
 - APIs: versioned REST under `/api/v1` and GraphQL at `/graphql`
 - Database: Supabase Postgres 17 with Flyway migrations
 - Quality: pnpm workspaces, Biome, TypeScript strict mode, Maven tests
+- Operations: role-gated Super Admin control plane and protected GitHub Actions workflows
 
 ## Platform modules
 
@@ -30,7 +31,7 @@ Architecture is documented in `docs/architecture/platform.md` and its ADRs.
 
 Every governed module has a repo-local skill under `.codex/skills`. Root `AGENTS.md` tells AI agents which skill to load. Any behavioral, dependency, contract, path, or invariant change must update the matching `SKILL.md` in the same commit.
 
-`pnpm verify:skills` enforces that coupling locally and in CI. `pnpm verify:contracts` ensures the canonical and runtime GraphQL schemas remain identical.
+`pnpm verify:skills` enforces that coupling locally and in CI. `pnpm review:commit` checks staged files, while `pnpm review:history` identifies the exact commit that introduced skill drift. `pnpm verify:contracts` ensures the canonical and runtime GraphQL schemas remain identical.
 
 ## Requirements
 
@@ -48,7 +49,7 @@ The local mobile environment is already connected to the `manabandhu` Supabase p
 ```bash
 corepack enable
 pnpm install
-pnpm dev:mobile
+pnpm dev:frontend
 ```
 
 For Android emulators, replace `localhost` in `frontend/universal/.env.local` with `10.0.2.2`. For a physical device, use the development machine's LAN address.
@@ -80,6 +81,12 @@ curl -H "Authorization: Bearer $ACCESS_TOKEN" \
 
 GraphQL supports `communityPosts` and `createCommunityPost`. Set `GRAPHIQL_ENABLED=true` locally to use `/graphiql`.
 
+## Super Admin automation
+
+The universal `/admin` route dispatches only backend allow-listed operations. Set `AUTOMATION_GITHUB_REPOSITORY=owner/repository` and a narrowly scoped `AUTOMATION_GITHUB_TOKEN` on the backend. Assign `SUPER_ADMIN` through trusted Supabase `app_metadata.roles`; never use user-editable metadata. Configure provider secrets and required reviewers in GitHub Environments before enabling production workflows.
+
+Install the versioned commit hook once with `pnpm hooks:install`. It rejects commits when governed module code is staged without its matching `SKILL.md` and validates API contracts.
+
 ## Database changes
 
 Flyway migration `V1__create_community_posts.sql` is checked in but has not been applied to the remote database. The backend applies it when started with valid database credentials. It enables RLS and revokes direct Data API access from `anon` and `authenticated`; access is mediated by the authenticated Spring API.
@@ -89,6 +96,8 @@ Flyway migration `V1__create_community_posts.sql` is checked in but has not been
 ```bash
 pnpm lint
 pnpm test
+pnpm verify
+pnpm review:history
 ```
 
 The Stitch source screens and catalog remain under `stitch/` for implementation reference.

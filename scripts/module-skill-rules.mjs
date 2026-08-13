@@ -19,7 +19,9 @@ export const moduleSkillRules = [
 export function requiredSkillChanges(files) {
   const changed = new Set(files);
   return moduleSkillRules
-    .filter(([, prefixes]) => [...changed].some((file) => prefixes.some((prefix) => file.startsWith(prefix))))
+    .filter(([, prefixes]) =>
+      [...changed].some((file) => prefixes.some((prefix) => file.startsWith(prefix))),
+    )
     .filter(([skill]) => !changed.has(`.codex/skills/${skill}/SKILL.md`))
     .map(([skill, prefixes]) => ({ skill, prefixes }));
 }

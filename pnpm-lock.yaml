@@ -12,7 +12,7 @@ importers:
         specifier: 2.5.8
         version: 2.5.8
 
-  apps/mobile:
+  frontend/universal:
     dependencies:
       '@expo/ui':
         specifier: ~57.0.10
@@ -4360,7 +4360,9 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 

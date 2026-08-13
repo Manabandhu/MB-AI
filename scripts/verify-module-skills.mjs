@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
-import { moduleSkillRules as rules, requiredSkillChanges } from './module-skill-rules.mjs';
+import { requiredSkillChanges, moduleSkillRules as rules } from './module-skill-rules.mjs';
 
 function gitLines(args) {
   try {

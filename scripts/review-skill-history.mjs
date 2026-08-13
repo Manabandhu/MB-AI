@@ -7,7 +7,9 @@ function git(args) {
 
 const base = process.env.SKILL_BASE_REF?.trim();
 const range = base ? `${base}..HEAD` : '-50';
-const commits = git(base ? ['rev-list', '--reverse', range] : ['rev-list', '--reverse', range, 'HEAD'])
+const commits = git(
+  base ? ['rev-list', '--reverse', range] : ['rev-list', '--reverse', range, 'HEAD'],
+)
   .split('\n')
   .filter(Boolean);
 const failures = [];

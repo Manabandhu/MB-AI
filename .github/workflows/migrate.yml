@@ -1,0 +1,20 @@
+name: migrate
+on:
+  workflow_dispatch:
+    inputs:
+      environment: { description: Target database, required: true, type: environment }
+      reason: { description: Operator reason, required: true, type: string }
+      actor_id: { description: Requesting user, required: true, type: string }
+      execution_id: { description: Audit correlation ID, required: true, type: string }
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply versioned migrations
+        run: docker run --rm -v "$PWD/backend/src/main/resources/db/migration:/flyway/sql:ro" flyway/flyway:11 -url="$DATABASE_URL" -user="$DATABASE_USER" -password="$DATABASE_PASSWORD" migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_USER: ${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
