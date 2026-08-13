@@ -5,17 +5,26 @@ import { useEffect } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fallbackWelcomeFlow, getWelcomeFlow } from '@/modules/foundation/api';
+import { getWelcomeFlow } from '@/modules/foundation/api';
+import {
+  fallbackWelcomeFlow,
+  foundationQueryKeys,
+  foundationRoutes,
+  welcomeFlowTiming,
+} from '@/modules/foundation/foundationConstants';
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function SplashScreen() {
   const layout = useAdaptiveLayout();
-  const welcome = useQuery({ queryKey: ['foundation', 'welcome'], queryFn: getWelcomeFlow });
+  const welcome = useQuery({ queryKey: foundationQueryKeys.welcome, queryFn: getWelcomeFlow });
   const content = welcome.data?.splash ?? fallbackWelcomeFlow.splash;
 
   useEffect(() => {
-    const timer = setTimeout(() => router.replace('/welcome'), 1400);
+    const timer = setTimeout(
+      () => router.replace(foundationRoutes.welcome),
+      welcomeFlowTiming.splashDurationMs,
+    );
     return () => clearTimeout(timer);
   }, []);
 

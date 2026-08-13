@@ -17,5 +17,6 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 10. Use Zustand 5 for shared client state; dependency resolutions must satisfy the workspace supply-chain release-age policy.
 11. Treat `frontend/src/modules/screen-catalog.ts` as the canonical screen and route inventory. Keep Expo Router entries thin and use module-qualified IDs for repeated screen names.
 12. The public launch flow begins at `/`, continues through `/welcome`, and keeps the backend-status home surface at `/home`.
-13. Keep Expo SDK 54 aligned through `expo install --fix`: React Native 0.81, React 19.1, React Native Web 0.21, and Node 20.19.4 or newer. Prefer a development build when a current physical-iOS Expo Go no longer supports SDK 54.
-14. Update this skill when targets, breakpoints, routing, commands, dependencies, or invariants change.
+13. Keep reusable foundation constants, typed welcome API shapes, step helpers, and repeated welcome UI under `frontend/src/modules/foundation` rather than in Expo Router files.
+14. Keep Expo SDK 54 aligned through `expo install --fix`: React Native 0.81, React 19.1, React Native Web 0.21, and Node 20.19.4 or newer. Prefer a development build when a current physical-iOS Expo Go no longer supports SDK 54.
+15. Update this skill when targets, breakpoints, routing, commands, dependencies, or invariants change.

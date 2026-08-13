@@ -10,4 +10,5 @@ description: Maintain ManaBandhu foundation journeys including splash, welcome, 
 3. Delegate authentication, notifications, and business data to their owning modules; foundation may aggregate but not duplicate ownership.
 4. Keep screen IDs and routes unique and module-qualified. Catalog entries describe scope, not implementation status.
 5. The root route `/` starts the public splash/welcome journey; the backend-status home screen is `/home`.
-6. Run frontend checks, Expo web export, and skill verification after changes.
+6. Keep foundation route/query keys and welcome fallback content in `frontend/src/modules/foundation/foundationConstants.ts`; keep welcome API shapes in `welcomeTypes.ts`, step helpers in `welcomeUtils.ts`, local imagery in `welcomeAssets.ts`, and repeated welcome UI in `components/`.
+7. Run frontend checks, Expo web export, and skill verification after changes.

@@ -13,10 +13,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getApiHealth } from '@/lib/api';
+import { foundationQueryKeys, foundationRoutes } from '@/modules/foundation/foundationConstants';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export default function HomeScreen() {
-  const health = useQuery({ queryKey: ['api-health'], queryFn: getApiHealth });
+  const health = useQuery({ queryKey: foundationQueryKeys.apiHealth, queryFn: getApiHealth });
   const layout = useAdaptiveLayout();
 
   return (
@@ -66,7 +67,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          <Link href="/splash" asChild>
+          <Link href={foundationRoutes.splash} asChild>
             <Pressable accessibilityRole="button" style={styles.primaryButton}>
               <Text style={styles.primaryButtonText}>Replay welcome flow</Text>
             </Pressable>

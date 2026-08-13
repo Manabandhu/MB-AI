@@ -5,18 +5,31 @@ import { useMemo, useRef, useState } from 'react';
 import { Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fallbackWelcomeFlow, getWelcomeFlow } from '@/modules/foundation/api';
+import { getWelcomeFlow } from '@/modules/foundation/api';
+import { PillButton } from '@/modules/foundation/components/PillButton';
+import { ProgressDots } from '@/modules/foundation/components/ProgressDots';
+import {
+  fallbackWelcomeFlow,
+  foundationQueryKeys,
+  foundationRoutes,
+} from '@/modules/foundation/foundationConstants';
 import { welcomeImageSource } from '@/modules/foundation/welcomeAssets';
+import {
+  clampWelcomeStepIndex,
+  getWelcomeSteps,
+  isFinalWelcomeStep,
+} from '@/modules/foundation/welcomeUtils';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function WelcomeScreen() {
   const [stepIndex, setStepIndex] = useState(0);
   const layout = useAdaptiveLayout();
-  const welcome = useQuery({ queryKey: ['foundation', 'welcome'], queryFn: getWelcomeFlow });
+  const welcome = useQuery({ queryKey: foundationQueryKeys.welcome, queryFn: getWelcomeFlow });
   const flow = welcome.data ?? fallbackWelcomeFlow;
-  const steps = flow.steps.length ? flow.steps : fallbackWelcomeFlow.steps;
-  const step = steps[Math.min(stepIndex, steps.length - 1)];
-  const isFinalStep = stepIndex === steps.length - 1;
+  const steps = getWelcomeSteps(flow);
+  const safeStepIndex = clampWelcomeStepIndex(stepIndex, steps.length);
+  const step = steps[safeStepIndex];
+  const isFinalStep = isFinalWelcomeStep(safeStepIndex, steps.length);
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gesture) =>
@@ -45,14 +58,14 @@ export function WelcomeScreen() {
 
   function goToNextStep() {
     if (isFinalStep) {
-      router.replace('/home');
+      router.replace(foundationRoutes.home);
       return;
     }
-    setStepIndex((current) => Math.min(current + 1, steps.length - 1));
+    setStepIndex((current) => clampWelcomeStepIndex(current + 1, steps.length));
   }
 
   function goToPreviousStep() {
-    setStepIndex((current) => Math.max(current - 1, 0));
+    setStepIndex((current) => clampWelcomeStepIndex(current - 1, steps.length));
   }
 
   return (
@@ -90,34 +103,16 @@ export function WelcomeScreen() {
           </View>
 
           <View style={styles.footer}>
-            <View
-              accessibilityLabel={`Progress: Step ${stepIndex + 1} of ${steps.length}`}
-              style={styles.progress}
-            >
-              {steps.map((item, index) => (
-                <View
-                  key={item.id}
-                  style={[styles.progressDot, index === stepIndex && styles.progressDotActive]}
-                />
-              ))}
-            </View>
+            <ProgressDots count={steps.length} index={safeStepIndex} />
 
-            <Pressable
-              accessibilityRole="button"
-              onPress={goToNextStep}
-              style={styles.primaryButton}
-            >
-              <Text style={styles.primaryText}>{step.actionLabel}</Text>
-            </Pressable>
+            <PillButton label={step.actionLabel} onPress={goToNextStep} />
 
             {step.secondaryActionLabel ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.replace('/home')}
-                style={styles.secondaryButton}
-              >
-                <Text style={styles.secondaryText}>{step.secondaryActionLabel}</Text>
-              </Pressable>
+              <PillButton
+                label={step.secondaryActionLabel}
+                onPress={() => router.replace(foundationRoutes.home)}
+                variant="secondary"
+              />
             ) : null}
 
             {isFinalStep ? (
@@ -178,28 +173,5 @@ const styles = StyleSheet.create({
   body: { color: colors.muted, fontSize: 17, lineHeight: 27, maxWidth: 430, textAlign: 'center' },
   offlineNote: { color: colors.teal, fontSize: 12, fontWeight: '700' },
   footer: { gap: space.x4, paddingBottom: space.x4 },
-  progress: { alignItems: 'center', flexDirection: 'row', gap: space.x2, justifyContent: 'center' },
-  progressDot: { backgroundColor: colors.border, borderRadius: 4, height: 8, width: 8 },
-  progressDotActive: { backgroundColor: colors.primary, width: 32 },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: space.x2,
-    justifyContent: 'center',
-    minHeight: 56,
-  },
-  primaryText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  secondaryButton: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.primarySoft,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  secondaryText: { color: colors.primary, fontSize: 15, fontWeight: '800' },
   privacyText: { color: colors.muted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
 });
