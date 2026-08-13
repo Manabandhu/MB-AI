@@ -12,6 +12,37 @@ const mobileStorage = {
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
+function ensureStaticRenderWebSocket() {
+  const target = globalThis as typeof globalThis & { WebSocket?: typeof WebSocket };
+  if (target.WebSocket) return;
+
+  class StaticRenderWebSocket extends EventTarget {
+    static readonly CONNECTING = 0;
+    static readonly OPEN = 1;
+    static readonly CLOSING = 2;
+    static readonly CLOSED = 3;
+
+    readonly binaryType = 'blob';
+    readonly bufferedAmount = 0;
+    readonly extensions = '';
+    readonly protocol = '';
+    readonly readyState = StaticRenderWebSocket.CLOSED;
+    readonly url: string;
+
+    constructor(url: string | URL) {
+      super();
+      this.url = String(url);
+    }
+
+    close() {}
+    send() {}
+  }
+
+  target.WebSocket = StaticRenderWebSocket as unknown as typeof WebSocket;
+}
+
+ensureStaticRenderWebSocket();
+
 export const supabase = createClient(env.supabaseUrl, env.supabasePublishableKey, {
   auth: {
     storage: Platform.OS === 'web' ? globalThis.localStorage : mobileStorage,

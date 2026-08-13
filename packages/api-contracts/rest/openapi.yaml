@@ -27,6 +27,74 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WelcomeFlow'
+  /foundation/screens/{screenId}:
+    get:
+      operationId: getFoundationScreenContent
+      security: []
+      parameters:
+        - name: screenId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [onboarding, explore, search, saved, profile, settings]
+      responses:
+        '200':
+          description: Public foundation screen content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogScreenContent'
+        '404': { description: Unknown screen }
+  /notifications/inbox:
+    get:
+      operationId: getNotificationsInbox
+      security: []
+      responses:
+        '200':
+          description: Demo-safe in-app notification inbox content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogScreenContent'
+  /rooms/screens/{screenId}:
+    get:
+      operationId: getRoomsScreenContent
+      security: []
+      parameters:
+        - name: screenId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [home, search, map, filters, saved, my-listings, create-listing, details, edit]
+      responses:
+        '200':
+          description: Demo-safe room discovery screen content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogScreenContent'
+        '404': { description: Unknown screen }
+  /rides/screens/{screenId}:
+    get:
+      operationId: getRidesScreenContent
+      security: []
+      parameters:
+        - name: screenId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [home, search, map, filters, offer]
+      responses:
+        '200':
+          description: Demo-safe ride discovery screen content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogScreenContent'
+        '404': { description: Unknown screen }
   /posts:
     get:
       operationId: listCommunityPosts
@@ -137,6 +205,40 @@ components:
         imageUrl: { type: string, format: uri }
         actionLabel: { type: string, minLength: 1 }
         secondaryActionLabel: { type: string }
+    CatalogScreenContent:
+      type: object
+      additionalProperties: false
+      required: [title, subtitle, eyebrow, metrics, items]
+      properties:
+        title: { type: string, minLength: 1 }
+        subtitle: { type: string, minLength: 1 }
+        eyebrow: { type: string, minLength: 1 }
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogMetric'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogItem'
+    CatalogMetric:
+      type: object
+      additionalProperties: false
+      required: [label, value]
+      properties:
+        label: { type: string, minLength: 1 }
+        value: { type: string, minLength: 1 }
+    CatalogItem:
+      type: object
+      additionalProperties: false
+      required: [id, title, body]
+      properties:
+        id: { type: string, minLength: 1 }
+        title: { type: string, minLength: 1 }
+        body: { type: string, minLength: 1 }
+        meta: { type: string }
+        route: { type: string }
+        status: { type: string }
     CreatePostInput:
       type: object
       additionalProperties: false

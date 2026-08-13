@@ -49,4 +49,63 @@ public class FoundationContentService {
                                 "Get Started",
                                 "Sign In")));
     }
+
+    CatalogScreenContent screen(String screenId) {
+        return switch (screenId) {
+            case "onboarding" -> new CatalogScreenContent(
+                    "Set up your ManaBandhu space",
+                    "Choose your city, interests, and safety preferences so the app feels useful from day one.",
+                    "Getting Started",
+                    List.of(new CatalogMetric("Setup time", "2 min"), new CatalogMetric("Privacy steps", "3")),
+                    List.of(
+                            item("location", "Pick your local area", "Use a broad neighborhood or city so discovery works without exposing precise location.", "Location privacy first", null),
+                            item("interests", "Select what you need", "Rooms, rides, jobs, events, community help, safety, and utilities can be tuned any time.", "Personalized modules", null)));
+            case "explore" -> new CatalogScreenContent(
+                    "Everything nearby, organized",
+                    "Jump into rooms, rides, jobs, events, services, and community posts from one discovery surface.",
+                    "Explore",
+                    List.of(new CatalogMetric("Modules", "9"), new CatalogMetric("Saved searches", "4")),
+                    List.of(
+                            item("rooms", "Rooms", "Find shared housing and trusted listings.", "Open rooms", "/rooms"),
+                            item("rides", "Rides", "Offer or request safe local and airport rides.", "Open rides", "/rides"),
+                            item("notifications", "Notifications", "See updates from your communities and saved searches.", "Open inbox", "/notifications")));
+            case "search" -> new CatalogScreenContent(
+                    "Search across ManaBandhu",
+                    "A unified search home for listings, rides, people, guides, events, and help requests.",
+                    "Search",
+                    List.of(new CatalogMetric("Categories", "12"), new CatalogMetric("Recent searches", "5")),
+                    List.of(
+                            item("query", "Start with a need", "Try room near Plano, airport ride, or job referral.", "Smart suggestions", null),
+                            item("filters", "Refine fast", "Filter by distance, price, availability, trust signals, and module.", "Cross-module filters", null)));
+            case "saved" -> new CatalogScreenContent(
+                    "Your saved things",
+                    "Saved rooms, rides, events, jobs, marketplace items, and resources live in one calm place.",
+                    "Saved",
+                    List.of(new CatalogMetric("Saved items", "18"), new CatalogMetric("Updated today", "6")),
+                    List.of(
+                            item("room", "Sunny room in Irving", "Available next month with verified host notes.", "Room", "/rooms/demo-room-1"),
+                            item("ride", "DFW airport ride", "Saturday morning ride with two seats left.", "Ride", null)));
+            case "profile" -> new CatalogScreenContent(
+                    "Your community profile",
+                    "Manage your visible name, trust signals, interests, and the ways others can safely contact you.",
+                    "Profile",
+                    List.of(new CatalogMetric("Profile strength", "72%"), new CatalogMetric("Trust checks", "2")),
+                    List.of(
+                            item("identity", "Identity and privacy", "Control your display name, pronouns, language, and location precision.", "Editable", null),
+                            item("activity", "Recent activity", "Your posts, listings, rides, saves, and community contributions.", "Private by default", null)));
+            case "settings" -> new CatalogScreenContent(
+                    "Preferences and safety",
+                    "Tune notifications, language, privacy, blocked users, security, and app appearance.",
+                    "Settings",
+                    List.of(new CatalogMetric("Notification groups", "5"), new CatalogMetric("Privacy controls", "8")),
+                    List.of(
+                            item("notifications", "Notification preferences", "Choose what reaches in-app, push, email, or SMS later.", "Review", "/notifications"),
+                            item("privacy", "Privacy and safety", "Manage blocked users, trusted contacts, and sensitive data choices.", "Protected", null)));
+            default -> throw new UnknownCatalogScreenException(screenId);
+        };
+    }
+
+    private static CatalogItem item(String id, String title, String body, String meta, String route) {
+        return new CatalogItem(id, title, body, meta, route, null);
+    }
 }

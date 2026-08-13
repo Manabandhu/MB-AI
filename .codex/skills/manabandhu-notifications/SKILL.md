@@ -8,6 +8,7 @@ description: Maintain ManaBandhu notifications across in-app inbox, mobile push,
 Frontend notification center, preferences, permissions, badges, and deep-link behavior belong to `frontend/src/modules/notifications`.
 
 The module owns the foundation-level Notifications screen even when it is linked from the global app shell.
+The first-batch inbox route `/notifications` uses `frontend/src/modules/notifications/screens/NotificationsInboxScreen.tsx` and the read-only demo endpoint `GET /api/v1/notifications/inbox`.
 
 1. Read `platform/notifications/MODULE.md` and the AsyncAPI contract.
 2. Emit versioned, idempotent notification requests; never call providers from business transactions.

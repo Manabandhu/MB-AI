@@ -32,6 +32,10 @@ public class SecurityConfig {
         var publicGetEndpoints = new String[] {
                 "/api/v1/health",
                 "/api/v1/foundation/welcome",
+                "/api/v1/foundation/screens/**",
+                "/api/v1/notifications/inbox",
+                "/api/v1/rooms/screens/**",
+                "/api/v1/rides/screens/**",
                 "/actuator/health/**"
         };
 

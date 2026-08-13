@@ -18,4 +18,9 @@ public class FoundationController {
     WelcomeFlow welcome() {
         return service.welcomeFlow();
     }
+
+    @GetMapping("/screens/{screenId}")
+    CatalogScreenContent screen(@org.springframework.web.bind.annotation.PathVariable String screenId) {
+        return service.screen(screenId);
+    }
 }
