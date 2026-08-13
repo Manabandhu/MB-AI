@@ -47,7 +47,7 @@ public class SecurityConfig {
             var convertedScopes = scopeConverter.convert(jwt);
             var scopeAuthorities = convertedScopes == null ? Stream.<GrantedAuthority>empty() : convertedScopes.stream();
             var metadata = jwt.getClaimAsMap("app_metadata");
-            var roles = metadata == null ? List.of() : rolesFrom(metadata);
+            List<String> roles = metadata == null ? List.of() : rolesFrom(metadata);
             Stream<GrantedAuthority> roleAuthorities = roles.stream()
                     .map(role -> "ROLE_" + role.toUpperCase(Locale.ROOT))
                     .map(SimpleGrantedAuthority::new);

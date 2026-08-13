@@ -87,6 +87,8 @@ The universal `/admin` route dispatches only backend allow-listed operations. Se
 
 Install the versioned commit hook once with `pnpm hooks:install`. It rejects commits when governed module code is staged without its matching `SKILL.md` and validates API contracts.
 
+VS Code uses the repository commit editor so an empty commit message is generated from staged areas. Generated and manually entered messages must use Conventional Commits and contain at most 20 words. Examples: `feat(frontend): add community profile module` or `fix(auth): preserve refreshed sessions`.
+
 ## Database changes
 
 Flyway migration `V1__create_community_posts.sql` is checked in but has not been applied to the remote database. The backend applies it when started with valid database credentials. It enables RLS and revokes direct Data API access from `anon` and `authenticated`; access is mediated by the authenticated Spring API.

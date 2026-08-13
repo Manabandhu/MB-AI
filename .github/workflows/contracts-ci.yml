@@ -1,0 +1,34 @@
+name: CI · API Contracts
+
+on:
+  pull_request:
+    paths:
+      - packages/api-contracts/**
+      - backend/src/main/resources/graphql/**
+      - scripts/verify-contracts.mjs
+      - .github/workflows/contracts-ci.yml
+  push:
+    branches: [main]
+    paths:
+      - packages/api-contracts/**
+      - backend/src/main/resources/graphql/**
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: Verify REST, GraphQL, and event contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Verify contract synchronization
+        run: node scripts/verify-contracts.mjs
+      - name: Parse contract documents
+        run: ruby -e "require 'yaml'; Dir['packages/api-contracts/**/*.{yaml,yml}'].each { |file| YAML.load_file(file); puts \"validated #{file}\" }"

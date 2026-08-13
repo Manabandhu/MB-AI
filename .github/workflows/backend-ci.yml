@@ -1,0 +1,45 @@
+name: CI · Backend
+
+on:
+  pull_request:
+    paths:
+      - backend/**
+      - packages/api-contracts/**
+      - .github/workflows/backend-ci.yml
+  push:
+    branches: [main]
+    paths:
+      - backend/**
+      - packages/api-contracts/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Compile, test, and package Spring Boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Verify backend
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+        working-directory: backend
+      - name: Upload backend package
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-${{ github.sha }}
+          path: backend/target/*.jar
+          if-no-files-found: error
+          retention-days: 7

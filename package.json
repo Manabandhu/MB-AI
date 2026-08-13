@@ -16,6 +16,8 @@
     "verify:skills": "node scripts/verify-module-skills.mjs",
     "verify": "pnpm lint && pnpm verify:contracts && pnpm verify:skills",
     "review:commit": "node scripts/review-commit.mjs",
+    "commit:message": "node scripts/generate-commit-message.mjs",
+    "commit:message:check": "node scripts/validate-commit-message.mjs",
     "review:history": "node scripts/review-skill-history.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "prepare": "pnpm hooks:install"
