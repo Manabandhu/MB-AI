@@ -1,5 +1,5 @@
-import { StitchAppShellScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { CommunityHomeScreen } from '@/modules/community/screens/CommunityHomeScreen';
 
 export default function CommunityRoute() {
-  return <StitchAppShellScreen kind="community" />;
+  return <CommunityHomeScreen />;
 }

@@ -1,5 +1,5 @@
-import { RoomsScreen } from '@/modules/rooms/screens/RoomsScreen';
+import { RoomDetailScreen } from '@/modules/rooms/screens/RoomDetailScreen';
 
 export default function RoomDetailsRoute() {
-  return <RoomsScreen screenId="details" />;
+  return <RoomDetailScreen />;
 }

@@ -1,3 +1,3 @@
-import { StitchWelcomeFlowScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { StitchWelcomeFlowScreen } from '@/modules/foundation/screens/StitchWelcomeFlowScreen';
 
 export default StitchWelcomeFlowScreen;

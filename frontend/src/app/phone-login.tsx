@@ -1,5 +1,5 @@
-import { StitchAuthScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { PhoneLoginScreen } from '@/modules/auth/screens/PhoneLoginScreen';
 
 export default function PhoneLoginRoute() {
-  return <StitchAuthScreen kind="phone" />;
+  return <PhoneLoginScreen />;
 }

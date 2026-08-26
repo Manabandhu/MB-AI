@@ -19,6 +19,83 @@ export type AutomationExecution = {
   requestedAt: string;
 };
 
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: string;
+};
+
+export type AdminReport = {
+  id: string;
+  type: string;
+  targetId: string;
+  targetType: string;
+  reporterName: string;
+  reason: string;
+  status: string;
+  createdAt: string;
+};
+
+export type AdminRoom = {
+  id: string;
+  title: string;
+  hostName: string;
+  status: string;
+  reported: boolean;
+  createdAt: string;
+};
+
+export type AdminRide = {
+  id: string;
+  from: string;
+  to: string;
+  driverName: string;
+  status: string;
+  reported: boolean;
+  createdAt: string;
+};
+
+export type AdminCommunityPost = {
+  id: string;
+  communityName: string;
+  authorName: string;
+  title: string;
+  status: string;
+  reported: boolean;
+  createdAt: string;
+};
+
+export type AdminJob = {
+  id: string;
+  title: string;
+  company: string;
+  status: string;
+  reported: boolean;
+  createdAt: string;
+};
+
+export type AdminEvent = {
+  id: string;
+  title: string;
+  organizer: string;
+  date: string;
+  status: string;
+  reported: boolean;
+  createdAt: string;
+};
+
+export type AuditLogEntry = {
+  id: string;
+  actor: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  createdAt: string;
+};
+
 async function responseJson<T>(response: Response): Promise<T> {
   if (response.ok) return response.json() as Promise<T>;
   const detail = await response.text();
@@ -39,4 +116,55 @@ export async function executeAutomation(
       body: JSON.stringify(input),
     }),
   );
+}
+
+export async function listUsers(): Promise<AdminUser[]> {
+  return responseJson(await apiFetch('/api/v1/admin/users'));
+}
+
+export async function getUser(id: string): Promise<AdminUser> {
+  return responseJson(await apiFetch(`/api/v1/admin/users/${encodeURIComponent(id)}`));
+}
+
+export async function updateUserStatus(input: { id: string; status: string }): Promise<AdminUser> {
+  return responseJson(
+    await apiFetch(`/api/v1/admin/users/${encodeURIComponent(input.id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: input.status }),
+    }),
+  );
+}
+
+export async function listReports(): Promise<AdminReport[]> {
+  return responseJson(await apiFetch('/api/v1/admin/reports'));
+}
+
+export async function resolveReport(id: string): Promise<AdminReport> {
+  return responseJson(
+    await apiFetch(`/api/v1/admin/reports/${encodeURIComponent(id)}/resolve`, { method: 'POST' }),
+  );
+}
+
+export async function listAdminRooms(): Promise<AdminRoom[]> {
+  return responseJson(await apiFetch('/api/v1/admin/rooms'));
+}
+
+export async function listAdminRides(): Promise<AdminRide[]> {
+  return responseJson(await apiFetch('/api/v1/admin/rides'));
+}
+
+export async function listAdminCommunityPosts(): Promise<AdminCommunityPost[]> {
+  return responseJson(await apiFetch('/api/v1/admin/community'));
+}
+
+export async function listAdminJobs(): Promise<AdminJob[]> {
+  return responseJson(await apiFetch('/api/v1/admin/jobs'));
+}
+
+export async function listAdminEvents(): Promise<AdminEvent[]> {
+  return responseJson(await apiFetch('/api/v1/admin/events'));
+}
+
+export async function listAuditLog(): Promise<AuditLogEntry[]> {
+  return responseJson(await apiFetch('/api/v1/admin/audit-log'));
 }

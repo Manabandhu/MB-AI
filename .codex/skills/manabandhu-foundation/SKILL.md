@@ -5,12 +5,85 @@ description: Maintain ManaBandhu foundation journeys including splash, welcome, 
 
 # Foundation
 
-1. Read `frontend/src/modules/foundation/MODULE.md`, `frontend/src/modules/screen-catalog.ts`, and relevant Stitch screens.
-2. Keep shell routes thin, adaptive, accessible, deep-linkable, and authorization-aware across native and web.
-3. Delegate authentication, notifications, and business data to their owning modules; foundation may aggregate but not duplicate ownership.
-4. Keep screen IDs and routes unique and module-qualified. Catalog entries describe scope, not implementation status.
-5. The root route `/` starts the public splash/welcome journey; the backend-status home screen is `/home`.
-6. Keep foundation routes and welcome step IDs in `frontend/src/modules/foundation/foundationConstants.ts`; keep local imagery in `welcomeAssets.ts`, shared controls in `frontend/src/modules/shared/ui`, and catalog-backed foundation screens in `catalogApi.ts`, `screenDataTypes.ts`, `foundationScreenFallbacks.ts`, and `screens/CatalogContentScreen.tsx`.
-7. Stitch screens 1-27 are implemented as native Expo screens in `frontend/src/modules/foundation/screens/StitchPrototypeScreens.tsx`, translated from local Stitch HTML rather than screenshot rendering. The old local `stitch/` export folder may be deleted before a fresh MCP export arrives. The Stitch splash route auto-advances to `/welcome` while staying tappable, temporary demo sign-in routes to `/home`, and repeated buttons/icons/inputs should use Gluestack or `frontend/src/modules/shared/ui`.
-8. Foundation home and catalog screens must connect forward into onboarding, explore, search, saved, notifications, profile, settings, rooms, rides, chat, community, and auth routes without requiring manual URL entry. Explore uses a super-app grouped service grid for many current/future modules; route unavailable future-module tiles to `/search` until their module routes exist.
-9. Run frontend checks, Expo web export, and skill verification after changes.
+## Module Purpose and Ownership
+
+Owns the app shell, public onboarding journey, home/explore/search/saved/profile/settings screens, and the canonical screen catalog. Foundation aggregates module tiles and deep-links into business modules but does not duplicate their ownership.
+
+## Route Inventory
+
+| Route | Screen Component | Type | States |
+|---|---|---|---|
+| `/` | `StitchSplashScreen` | shell | loading |
+| `/welcome` | `StitchWelcomeFlowScreen` | onboarding | normal |
+| `/onboarding/*` | `StitchOnboardingScreen` | form | normal, success, permission |
+| `/home` | `StitchAppShellScreen` (kind=`home`) | shell | loading, empty, error |
+| `/explore` | `StitchAppShellScreen` (kind=`explore`) | catalog | loading, empty, error |
+| `/search` | `SearchScreen` | form | loading, empty, error |
+| `/saved` | `SavedScreen` | list | loading, empty, error |
+| `/profile` | `StitchAppShellScreen` (kind=`profile`) | detail | loading, error |
+| `/settings` | `SettingsScreen` | settings | normal |
+
+## Component Inventory
+
+- `StitchSplashScreen` - brand splash with auto-advance
+- `StitchWelcomeFlowScreen` - welcome carousel and entry points
+- `StitchOnboardingScreen` - multi-step onboarding with progress
+- `StitchAppShellScreen` - adaptive shell with tab bar, header, and module shells
+- `SearchScreen` - global search with filter chips
+- `SavedScreen` - cross-module saved aggregation
+- `SettingsScreen` - app preferences and account settings
+- `CatalogContentScreen` - generic catalog screen driven by `screenId`
+- `ScreenChrome` - auth/onboarding shell wrapper
+- `Button` / `MiniAction` - primary/secondary action controls
+- `ServiceGroup` / `SuperTile` - grouped module discovery grid
+- `ImageCard` / `InfoCard` - horizontal and text cards
+- `FeedItem` - compact feed list item
+- `Stat` / `SectionTitle` - metrics and headings
+
+## API Surface
+
+- `getFoundationScreenContent(screenId)` -> `GET /api/v1/foundation/screens/{screenId}`
+- Read-only demo endpoints for catalog-backed screens.
+
+## Demo Fixtures
+
+- `frontend/src/modules/foundation/foundationScreenFallbacks.ts` - demo payloads for all catalog-backed screens
+- `frontend/src/modules/foundation/fixtures.ts` - onboarding and welcome copy
+
+## State Patterns
+
+- **Loading**: skeleton or spinner while initial content loads
+- **Empty**: illustration, title, body, primary action when no data
+- **Error**: error icon, title, body, retry action on failure
+- **Success**: confirmation after onboarding complete
+- **Offline**: banner indicating offline mode, cached data shown
+- **Permission**: location and notification permission education during onboarding
+
+## Navigation Actions and Cross-Module Links
+
+- Tab navigation: Home, Explore, Search, Saved, Profile
+- Quick actions on Home push to `/rooms`, `/rides`, `/community`, `/jobs`, `/chat`, `/events`, `/marketplace`, `/expenses`, `/immigration`, `/utilities`, `/safety`, `/referrals`
+- Explore uses `SuperTile` and `ServiceGroup` to surface modules; future modules route to `/search` until implemented
+- Deep links navigate to module home if intermediate state is missing
+
+## Implementation Notes for Expo React Native
+
+- Route files in `frontend/src/app/` are thin wrappers that delegate to module screens
+- Stitch screens 1-27 are implemented as native Expo screens in `frontend/src/modules/foundation/screens/StitchPrototypeScreens.tsx`
+- Shared controls live in `frontend/src/modules/shared/ui`
+- Use `useQuery` for server state and `useState` for local UI state
+- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- `useAdaptiveLayout` governs responsive max-width and column count
+
+## Accessibility and Responsive Behavior Rules
+
+- Safe area insets always respected via `react-native-safe-area-context`
+- Minimum touch target: 44x44pt
+- All interactive elements need `accessibilityRole` and `accessibilityLabel`
+- Keyboard-aware: scroll to focused input on form screens
+- Single column on compact, 2 columns on medium, 3 columns on expanded/wide
+- Animations respect `accessibility.reducedMotion`
+
+## Current Implementation Status
+
+- **Partial**: Splash, welcome, onboarding, app shell, search, saved, profile, and settings are implemented. Explore shell and catalog-backed screens are functional but rely on demo fallbacks pending backend content. Stitch prototype screens are translated from HTML and will be refined.

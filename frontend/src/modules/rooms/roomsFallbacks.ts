@@ -25,6 +25,13 @@ export const roomScreenFallbacks: Record<string, CatalogScreenContent> = {
         meta: '$720/mo',
         route: '/rooms/demo-room-2',
       },
+      {
+        id: 'demo-room-3',
+        title: 'Quiet room in family home',
+        body: 'Richardson · private bath · laundry access.',
+        meta: '$680/mo',
+        route: '/rooms/demo-room-3',
+      },
     ],
   },
   search: {
@@ -48,6 +55,12 @@ export const roomScreenFallbacks: Record<string, CatalogScreenContent> = {
         title: 'Household match',
         body: 'Find listings by lifestyle, language, food, and visitor preferences.',
         meta: 'Compatibility',
+      },
+      {
+        id: 'commute',
+        title: 'Commute filter',
+        body: 'Filter by distance to work, school, or transit.',
+        meta: 'Location',
       },
     ],
   },
@@ -73,6 +86,12 @@ export const roomScreenFallbacks: Record<string, CatalogScreenContent> = {
         body: 'Compare distance to work, school, groceries, temples, and transit.',
         meta: 'Coming next',
       },
+      {
+        id: 'zones',
+        title: 'Neighborhood zones',
+        body: 'Explore listings by neighborhood and community area.',
+        meta: 'Discovery',
+      },
     ],
   },
   filters: {
@@ -97,6 +116,12 @@ export const roomScreenFallbacks: Record<string, CatalogScreenContent> = {
         body: 'Parking, private bath, furnished, laundry, kitchen, and pets.',
         meta: 'Comfort',
       },
+      {
+        id: 'safety',
+        title: 'Safety preferences',
+        body: 'Verified hosts, community reviews, and safety notes.',
+        meta: 'Trust',
+      },
     ],
   },
   saved: {
@@ -115,6 +140,13 @@ export const roomScreenFallbacks: Record<string, CatalogScreenContent> = {
         route: '/rooms/demo-room-1',
         meta: 'Saved',
       },
+      {
+        id: 'demo-room-2',
+        title: 'Shared apartment near transit',
+        body: 'New price drop since you saved this listing.',
+        route: '/rooms/demo-room-2',
+        meta: 'Price drop',
+      },
     ],
   },
   'my-listings': {
@@ -127,6 +159,13 @@ export const roomScreenFallbacks: Record<string, CatalogScreenContent> = {
       { label: 'Drafts', value: '2' },
     ],
     items: [
+      {
+        id: 'demo-room-1',
+        title: 'Sunny private room',
+        body: 'Active listing with 3 applicant conversations.',
+        route: '/rooms/demo-room-1',
+        meta: 'Active',
+      },
       {
         id: 'draft',
         title: 'Complete your draft',
@@ -157,6 +196,12 @@ export const roomScreenFallbacks: Record<string, CatalogScreenContent> = {
         body: 'House rules, verification, reporting, and contact privacy settings.',
         meta: 'Step 2',
       },
+      {
+        id: 'photos',
+        title: 'Photos and description',
+        body: 'Add clear photos and a welcoming description.',
+        meta: 'Step 3',
+      },
     ],
   },
   details: {
@@ -181,6 +226,12 @@ export const roomScreenFallbacks: Record<string, CatalogScreenContent> = {
         body: 'Ask a question or request a safe contact exchange after review.',
         meta: 'Protected handoff',
       },
+      {
+        id: 'household',
+        title: 'Household fit',
+        body: 'Quiet household, vegetarian kitchen, no overnight guests.',
+        meta: 'Lifestyle',
+      },
     ],
   },
   edit: {
@@ -204,6 +255,12 @@ export const roomScreenFallbacks: Record<string, CatalogScreenContent> = {
         title: 'Visibility',
         body: 'Pause, publish, or send for moderation review.',
         meta: 'Owner only',
+      },
+      {
+        id: 'photos',
+        title: 'Photos and media',
+        body: 'Update photos, virtual tours, and listing media.',
+        meta: 'Editable',
       },
     ],
   },

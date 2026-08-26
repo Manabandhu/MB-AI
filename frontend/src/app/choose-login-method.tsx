@@ -1,5 +1,5 @@
-import { StitchAuthScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { ChooseLoginMethodScreen } from '@/modules/auth/screens/ChooseLoginMethodScreen';
 
 export default function ChooseLoginMethodRoute() {
-  return <StitchAuthScreen kind="choose" />;
+  return <ChooseLoginMethodScreen />;
 }

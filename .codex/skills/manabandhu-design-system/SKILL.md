@@ -12,3 +12,4 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 5. Use semantic tokens. Avoid screen-local hardcoded colors, spacing, and breakpoints.
 6. Test representative phone, tablet/foldable, and browser widths.
 7. Update this skill when tokens, breakpoints, component conventions, icon libraries, or accessibility rules change.
+8. Current implementation: tokens exported from `packages/design-system/src/index.ts` as const objects (`color`, `darkColor`, `space`, `radius`, `shadow`, `typography`, `duration`, `iconography`, `accessibility`, `breakpoint`, `contentWidth`). Components use Gluestack-backed wrappers under `frontend/src/modules/shared/ui` and `frontend/src/modules/shared/components`.

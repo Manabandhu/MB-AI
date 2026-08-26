@@ -1,5 +1,5 @@
-import { RoomsScreen } from '@/modules/rooms/screens/RoomsScreen';
+import { RoomEditScreen } from '@/modules/rooms/screens/RoomEditScreen';
 
 export default function RoomEditRoute() {
-  return <RoomsScreen screenId="edit" />;
+  return <RoomEditScreen />;
 }

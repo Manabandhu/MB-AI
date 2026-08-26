@@ -1,5 +1,5 @@
-import { StitchAuthScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { EmailLoginScreen } from '@/modules/auth/screens/EmailLoginScreen';
 
 export default function EmailLoginRoute() {
-  return <StitchAuthScreen kind="email" />;
+  return <EmailLoginScreen />;
 }

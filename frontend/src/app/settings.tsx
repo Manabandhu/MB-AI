@@ -1,5 +1,3 @@
-import { CatalogContentScreen } from '@/modules/foundation/screens/CatalogContentScreen';
+import { SettingsScreen } from '@/modules/foundation/screens/SettingsScreen';
 
-export default function SettingsRoute() {
-  return <CatalogContentScreen screenId="settings" />;
-}
+export default SettingsScreen;

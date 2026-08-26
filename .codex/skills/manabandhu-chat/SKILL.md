@@ -5,14 +5,71 @@ description: Maintain ManaBandhu direct, group, support, and AI chat, including 
 
 # Chat
 
-Frontend conversation experiences belong to `frontend/src/modules/chat`; realtime service ownership remains under `services/chat-realtime` and `platform/chat`.
+## Module Purpose and Ownership
 
-The owned screen set is Chat List, New Chat, Conversation, and Conversation Info.
+Owns Chat List, New Chat, Conversation, Conversation Info, message state, realtime subscriptions, attachments, presence, and moderation affordances. Realtime service ownership remains under `platform/chat` and `services/chat-realtime`.
 
-1. Read `platform/chat/MODULE.md` and `services/chat-realtime/MODULE.md`.
-2. Use one conversation model with typed participants and message kinds for humans, support agents, and bots.
-3. Enforce membership and block/report rules on every read/write; never rely only on UI visibility.
-4. Separate durable messages from ephemeral typing/presence. Use client-generated idempotency IDs for offline send/retry.
-5. Scan attachments, bound payloads, define retention, and exclude content from analytics and logs.
-6. Test ordering, reconnect, duplicates, authorization, moderation, deletion, and bot handoff.
-7. Update this skill when chat schema, transport, retention, moderation, or paths change.
+## Route Inventory
+
+| Route | Screen Component | Type | States |
+|---|---|---|---|
+| `/chat` | `ChatListScreen` | list | loading, empty, error |
+| `/chat/new` | `NewChatScreen` | form | normal, error |
+| `/chat/[conversationId]` | `ConversationScreen` | detail | loading, empty, error |
+| `/chat/[conversationId]/info` | `ConversationInfoScreen` | detail | normal, error |
+
+## Component Inventory
+
+- `ChatListScreen` - list of conversations with search and navigation
+- `NewChatScreen` - start new conversation from contacts list
+- `ConversationScreen` - chat messages view with composer and send
+- `ConversationInfoScreen` - conversation details and participants
+- Shared: `ScreenShell`, `SearchBar`, `SectionHeader`, `ListScreen`, `Avatar`, `Card`, `AppButton`, `MessageBubble`, `Input`
+
+## API Surface
+
+- `listConversations()` -> `GET /api/v1/chat/conversations`
+- `getConversation(id)` -> `GET /api/v1/chat/conversations/{id}`
+- `listMessages(conversationId)` -> `GET /api/v1/chat/conversations/{id}/messages`
+- `sendMessage(conversationId, body)` -> `POST /api/v1/chat/conversations/{id}/messages`
+- `getParticipants(conversationId)` -> `GET /api/v1/chat/conversations/{id}/participants`
+
+## Demo Fixtures
+
+- `frontend/src/modules/chat/chatFallbacks.ts` - demo fixtures for all chat screens
+
+## State Patterns
+
+- **Loading**: skeleton rows while messages load
+- **Empty**: `EmptyState` when no conversations or messages exist
+- **Error**: `ErrorState` with retry action
+- **Success**: message sent confirmation
+- **Offline**: cached messages shown, new messages queued
+- **Permission**: not applicable
+
+## Navigation Actions and Cross-Module Links
+
+- `/chat` -> `/chat/new`, `/chat/[conversationId]`
+- `/chat/[conversationId]` -> `/chat/[conversationId]/info`
+- Back navigation from conversation to chat list
+- Deep links to chat from notifications and profile
+
+## Implementation Notes for Expo React Native
+
+- Route files in `frontend/src/app/chat/` are thin wrappers
+- Uses `useQuery` for conversations, messages, and participants
+- Realtime transport is pending; current implementation uses demo fallbacks
+- Client-generated idempotency IDs used for offline send/retry
+- Attachments are UI placeholders; payload bounds and scanning are backend responsibilities
+
+## Accessibility and Responsive Behavior Rules
+
+- Minimum touch target: 44x44pt
+- All interactive elements have `accessibilityRole` and `accessibilityLabel`
+- Message input has `accessibilityLabel`
+- Reduced motion: disable animations when `accessibility.reducedMotion` is true
+- Safe area insets always respected
+
+## Current Implementation Status
+
+- **Partial**: Chat list, new chat, conversation, and conversation info screens are UI-complete. Realtime transport, message delivery/read state, typing/presence, and offline sync are pending backend integration.

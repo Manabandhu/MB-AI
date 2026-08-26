@@ -1,1 +1,5 @@
-export { default } from '@/modules/admin/screens/SuperAdminScreen';
+import AdminDashboardScreen from '@/modules/admin/screens/AdminDashboardScreen';
+
+export default function AdminRoute() {
+  return <AdminDashboardScreen />;
+}

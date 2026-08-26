@@ -22,6 +22,7 @@ export const moduleSkillRules = [
       'backend/src/main/java/com/manabandhu/backend/admin/',
     ],
   ],
+  ['manabandhu-admin', ['frontend/src/app/admin/', 'frontend/src/modules/admin/']],
   ['manabandhu-api-contracts', ['packages/api-contracts/']],
   ['manabandhu-architecture', ['docs/architecture/']],
   ['manabandhu-design-system', ['packages/design-system/', 'stitch/']],

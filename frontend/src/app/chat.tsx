@@ -1,5 +1,5 @@
-import { StitchAppShellScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import ChatListScreen from '@/modules/chat/screens/ChatListScreen';
 
 export default function ChatRoute() {
-  return <StitchAppShellScreen kind="chat" />;
+  return <ChatListScreen />;
 }

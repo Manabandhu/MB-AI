@@ -1,5 +1,5 @@
-import { StitchAuthScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { ResetPasswordScreen } from '@/modules/auth/screens/ResetPasswordScreen';
 
 export default function ResetPasswordRoute() {
-  return <StitchAuthScreen kind="reset" />;
+  return <ResetPasswordScreen />;
 }

@@ -23,6 +23,12 @@ export const rideScreenFallbacks: Record<string, CatalogScreenContent> = {
         body: 'Plano to Patel Brothers this evening.',
         meta: 'Local trip',
       },
+      {
+        id: 'commute',
+        title: 'Daily commute',
+        body: 'Richardson to Dallas · weekdays · 7:30 AM.',
+        meta: '$12 contribution',
+      },
     ],
   },
   search: {
@@ -47,6 +53,12 @@ export const rideScreenFallbacks: Record<string, CatalogScreenContent> = {
         body: 'Match capacity, luggage, child seat, and contribution expectations.',
         meta: 'Trip fit',
       },
+      {
+        id: 'driver',
+        title: 'Driver preferences',
+        body: 'Verified drivers, ratings, and community connections.',
+        meta: 'Trust',
+      },
     ],
   },
   map: {
@@ -69,6 +81,12 @@ export const rideScreenFallbacks: Record<string, CatalogScreenContent> = {
         title: 'Common routes',
         body: 'Airport, campuses, grocery corridors, and commute paths.',
         meta: 'Discovery',
+      },
+      {
+        id: 'hotspots',
+        title: 'Ride hotspots',
+        body: 'Popular pickup areas with frequent ride matches.',
+        meta: 'Activity',
       },
     ],
   },
@@ -94,6 +112,12 @@ export const rideScreenFallbacks: Record<string, CatalogScreenContent> = {
         body: 'Verified drivers, known communities, ratings, and shared trip status.',
         meta: 'Safety',
       },
+      {
+        id: 'contribution',
+        title: 'Contribution range',
+        body: 'Set minimum and maximum contribution expectations.',
+        meta: 'Budget',
+      },
     ],
   },
   offer: {
@@ -117,6 +141,250 @@ export const rideScreenFallbacks: Record<string, CatalogScreenContent> = {
         title: 'Safety and visibility',
         body: 'Set who can request, confirmation flow, and trip sharing options.',
         meta: 'Step 2',
+      },
+      {
+        id: 'review',
+        title: 'Review and publish',
+        body: 'Confirm details and publish your ride offer.',
+        meta: 'Step 3',
+      },
+    ],
+  },
+  request: {
+    eyebrow: 'Rides',
+    title: 'Request a ride',
+    subtitle: 'Request a ride by describing your route, timing, and seat needs.',
+    metrics: [
+      { label: 'Steps', value: '3' },
+      { label: 'Required fields', value: '5' },
+    ],
+    items: [
+      {
+        id: 'route',
+        title: 'Route and time',
+        body: 'Pickup area, destination, date, and time.',
+        meta: 'Step 1',
+      },
+      {
+        id: 'needs',
+        title: 'Seat and luggage',
+        body: 'Number of seats, luggage, and special requirements.',
+        meta: 'Step 2',
+      },
+      {
+        id: 'review',
+        title: 'Review and request',
+        body: 'Confirm details and submit your ride request.',
+        meta: 'Step 3',
+      },
+    ],
+  },
+  saved: {
+    eyebrow: 'Rides',
+    title: 'Saved rides',
+    subtitle: 'Track rides you want to revisit or request later.',
+    metrics: [
+      { label: 'Saved', value: '4' },
+      { label: 'Upcoming', value: '2' },
+    ],
+    items: [
+      {
+        id: 'demo-ride-1',
+        title: 'DFW airport ride',
+        body: 'Saturday · 8:30 AM · two seats open.',
+        route: '/rides/demo-ride-1',
+        meta: 'Saved',
+      },
+      {
+        id: 'demo-ride-2',
+        title: 'Daily commute',
+        body: 'Weekdays · 7:30 AM · Richardson to Dallas.',
+        route: '/rides/demo-ride-2',
+        meta: 'Saved',
+      },
+    ],
+  },
+  mine: {
+    eyebrow: 'Rides',
+    title: 'My rides',
+    subtitle: 'Manage your offered rides, seat requests, and rider conversations.',
+    metrics: [
+      { label: 'Active', value: '2' },
+      { label: 'Pending requests', value: '5' },
+    ],
+    items: [
+      {
+        id: 'demo-ride-1',
+        title: 'DFW airport ride',
+        body: 'Saturday · 8:30 AM · 2 seat requests pending.',
+        route: '/rides/demo-ride-1/manage',
+        meta: 'Active',
+      },
+      {
+        id: 'demo-ride-2',
+        title: 'Daily commute',
+        body: 'Weekdays · 7:30 AM · 3 regular riders.',
+        route: '/rides/demo-ride-2/manage',
+        meta: 'Active',
+      },
+    ],
+  },
+  history: {
+    eyebrow: 'Rides',
+    title: 'Ride history',
+    subtitle: 'View past rides and rate your experiences.',
+    metrics: [
+      { label: 'Completed', value: '12' },
+      { label: 'Rated', value: '9' },
+    ],
+    items: [
+      {
+        id: 'demo-ride-3',
+        title: 'Grocery run',
+        body: 'Completed 2 days ago · Plano to Patel Brothers.',
+        route: '/rides/demo-ride-3/rate',
+        meta: 'Completed',
+      },
+      {
+        id: 'demo-ride-4',
+        title: 'Airport drop-off',
+        body: 'Completed last week · DFW airport.',
+        route: '/rides/demo-ride-4/rate',
+        meta: 'Completed',
+      },
+    ],
+  },
+  details: {
+    eyebrow: 'Rides',
+    title: 'Ride details',
+    subtitle:
+      'A focused ride page with route, timeline, seat state, safety controls, and participant info.',
+    metrics: [
+      { label: 'Seats open', value: '2' },
+      { label: 'Contribution', value: '$18' },
+    ],
+    items: [
+      {
+        id: 'summary',
+        title: 'DFW airport ride',
+        body: 'Saturday morning ride with verified driver and two open seats.',
+        meta: 'Active',
+      },
+      {
+        id: 'route',
+        title: 'Route',
+        body: 'Plano to DFW Airport · approximate pickup shared after acceptance.',
+        meta: 'Privacy protected',
+      },
+      {
+        id: 'safety',
+        title: 'Safety',
+        body: 'Verified driver, trip sharing enabled, and community reviews.',
+        meta: 'Safety',
+      },
+    ],
+  },
+  manage: {
+    eyebrow: 'Rides',
+    title: 'Manage ride',
+    subtitle: 'Update ride status, seats, visibility, and safety controls.',
+    metrics: [
+      { label: 'Pending requests', value: '3' },
+      { label: 'Confirmed', value: '1' },
+    ],
+    items: [
+      {
+        id: 'status',
+        title: 'Ride status',
+        body: 'Active, paused, or completed.',
+        meta: 'Editable',
+      },
+      {
+        id: 'seats',
+        title: 'Seats and contribution',
+        body: 'Update open seats and contribution amount.',
+        meta: 'Editable',
+      },
+      {
+        id: 'visibility',
+        title: 'Visibility',
+        body: 'Control who can see and request your ride.',
+        meta: 'Owner only',
+      },
+    ],
+  },
+  'seat-requests': {
+    eyebrow: 'Rides',
+    title: 'Seat requests',
+    subtitle: 'Review and manage seat requests for your ride.',
+    metrics: [
+      { label: 'Pending', value: '3' },
+      { label: 'Approved', value: '1' },
+    ],
+    items: [
+      {
+        id: 'request-1',
+        title: 'Anya P.',
+        body: 'Plano pickup · 1 seat · community member.',
+        meta: 'Pending',
+      },
+      {
+        id: 'request-2',
+        title: 'Raj K.',
+        body: 'Irving pickup · 1 seat · verified rider.',
+        meta: 'Pending',
+      },
+    ],
+  },
+  participants: {
+    eyebrow: 'Rides',
+    title: 'Participants',
+    subtitle: 'View confirmed participants and trip sharing status.',
+    metrics: [
+      { label: 'Confirmed', value: '2' },
+      { label: 'Trip shared', value: '1' },
+    ],
+    items: [
+      {
+        id: 'participant-1',
+        title: 'Driver · You',
+        body: 'Verified driver with trip sharing enabled.',
+        meta: 'Host',
+      },
+      {
+        id: 'participant-2',
+        title: 'Priya S.',
+        body: 'Confirmed rider · trip shared with trusted contact.',
+        meta: 'Rider',
+      },
+    ],
+  },
+  rate: {
+    eyebrow: 'Rides',
+    title: 'Rate ride',
+    subtitle: 'Share feedback on safety, timeliness, and comfort.',
+    metrics: [
+      { label: 'Completed', value: '1' },
+      { label: 'Pending rating', value: '1' },
+    ],
+    items: [
+      {
+        id: 'safety',
+        title: 'Safety',
+        body: 'Rate the driver safety and vehicle condition.',
+        meta: 'Rating',
+      },
+      {
+        id: 'timeliness',
+        title: 'Timeliness',
+        body: 'Rate pickup and drop-off timeliness.',
+        meta: 'Rating',
+      },
+      {
+        id: 'comfort',
+        title: 'Comfort',
+        body: 'Rate ride comfort and communication.',
+        meta: 'Rating',
       },
     ],
   },

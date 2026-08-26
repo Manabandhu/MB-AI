@@ -5,8 +5,77 @@ description: Maintain ManaBandhu event discovery, search, details, creation, sav
 
 # Events
 
-1. Read `frontend/src/modules/events/MODULE.md` and affected contracts first.
-2. Store instants in UTC with an event time zone and render locale-aware dates, recurrence, and daylight-saving transitions.
-3. Enforce organizer ownership, visibility, capacity, attendance, reporting, and moderation server-side.
-4. Test search, saves, cancellation, capacity races, location privacy, notifications, and adaptive layouts.
-5. Update contracts, module documentation, and this skill together.
+## Module Purpose and Ownership
+
+Owns event discovery, search, details, creation, saves, user events, attendance, time zones, locations, and moderation handoff.
+
+## Route Inventory
+
+| Route | Screen Component | Type | States |
+|---|---|---|---|
+| `/events` | `EventsHomeScreen` | catalog | loading, empty, error |
+| `/events/search` | `EventsSearchScreen` | list | loading, empty, error |
+| `/events/[eventId]` | `EventDetailsScreen` | detail | loading, error |
+| `/events/create` | `CreateEventScreen` | form | normal, error, success, loading |
+| `/events/saved` | `SavedEventsScreen` | list | loading, empty, error |
+| `/events/mine` | `MyEventsScreen` | list | loading, empty, error |
+
+## Component Inventory
+
+- `EventsHomeScreen` - discover events catalog with search
+- `EventsSearchScreen` - search events list
+- `EventDetailsScreen` - event detail view with timeline and map preview
+- `CreateEventScreen` - create new event form
+- `SavedEventsScreen` - saved events list
+- `MyEventsScreen` - manage own events
+- Shared: `CatalogScreen`, `SearchBar`, `FilterBar`, `Card`, `AppButton`, `DetailScreen`, `MapPreview`, `Timeline`, `SectionHeader`, `ListScreen`, `FormScreen`, `DateTimePicker`, `TextArea`, `ImageUpload`, `EmptyState`, `ErrorState`, `LoadingState`, `SwipeAction`
+
+## API Surface
+
+- `listEvents()` -> `GET /api/v1/events`
+- `searchEvents(query)` -> `GET /api/v1/events/search?q={query}`
+- `getEvent(id)` -> `GET /api/v1/events/{id}`
+- `createEvent(input)` -> `POST /api/v1/events`
+- `listSavedEvents()` -> `GET /api/v1/events/saved`
+- `listMyEvents()` -> `GET /api/v1/events/mine`
+
+## Demo Fixtures
+
+- `frontend/src/modules/events/eventsFallbacks.ts` - demo fixtures for all events screens
+
+## State Patterns
+
+- **Loading**: `LoadingState` while events load
+- **Empty**: `EmptyState` with action to search or create event
+- **Error**: `ErrorState` with retry action
+- **Success**: navigation to event detail or home after create
+- **Offline**: offline banner with cached data
+- **Permission**: not applicable
+
+## Navigation Actions and Cross-Module Links
+
+- Home -> Search -> Details -> Create -> Saved -> My Events
+- Search results navigate to event details
+- Create event navigates to home on success
+- Deep links to events from explore and saved
+
+## Implementation Notes for Expo React Native
+
+- Route files in `frontend/src/app/events/` are thin wrappers
+- Uses `useQuery` and `useMutation` from `@tanstack/react-query`
+- Forms use `react-hook-form` + `zod` + `@hookform/resolvers`
+- Events store instants in UTC and render locale-aware dates
+- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+
+## Accessibility and Responsive Behavior Rules
+
+- Minimum touch target: 44x44pt
+- All interactive elements have `accessibilityRole` and `accessibilityLabel`
+- Focus ring: 3pt, color: `color.primary`
+- Reduced motion: disable animations when `accessibility.reducedMotion` is true
+- Single column on compact, 2 columns on medium, 3 columns on expanded/wide
+- Safe area insets always respected
+
+## Current Implementation Status
+
+- **Partial**: Events home, search, details, and create event screens are implemented. Saved and my events screens are UI-complete but rely on demo fallbacks. Backend moderation, capacity, and attendance rules are enforced server-side.

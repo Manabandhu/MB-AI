@@ -4,8 +4,19 @@ import { getRoomsScreen } from '@/modules/rooms/api';
 import { roomScreenFallbacks } from '@/modules/rooms/roomsFallbacks';
 import { FeatureScreen } from '@/modules/shared/components/FeatureScreen';
 
+export type RoomsScreenId =
+  | 'home'
+  | 'search'
+  | 'map'
+  | 'filters'
+  | 'saved'
+  | 'my-listings'
+  | 'create-listing'
+  | 'details'
+  | 'edit';
+
 type RoomsScreenProps = {
-  screenId: keyof typeof roomRoutes;
+  screenId: RoomsScreenId;
 };
 
 export function RoomsScreen({ screenId }: RoomsScreenProps) {
@@ -29,7 +40,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   );
 }
 
-const roomRoutes = {
+const roomRoutes: Record<RoomsScreenId, string> = {
   home: '/rooms',
   search: '/rooms/search',
   map: '/rooms/map',
@@ -39,9 +50,9 @@ const roomRoutes = {
   'create-listing': '/rooms/create-listing',
   details: '/rooms/demo-room-1',
   edit: '/rooms/demo-room-1/edit',
-} as const;
+};
 
-const roomActions = {
+const roomActions: Record<RoomsScreenId, readonly { label: string; route: string }[]> = {
   home: [
     { label: 'Search', route: '/rooms/search' },
     { label: 'Map', route: '/rooms/map' },
@@ -82,4 +93,4 @@ const roomActions = {
     { label: 'View details', route: '/rooms/demo-room-1' },
     { label: 'My listings', route: '/rooms/my-listings' },
   ],
-} as const;
+};

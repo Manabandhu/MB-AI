@@ -5,10 +5,86 @@ description: Maintain ManaBandhu ride discovery, offers, requests, seats, partic
 
 # Rides
 
-1. Read `frontend/src/modules/rides/MODULE.md` and affected contracts first.
-2. Model ride, seat-request, participant, and lifecycle states explicitly; make mutations idempotent.
-3. First-batch ride routes `/rides`, `/rides/search`, `/rides/map`, `/rides/filters`, and `/rides/offer` share `frontend/src/modules/rides/screens/RidesScreen.tsx` and read public demo content from `GET /api/v1/rides/screens/{screenId}`.
-4. Ride discovery screens must expose connected actions between home, search, map, filters, and offer.
-5. Protect live and historical location data, enforce driver/rider permissions server-side, and integrate safety/reporting boundaries.
-6. Test capacity races, cancellation, time zones, map/list behavior, notifications, ratings, and degraded connectivity.
-7. Update contracts, module documentation, and this skill together.
+## Module Purpose and Ownership
+
+Owns ride discovery, offers, requests, seats, participants, history, ratings, location sharing, safety state, and ride management.
+
+## Route Inventory
+
+| Route | Screen Component | Type | States |
+|---|---|---|---|
+| `/rides` | `RidesScreen` (`screenId="home"`) | catalog | loading, empty, error |
+| `/rides/search` | `RidesScreen` (`screenId="search"`) | list | loading, empty, error |
+| `/rides/map` | `RidesScreen` (`screenId="map"`) | map | loading, empty, error, permission |
+| `/rides/filters` | `RidesScreen` (`screenId="filters"`) | filter | normal |
+| `/rides/offer` | `RideOfferScreen` | form | normal, error, success, loading |
+| `/rides/request` | `RideRequestScreen` | form | normal, error, success, loading |
+| `/rides/saved` | `RidesScreen` (`screenId="saved"`) | list | loading, empty, error |
+| `/rides/mine` | `RidesScreen` (`screenId="mine"`) | list | loading, empty, error |
+| `/rides/history` | `RidesScreen` (`screenId="history"`) | list | loading, empty, error |
+| `/rides/[rideId]` | `RideDetailScreen` | detail | loading, error |
+| `/rides/[rideId]/manage` | `RideManageScreen` | form | normal, error, success, loading |
+| `/rides/[rideId]/seat-requests` | `RidesScreen` (`screenId="seat-requests"`) | list | loading, empty, error |
+| `/rides/[rideId]/participants` | `RidesScreen` (`screenId="participants"`) | list | loading, empty, error |
+| `/rides/[rideId]/rate` | `RideRateScreen` | form | normal, success |
+
+## Component Inventory
+
+- `RidesScreen` - multi-mode catalog/list screen driven by `screenId` prop
+- `RideDetailScreen` - placeholder for ride detail with route, timeline, seat state, and safety controls
+- `RideManageScreen` - placeholder for ride management form
+- `RideOfferScreen` - placeholder for ride offer creation form
+- `RideRequestScreen` - placeholder for ride request creation form
+- `RideRateScreen` - placeholder for ride rating form
+- Shared: `FeatureScreen`, `SearchBar`, `FilterBar`, `Card`, `MapPreview`, `AppButton`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`, `Timeline`, `StarRating`, `DateTimePicker`, `MapPicker`, `Select`, `SwipeAction`
+
+## API Surface
+
+- `getRidesScreen(screenId)` -> `GET /api/v1/rides/screens/{screenId}`
+- `getRideDetail(rideId)` -> `GET /api/v1/rides/{rideId}`
+- `getRideManage(rideId)` -> `GET /api/v1/rides/{rideId}/manage`
+- `createRideOffer()` -> `POST /api/v1/rides/offer`
+- `createRideRequest()` -> `POST /api/v1/rides/request`
+- `submitRideRating(rideId)` -> `POST /api/v1/rides/{rideId}/rate`
+
+## Demo Fixtures
+
+- `frontend/src/modules/rides/ridesFallbacks.ts` - realistic demo data for all ride `screenId`s
+
+## State Patterns
+
+- **Loading**: `LoadingState` while screen content loads
+- **Empty**: `EmptyState` with action to search or offer ride
+- **Error**: `ErrorState` with retry action
+- **Success**: navigation on offer/request/rate completion
+- **Offline**: offline banner with cached data fallback
+- **Permission**: permission banner for map screen with fallback list
+
+## Navigation Actions and Cross-Module Links
+
+- Home actions: Search, Map, Offer ride
+- Search actions: Filters, Map, Offer ride
+- Map actions: Search list, Filters
+- Filters actions: Apply to search, Map
+- Detail/manage actions: Seat requests, Participants, Rate
+- Cross-module: deep link from explore, saved, and community
+
+## Implementation Notes for Expo React Native
+
+- Route files in `frontend/src/app/rides/` are thin wrappers
+- `RidesScreen` uses `useQuery` with fallback data from `ridesFallbacks.ts`
+- `FeatureScreen` provides adaptive catalog/list layout
+- Ride offer, request, manage, and rate screens are placeholders pending backend forms
+- Map view is a placeholder pending real map integration
+
+## Accessibility and Responsive Behavior Rules
+
+- Minimum touch target: 44x44pt
+- Map screen requests location permission with education banner
+- Single column on compact, 2 columns on medium, 3 columns on expanded/wide
+- Bottom sheets and modals respect safe area insets
+- Color is not the only indicator of state
+
+## Current Implementation Status
+
+- **Partial**: Home, search, filters, saved, mine, history, seat-requests, and participants screens are complete via `FeatureScreen`. Ride detail, manage, offer, request, and rate screens are placeholders. Map view is a placeholder pending real map integration.

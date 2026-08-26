@@ -17,3 +17,4 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 5. Design in-app and push now; keep email/SMS adapters explicit. Preserve future watch delivery compatibility.
 6. Test duplicate events, retries, disabled channels, quiet hours, and provider failure.
 7. Update this skill when channels, event fields, providers, policies, or paths change.
+8. Current frontend implementation: inbox route `/notifications` renders `NotificationsInboxScreen` from `frontend/src/modules/notifications/screens/`. Additional screens include `NotificationDetailScreen` and `NotificationSettingsScreen`. API client in `frontend/src/modules/notifications/api.ts` uses read-only demo endpoints.

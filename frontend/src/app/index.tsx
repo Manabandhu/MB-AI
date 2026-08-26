@@ -1,3 +1,3 @@
-import { StitchSplashScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { StitchSplashScreen } from '@/modules/foundation/screens/StitchSplashScreen';
 
 export default StitchSplashScreen;

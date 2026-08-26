@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+declare const process: { env: Record<string, string | undefined> };
+
 const publicEnvSchema = z.object({
   apiUrl: z.url(),
   supabaseUrl: z.url(),

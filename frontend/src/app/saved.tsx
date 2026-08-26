@@ -1,5 +1,3 @@
-import { CatalogContentScreen } from '@/modules/foundation/screens/CatalogContentScreen';
+import { SavedScreen } from '@/modules/foundation/screens/SavedScreen';
 
-export default function SavedRoute() {
-  return <CatalogContentScreen screenId="saved" />;
-}
+export default SavedScreen;

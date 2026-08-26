@@ -1,5 +1,5 @@
-import { StitchAuthScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { SignUpScreen } from '@/modules/auth/screens/SignUpScreen';
 
 export default function SignUpRoute() {
-  return <StitchAuthScreen kind="create-account" />;
+  return <SignUpScreen />;
 }

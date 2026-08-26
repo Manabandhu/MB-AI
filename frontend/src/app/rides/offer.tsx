@@ -1,5 +1,5 @@
-import { RidesScreen } from '@/modules/rides/screens/RidesScreen';
+import { RideOfferScreen } from '@/modules/rides/screens/RideOfferScreen';
 
 export default function RidesOfferRoute() {
-  return <RidesScreen screenId="offer" />;
+  return <RideOfferScreen />;
 }

@@ -1,5 +1,5 @@
-import { StitchAuthScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { OtpVerificationScreen } from '@/modules/auth/screens/OtpVerificationScreen';
 
 export default function OtpVerificationRoute() {
-  return <StitchAuthScreen kind="otp" />;
+  return <OtpVerificationScreen />;
 }

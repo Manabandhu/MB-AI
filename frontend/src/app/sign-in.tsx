@@ -1,5 +1,5 @@
-import { StitchAuthScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { SignInScreen } from '@/modules/auth/screens/SignInScreen';
 
 export default function SignInRoute() {
-  return <StitchAuthScreen kind="sign-in" />;
+  return <SignInScreen />;
 }

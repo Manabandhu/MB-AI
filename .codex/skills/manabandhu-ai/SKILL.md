@@ -3,14 +3,72 @@ name: manabandhu-ai
 description: Maintain ManaBandhu AI assistant and chatbot capabilities, including model routing, retrieval, tools, prompts, safety, privacy, evaluations, cost controls, citations, feedback, and human escalation. Use for any generative-AI or agentic workflow.
 ---
 
-# AI
+# AI Assistant
 
-Frontend assistant experiences belong to `frontend/src/modules/ai-assistant`; orchestration and evaluation infrastructure remain under `services/ai-orchestrator` and `platform/ai`.
+## Module Purpose and Ownership
 
-1. Read `platform/ai/MODULE.md` and `services/ai-orchestrator/MODULE.md`.
-2. Keep model providers behind ports; version prompts, models, tools, policies, and evaluation datasets.
-3. Authorize every tool call using the verified user and conversation scope. Treat model output and retrieved content as untrusted.
-4. Minimize PII, prevent secrets from entering prompts/logs, moderate inputs/outputs, cite retrieval, and support deletion/retention.
-5. Define latency, token, cost, quality, and fallback budgets before production use.
-6. Add deterministic tests plus offline evaluations for safety and task quality.
-7. Update this skill when providers, tools, policies, prompts, evaluations, or AI data flow change.
+Owns user-facing assistant and bot experiences, streaming UI, consent, safety feedback, citations, and typed integration with the AI orchestrator. Orchestration and evaluation infrastructure remain under `services/ai-orchestrator` and `platform/ai`.
+
+## Route Inventory
+
+| Route | Screen Component | Type | States |
+|---|---|---|---|
+| `/assistant` | `AssistantScreen` | chat | loading, empty, error, offline |
+| `/assistant/history` | `AssistantHistoryScreen` | list | loading, empty, error |
+| `/assistant/citations` | `AssistantCitationsScreen` | list | loading, empty, error |
+
+## Component Inventory
+
+- `AssistantScreen` - chat screen with `MessageBubble`, message input, offline banner, and history/citations actions
+- `AssistantHistoryScreen` - list screen of past conversations with `SectionHeader`
+- `AssistantCitationsScreen` - list screen of source citations with `SectionHeader`
+- Shared: `ScreenShell`, `MessageBubble`, `Input`, `AppButton`, `Avatar`, `SectionHeader`, `Banner`, `ListScreen`, `Card`
+
+## API Surface
+
+- `getAssistantMessages()` -> `GET /api/v1/assistant/messages`
+- `sendAssistantMessage(input)` -> `POST /api/v1/assistant/messages`
+- `getAssistantHistory()` -> `GET /api/v1/assistant/history`
+- `getAssistantCitations()` -> `GET /api/v1/assistant/citations`
+
+## Demo Fixtures
+
+- `frontend/src/modules/ai-assistant/assistantFallbacks.ts` - demo fixtures for assistant messages and history
+
+## State Patterns
+
+- **Loading**: `LoadingState` while messages load
+- **Empty**: `EmptyState` when no conversation history or citations exist
+- **Error**: `ErrorState` with retry action
+- **Success**: message sent confirmation
+- **Offline**: cached messages shown, new queries disabled
+- **Permission**: microphone permission optional for voice input; text-only mode shown if missing
+
+## Navigation Actions and Cross-Module Links
+
+- `/assistant` -> `/assistant/history`, `/assistant/citations`
+- Back navigation from history/citations to assistant
+- Cross-module: assistant can reference rooms, rides, community, and safety data via retrieval
+
+## Implementation Notes for Expo React Native
+
+- Route files in `frontend/src/app/assistant/` are thin wrappers
+- Uses `useQuery` for messages, history, and citations
+- Message send uses mutation with offline catch
+- `useAdaptiveLayout` governs responsive max-width
+- Streaming UI is a placeholder; real streaming is pending orchestrator integration
+- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+
+## Accessibility and Responsive Behavior Rules
+
+- Minimum touch target: 44x44pt
+- All interactive elements have `accessibilityRole` and `accessibilityLabel`
+- Message input has `accessibilityLabel`
+- Focus ring: 3pt, color: `color.primary`
+- Reduced motion: disable animations when `accessibility.reducedMotion` is true
+- Single column on compact, 2 columns on medium, 3 columns on expanded/wide
+- Safe area insets always respected
+
+## Current Implementation Status
+
+- **Partial**: Assistant, history, and citations screens are UI-complete. AI orchestration, model routing, retrieval, tools, safety moderation, and streaming are pending backend/platform integration.

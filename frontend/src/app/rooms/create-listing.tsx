@@ -1,5 +1,5 @@
-import { RoomsScreen } from '@/modules/rooms/screens/RoomsScreen';
+import { RoomCreateScreen } from '@/modules/rooms/screens/RoomCreateScreen';
 
 export default function RoomsCreateListingRoute() {
-  return <RoomsScreen screenId="create-listing" />;
+  return <RoomCreateScreen />;
 }

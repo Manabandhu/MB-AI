@@ -1,5 +1,3 @@
-import { CatalogContentScreen } from '@/modules/foundation/screens/CatalogContentScreen';
+import { SearchScreen } from '@/modules/foundation/screens/SearchScreen';
 
-export default function SearchRoute() {
-  return <CatalogContentScreen screenId="search" />;
-}
+export default SearchScreen;

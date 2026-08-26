@@ -1,4 +1,4 @@
-import { StitchOnboardingScreen } from '@/modules/foundation/screens/StitchPrototypeScreens';
+import { StitchOnboardingScreen } from '@/modules/foundation/screens/StitchOnboardingScreen';
 
 export default function OnboardingInterestsRoute() {
   return <StitchOnboardingScreen kind="interests" />;

@@ -5,12 +5,81 @@ description: Maintain ManaBandhu authentication, registration, sessions, account
 
 # Authentication
 
-1. Read `frontend/src/modules/auth/MODULE.md`, backend security configuration, and affected contracts.
-2. Keep Sign In, Sign Up, Forgot Password, auth UI, hooks, schemas, state, and adapters inside `frontend/src/modules/auth`; expose only intentional public APIs.
-3. The auth routes `/sign-in`, `/sign-up`, `/forgot-password`, and related login/reset steps use `frontend/src/modules/foundation/screens/StitchPrototypeScreens.tsx`; temporary demo login shows `demo@manabandhu.local` / `DemoPass123` and returns to `/home` until Supabase auth actions are wired. The legacy `frontend/src/modules/auth/screens/AuthScreen.tsx` file was removed.
-4. `frontend/src/lib/supabase.ts` owns the shared Supabase client and may provide a static-render WebSocket fallback only when `globalThis.WebSocket` is missing.
-5. Store native sessions with Secure Store and use supported browser persistence on web. Never log tokens or place service credentials in the client.
-6. Derive authorization from verified server-side JWT claims. Never trust client state or editable user metadata for privileged roles; the Super Admin local/demo public override is the only temporary exception and is controlled server-side.
-7. Cover sign-in, sign-out, refresh, expiry, recovery, verification, cancellation, offline, and deep-link behavior across native and web.
-8. Run frontend lint, typecheck, affected tests, and an Expo web export.
-9. Update this skill with auth paths, providers, claims, persistence, contracts, or security invariants.
+## Module Purpose and Ownership
+
+Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, reset password, choose login method, session lifecycle, account recovery, identity verification, authorization-aware navigation, and Supabase Auth adapters.
+
+## Route Inventory
+
+| Route | Screen Component | Type | States |
+|---|---|---|---|
+| `/sign-in` | `SignInScreen` | auth | normal, error, loading |
+| `/sign-up` | `SignUpScreen` | auth | normal, error, loading |
+| `/forgot-password` | `ForgotPasswordScreen` | auth | normal, success, error |
+| `/phone-login` | `PhoneLoginScreen` | auth | normal, error, loading |
+| `/email-login` | `EmailLoginScreen` | auth | normal, error, loading |
+| `/otp-verification` | `OtpVerificationScreen` | auth | normal, error, loading |
+| `/reset-password` | `ResetPasswordScreen` | auth | normal, success, error |
+| `/choose-login-method` | `ChooseLoginMethodScreen` | auth | normal |
+
+## Component Inventory
+
+- `SignInScreen` - email/password sign-in with demo credentials
+- `SignUpScreen` - account creation form
+- `ForgotPasswordScreen` - password reset initiation
+- `PhoneLoginScreen` - phone number entry
+- `EmailLoginScreen` - email magic link / OAuth entry
+- `OtpVerificationScreen` - OTP entry with countdown
+- `ResetPasswordScreen` - new password form
+- `ChooseLoginMethodScreen` - auth method selector
+- Shared: `ScreenShell`, `FormScreen`, `Input`, `AppButton`, `Text`, `Link`, `CountdownTimer`
+
+## API Surface
+
+- Supabase Auth client in `frontend/src/lib/supabase.ts`
+- Demo submission uses `demo@manabandhu.local` / `DemoPass123` and returns to `/home` until Supabase auth actions are wired
+- No custom REST endpoints; auth state is derived from verified JWT claims
+
+## Demo Fixtures
+
+- `frontend/src/modules/auth/fixtures.ts` - `authCredentialsFixture` and `authFlowsFixture`
+
+## State Patterns
+
+- **Loading**: spinner while auth action is in flight
+- **Empty**: not applicable
+- **Error**: inline error message with retry
+- **Success**: auto-navigate to `/home`
+- **Offline**: disable submit, show offline banner
+- **Permission**: not applicable
+
+## Navigation Actions and Cross-Module Links
+
+- `/sign-in` -> `/home` on success, `/forgot-password`
+- `/sign-up` -> `/home` on success, `/sign-in`
+- `/forgot-password` -> `/reset-password`
+- `/phone-login` -> `/otp-verification`
+- `/email-login` -> `/home` on success
+- `/otp-verification` -> `/home` on success
+- `/reset-password` -> `/home` on success
+- `/choose-login-method` -> `/phone-login` or `/email-login`
+
+## Implementation Notes for Expo React Native
+
+- Route files in `frontend/src/app/` delegate to dedicated auth screens
+- Native sessions stored with Secure Store; browser persistence on web
+- `frontend/src/lib/supabase.ts` owns shared Supabase client with static-render WebSocket fallback for Node runtimes
+- Forms use `react-hook-form` + `zod` + `@hookform/resolvers`
+- Never log tokens or place service credentials in the client
+
+## Accessibility and Responsive Behavior Rules
+
+- Minimum touch target: 44x44pt
+- All inputs have `accessibilityLabel`
+- Focus ring width: 3pt, color: `color.primary`
+- Reduced motion: disable animations when `accessibility.reducedMotion` is true
+- Support screen readers for all content
+
+## Current Implementation Status
+
+- **Partial**: All auth screens are implemented with demo credentials. Supabase auth actions are not yet fully wired; demo login returns to `/home`. Phone/email login, OTP, and password reset screens are UI-complete.
