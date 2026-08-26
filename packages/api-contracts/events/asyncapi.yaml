@@ -13,6 +13,10 @@ operations:
     action: receive
     channel:
       $ref: '#/channels/notificationRequested'
+  produceNotificationRequested:
+    action: send
+    channel:
+      $ref: '#/channels/notificationRequested'
 components:
   messages:
     NotificationRequested:

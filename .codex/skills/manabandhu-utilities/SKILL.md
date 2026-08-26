@@ -75,3 +75,4 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 ## Current Implementation Status
 
 - **Partial**: Home via `FeatureScreen`, package tracking, nearby, and emergency resources screens are UI-complete. Real provider integration, location consent flow, and offline fallbacks are pending backend wiring.
+- **Backend**: REST and GraphQL APIs implemented under `/api/v1/utilities` with packages, nearby places, emergency resources, and Flyway migration V12.

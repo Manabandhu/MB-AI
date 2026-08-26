@@ -12,5 +12,6 @@ description: Maintain ManaBandhu's canonical OpenAPI, GraphQL, and AsyncAPI cont
 5. Keep `packages/api-contracts/graphql/schema.graphqls` byte-identical to the backend runtime schema.
 6. The Super Admin REST surface is `/api/v1/admin/automations`; changes require synchronized frontend types and backend records plus explicit 401, 403, confirmation, provider failure, and temporary public-admin override documentation.
 7. Public demo content is exposed through additive REST endpoints under `/api/v1/foundation`, `/api/v1/notifications`, `/api/v1/rooms`, and `/api/v1/rides`; it must not require authentication or expose user data.
-8. Run `pnpm verify:contracts`, then validate every affected producer and consumer.
-9. Update this skill when contract locations, generators, compatibility policy, or validation commands change.
+ 8. Run `pnpm verify:contracts`, then validate every affected producer and consumer.
+ 9. Covered modules: community, rooms, rides, jobs, events, expenses, marketplace, referrals, immigration, safety, utilities, notifications, chat, ai, foundation, admin.
+10. Update this skill when contract locations, generators, compatibility policy, or validation commands change.

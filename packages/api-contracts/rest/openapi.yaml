@@ -122,6 +122,1032 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommunityPost'
+  /immigration/resources:
+    get:
+      operationId: listImmigrationResources
+      responses:
+        '200':
+          description: Immigration resources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImmigrationResource'
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+    post:
+      operationId: createImmigrationResource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateImmigrationResourceInput'
+      responses:
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImmigrationResource'
+  /immigration/guides:
+    get:
+      operationId: listImmigrationGuides
+      responses:
+        '200':
+          description: Immigration guides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImmigrationGuide'
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+  /immigration/checklists:
+    get:
+      operationId: listImmigrationChecklists
+      responses:
+        '200':
+          description: Immigration checklists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImmigrationChecklist'
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+  /immigration/faq:
+    get:
+      operationId: listFaqItems
+      responses:
+        '200':
+          description: FAQ items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FaqItem'
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+  /immigration/news:
+    get:
+      operationId: listImmigrationNews
+      responses:
+        '200':
+          description: Immigration news
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImmigrationNews'
+  /safety/reports:
+    get:
+      operationId: listSafetyReports
+      responses:
+        '200':
+          description: Safety reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SafetyReport'
+    post:
+      operationId: createSafetyReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSafetyReportInput'
+      responses:
+        '201':
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafetyReport'
+  /safety/reports/{id}/resolve:
+    post:
+      operationId: resolveSafetyReport
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Report resolved
+  /safety/blocked-users:
+    get:
+      operationId: listBlockedUsers
+      responses:
+        '200':
+          description: Blocked users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BlockedUser'
+    post:
+      operationId: blockUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockUserInput'
+      responses:
+        '201':
+          description: User blocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockedUser'
+  /safety/blocked-users/{blockedUserId}/unblock:
+    post:
+      operationId: unblockUser
+      parameters:
+        - name: blockedUserId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: User unblocked
+  /safety/trusted-contacts:
+    get:
+      operationId: listTrustedContacts
+      responses:
+        '200':
+          description: Trusted contacts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrustedContact'
+    post:
+      operationId: createTrustedContact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrustedContactInput'
+      responses:
+        '201':
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustedContact'
+  /utilities/packages:
+    get:
+      operationId: listPackageTrackings
+      responses:
+        '200':
+          description: Package trackings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PackageTracking'
+    post:
+      operationId: createPackageTracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePackageTrackingInput'
+      responses:
+        '201':
+          description: Tracking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackageTracking'
+  /utilities/nearby:
+    get:
+      operationId: listNearbyPlaces
+      responses:
+        '200':
+          description: Nearby places
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NearbyPlace'
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+  /utilities/emergency:
+    get:
+      operationId: listEmergencyResources
+      responses:
+        '200':
+          description: Emergency resources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmergencyResource'
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+  /notifications:
+    get:
+      operationId: listNotifications
+      responses:
+        '200':
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+    post:
+      operationId: createNotification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNotificationRequest'
+      responses:
+        '201':
+          description: Notification created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+  /notifications/unread-count:
+    get:
+      operationId: getUnreadNotificationCount
+      responses:
+        '200':
+          description: Unread notification count
+          content:
+            application/json:
+              schema:
+                type: integer
+  /notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Notification marked read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+  /notifications/preferences:
+    get:
+      operationId: listNotificationPreferences
+      responses:
+        '200':
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationPreference'
+    post:
+      operationId: setNotificationPreference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPreferenceRequest'
+      responses:
+        '200':
+          description: Preference updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+  /chat/conversations:
+    get:
+      operationId: listConversations
+      responses:
+        '200':
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+    post:
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationInput'
+      responses:
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+  /chat/conversations/{id}:
+    get:
+      operationId: getConversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Conversation detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+  /chat/conversations/{id}/messages:
+    get:
+      operationId: listMessages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+    post:
+      operationId: sendMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageInput'
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+  /chat/conversations/{id}/participants:
+    get:
+      operationId: listParticipants
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConversationParticipant'
+    post:
+      operationId: addParticipant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddParticipantInput'
+      responses:
+        '201':
+          description: Participant added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationParticipant'
+  /assistant/conversations:
+    get:
+      operationId: listAssistantConversations
+      responses:
+        '200':
+          description: Assistant conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssistantConversation'
+    post:
+      operationId: createAssistantConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationRequest'
+      responses:
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantConversation'
+  /assistant/conversations/{id}/messages:
+    get:
+      operationId: listAssistantMessages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Assistant messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssistantMessage'
+    post:
+      operationId: sendAssistantMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendAssistantMessageInput'
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantMessage'
+  /assistant/conversations/{id}/stream:
+    get:
+      operationId: streamAssistantMessages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Streaming assistant response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /assistant/messages/{id}/citations:
+    get:
+      operationId: listAssistantCitations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Citations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssistantCitation'
+    post:
+      operationId: createAssistantCitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssistantCitationInput'
+      responses:
+        '201':
+          description: Citation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantCitation'
+  /rooms:
+    get:
+      operationId: listRoomListings
+      parameters:
+        - name: location
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Room listings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoomListing' }
+    post:
+      operationId: createRoomListing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRoomListingInput' }
+      responses:
+        '201':
+          description: Listing created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomListing' }
+  /rooms/saved:
+    get:
+      operationId: listSavedRoomListings
+      responses:
+        '200':
+          description: Saved room listings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoomListing' }
+  /rooms/my-listings:
+    get:
+      operationId: listMyRoomListings
+      responses:
+        '200':
+          description: My room listings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoomListing' }
+  /rooms/{roomId}:
+    get:
+      operationId: getRoomListing
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Room listing detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomListing' }
+  /rooms/{roomId}/bookings:
+    get:
+      operationId: listRoomBookings
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Room bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoomBooking' }
+    post:
+      operationId: createRoomBooking
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRoomBookingInput' }
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomBooking' }
+  /rides:
+    get:
+      operationId: listRideOffers
+      parameters:
+        - name: origin
+          in: query
+          schema: { type: string }
+        - name: destination
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Ride offers
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RideOffer' }
+    post:
+      operationId: createRideOffer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRideOfferInput' }
+      responses:
+        '201':
+          description: Ride offer created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOffer' }
+  /rides/saved:
+    get:
+      operationId: listSavedRides
+      responses:
+        '200':
+          description: Saved rides
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RideOffer' }
+  /rides/mine:
+    get:
+      operationId: listMyRides
+      responses:
+        '200':
+          description: My rides
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RideOffer' }
+  /rides/history:
+    get:
+      operationId: listRideHistory
+      responses:
+        '200':
+          description: Ride history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RideOffer' }
+  /rides/{rideId}:
+    get:
+      operationId: getRideOffer
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Ride offer detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOffer' }
+  /rides/{rideId}/requests:
+    get:
+      operationId: listRideRequests
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Ride requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RideRequest' }
+    post:
+      operationId: createRideRequest
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRideRequestInput' }
+      responses:
+        '201':
+          description: Request created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideRequest' }
+  /rides/{rideId}/participants:
+    get:
+      operationId: listRideParticipants
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Ride participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RideParticipant' }
+  /rides/{rideId}/rate:
+    post:
+      operationId: rateRide
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRideRatingInput' }
+      responses:
+        '201':
+          description: Rating created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideRating' }
+  /rides/{rideId}/ratings:
+    get:
+      operationId: listRideRatings
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Ride ratings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RideRating' }
+  /posts/communities:
+    get:
+      operationId: listCommunities
+      responses:
+        '200':
+          description: Communities
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Community' }
+    post:
+      operationId: createCommunity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCommunityInput' }
+      responses:
+        '201':
+          description: Community created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Community' }
+  /posts/{postId}/comments:
+    get:
+      operationId: listPostComments
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Post comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PostComment' }
+    post:
+      operationId: createPostComment
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePostCommentInput' }
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostComment' }
+  /posts/{postId}/reactions:
+    get:
+      operationId: listPostReactions
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Post reactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PostReaction' }
+    post:
+      operationId: createPostReaction
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePostReactionInput' }
+      responses:
+        '201':
+          description: Reaction created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostReaction' }
+  /events:
+    get:
+      operationId: listEvents
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Event' }
+    post:
+      operationId: createEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEventInput' }
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+  /events/saved:
+    get:
+      operationId: listSavedEvents
+      responses:
+        '200':
+          description: Saved events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Event' }
+  /events/mine:
+    get:
+      operationId: listMyEvents
+      responses:
+        '200':
+          description: My events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Event' }
+  /events/{eventId}:
+    get:
+      operationId: getEvent
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Event detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+  /events/{eventId}/attendance:
+    get:
+      operationId: listEventAttendance
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Event attendance
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/EventAttendance' }
+    post:
+      operationId: createEventAttendance
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEventAttendanceInput' }
+      responses:
+        '201':
+          description: Attendance created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EventAttendance' }
+  /events/categories:
+    get:
+      operationId: listEventCategories
+      responses:
+        '200':
+          description: Event categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/EventCategory' }
   /admin/automations:
     get:
       operationId: listAutomationOperations
@@ -255,6 +1281,359 @@ components:
             id: { type: string, format: uuid }
             ownerId: { type: string, format: uuid }
             createdAt: { type: string, format: date-time }
+    ImmigrationResource:
+      type: object
+      additionalProperties: false
+      required: [id, ownerId, title, description, category, resourceType, verified, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        category: { type: string, maxLength: 80 }
+        url: { type: string, format: uri, maxLength: 500 }
+        resourceType: { type: string, enum: [DOCUMENT, GUIDE, LINK, FORM, TEMPLATE] }
+        tags: { type: string, maxLength: 400 }
+        verified: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    CreateImmigrationResourceInput:
+      type: object
+      additionalProperties: false
+      required: [title, description, category, resourceType]
+      properties:
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        category: { type: string, maxLength: 80 }
+        url: { type: string, format: uri, maxLength: 500 }
+        resourceType: { type: string, enum: [DOCUMENT, GUIDE, LINK, FORM, TEMPLATE] }
+        tags: { type: string, maxLength: 400 }
+        verified: { type: boolean }
+    ImmigrationGuide:
+      type: object
+      additionalProperties: false
+      required: [id, ownerId, title, description, content, category, difficultyLevel, estimatedDurationMinutes, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        content: { type: string, maxLength: 4000 }
+        category: { type: string, maxLength: 80 }
+        difficultyLevel: { type: string, enum: [BEGINNER, INTERMEDIATE, ADVANCED] }
+        estimatedDurationMinutes: { type: integer }
+        createdAt: { type: string, format: date-time }
+    ImmigrationChecklist:
+      type: object
+      additionalProperties: false
+      required: [id, ownerId, title, description, category, itemsJson, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        category: { type: string, maxLength: 80 }
+        itemsJson: { type: string, maxLength: 4000 }
+        dueDate: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    ImmigrationNews:
+      type: object
+      additionalProperties: false
+      required: [id, title, body, category, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 300 }
+        body: { type: string, maxLength: 4000 }
+        source: { type: string, maxLength: 200 }
+        url: { type: string, format: uri, maxLength: 500 }
+        category: { type: string, maxLength: 80 }
+        publishedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    FaqItem:
+      type: object
+      additionalProperties: false
+      required: [id, question, answer, category, published, sortOrder, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        question: { type: string, maxLength: 500 }
+        answer: { type: string, maxLength: 4000 }
+        category: { type: string, maxLength: 80 }
+        tags: { type: string, maxLength: 400 }
+        published: { type: boolean }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+    SafetyReport:
+      type: object
+      additionalProperties: false
+      required: [id, reporterId, targetId, category, description, status, severity, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        reporterId: { type: string, format: uuid }
+        targetId: { type: string, format: uuid }
+        category: { type: string, maxLength: 80 }
+        description: { type: string, maxLength: 4000 }
+        status: { type: string, enum: [OPEN, IN_REVIEW, RESOLVED, DISMISSED] }
+        severity: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+        evidenceUrls: { type: string, maxLength: 2000 }
+        createdAt: { type: string, format: date-time }
+        resolvedAt: { type: string, format: date-time }
+    CreateSafetyReportInput:
+      type: object
+      additionalProperties: false
+      required: [targetId, category, description, severity]
+      properties:
+        targetId: { type: string, format: uuid }
+        category: { type: string, maxLength: 80 }
+        description: { type: string, maxLength: 4000 }
+        severity: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+        evidenceUrls: { type: string, maxLength: 2000 }
+    BlockedUser:
+      type: object
+      additionalProperties: false
+      required: [id, ownerId, blockedUserId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        blockedUserId: { type: string, format: uuid }
+        reason: { type: string, maxLength: 500 }
+        createdAt: { type: string, format: date-time }
+    BlockUserInput:
+      type: object
+      additionalProperties: false
+      required: [blockedUserId]
+      properties:
+        blockedUserId: { type: string, format: uuid }
+        reason: { type: string, maxLength: 500 }
+    TrustedContact:
+      type: object
+      additionalProperties: false
+      required: [id, ownerId, name, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        name: { type: string, maxLength: 120 }
+        phone: { type: string, maxLength: 20 }
+        email: { type: string, format: email, maxLength: 200 }
+        relationship: { type: string, maxLength: 120 }
+        createdAt: { type: string, format: date-time }
+    CreateTrustedContactInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 120 }
+        phone: { type: string, maxLength: 20 }
+        email: { type: string, format: email, maxLength: 200 }
+        relationship: { type: string, maxLength: 120 }
+    PackageTracking:
+      type: object
+      additionalProperties: false
+      required: [id, ownerId, trackingNumber, carrier, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        trackingNumber: { type: string, maxLength: 80 }
+        carrier: { type: string, maxLength: 80 }
+        status: { type: string, enum: [PENDING, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION] }
+        estimatedDelivery: { type: string, format: date-time }
+        lastUpdate: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    CreatePackageTrackingInput:
+      type: object
+      additionalProperties: false
+      required: [trackingNumber, carrier, status]
+      properties:
+        trackingNumber: { type: string, maxLength: 80 }
+        carrier: { type: string, maxLength: 80 }
+        status: { type: string, enum: [PENDING, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION] }
+        estimatedDelivery: { type: string, format: date-time }
+    NearbyPlace:
+      type: object
+      additionalProperties: false
+      required: [id, name, category, address, latitude, longitude, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 200 }
+        category: { type: string, maxLength: 80 }
+        address: { type: string, maxLength: 400 }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        rating: { type: number, format: double }
+        distanceKm: { type: number, format: double }
+        phone: { type: string, maxLength: 20 }
+        createdAt: { type: string, format: date-time }
+    EmergencyResource:
+      type: object
+      additionalProperties: false
+      required: [id, name, category, address, description, latitude, longitude, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 200 }
+        category: { type: string, maxLength: 80 }
+        address: { type: string, maxLength: 400 }
+        phone: { type: string, maxLength: 20 }
+        hours: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 4000 }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        createdAt: { type: string, format: date-time }
+    CreateEmergencyResourceInput:
+      type: object
+      additionalProperties: false
+      required: [name, category, address, description, latitude, longitude]
+      properties:
+        name: { type: string, maxLength: 200 }
+        category: { type: string, maxLength: 80 }
+        address: { type: string, maxLength: 400 }
+        phone: { type: string, maxLength: 20 }
+        hours: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 4000 }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+    Notification:
+      type: object
+      additionalProperties: false
+      required: [id, userId, title, body, type, read, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        body: { type: string, maxLength: 4000 }
+        type: { type: string, enum: [SYSTEM, COMMUNITY, SAFETY, RIDE, ROOM, CHAT, AI] }
+        read: { type: boolean }
+        readAt: { type: string, format: date-time }
+        actionRoute: { type: string, maxLength: 200 }
+        createdAt: { type: string, format: date-time }
+    CreateNotificationRequest:
+      type: object
+      additionalProperties: false
+      required: [title, body, type]
+      properties:
+        title: { type: string, maxLength: 200 }
+        body: { type: string, maxLength: 4000 }
+        type: { type: string, enum: [SYSTEM, COMMUNITY, SAFETY, RIDE, ROOM, CHAT, AI] }
+        actionRoute: { type: string, maxLength: 200 }
+    NotificationPreference:
+      type: object
+      additionalProperties: false
+      required: [id, userId, channel, enabled, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        channel: { type: string, enum: [IN_APP, PUSH, EMAIL, SMS] }
+        enabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    SetPreferenceRequest:
+      type: object
+      additionalProperties: false
+      required: [channel, enabled]
+      properties:
+        channel: { type: string, enum: [IN_APP, PUSH, EMAIL, SMS] }
+        enabled: { type: boolean }
+    Conversation:
+      type: object
+      additionalProperties: false
+      required: [id, type, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [DIRECT, GROUP] }
+        title: { type: string, maxLength: 200 }
+        createdAt: { type: string, format: date-time }
+        lastMessageAt: { type: string, format: date-time }
+    CreateConversationInput:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string, enum: [DIRECT, GROUP] }
+        title: { type: string, maxLength: 200 }
+    Message:
+      type: object
+      additionalProperties: false
+      required: [id, conversationId, senderId, body, messageType, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        senderId: { type: string, format: uuid }
+        body: { type: string, maxLength: 4000 }
+        messageType: { type: string, enum: [TEXT, IMAGE, SYSTEM] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    SendMessageInput:
+      type: object
+      additionalProperties: false
+      required: [body, messageType]
+      properties:
+        body: { type: string, maxLength: 4000 }
+        messageType: { type: string, enum: [TEXT, IMAGE, SYSTEM] }
+    ConversationParticipant:
+      type: object
+      additionalProperties: false
+      required: [id, conversationId, userId, role, joinedAt]
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        joinedAt: { type: string, format: date-time }
+        leftAt: { type: string, format: date-time }
+        role: { type: string, enum: [OWNER, MEMBER] }
+    AddParticipantInput:
+      type: object
+      additionalProperties: false
+      required: [userId]
+      properties:
+        userId: { type: string, format: uuid }
+    AssistantConversation:
+      type: object
+      additionalProperties: false
+      required: [id, userId, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateConversationRequest:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: { type: string, maxLength: 200 }
+    AssistantMessage:
+      type: object
+      additionalProperties: false
+      required: [id, conversationId, role, content, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        role: { type: string, enum: [USER, ASSISTANT, SYSTEM] }
+        content: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
+    SendAssistantMessageInput:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content: { type: string, maxLength: 4000 }
+    AssistantCitation:
+      type: object
+      additionalProperties: false
+      required: [id, messageId, title, snippet, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        messageId: { type: string, format: uuid }
+        title: { type: string, maxLength: 300 }
+        url: { type: string, format: uri, maxLength: 500 }
+        snippet: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
+    CreateAssistantCitationInput:
+      type: object
+      additionalProperties: false
+      required: [title, snippet]
+      properties:
+        title: { type: string, maxLength: 300 }
+        url: { type: string, format: uri, maxLength: 500 }
+        snippet: { type: string, maxLength: 4000 }
     AutomationOperation:
       type: object
       additionalProperties: false
@@ -287,6 +1666,234 @@ components:
         environment: { type: string }
         ref: { type: string }
         requestedAt: { type: string, format: date-time }
+    RoomListing:
+      type: object
+      additionalProperties: false
+      required: [id, ownerId, title, price, roomType, status, broadLocation, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        price: { type: number, format: double }
+        roomType: { type: string, enum: [PRIVATE, SHARED, ENTIRE] }
+        status: { type: string, enum: [DRAFT, ACTIVE, PAUSED, RENTED] }
+        broadLocation: { type: string, maxLength: 200 }
+        exactAddress: { type: string, maxLength: 4000 }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateRoomListingInput:
+      type: object
+      additionalProperties: false
+      required: [title, price, roomType, broadLocation]
+      properties:
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        price: { type: number, format: double }
+        roomType: { type: string, enum: [PRIVATE, SHARED, ENTIRE] }
+        broadLocation: { type: string, maxLength: 200 }
+        exactAddress: { type: string, maxLength: 4000 }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+    CreateRoomBookingInput:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message: { type: string, maxLength: 4000 }
+    RoomBooking:
+      type: object
+      additionalProperties: false
+      required: [id, listingId, requesterId, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        requesterId: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, ACCEPTED, REJECTED, CANCELED] }
+        message: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
+    RideOffer:
+      type: object
+      additionalProperties: false
+      required: [id, driverId, originArea, destinationArea, departureAt, seatsTotal, seatsAvailable, contribution, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        driverId: { type: string, format: uuid }
+        originArea: { type: string, maxLength: 200 }
+        destinationArea: { type: string, maxLength: 200 }
+        departureAt: { type: string, format: date-time }
+        seatsTotal: { type: integer }
+        seatsAvailable: { type: integer }
+        contribution: { type: string, maxLength: 200 }
+        status: { type: string, enum: [OPEN, FULL, COMPLETED, CANCELED] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateRideOfferInput:
+      type: object
+      additionalProperties: false
+      required: [originArea, destinationArea, departureAt, seatsTotal, contribution]
+      properties:
+        originArea: { type: string, maxLength: 200 }
+        destinationArea: { type: string, maxLength: 200 }
+        departureAt: { type: string, format: date-time }
+        seatsTotal: { type: integer }
+        contribution: { type: string, maxLength: 200 }
+    CreateRideRequestInput:
+      type: object
+      additionalProperties: false
+      required: [seatsRequested, message]
+      properties:
+        seatsRequested: { type: integer }
+        message: { type: string, maxLength: 4000 }
+    RideRequest:
+      type: object
+      additionalProperties: false
+      required: [id, rideId, riderId, seatsRequested, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        rideId: { type: string, format: uuid }
+        riderId: { type: string, format: uuid }
+        seatsRequested: { type: integer }
+        message: { type: string, maxLength: 4000 }
+        status: { type: string, enum: [PENDING, ACCEPTED, REJECTED, CANCELED] }
+        createdAt: { type: string, format: date-time }
+    RideParticipant:
+      type: object
+      additionalProperties: false
+      required: [id, rideId, userId, role, joinedAt]
+      properties:
+        id: { type: string, format: uuid }
+        rideId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        role: { type: string, enum: [DRIVER, RIDER] }
+        joinedAt: { type: string, format: date-time }
+    CreateRideRatingInput:
+      type: object
+      additionalProperties: false
+      required: [rateeId, rating]
+      properties:
+        rateeId: { type: string, format: uuid }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 4000 }
+    RideRating:
+      type: object
+      additionalProperties: false
+      required: [id, rideId, raterId, rateeId, rating, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        rideId: { type: string, format: uuid }
+        raterId: { type: string, format: uuid }
+        rateeId: { type: string, format: uuid }
+        rating: { type: integer }
+        comment: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
+    Community:
+      type: object
+      additionalProperties: false
+      required: [id, ownerId, name, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
+    CreateCommunityInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+    PostComment:
+      type: object
+      additionalProperties: false
+      required: [id, postId, authorId, body, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        postId: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        body: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
+    CreatePostCommentInput:
+      type: object
+      additionalProperties: false
+      required: [body]
+      properties:
+        body: { type: string, maxLength: 4000 }
+    PostReaction:
+      type: object
+      additionalProperties: false
+      required: [id, postId, userId, type, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        postId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        type: { type: string, maxLength: 20 }
+        createdAt: { type: string, format: date-time }
+    CreatePostReactionInput:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string, maxLength: 20 }
+    Event:
+      type: object
+      additionalProperties: false
+      required: [id, organizerId, title, location, startAt, endAt, categoryId, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        organizerId: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        location: { type: string, maxLength: 200 }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        categoryId: { type: string, format: uuid }
+        status: { type: string, enum: [DRAFT, PUBLISHED, CANCELED, COMPLETED] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateEventInput:
+      type: object
+      additionalProperties: false
+      required: [title, location, startAt, endAt, categoryId]
+      properties:
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        location: { type: string, maxLength: 200 }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        categoryId: { type: string, format: uuid }
+    CreateEventAttendanceInput:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [INTERESTED, GOING, NOT_GOING] }
+    EventAttendance:
+      type: object
+      additionalProperties: false
+      required: [id, eventId, userId, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        eventId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        status: { type: string, enum: [INTERESTED, GOING, NOT_GOING] }
+        createdAt: { type: string, format: date-time }
+    EventCategory:
+      type: object
+      additionalProperties: false
+      required: [id, name, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
   responses:
     Unauthorized: { description: Authentication is required }
     Forbidden: { description: SUPER_ADMIN role is required }

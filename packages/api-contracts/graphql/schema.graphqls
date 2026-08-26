@@ -6,15 +6,228 @@ type CommunityPost {
   createdAt: String!
 }
 
+type Community {
+  id: ID!
+  ownerId: ID!
+  name: String!
+  description: String
+  createdAt: String!
+}
+
+type PostComment {
+  id: ID!
+  postId: ID!
+  authorId: ID!
+  body: String!
+  createdAt: String!
+}
+
+type PostReaction {
+  id: ID!
+  postId: ID!
+  userId: ID!
+  type: String!
+  createdAt: String!
+}
+
+type RoomListing {
+  id: ID!
+  ownerId: ID!
+  title: String!
+  description: String
+  price: String!
+  roomType: String!
+  status: String!
+  broadLocation: String!
+  exactAddress: String
+  latitude: String
+  longitude: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+type RoomBooking {
+  id: ID!
+  listingId: ID!
+  requesterId: ID!
+  status: String!
+  message: String
+  createdAt: String!
+}
+
+type RideOffer {
+  id: ID!
+  driverId: ID!
+  originArea: String!
+  destinationArea: String!
+  departureAt: String!
+  seatsTotal: Int!
+  seatsAvailable: Int!
+  contribution: String!
+  status: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type RideRequest {
+  id: ID!
+  rideId: ID!
+  riderId: ID!
+  seatsRequested: Int!
+  message: String
+  status: String!
+  createdAt: String!
+}
+
+type RideParticipant {
+  id: ID!
+  rideId: ID!
+  userId: ID!
+  role: String!
+  joinedAt: String!
+}
+
+type RideRating {
+  id: ID!
+  rideId: ID!
+  raterId: ID!
+  rateeId: ID!
+  rating: Int!
+  comment: String
+  createdAt: String!
+}
+
+type Event {
+  id: ID!
+  organizerId: ID!
+  title: String!
+  description: String
+  location: String!
+  latitude: String
+  longitude: String
+  startAt: String!
+  endAt: String!
+  categoryId: ID!
+  status: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type EventCategory {
+  id: ID!
+  name: String!
+  description: String
+  createdAt: String!
+}
+
+type EventAttendance {
+  id: ID!
+  eventId: ID!
+  userId: ID!
+  status: String!
+  createdAt: String!
+}
+
 input CreatePostInput {
   title: String!
   body: String!
 }
 
+input CreateCommunityInput {
+  name: String!
+  description: String
+}
+
+input CreatePostCommentInput {
+  body: String!
+}
+
+input CreatePostReactionInput {
+  type: String!
+}
+
+input CreateRoomListingInput {
+  title: String!
+  description: String
+  price: String!
+  roomType: String!
+  broadLocation: String!
+  exactAddress: String
+  latitude: String
+  longitude: String
+}
+
+input CreateRoomBookingInput {
+  message: String!
+}
+
+input CreateRideOfferInput {
+  originArea: String!
+  destinationArea: String!
+  departureAt: String!
+  seatsTotal: Int!
+  contribution: String!
+}
+
+input CreateRideRequestInput {
+  seatsRequested: Int!
+  message: String!
+}
+
+input CreateRideRatingInput {
+  rateeId: ID!
+  rating: Int!
+  comment: String
+}
+
+input CreateEventInput {
+  title: String!
+  description: String
+  location: String!
+  latitude: String
+  longitude: String
+  startAt: String!
+  endAt: String!
+  categoryId: ID!
+}
+
+input CreateEventAttendanceInput {
+  status: String!
+}
+
 type Query {
   communityPosts: [CommunityPost!]!
+  communities: [Community!]!
+  postComments(postId: ID!): [PostComment!]!
+  postReactions(postId: ID!): [PostReaction!]!
+  roomListings: [RoomListing!]!
+  roomListing(id: ID!): RoomListing!
+  savedRoomListings: [RoomListing!]!
+  myRoomListings: [RoomListing!]!
+  rideOffers: [RideOffer!]!
+  rideOffer(id: ID!): RideOffer!
+  savedRides: [RideOffer!]!
+  myRides: [RideOffer!]!
+  rideParticipants(rideId: ID!): [RideParticipant!]!
+  rideRatings(rideId: ID!): [RideRating!]!
+  events: [Event!]!
+  event(id: ID!): Event!
+  savedEvents: [Event!]!
+  myEvents: [Event!]!
+  eventCategories: [EventCategory!]!
+  eventAttendance(eventId: ID!): [EventAttendance!]!
 }
 
 type Mutation {
   createCommunityPost(input: CreatePostInput!): CommunityPost!
+  createCommunity(input: CreateCommunityInput!): Community!
+  addPostComment(postId: ID!, input: CreatePostCommentInput!): PostComment!
+  addPostReaction(postId: ID!, input: CreatePostReactionInput!): PostReaction!
+  createRoomListing(input: CreateRoomListingInput!): RoomListing!
+  bookRoom(roomId: ID!, input: CreateRoomBookingInput!): RoomBooking!
+  createRideOffer(input: CreateRideOfferInput!): RideOffer!
+  requestRideSeat(rideId: ID!, input: CreateRideRequestInput!): RideRequest!
+  rateRide(rideId: ID!, input: CreateRideRatingInput!): RideRating!
+  createEvent(input: CreateEventInput!): Event!
+  attendEvent(eventId: ID!, input: CreateEventAttendanceInput!): EventAttendance!
 }

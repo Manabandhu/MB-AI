@@ -73,3 +73,4 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 ## Current Implementation Status
 
 - **Partial**: Chat list, new chat, conversation, and conversation info screens are UI-complete. Realtime transport, message delivery/read state, typing/presence, and offline sync are pending backend integration.
+- **Backend**: REST and GraphQL APIs implemented under `/api/v1/chat` with conversations, messages, participants, and Flyway migration V14.

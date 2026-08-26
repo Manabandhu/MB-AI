@@ -18,3 +18,4 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 6. Test duplicate events, retries, disabled channels, quiet hours, and provider failure.
 7. Update this skill when channels, event fields, providers, policies, or paths change.
 8. Current frontend implementation: inbox route `/notifications` renders `NotificationsInboxScreen` from `frontend/src/modules/notifications/screens/`. Additional screens include `NotificationDetailScreen` and `NotificationSettingsScreen`. API client in `frontend/src/modules/notifications/api.ts` uses read-only demo endpoints.
+9. Backend: REST and GraphQL APIs implemented under `/api/v1/notifications` with notifications, preferences, device registrations, AsyncAPI `notificationRequested` producer, and Flyway migration V13.

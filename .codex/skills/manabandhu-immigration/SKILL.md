@@ -98,3 +98,4 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 ## Current Implementation Status
 
 - **Partial**: Home via `FeatureScreen` is complete. Dedicated list screens (resources, guides, checklists, FAQ, questions, USCIS, news, saved) and resource detail are UI-complete. Backend content freshness and citation linking are pending.
+- **Backend**: REST and GraphQL APIs implemented under `/api/v1/immigration` with resources, guides, checklists, news, FAQ, and Flyway migration V10.
