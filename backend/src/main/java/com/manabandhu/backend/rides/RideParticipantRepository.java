@@ -9,4 +9,8 @@ interface RideParticipantRepository extends JpaRepository<RideParticipant, UUID>
     List<RideParticipant> findByRideIdOrderByJoinedAtAsc(UUID rideId);
 
     List<RideParticipant> findByUserIdOrderByJoinedAtDesc(UUID userId);
+
+    boolean existsByRideIdAndUserId(UUID rideId, UUID userId);
+
+    void deleteByUserId(UUID userId);
 }

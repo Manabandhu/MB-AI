@@ -1,4 +1,5 @@
 import { color as baseColors, space } from '@manabandhu/design-system';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { supabase } from '@/lib/supabase';
 
 const colors = {
   ...baseColors,
@@ -23,6 +25,27 @@ export function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSignUp() {
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      router.replace('/home');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sign up failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -87,7 +110,8 @@ export function SignUpScreen() {
               />
             </Input>
           </View>
-          <AppButton label="Create account" route="/home" />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <AppButton label="Create account" onPress={handleSignUp} loading={loading} />
           <Text style={styles.orText}>or</Text>
           <AppButton label="Sign In" route="/sign-in" variant="secondary" />
         </View>
@@ -148,4 +172,5 @@ const styles = StyleSheet.create({
     paddingVertical: space.x2,
   },
   privacyText: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
 });

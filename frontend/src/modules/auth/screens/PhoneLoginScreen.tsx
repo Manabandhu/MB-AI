@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { supabase } from '@/lib/supabase';
 
 const colors = {
   ...baseColors,
@@ -21,6 +22,23 @@ const colors = {
 
 export function PhoneLoginScreen() {
   const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handlePhoneLogin() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ phone });
+      if (error) throw error;
+      router.push('/otp-verification');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Phone login failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -49,7 +67,8 @@ export function PhoneLoginScreen() {
               />
             </Input>
           </View>
-          <AppButton label="Send code" route="/otp-verification" />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <AppButton label="Send code" onPress={handlePhoneLogin} loading={loading} />
           <Pressable
             accessibilityRole="link"
             onPress={() => router.push('/email-login')}
@@ -95,4 +114,5 @@ const styles = StyleSheet.create({
   inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
   backLink: { alignSelf: 'center', marginTop: space.x3 },
   backLinkText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
 });

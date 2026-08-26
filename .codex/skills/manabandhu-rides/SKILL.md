@@ -40,12 +40,36 @@ Owns ride discovery, offers, requests, seats, participants, history, ratings, lo
 
 ## API Surface
 
-- `getRidesScreen(screenId)` -> `GET /api/v1/rides/screens/{screenId}`
-- `getRideDetail(rideId)` -> `GET /api/v1/rides/{rideId}`
-- `getRideManage(rideId)` -> `GET /api/v1/rides/{rideId}/manage`
-- `createRideOffer()` -> `POST /api/v1/rides/offer`
-- `createRideRequest()` -> `POST /api/v1/rides/request`
-- `submitRideRating(rideId)` -> `POST /api/v1/rides/{rideId}/rate`
+- `GET /api/v1/rides/screens/{screenId}` - catalog screen content
+- `GET /api/v1/rides/offers` - list active ride offers (params: `origin`, `destination`)
+- `POST /api/v1/rides/offers` - create ride offer (authenticated)
+- `GET /api/v1/rides/offers/{offerId}` - get ride offer by ID
+- `PATCH /api/v1/rides/offers/{offerId}` - update ride offer
+- `DELETE /api/v1/rides/offers/{offerId}` - delete ride offer
+- `GET /api/v1/rides/my-offers` - list driver's ride offers (authenticated)
+- `PATCH /api/v1/rides/offers/{offerId}/seats` - adjust available seats (param: `seats`)
+- `GET /api/v1/rides/offers/{offerId}/requests` - list ride requests for an offer
+- `POST /api/v1/rides/offers/{offerId}/requests` - create ride request (authenticated)
+- `GET /api/v1/rides/requests/{requestId}` - get ride request by ID
+- `PATCH /api/v1/rides/requests/{requestId}/status` - update request status
+- `DELETE /api/v1/rides/requests/{requestId}` - delete ride request
+- `GET /api/v1/rides/my-requests` - list rider's requests (authenticated)
+- `GET /api/v1/rides/offers/{offerId}/participants` - list ride participants
+- `POST /api/v1/rides/offers/{offerId}/participants` - add participant (authenticated, `role` param)
+- `DELETE /api/v1/rides/participants/{participantId}` - remove participant
+- `GET /api/v1/rides/offers/{offerId}/bookings` - list ride bookings
+- `POST /api/v1/rides/offers/{offerId}/bookings` - create ride booking (authenticated)
+- `GET /api/v1/rides/bookings/{bookingId}` - get ride booking by ID
+- `PATCH /api/v1/rides/bookings/{bookingId}/status` - update booking status
+- `DELETE /api/v1/rides/bookings/{bookingId}` - cancel booking
+- `GET /api/v1/rides/my-bookings` - list rider's bookings (authenticated)
+- `GET /api/v1/rides/offers/{offerId}/ratings` - list ratings for an offer
+- `POST /api/v1/rides/offers/{offerId}/ratings` - create rating (authenticated)
+- `GET /api/v1/rides/ratings/{ratingId}` - get rating by ID
+- `DELETE /api/v1/rides/ratings/{ratingId}` - delete rating
+- `GET /api/v1/rides/my-ratings` - list ratings received (authenticated)
+
+Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantService`, `RideBookingService`, `RideRatingService`.
 
 ## Demo Fixtures
 
@@ -87,4 +111,4 @@ Owns ride discovery, offers, requests, seats, participants, history, ratings, lo
 
 ## Current Implementation Status
 
-- **Partial**: Home, search, filters, saved, mine, history, seat-requests, and participants screens are complete via `FeatureScreen`. Ride detail, manage, offer, request, and rate screens are placeholders. Map view is a placeholder pending real map integration.
+- **Partial**: Backend REST API complete with full CRUD for offers, requests, participants, bookings, and ratings, including automatic seat management on booking create/cancel. Frontend screens (home, search, filters, saved, mine, history, seat-requests, participants, detail, manage, offer, request, rate) remain catalog/placeholder pending integration with backend REST APIs.

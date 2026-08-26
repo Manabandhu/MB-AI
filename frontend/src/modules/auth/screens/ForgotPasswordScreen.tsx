@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { supabase } from '@/lib/supabase';
 
 const colors = {
   ...baseColors,
@@ -22,6 +23,23 @@ const colors = {
 export function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleReset() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      setSent(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Reset request failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -61,7 +79,8 @@ export function ForgotPasswordScreen() {
                   />
                 </Input>
               </View>
-              <AppButton label="Send reset link" onPress={() => setSent(true)} />
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+              <AppButton label="Send reset link" onPress={handleReset} loading={loading} />
               <Pressable
                 accessibilityRole="link"
                 onPress={() => router.push('/sign-in')}
@@ -117,4 +136,5 @@ const styles = StyleSheet.create({
   successBody: { color: colors.muted, fontSize: 15, lineHeight: 23 },
   backLink: { alignSelf: 'center', marginTop: space.x3 },
   backLinkText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
 });

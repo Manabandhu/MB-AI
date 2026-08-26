@@ -40,7 +40,7 @@ public class RideParticipantService {
         if (!offerRepository.existsById(rideId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found");
         }
-        if (repository.existsById(userId)) {
+        if (repository.existsByRideIdAndUserId(rideId, userId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User already a participant");
         }
         var participant = new RideParticipant(rideId, userId, role);

@@ -1,11 +1,14 @@
 import { color as baseColors, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { supabase } from '@/lib/supabase';
+import { AuthError } from '@/lib/api';
 
 const colors = {
   ...baseColors,
@@ -19,6 +22,44 @@ const colors = {
 };
 
 export function SignInScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSignIn() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      router.replace('/home');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sign in failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDemoSignIn() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: 'demo@manabandhu.local',
+        password: 'DemoPass123',
+      });
+      if (error) throw error;
+      router.replace('/home');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Demo sign in failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -36,22 +77,34 @@ export function SignInScreen() {
         </View>
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email or phone</Text>
+            <Text style={styles.inputLabel}>Email</Text>
             <Input className="min-h-14 rounded-xl bg-secondary/70">
-              <InputField placeholder="Enter your email or phone" autoCapitalize="none" />
+              <InputField
+                placeholder="Enter your email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
             </Input>
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Password</Text>
             <Input className="min-h-14 rounded-xl bg-secondary/70">
-              <InputField placeholder="Enter your password" secureTextEntry />
+              <InputField
+                placeholder="Enter your password"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
             </Input>
           </View>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <View style={styles.demoCredentials}>
             <Text style={styles.demoTitle}>Test user</Text>
             <Text style={styles.demoLine}>Email: demo@manabandhu.local</Text>
             <Text style={styles.demoLine}>Password: DemoPass123</Text>
-            <AppButton label="Use demo account" route="/home" variant="secondary" />
+            <AppButton label="Use demo account" onPress={handleDemoSignIn} variant="secondary" loading={loading} />
           </View>
           <Pressable
             accessibilityRole="link"
@@ -60,7 +113,7 @@ export function SignInScreen() {
           >
             <Text style={styles.forgotText}>Forgot password?</Text>
           </Pressable>
-          <AppButton label="Continue" route="/home" />
+          <AppButton label="Continue" onPress={handleSignIn} loading={loading} />
           <Text style={styles.orText}>or</Text>
           <AppButton label="Create account" route="/sign-up" variant="secondary" />
         </View>
@@ -131,4 +184,5 @@ const styles = StyleSheet.create({
     paddingVertical: space.x2,
   },
   privacyText: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
 });

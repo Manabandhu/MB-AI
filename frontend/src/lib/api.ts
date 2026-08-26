@@ -8,14 +8,34 @@ export type ApiHealth = {
   status: string;
 };
 
-async function authorizationHeaders(): Promise<Record<string, string>> {
+export class AuthError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export async function authorizationHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
   return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
 }
 
 export async function getApiHealth(): Promise<ApiHealth> {
   const response = await fetch(`${env.apiUrl}/api/v1/health`);
-  if (!response.ok) throw new Error(`Health check failed: ${response.status}`);
+  if (!response.ok) throw new ApiError(`Health check failed: ${response.status}`, response.status);
   return response.json() as Promise<ApiHealth>;
 }
 
@@ -31,8 +51,15 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   headers.set('Content-Type', 'application/json');
   for (const [name, value] of Object.entries(auth)) headers.set(name, value);
 
-  return fetch(`${env.apiUrl}${path}`, {
+  const response = await fetch(`${env.apiUrl}${path}`, {
     ...init,
     headers,
   });
+
+  if (response.status === 401 || response.status === 403) {
+    const text = await response.text().catch(() => '');
+    throw new AuthError(text || `Authentication required (${response.status})`, response.status);
+  }
+
+  return response;
 }

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { supabase } from '@/lib/supabase';
 
 const colors = {
   ...baseColors,
@@ -21,7 +22,28 @@ const colors = {
 export function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleReset() {
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      setSuccess(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Password reset failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -69,7 +91,8 @@ export function ResetPasswordScreen() {
                   />
                 </Input>
               </View>
-              <AppButton label="Reset password" onPress={() => setSuccess(true)} />
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+              <AppButton label="Reset password" onPress={handleReset} loading={loading} />
             </>
           )}
         </View>
@@ -116,4 +139,5 @@ const styles = StyleSheet.create({
   },
   successTitle: { color: colors.success, fontSize: 18, fontWeight: '800' },
   successBody: { color: colors.muted, fontSize: 15, lineHeight: 23 },
+  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
 });

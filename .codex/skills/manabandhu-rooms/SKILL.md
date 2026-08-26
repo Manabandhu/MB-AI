@@ -33,10 +33,30 @@ Owns room discovery, search, map, filters, saved rooms, listings, listing creati
 
 ## API Surface
 
-- `getRoomsScreen(screenId)` -> `GET /api/v1/rooms/screens/{screenId}`
-- `getRoomDetail(roomId)` -> `GET /api/v1/rooms/{roomId}`
-- `getRoomEdit(roomId)` -> `GET /api/v1/rooms/{roomId}/edit`
-- `createRoomListing()` -> `POST /api/v1/rooms/create-listing`
+- `GET /api/v1/rooms/screens/{screenId}` - catalog screen content
+- `GET /api/v1/rooms/listings` - list active listings (params: `location`, `roomType`)
+- `POST /api/v1/rooms/listings` - create listing (authenticated)
+- `GET /api/v1/rooms/listings/{listingId}` - get listing by ID
+- `PATCH /api/v1/rooms/listings/{listingId}` - update listing
+- `DELETE /api/v1/rooms/listings/{listingId}` - delete listing
+- `GET /api/v1/rooms/my-listings` - list owner's listings (authenticated)
+- `GET /api/v1/rooms/listings/{listingId}/images` - list images for a listing
+- `POST /api/v1/rooms/listings/{listingId}/images` - add image to listing
+- `DELETE /api/v1/rooms/images/{imageId}` - delete image
+- `GET /api/v1/rooms/listings/{listingId}/availability` - list availability windows
+- `POST /api/v1/rooms/listings/{listingId}/availability` - create availability window
+- `DELETE /api/v1/rooms/availability/{availabilityId}` - delete availability
+- `GET /api/v1/rooms/listings/{listingId}/bookings` - list bookings for a listing
+- `POST /api/v1/rooms/listings/{listingId}/bookings` - create booking (authenticated)
+- `GET /api/v1/rooms/bookings/{bookingId}` - get booking by ID
+- `PATCH /api/v1/rooms/bookings/{bookingId}/status` - update booking status
+- `DELETE /api/v1/rooms/bookings/{bookingId}` - cancel booking
+- `GET /api/v1/rooms/my-bookings` - list requester's bookings (authenticated)
+- `GET /api/v1/rooms/favorites` - list saved listings (authenticated)
+- `POST /api/v1/rooms/listings/{listingId}/favorite` - save listing (authenticated)
+- `DELETE /api/v1/rooms/listings/{listingId}/favorite` - remove saved listing (authenticated)
+
+Backend services: `RoomListingService`, `RoomAvailabilityService`, `RoomBookingService`, `RoomImageService`, `RoomFavoriteService`.
 
 ## Demo Fixtures
 
@@ -79,4 +99,4 @@ Owns room discovery, search, map, filters, saved rooms, listings, listing creati
 
 ## Current Implementation Status
 
-- **Partial**: Home, search, filters, saved, and my-listings screens are complete via `FeatureScreen`. Room detail, edit, and create listing screens are placeholders. Map view is a placeholder pending real map integration.
+- **Partial**: Backend REST API complete with full CRUD for listings, images, availability, bookings, and saved listings. Frontend screens (home, search, filters, saved, my-listings, map, create/edit/detail) remain catalog/placeholder pending integration with backend REST APIs.

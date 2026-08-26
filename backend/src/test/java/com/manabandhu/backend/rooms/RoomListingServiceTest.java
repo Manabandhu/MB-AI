@@ -55,8 +55,9 @@ class RoomListingServiceTest {
     @Test
     void updateThrowsNotFound() {
         var input = new UpdateRoomListingInput(null, null, null, null, null, null, null, null, "paused");
-        when(repository.findById(UUID.randomUUID())).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.update(UUID.randomUUID(), input))
+        var listingId = UUID.randomUUID();
+        when(repository.findById(listingId)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.update(listingId, input))
                 .isInstanceOf(ResponseStatusException.class);
     }
 

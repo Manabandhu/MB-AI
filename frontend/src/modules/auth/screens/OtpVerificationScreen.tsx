@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { supabase } from '@/lib/supabase';
 
 const colors = {
   ...baseColors,
@@ -24,6 +25,8 @@ export function OtpVerificationScreen() {
   const [code, setCode] = useState('');
   const [countdown, setCountdown] = useState(OTP_COUNTDOWN_SECONDS);
   const [resendAvailable, setResendAvailable] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (countdown <= 0) {
@@ -33,6 +36,21 @@ export function OtpVerificationScreen() {
     const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
     return () => clearInterval(timer);
   }, [countdown]);
+
+  async function handleVerify() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.verifyOtp({ email: 'demo@manabandhu.local', token: code, type: 'email' });
+      if (error) throw error;
+      router.replace('/home');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Verification failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function handleResend() {
     setResendAvailable(false);
@@ -67,7 +85,8 @@ export function OtpVerificationScreen() {
               />
             </Input>
           </View>
-          <AppButton label="Verify" route="/home" />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <AppButton label="Verify" onPress={handleVerify} loading={loading} />
           <View style={styles.resendRow}>
             <Text style={styles.resendLabel}>Didn’t get the code? </Text>
             {resendAvailable ? (
@@ -118,4 +137,5 @@ const styles = StyleSheet.create({
   resendLabel: { color: colors.muted, fontSize: 14, fontWeight: '700' },
   resendAction: { color: colors.primary, fontSize: 14, fontWeight: '800' },
   resendCountdown: { color: colors.muted, fontSize: 14, fontWeight: '700' },
+  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
 });
