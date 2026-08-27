@@ -12,9 +12,17 @@ type AppButtonProps = {
   onPress?: () => void;
   variant?: AppButtonVariant;
   icon?: AppIconName;
+  loading?: boolean;
 };
 
-export function AppButton({ label, route, onPress, variant = 'primary', icon }: AppButtonProps) {
+export function AppButton({
+  label,
+  route,
+  onPress,
+  variant = 'primary',
+  icon,
+  loading,
+}: AppButtonProps) {
   const isPrimary = variant === 'primary';
   const gluestackVariant = isPrimary ? 'default' : variant === 'secondary' ? 'outline' : 'ghost';
   const textColor = isPrimary ? colors.surface : colors.primary;
@@ -24,6 +32,7 @@ export function AppButton({ label, route, onPress, variant = 'primary', icon }: 
       className="min-h-12 rounded-xl px-4"
       onPress={onPress ?? (() => route && router.push(route as Href))}
       variant={gluestackVariant}
+      isDisabled={loading}
     >
       {icon ? <AppIcon color={textColor} name={icon} size={18} /> : null}
       <ButtonText

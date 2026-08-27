@@ -83,3 +83,4 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 ## Current Implementation Status
 
 - **Partial**: All auth screens are implemented with demo credentials. Supabase auth actions are not yet fully wired; demo login returns to `/home`. Phone/email login, OTP, and password reset screens are UI-complete.
+- Recent fixes: auth screen imports now group the Supabase client import with other client imports, `authStore.ts` uses `_get` to avoid an unused getter lint, and `SignInScreen.tsx` removed an unused `AuthError` import.

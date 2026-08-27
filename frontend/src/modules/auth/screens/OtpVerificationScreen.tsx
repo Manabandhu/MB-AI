@@ -1,12 +1,13 @@
 import { color as baseColors, space } from '@manabandhu/design-system';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { supabase } from '@/lib/supabase';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
-import { supabase } from '@/lib/supabase';
 
 const colors = {
   ...baseColors,
@@ -41,7 +42,11 @@ export function OtpVerificationScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.verifyOtp({ email: 'demo@manabandhu.local', token: code, type: 'email' });
+      const { error } = await supabase.auth.verifyOtp({
+        email: 'demo@manabandhu.local',
+        token: code,
+        type: 'email',
+      });
       if (error) throw error;
       router.replace('/home');
     } catch (err) {

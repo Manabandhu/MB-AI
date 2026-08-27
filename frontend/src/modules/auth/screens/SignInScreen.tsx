@@ -4,11 +4,10 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { supabase } from '@/lib/supabase';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
-import { supabase } from '@/lib/supabase';
-import { AuthError } from '@/lib/api';
 
 const colors = {
   ...baseColors,
@@ -104,7 +103,12 @@ export function SignInScreen() {
             <Text style={styles.demoTitle}>Test user</Text>
             <Text style={styles.demoLine}>Email: demo@manabandhu.local</Text>
             <Text style={styles.demoLine}>Password: DemoPass123</Text>
-            <AppButton label="Use demo account" onPress={handleDemoSignIn} variant="secondary" loading={loading} />
+            <AppButton
+              label="Use demo account"
+              onPress={handleDemoSignIn}
+              variant="secondary"
+              loading={loading}
+            />
           </View>
           <Pressable
             accessibilityRole="link"

@@ -1,6 +1,6 @@
 import { color } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -72,7 +72,7 @@ export default function AdminReportsScreen() {
                 <Pressable
                   key={r.id}
                   accessibilityRole="button"
-                  onPress={() => router.push(`/admin/reports/${r.id}`)}
+                  onPress={() => router.push(`/admin/reports/${r.id}` as Href)}
                   style={styles.item}
                 >
                   <View style={styles.itemBody}>

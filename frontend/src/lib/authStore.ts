@@ -1,4 +1,4 @@
-import { type Session, type User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { create } from 'zustand';
@@ -29,7 +29,7 @@ interface AuthActions {
   _setSession: (session: Session | null) => void;
 }
 
-export const useAuthStore = create<AuthState & AuthActions>()((set, get) => ({
+export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   session: null,
   user: null,
   status: 'loading',

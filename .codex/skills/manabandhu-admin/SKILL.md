@@ -91,3 +91,4 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 ## Current Implementation Status
 
 - **Partial**: Dashboard and all list screens (users, reports, rooms, rides, community, jobs, events, audit log) are UI-complete. Moderation actions and automation executions are placeholders pending backend wiring. Authorization is not yet enforced client-side beyond route gating.
+- Recent fixes: admin detail navigation uses typed `Href` casts, and screen JSX formatting was normalized for readability.

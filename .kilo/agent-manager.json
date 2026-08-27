@@ -1,0 +1,70 @@
+{
+  "worktrees": {
+    "wt-1787769687914-1": {
+      "branch": "implement-community-screens",
+      "path": "/workspaces/MB-AI/.kilo/worktrees/implement-community-screens",
+      "parentBranch": "main",
+      "createdAt": "2026-08-26T18:41:27.914Z",
+      "remote": "origin",
+      "label": "implement community screens",
+      "branchOwned": true
+    },
+    "wt-1787769692609-2": {
+      "branch": "implement-chat-screens",
+      "path": "/workspaces/MB-AI/.kilo/worktrees/implement-chat-screens",
+      "parentBranch": "main",
+      "createdAt": "2026-08-26T18:41:32.609Z",
+      "remote": "origin",
+      "label": "implement chat screens",
+      "branchOwned": true
+    },
+    "wt-1787769694727-3": {
+      "branch": "implement-admin-screens",
+      "path": "/workspaces/MB-AI/.kilo/worktrees/implement-admin-screens",
+      "parentBranch": "main",
+      "createdAt": "2026-08-26T18:41:34.727Z",
+      "remote": "origin",
+      "label": "implement admin screens",
+      "branchOwned": true
+    },
+    "wt-1787769698243-4": {
+      "branch": "implement-events-screens",
+      "path": "/workspaces/MB-AI/.kilo/worktrees/implement-events-screens",
+      "parentBranch": "main",
+      "createdAt": "2026-08-26T18:41:38.243Z",
+      "remote": "origin",
+      "label": "implement events screens",
+      "branchOwned": true
+    }
+  },
+  "sessions": {
+    "ses_fc09f624dffe9nuI82jpmMx26u": {
+      "worktreeId": "wt-1787769687914-1",
+      "createdAt": "2026-08-26T18:41:31.707Z"
+    },
+    "ses_fc09f5a40ffepQjT53nrX4RL2P": {
+      "worktreeId": "wt-1787769692609-2",
+      "createdAt": "2026-08-26T18:41:33.643Z"
+    },
+    "ses_fc09f4227ffeDov5vETm5bkW9k": {
+      "worktreeId": "wt-1787769698243-4",
+      "createdAt": "2026-08-26T18:41:39.837Z"
+    },
+    "ses_fc07d12ccffe6Y3KvUOTouG0xO": {
+      "worktreeId": "wt-1787769694727-3",
+      "createdAt": "2026-08-26T22:49:39.422Z"
+    }
+  },
+  "tabOrder": {
+    "local": [
+      "pending:979317db-4257-44f8-8504-5d3d8ce36280"
+    ]
+  },
+  "worktreeOrder": [
+    "wt-1787769687914-1",
+    "wt-1787769692609-2",
+    "wt-1787769694727-3",
+    "wt-1787769698243-4"
+  ],
+  "sessionsCollapsed": true
+}
