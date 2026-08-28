@@ -78,3 +78,5 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
 ## Current Implementation Status
 
 - **Partial**: Home via `FeatureScreen`, search, categories, saved, and listing details are UI-complete. Sell item screen is a placeholder. Backend listing availability, seller trust, and moderation are pending.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

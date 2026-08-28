@@ -77,3 +77,5 @@ Owns referral discovery, requests, offers, details, status tracking, user-owned 
 ## Current Implementation Status
 
 - **Partial**: Home via `FeatureScreen`, request, offer, details, and my referrals screens are UI-complete. Backend referral lifecycle, consent enforcement, and privacy boundaries are pending.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

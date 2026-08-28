@@ -12,9 +12,10 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 5. Keep REST under `/api/v1`; keep GraphQL schema compatible with the canonical contract.
 6. Privileged automation lives in the `admin` package: require the trusted `SUPER_ADMIN` role unless the temporary public admin override is enabled, map stable operation IDs to an allow-list, require reasons/confirmations, and keep provider credentials server-side.
 7. Public foundation, notifications, rooms, and rides demo content endpoints (`/screens/{screenId}`) must remain read-only, contain no user data, stay under `/api/v1/foundation`, `/api/v1/notifications`, `/api/v1/rooms`, and `/api/v1/rides`, and include route fields only for client-owned in-app navigation targets. Rooms and rides also expose authenticated CRUD REST endpoints under `/api/v1/rooms` and `/api/v1/rides`; derive user identity from the verified JWT subject and never trust client-supplied owner IDs.
- 8. Add tests for authorization, validation, failure behavior, and persistence boundaries.
- 9. Baseline existing Supabase schemas at Flyway version `0` so repository migrations still run from `V1`. New V2 (`room_listings`, `room_images`, `room_availabilities`, `room_bookings`, `room_favorites`) and V3 (`ride_offers`, `ride_requests`, `ride_participants`, `ride_bookings`, `ride_ratings`) migrations follow this baseline.
+  8. Add tests for authorization, validation, failure behavior, and persistence boundaries.
+9. Baseline existing Supabase schemas at Flyway version `0` so repository migrations still run from `V1`. New V2 (`room_listings`, `room_images`, `room_availabilities`, `room_bookings`, `room_favorites`) and V3 (`ride_offers`, `ride_requests`, `ride_participants`, `ride_bookings`, `ride_ratings`) migrations follow this baseline.
 10. Use `pnpm dev:backend` for local backend startup; it loads `backend/.env` when present while preserving shell environment overrides, then runs the Maven wrapper.
 11. Run Maven tests on Java 25.
 12. Module boundaries: immigration, safety, utilities, notifications, chat, ai, community, rooms, rides, jobs, events, expenses, marketplace, referrals, foundation, admin, auth, analytics, observability.
-13. Update this skill when backend structure, dependencies, security, contracts, or commands change.
+13. GraphQL controllers must expose all queries and mutations defined in the canonical schema; recent additions include `rideRatings` and `eventAttendance` queries mapped through `RidesGraphqlController` and `EventsGraphqlController`.
+14. Update this skill when backend structure, dependencies, security, contracts, or commands change.

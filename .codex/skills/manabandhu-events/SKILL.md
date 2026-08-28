@@ -79,3 +79,5 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 ## Current Implementation Status
 
 - **Partial**: Events home, search, details, and create event screens are implemented. Saved and my events screens are UI-complete but rely on demo fallbacks. Backend moderation, capacity, and attendance rules are enforced server-side.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

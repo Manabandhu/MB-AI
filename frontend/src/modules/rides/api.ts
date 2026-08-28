@@ -1,38 +1,35 @@
-import { apiFetch } from '@/lib/api';
+import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 
 export async function getRidesScreen(screenId: string): Promise<CatalogScreenContent> {
-  const response = await apiFetch(`/api/v1/rides/screens/${screenId}`);
-  if (!response.ok) throw new Error(`Rides screen failed: ${response.status}`);
-  return response.json() as Promise<CatalogScreenContent>;
+  return parseJsonOrThrow(await apiFetch(`/api/v1/rides/screens/${screenId}`), 'Rides screen');
 }
 
 export async function getRideDetail(rideId: string): Promise<CatalogScreenContent> {
-  const response = await apiFetch(`/api/v1/rides/${rideId}`);
-  if (!response.ok) throw new Error(`Ride detail failed: ${response.status}`);
-  return response.json() as Promise<CatalogScreenContent>;
+  return parseJsonOrThrow(await apiFetch(`/api/v1/rides/${rideId}`), 'Ride detail');
 }
 
 export async function getRideManage(rideId: string): Promise<CatalogScreenContent> {
-  const response = await apiFetch(`/api/v1/rides/${rideId}/manage`);
-  if (!response.ok) throw new Error(`Ride manage failed: ${response.status}`);
-  return response.json() as Promise<CatalogScreenContent>;
+  return parseJsonOrThrow(await apiFetch(`/api/v1/rides/${rideId}/manage`), 'Ride manage');
 }
 
 export async function createRideOffer(): Promise<CatalogScreenContent> {
-  const response = await apiFetch('/api/v1/rides/offer', { method: 'POST' });
-  if (!response.ok) throw new Error(`Create ride offer failed: ${response.status}`);
-  return response.json() as Promise<CatalogScreenContent>;
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/rides/offer', { method: 'POST' }),
+    'Create ride offer',
+  );
 }
 
 export async function createRideRequest(): Promise<CatalogScreenContent> {
-  const response = await apiFetch('/api/v1/rides/request', { method: 'POST' });
-  if (!response.ok) throw new Error(`Create ride request failed: ${response.status}`);
-  return response.json() as Promise<CatalogScreenContent>;
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/rides/request', { method: 'POST' }),
+    'Create ride request',
+  );
 }
 
 export async function submitRideRating(rideId: string): Promise<CatalogScreenContent> {
-  const response = await apiFetch(`/api/v1/rides/${rideId}/rate`, { method: 'POST' });
-  if (!response.ok) throw new Error(`Submit ride rating failed: ${response.status}`);
-  return response.json() as Promise<CatalogScreenContent>;
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/rides/${rideId}/rate`, { method: 'POST' }),
+    'Submit ride rating',
+  );
 }

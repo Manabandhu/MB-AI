@@ -58,6 +58,11 @@ public class RidesGraphqlController {
         return service.findParticipants(rideId);
     }
 
+    @QueryMapping
+    List<RideRating> rideRatings(@Argument UUID rideId) {
+        return service.findRatings(rideId);
+    }
+
     @MutationMapping
     RideRating rateRide(Authentication authentication, @Argument UUID rideId, @Argument @Valid CreateRideRatingInput input) {
         return service.rate(rideId, UUID.fromString(authentication.getName()),

@@ -1,28 +1,20 @@
-import { apiFetch } from '@/lib/api';
+import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 
 export async function getUtilitiesHome(): Promise<CatalogScreenContent> {
-  const response = await apiFetch('/api/v1/utilities/home');
-  if (!response.ok) throw new Error(`Utilities home failed: ${response.status}`);
-  return response.json() as Promise<CatalogScreenContent>;
+  return parseJsonOrThrow(await apiFetch('/api/v1/utilities/home'), 'Utilities home');
 }
 
-export async function getPackages() {
-  const response = await apiFetch('/api/v1/utilities/packages');
-  if (!response.ok) throw new Error(`Packages failed: ${response.status}`);
-  return response.json() as Promise<PackageItem[]>;
+export async function getPackages(): Promise<PackageItem[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/utilities/packages'), 'Packages');
 }
 
-export async function getNearby() {
-  const response = await apiFetch('/api/v1/utilities/nearby');
-  if (!response.ok) throw new Error(`Nearby failed: ${response.status}`);
-  return response.json() as Promise<NearbyItem[]>;
+export async function getNearby(): Promise<NearbyItem[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/utilities/nearby'), 'Nearby');
 }
 
-export async function getEmergencyResources() {
-  const response = await apiFetch('/api/v1/utilities/emergency');
-  if (!response.ok) throw new Error(`Emergency resources failed: ${response.status}`);
-  return response.json() as Promise<EmergencyItem[]>;
+export async function getEmergencyResources(): Promise<EmergencyItem[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/utilities/emergency'), 'Emergency resources');
 }
 
 export type PackageItem = {

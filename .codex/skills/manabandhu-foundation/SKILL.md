@@ -87,3 +87,5 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 ## Current Implementation Status
 
 - **Partial**: Splash, welcome, onboarding, app shell, search, saved, profile, and settings are implemented. Explore shell and catalog-backed screens are functional but rely on demo fallbacks pending backend content. Stitch prototype screens are translated from HTML and will be refined.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

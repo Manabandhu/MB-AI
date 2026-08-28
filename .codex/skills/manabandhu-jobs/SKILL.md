@@ -77,3 +77,5 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 ## Current Implementation Status
 
 - **Partial**: Home via `FeatureScreen`, search, filters, saved, and job details are UI-complete. Post job screen is a placeholder. Backend job posting, employer context, and moderation are pending.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

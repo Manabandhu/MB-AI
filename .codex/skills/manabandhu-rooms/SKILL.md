@@ -100,3 +100,5 @@ Backend services: `RoomListingService`, `RoomAvailabilityService`, `RoomBookingS
 ## Current Implementation Status
 
 - **Partial**: Backend REST API complete with full CRUD for listings, images, availability, bookings, and saved listings. Frontend screens (home, search, filters, saved, my-listings, map, create/edit/detail) remain catalog/placeholder pending integration with backend REST APIs.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

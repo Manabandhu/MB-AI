@@ -1,4 +1,4 @@
-import { apiFetch } from '@/lib/api';
+import { apiFetch, parseJson } from '@/lib/apiClient';
 
 export type Event = {
   id: string;
@@ -26,22 +26,16 @@ export type EventAttendee = {
   status: string;
 };
 
-async function responseJson<T>(response: Response): Promise<T> {
-  if (response.ok) return response.json() as Promise<T>;
-  const detail = await response.text();
-  throw new Error(detail || `Request failed: ${response.status}`);
-}
-
 export async function listEvents(): Promise<Event[]> {
-  return responseJson(await apiFetch('/api/v1/events'));
+  return parseJson(await apiFetch('/api/v1/events'));
 }
 
 export async function searchEvents(query: string): Promise<Event[]> {
-  return responseJson(await apiFetch(`/api/v1/events/search?q=${encodeURIComponent(query)}`));
+  return parseJson(await apiFetch(`/api/v1/events/search?q=${encodeURIComponent(query)}`));
 }
 
 export async function getEvent(id: string): Promise<Event> {
-  return responseJson(await apiFetch(`/api/v1/events/${encodeURIComponent(id)}`));
+  return parseJson(await apiFetch(`/api/v1/events/${encodeURIComponent(id)}`));
 }
 
 export async function createEvent(input: {
@@ -51,7 +45,7 @@ export async function createEvent(input: {
   location: string;
   category: string;
 }): Promise<Event> {
-  return responseJson(
+  return parseJson(
     await apiFetch('/api/v1/events', {
       method: 'POST',
       body: JSON.stringify(input),
@@ -60,9 +54,9 @@ export async function createEvent(input: {
 }
 
 export async function listSavedEvents(): Promise<Event[]> {
-  return responseJson(await apiFetch('/api/v1/events/saved'));
+  return parseJson(await apiFetch('/api/v1/events/saved'));
 }
 
 export async function listMyEvents(): Promise<Event[]> {
-  return responseJson(await apiFetch('/api/v1/events/mine'));
+  return parseJson(await apiFetch('/api/v1/events/mine'));
 }

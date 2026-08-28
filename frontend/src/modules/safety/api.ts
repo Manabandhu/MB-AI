@@ -1,28 +1,20 @@
-import { apiFetch } from '@/lib/api';
+import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 
 export async function getSafetyCenter(): Promise<CatalogScreenContent> {
-  const response = await apiFetch('/api/v1/safety/center');
-  if (!response.ok) throw new Error(`Safety center failed: ${response.status}`);
-  return response.json() as Promise<CatalogScreenContent>;
+  return parseJsonOrThrow(await apiFetch('/api/v1/safety/center'), 'Safety center');
 }
 
-export async function getReports() {
-  const response = await apiFetch('/api/v1/safety/reports');
-  if (!response.ok) throw new Error(`Reports failed: ${response.status}`);
-  return response.json() as Promise<ReportItem[]>;
+export async function getReports(): Promise<ReportItem[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/safety/reports'), 'Reports');
 }
 
-export async function getBlockedUsers() {
-  const response = await apiFetch('/api/v1/safety/blocked-users');
-  if (!response.ok) throw new Error(`Blocked users failed: ${response.status}`);
-  return response.json() as Promise<BlockedUserItem[]>;
+export async function getBlockedUsers(): Promise<BlockedUserItem[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/safety/blocked-users'), 'Blocked users');
 }
 
-export async function getTrustedContacts() {
-  const response = await apiFetch('/api/v1/safety/trusted-contacts');
-  if (!response.ok) throw new Error(`Trusted contacts failed: ${response.status}`);
-  return response.json() as Promise<TrustedContactItem[]>;
+export async function getTrustedContacts(): Promise<TrustedContactItem[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/safety/trusted-contacts'), 'Trusted contacts');
 }
 
 export type ReportItem = {

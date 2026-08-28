@@ -1,4 +1,4 @@
-import { apiFetch } from '@/lib/api';
+import { apiFetch, parseJson } from '@/lib/apiClient';
 
 export type Community = {
   id: string;
@@ -25,33 +25,25 @@ export type Post = {
 export type Comment = {
   id: string;
   postId: string;
-  authorName: string;
+  authorId: string;
   body: string;
   createdAt: string;
 };
 
-async function responseJson<T>(response: Response): Promise<T> {
-  if (response.ok) return response.json() as Promise<T>;
-  const detail = await response.text();
-  throw new Error(detail || `Request failed: ${response.status}`);
-}
-
 export async function listCommunities(): Promise<Community[]> {
-  return responseJson(await apiFetch('/api/v1/communities'));
+  return parseJson(await apiFetch('/api/v1/communities'));
 }
 
 export async function getCommunity(id: string): Promise<Community> {
-  return responseJson(await apiFetch(`/api/v1/communities/${encodeURIComponent(id)}`));
+  return parseJson(await apiFetch(`/api/v1/communities/${encodeURIComponent(id)}`));
 }
 
 export async function listPosts(communityId: string): Promise<Post[]> {
-  return responseJson(
-    await apiFetch(`/api/v1/communities/${encodeURIComponent(communityId)}/posts`),
-  );
+  return parseJson(await apiFetch(`/api/v1/communities/${encodeURIComponent(communityId)}/posts`));
 }
 
 export async function getPost(postId: string): Promise<Post & { comments: Comment[] }> {
-  return responseJson(await apiFetch(`/api/v1/communities/posts/${encodeURIComponent(postId)}`));
+  return parseJson(await apiFetch(`/api/v1/communities/posts/${encodeURIComponent(postId)}`));
 }
 
 export async function createPost(input: {
@@ -59,7 +51,7 @@ export async function createPost(input: {
   title: string;
   body: string;
 }): Promise<Post> {
-  return responseJson(
+  return parseJson(
     await apiFetch('/api/v1/communities/posts', {
       method: 'POST',
       body: JSON.stringify(input),

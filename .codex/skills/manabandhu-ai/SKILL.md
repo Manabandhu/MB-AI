@@ -73,3 +73,5 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 
 - **Partial**: Assistant, history, and citations screens are UI-complete. AI orchestration, model routing, retrieval, tools, safety moderation, and streaming are pending backend/platform integration.
 - **Backend**: REST and GraphQL APIs implemented under `/api/v1/assistant` with conversations, messages, citations, SSE streaming endpoint, and Flyway migration V15.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

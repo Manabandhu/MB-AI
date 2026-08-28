@@ -1,30 +1,25 @@
-import { apiFetch } from '@/lib/api';
+import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 
-export async function getAssistantMessages() {
-  const response = await apiFetch('/api/v1/assistant/messages');
-  if (!response.ok) throw new Error(`Assistant messages failed: ${response.status}`);
-  return response.json() as Promise<AssistantMessage[]>;
+export async function getAssistantMessages(): Promise<AssistantMessage[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/assistant/messages'), 'Assistant messages');
 }
 
-export async function sendAssistantMessage(body: { text: string }) {
-  const response = await apiFetch('/api/v1/assistant/messages', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) throw new Error(`Send message failed: ${response.status}`);
-  return response.json() as Promise<AssistantMessage>;
+export async function sendAssistantMessage(body: { text: string }): Promise<AssistantMessage> {
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/assistant/messages', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+    'Send message',
+  );
 }
 
-export async function getAssistantHistory() {
-  const response = await apiFetch('/api/v1/assistant/history');
-  if (!response.ok) throw new Error(`Assistant history failed: ${response.status}`);
-  return response.json() as Promise<AssistantConversation[]>;
+export async function getAssistantHistory(): Promise<AssistantConversation[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/assistant/history'), 'Assistant history');
 }
 
-export async function getAssistantCitations() {
-  const response = await apiFetch('/api/v1/assistant/citations');
-  if (!response.ok) throw new Error(`Assistant citations failed: ${response.status}`);
-  return response.json() as Promise<AssistantCitation[]>;
+export async function getAssistantCitations(): Promise<AssistantCitation[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/assistant/citations'), 'Assistant citations');
 }
 
 export type AssistantMessage = {

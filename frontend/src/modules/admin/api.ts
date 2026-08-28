@@ -1,4 +1,4 @@
-import { apiFetch } from '@/lib/api';
+import { apiFetch, parseJson } from '@/lib/apiClient';
 
 export type AutomationOperation = {
   id: string;
@@ -96,21 +96,15 @@ export type AuditLogEntry = {
   createdAt: string;
 };
 
-async function responseJson<T>(response: Response): Promise<T> {
-  if (response.ok) return response.json() as Promise<T>;
-  const detail = await response.text();
-  throw new Error(detail || `Request failed: ${response.status}`);
-}
-
 export async function listAutomationOperations(): Promise<AutomationOperation[]> {
-  return responseJson(await apiFetch('/api/v1/admin/automations'));
+  return parseJson(await apiFetch('/api/v1/admin/automations'));
 }
 
 export async function executeAutomation(
   operationId: string,
   input: { environment: string; ref: string; reason: string; confirmed: boolean },
 ): Promise<AutomationExecution> {
-  return responseJson(
+  return parseJson(
     await apiFetch(`/api/v1/admin/automations/${encodeURIComponent(operationId)}/executions`, {
       method: 'POST',
       body: JSON.stringify(input),
@@ -119,15 +113,15 @@ export async function executeAutomation(
 }
 
 export async function listUsers(): Promise<AdminUser[]> {
-  return responseJson(await apiFetch('/api/v1/admin/users'));
+  return parseJson(await apiFetch('/api/v1/admin/users'));
 }
 
 export async function getUser(id: string): Promise<AdminUser> {
-  return responseJson(await apiFetch(`/api/v1/admin/users/${encodeURIComponent(id)}`));
+  return parseJson(await apiFetch(`/api/v1/admin/users/${encodeURIComponent(id)}`));
 }
 
 export async function updateUserStatus(input: { id: string; status: string }): Promise<AdminUser> {
-  return responseJson(
+  return parseJson(
     await apiFetch(`/api/v1/admin/users/${encodeURIComponent(input.id)}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status: input.status }),
@@ -136,35 +130,35 @@ export async function updateUserStatus(input: { id: string; status: string }): P
 }
 
 export async function listReports(): Promise<AdminReport[]> {
-  return responseJson(await apiFetch('/api/v1/admin/reports'));
+  return parseJson(await apiFetch('/api/v1/admin/reports'));
 }
 
 export async function resolveReport(id: string): Promise<AdminReport> {
-  return responseJson(
+  return parseJson(
     await apiFetch(`/api/v1/admin/reports/${encodeURIComponent(id)}/resolve`, { method: 'POST' }),
   );
 }
 
 export async function listAdminRooms(): Promise<AdminRoom[]> {
-  return responseJson(await apiFetch('/api/v1/admin/rooms'));
+  return parseJson(await apiFetch('/api/v1/admin/rooms'));
 }
 
 export async function listAdminRides(): Promise<AdminRide[]> {
-  return responseJson(await apiFetch('/api/v1/admin/rides'));
+  return parseJson(await apiFetch('/api/v1/admin/rides'));
 }
 
 export async function listAdminCommunityPosts(): Promise<AdminCommunityPost[]> {
-  return responseJson(await apiFetch('/api/v1/admin/community'));
+  return parseJson(await apiFetch('/api/v1/admin/community'));
 }
 
 export async function listAdminJobs(): Promise<AdminJob[]> {
-  return responseJson(await apiFetch('/api/v1/admin/jobs'));
+  return parseJson(await apiFetch('/api/v1/admin/jobs'));
 }
 
 export async function listAdminEvents(): Promise<AdminEvent[]> {
-  return responseJson(await apiFetch('/api/v1/admin/events'));
+  return parseJson(await apiFetch('/api/v1/admin/events'));
 }
 
 export async function listAuditLog(): Promise<AuditLogEntry[]> {
-  return responseJson(await apiFetch('/api/v1/admin/audit-log'));
+  return parseJson(await apiFetch('/api/v1/admin/audit-log'));
 }

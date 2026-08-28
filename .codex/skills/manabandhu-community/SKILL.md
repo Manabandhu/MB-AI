@@ -77,3 +77,5 @@ Owns Community Home, Discover, Joined Communities, Community Details, Create Pos
 ## Current Implementation Status
 
 - **Partial**: Community home, discover, joined, details, create post, and post details screens are implemented. Backend moderation and visibility rules are enforced server-side. Some community/post CRUD is UI-complete pending full backend wiring.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

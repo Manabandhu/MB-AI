@@ -74,3 +74,5 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 
 - **Partial**: Safety center, reports, blocked users, and trusted contacts screens are UI-complete. Backend enforcement of blocking, report resolution, and emergency escalation are pending.
 - **Backend**: REST and GraphQL APIs implemented under `/api/v1/safety` with reports, blocked users, trusted contacts, and Flyway migration V11.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

@@ -1,8 +1,9 @@
-import { apiFetch } from '@/lib/api';
+import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 
 export async function getExpensesScreen(screenId: string): Promise<CatalogScreenContent> {
-  const response = await apiFetch(`/api/v1/expenses/screens/${screenId}`);
-  if (!response.ok) throw new Error(`Expenses screen failed: ${response.status}`);
-  return response.json() as Promise<CatalogScreenContent>;
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/expenses/screens/${screenId}`),
+    'Expenses screen',
+  );
 }

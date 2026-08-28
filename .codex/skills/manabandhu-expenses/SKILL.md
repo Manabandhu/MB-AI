@@ -75,3 +75,5 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 ## Current Implementation Status
 
 - **Partial**: Home via `FeatureScreen` is complete. Expense groups, group details, balances, and settlements are UI-complete with demo fallbacks. Add expense form is implemented with local validation. Backend API for expenses is not yet fully defined.
+
+- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

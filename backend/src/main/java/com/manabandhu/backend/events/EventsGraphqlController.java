@@ -60,4 +60,9 @@ public class EventsGraphqlController {
     List<EventCategory> eventCategories() {
         return service.findCategories();
     }
+
+    @QueryMapping
+    List<EventAttendance> eventAttendance(@Argument UUID eventId) {
+        return service.findAttendance(eventId);
+    }
 }
