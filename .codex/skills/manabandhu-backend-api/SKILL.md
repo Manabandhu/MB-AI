@@ -18,4 +18,5 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 11. Run Maven tests on Java 25.
 12. Module boundaries: immigration, safety, utilities, notifications, chat, ai, community, rooms, rides, jobs, events, expenses, marketplace, referrals, foundation, admin, auth, analytics, observability.
 13. GraphQL controllers must expose all queries and mutations defined in the canonical schema; recent additions include `rideRatings` and `eventAttendance` queries mapped through `RidesGraphqlController` and `EventsGraphqlController`.
-14. Update this skill when backend structure, dependencies, security, contracts, or commands change.
+  14. Update this skill when backend structure, dependencies, security, contracts, or commands change.
+  15. Admin reads for rides are exposed through `AdminRidesController` under the `admin` package and reuse the existing `AdminAccessPolicy`.

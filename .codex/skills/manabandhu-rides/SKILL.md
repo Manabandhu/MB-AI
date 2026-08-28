@@ -112,5 +112,8 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 ## Current Implementation Status
 
 - **Partial**: Backend REST API complete with full CRUD for offers, requests, participants, bookings, and ratings, including automatic seat management on booking create/cancel. Frontend screens (home, search, filters, saved, mine, history, seat-requests, participants, detail, manage, offer, request, rate) remain catalog/placeholder pending integration with backend REST APIs.
+- Offer lifecycle statuses are standardized to `draft`, `active`, `completed`, `cancelled`. Request statuses use `pending`, `accepted`, `rejected`, `withdrawn`. Booking statuses use `pending`, `confirmed`, `cancelled`. Rating validation prevents self-rating.
+- RLS policies are defined in `V16__add_rides_rls_policies.sql` for all five ride tables.
+- Admin rides read endpoint exists at `GET /api/v1/admin/rides`.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

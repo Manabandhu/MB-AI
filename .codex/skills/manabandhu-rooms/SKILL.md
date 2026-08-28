@@ -1,13 +1,13 @@
 ---
 name: manabandhu-rooms
-description: Maintain ManaBandhu room discovery, search, map, filters, saved rooms, listings, creation, editing, details, privacy, and moderation handoff. Use for any change under the rooms module or its contracts.
+description: Maintain ManaBandhu room discovery, search, map, filters, saved rooms, listings, creation, editing, details, privacy, inquiries, and moderation handoff. Use for any change under the rooms module or its contracts.
 ---
 
 # Rooms
 
 ## Module Purpose and Ownership
 
-Owns room discovery, search, map, filters, saved rooms, listings, listing creation/editing, details, availability, location privacy, and moderation handoff.
+Owns room discovery, search, map, filters, saved rooms, listings, listing creation/editing, details, availability, location privacy, inquiries (bookings), saved searches, reports, analytics, and moderation handoff.
 
 ## Route Inventory
 
@@ -17,77 +17,94 @@ Owns room discovery, search, map, filters, saved rooms, listings, listing creati
 | `/rooms/search` | `RoomsScreen` (`screenId="search"`) | list | loading, empty, error |
 | `/rooms/map` | `RoomsScreen` (`screenId="map"`) | map | loading, empty, error, permission |
 | `/rooms/filters` | `RoomsScreen` (`screenId="filters"`) | filter | normal |
-| `/rooms/saved` | `RoomsScreen` (`screenId="saved"`) | list | loading, empty, error |
-| `/rooms/my-listings` | `RoomsScreen` (`screenId="my-listings"`) | list | loading, empty, error |
-| `/rooms/create-listing` | `RoomCreateScreen` | form | normal, error, success, loading |
+| `/rooms/saved` | `RoomFavoritesScreen` | list | loading, empty, error |
+| `/rooms/my-listings` | `RoomMyListingsScreen` | list | loading, empty, error |
+| `/rooms/create-listing` | `RoomCreateScreen` (`RoomForm`) | form | normal, error, success, loading |
 | `/rooms/[roomId]` | `RoomDetailScreen` | detail | loading, error |
-| `/rooms/[roomId]/edit` | `RoomEditScreen` | form | normal, error, success, loading |
+| `/rooms/[roomId]/edit` | `RoomEditScreen` (`RoomForm`) | form | normal, error, success, loading |
+| `/rooms/[roomId]/inquiry` | `RoomInquiryScreen` | form | normal, error, success, loading |
 
 ## Component Inventory
 
-- `RoomsScreen` - multi-mode catalog/list screen driven by `screenId` prop
-- `RoomDetailScreen` - placeholder for room detail with price, availability, and contact handoff
-- `RoomEditScreen` - placeholder for room listing edit form
-- `RoomCreateScreen` - placeholder for room listing creation form
-- Shared: `FeatureScreen`, `SearchBar`, `FilterBar`, `Card`, `MapPreview`, `AppButton`, `SwipeAction`, `ImageUpload`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`
+- `RoomsScreen` - multi-mode catalog/list screen driven by `screenId` prop; home/search now return real listing data
+- `RoomDetailScreen` - real listing detail with save/unsave and contact handoff
+- `RoomEditScreen` / `RoomCreateScreen` - real forms backed by `RoomForm` (react-hook-form + zod)
+- `RoomForm` - shared create/edit form with validation
+- `RoomFavoritesScreen` - real saved/favorite listings list
+- `RoomMyListingsScreen` - real owner listings list
+- `RoomInquiryScreen` - inquiry form that creates a booking for the listing
+- Shared: `FeatureScreen`, `SearchBar`, `AppButton`, `TextArea`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`
 
 ## API Surface
 
-- `GET /api/v1/rooms/screens/{screenId}` - catalog screen content
-- `GET /api/v1/rooms/listings` - list active listings (params: `location`, `roomType`)
-- `POST /api/v1/rooms/listings` - create listing (authenticated)
-- `GET /api/v1/rooms/listings/{listingId}` - get listing by ID
-- `PATCH /api/v1/rooms/listings/{listingId}` - update listing
-- `DELETE /api/v1/rooms/listings/{listingId}` - delete listing
-- `GET /api/v1/rooms/my-listings` - list owner's listings (authenticated)
-- `GET /api/v1/rooms/listings/{listingId}/images` - list images for a listing
-- `POST /api/v1/rooms/listings/{listingId}/images` - add image to listing
-- `DELETE /api/v1/rooms/images/{imageId}` - delete image
-- `GET /api/v1/rooms/listings/{listingId}/availability` - list availability windows
-- `POST /api/v1/rooms/listings/{listingId}/availability` - create availability window
-- `DELETE /api/v1/rooms/availability/{availabilityId}` - delete availability
-- `GET /api/v1/rooms/listings/{listingId}/bookings` - list bookings for a listing
-- `POST /api/v1/rooms/listings/{listingId}/bookings` - create booking (authenticated)
-- `GET /api/v1/rooms/bookings/{bookingId}` - get booking by ID
-- `PATCH /api/v1/rooms/bookings/{bookingId}/status` - update booking status
-- `DELETE /api/v1/rooms/bookings/{bookingId}` - cancel booking
-- `GET /api/v1/rooms/my-bookings` - list requester's bookings (authenticated)
-- `GET /api/v1/rooms/favorites` - list saved listings (authenticated)
-- `POST /api/v1/rooms/listings/{listingId}/favorite` - save listing (authenticated)
-- `DELETE /api/v1/rooms/listings/{listingId}/favorite` - remove saved listing (authenticated)
+Public catalog:
+- `GET /api/v1/rooms/screens/{screenId}` - catalog screen content (home/search return real listings)
+- `GET /api/v1/rooms/listings` - list published listings (params: `location`, `roomType`)
+- `GET /api/v1/rooms/{roomId}` - public listing detail (**never returns exactAddress**)
 
-Backend services: `RoomListingService`, `RoomAvailabilityService`, `RoomBookingService`, `RoomImageService`, `RoomFavoriteService`.
+Authenticated owner:
+- `POST /api/v1/rooms/listings` - create listing (owner derived from JWT)
+- `GET /api/v1/rooms/{roomId}/owner` - owner detail (**includes exactAddress**)
+- `PATCH /api/v1/rooms/{roomId}` - update listing (owner or admin only)
+- `PATCH /api/v1/rooms/{roomId}/publish` · `/pause` · `/archive` - owner state transitions
+- `DELETE /api/v1/rooms/{roomId}` - delete listing (owner or admin only)
+- `GET /api/v1/rooms/my-listings` - owner's listings
+- `GET /api/v1/rooms/listings/{listingId}/analytics` - owner-only analytics
 
-## Demo Fixtures
+Images, availability, bookings, favorites:
+- `GET/POST /api/v1/rooms/{listingId}/images` · `DELETE /api/v1/rooms/images/{imageId}`
+- `GET/POST /api/v1/rooms/{listingId}/availability` · `DELETE /api/v1/rooms/availability/{availabilityId}`
+- `POST /api/v1/rooms/{listingId}/bookings` - submit inquiry (no self-inquiry, no duplicate pending)
+- `GET /api/v1/rooms/{listingId}/bookings` - owner views listing inquiries
+- `PATCH /api/v1/rooms/bookings/{bookingId}/status` - accept/reject/cancel (owner or requester)
+- `GET /api/v1/rooms/my-bookings` - requester's inquiries
+- `GET /api/v1/rooms/favorites` · `POST/DELETE /api/v1/rooms/{listingId}/favorite`
 
-- `frontend/src/modules/rooms/roomsFallbacks.ts` - realistic demo data for all room `screenId`s
+Saved searches, reports, moderation (all authenticated):
+- `GET/POST /api/v1/rooms/saved-searches` · `PATCH/DELETE /api/v1/rooms/saved-searches/{searchId}`
+- `POST /api/v1/rooms/listings/{listingId}/report` · `GET /api/v1/rooms/my-reports`
+- `GET /api/v1/rooms/admin/reports` · `POST /api/v1/rooms/admin/reports/{reportId}/review` (admin only)
+- `POST /api/v1/rooms/admin/listings/{listingId}/moderate` (admin only)
+
+Backend services: `RoomListingService`, `RoomAvailabilityService`, `RoomBookingService`, `RoomImageService`, `RoomFavoriteService`, `RoomSavedSearchService`, `RoomReportService`, `RoomAnalyticsService`.
+
+## Data Model
+
+Migration `V16__extend_rooms.sql` adds `room_amenities`, `room_preferences`, `room_saved_searches`, `room_reports`, `room_analytics`, `room_moderation_actions`. Existing tables: `room_listings`, `room_images`, `room_availabilities`, `room_bookings`, `room_favorites`.
+
+Listing statuses: `draft`, `active`, `paused`, `archived`, `rejected`. Booking statuses: `pending`, `accepted`, `rejected`, `cancelled`.
+
+## Authorization and Privacy Rules
+
+- **Exact address is never returned through public APIs.** `RoomListingResponse` omits it; only `OwnerRoomListingResponse` (owner/admin) includes it.
+- Ownership is derived from the authenticated JWT (`authentication.getName()`), never from client input.
+- Cross-user enforcement lives in the Spring service layer (the backend connects as the `postgres` superuser, which bypasses RLS, so RLS is defense-in-depth; service-layer checks are authoritative).
+- Listing state transitions are validated server-side: draft→active/archived, active→paused/archived, paused→active/archived; rejected→active/draft is admin-only.
+- Self-inquiry and duplicate-pending inquiries are rejected. Only the listing owner can accept/reject; only the requester can cancel.
+- Reports: no self-reporting, no duplicate open reports. Review queue is admin-only.
+- RLS policies exist on every rooms table: public read of published listings, owner write, admin override, participant-only booking access.
 
 ## State Patterns
 
-- **Loading**: `LoadingState` while screen content loads
+- **Loading**: `LoadingState` while data loads
 - **Empty**: `EmptyState` with action to search or create listing
 - **Error**: `ErrorState` with retry action
-- **Success**: navigation on create/edit completion
-- **Offline**: offline banner with cached data fallback
+- **Success**: navigation on create/edit/inquiry completion
 - **Permission**: permission banner for map screen with fallback list
 
 ## Navigation Actions and Cross-Module Links
 
 - Home actions: Search, Map, Saved, Create listing
 - Search actions: Filters, Map, Saved
-- Map actions: Search list, Filters
-- Filters actions: Apply to search, Map
-- Saved actions: Room details, Search more
-- My listings actions: Create listing, Edit listing
 - Cross-module: deep link to `/rooms/[roomId]` from explore, saved, and search
 
 ## Implementation Notes for Expo React Native
 
-- Route files in `frontend/src/app/rooms/` are thin wrappers
-- `RoomsScreen` uses `useQuery` with fallback data from `roomsFallbacks.ts`
-- `FeatureScreen` provides adaptive catalog/list layout with actions and cards
-- Map and filter behaviors are UI placeholders pending real geocoding and filter persistence
-- Forms use `react-hook-form` + `zod` where implemented
+- Route files in `frontend/src/app/rooms/` are thin wrappers.
+- `RoomsScreen` uses `useQuery`; home/search now render real listings from the content service.
+- Detail, create, edit, favorites, my-listings, and inquiry screens use TanStack Query against the real REST API.
+- Forms use `react-hook-form` + `zod` with string-based numeric fields converted on submit.
+- Save/unsave uses optimistic invalidation of the detail and favorites queries.
 
 ## Accessibility and Responsive Behavior Rules
 
@@ -99,6 +116,8 @@ Backend services: `RoomListingService`, `RoomAvailabilityService`, `RoomBookingS
 
 ## Current Implementation Status
 
-- **Partial**: Backend REST API complete with full CRUD for listings, images, availability, bookings, and saved listings. Frontend screens (home, search, filters, saved, my-listings, map, create/edit/detail) remain catalog/placeholder pending integration with backend REST APIs.
+- **Complete**: End-to-end vertical slice across database (V16), backend (controllers/services/repositories/DTOs/authorization), REST contracts (openapi.yaml), and frontend (list, detail, create, edit, favorites, my-listings, inquiry). Service-layer authorization covers ownership, cross-user protection, address privacy, and state transitions. Backend tests cover authorization, transitions, and address protection.
 
-- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+- The legacy GraphQL rooms path and the `AdminRoomsScreen` retain their original shape; the canonical rooms APIs are REST under `/api/v1/rooms`.
+
+- Recent backend fixes: rooms controller/service method signatures now consistently pass actor/admin flags, room listing ownership checks are enforced in services, and room booking/availability/delete flows require authenticated ownership or admin override.

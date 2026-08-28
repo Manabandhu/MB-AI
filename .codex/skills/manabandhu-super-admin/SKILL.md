@@ -15,6 +15,7 @@ description: Maintain ManaBandhu's privileged operations control plane across th
 8. Keep the OpenAPI operation, frontend types, backend records, workflow inputs, tests, and this skill synchronized.
 9. Run `pnpm verify`, `pnpm test`, and the web export before handoff.
 10. Current frontend implementation: thin route at `frontend/src/app/admin.tsx` delegates to `frontend/src/modules/admin/screens/AdminDashboardScreen.tsx`. Admin screens use `useQuery` against typed API client in `frontend/src/modules/admin/api.ts` with demo fallbacks in `adminFallbacks.ts`. All moderation endpoints are read-only in the first batch.
-11. Skill remains synchronized with admin route ownership; recent admin UI typing fixes are tracked under the admin module skill.
+11. Admin moderation includes rides read access through `GET /api/v1/admin/rides` with projections that exclude private fields not needed for moderation.
+12. Skill remains synchronized with admin route ownership; recent admin UI typing fixes are tracked under the admin module skill.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

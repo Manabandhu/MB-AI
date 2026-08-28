@@ -713,7 +713,7 @@ paths:
           description: Listing created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/RoomListing' }
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
   /rooms/saved:
     get:
       operationId: listSavedRoomListings
@@ -735,7 +735,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/RoomListing' }
+                items: { $ref: '#/components/schemas/OwnerRoomListing' }
   /rooms/{roomId}:
     get:
       operationId: getRoomListing
@@ -750,6 +750,62 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RoomListing' }
+  /rooms/{roomId}/owner:
+    get:
+      operationId: getRoomListingForOwner
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Owner-facing room listing detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+  /rooms/{roomId}/publish:
+    post:
+      operationId: publishRoomListing
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Listing published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+  /rooms/{roomId}/pause:
+    post:
+      operationId: pauseRoomListing
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Listing paused
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+  /rooms/{roomId}/archive:
+    post:
+      operationId: archiveRoomListing
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Listing archived
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
   /rooms/{roomId}/bookings:
     get:
       operationId: listRoomBookings
@@ -784,6 +840,157 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RoomBooking' }
+  /rooms/saved-searches:
+    get:
+      operationId: listSavedSearches
+      responses:
+        '200':
+          description: Saved searches
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SavedSearch' }
+    post:
+      operationId: createSavedSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSavedSearchInput' }
+      responses:
+        '201':
+          description: Saved search created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedSearch' }
+  /rooms/saved-searches/{searchId}:
+    patch:
+      operationId: updateSavedSearch
+      parameters:
+        - name: searchId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSavedSearchInput' }
+      responses:
+        '200':
+          description: Saved search updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedSearch' }
+    delete:
+      operationId: deleteSavedSearch
+      parameters:
+        - name: searchId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Saved search deleted
+  /rooms/listings/{listingId}/report:
+    post:
+      operationId: reportRoomListing
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReportInput' }
+      responses:
+        '201':
+          description: Report created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomReport' }
+  /rooms/my-reports:
+    get:
+      operationId: listMyReports
+      responses:
+        '200':
+          description: Reports submitted by the user
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoomReport' }
+  /rooms/listings/{listingId}/analytics:
+    get:
+      operationId: getRoomAnalytics
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Owner-only analytics for a listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomAnalytics' }
+  /rooms/admin/reports:
+    get:
+      operationId: listReviewQueue
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Moderator review queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoomReport' }
+  /rooms/admin/reports/{reportId}/review:
+    post:
+      operationId: reviewReport
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          required: true
+          schema: { type: string }
+        - name: resolution
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Report reviewed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomReport' }
+  /rooms/admin/listings/{listingId}/moderate:
+    post:
+      operationId: moderateRoomListing
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Listing moderated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
   /rides:
     get:
       operationId: listRideOffers
@@ -1669,21 +1876,45 @@ components:
     RoomListing:
       type: object
       additionalProperties: false
-      required: [id, ownerId, title, price, roomType, status, broadLocation, createdAt, updatedAt]
+      description: Public listing response. The exact address is never returned here; it is only available to the owner via OwnerRoomListing.
+      required: [id, ownerId, title, price, roomType, status, broadLocation, createdAt, updatedAt, savedByViewer]
       properties:
         id: { type: string, format: uuid }
         ownerId: { type: string, format: uuid }
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 4000 }
         price: { type: number, format: double }
-        roomType: { type: string, enum: [PRIVATE, SHARED, ENTIRE] }
-        status: { type: string, enum: [DRAFT, ACTIVE, PAUSED, RENTED] }
+        roomType: { type: string }
+        status: { type: string, enum: [DRAFT, ACTIVE, PAUSED, ARCHIVED, REJECTED] }
+        broadLocation: { type: string, maxLength: 200 }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        amenities: { type: array, items: { type: string } }
+        preferences: { type: array, items: { type: string } }
+        savedByViewer: { type: boolean }
+    OwnerRoomListing:
+      type: object
+      additionalProperties: false
+      description: Owner-facing listing response that includes the exact address.
+      required: [id, ownerId, title, price, roomType, status, broadLocation, exactAddress, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        price: { type: number, format: double }
+        roomType: { type: string }
+        status: { type: string, enum: [DRAFT, ACTIVE, PAUSED, ARCHIVED, REJECTED] }
         broadLocation: { type: string, maxLength: 200 }
         exactAddress: { type: string, maxLength: 4000 }
         latitude: { type: number, format: double }
         longitude: { type: number, format: double }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        amenities: { type: array, items: { type: string } }
+        preferences: { type: array, items: { type: string } }
     CreateRoomListingInput:
       type: object
       additionalProperties: false
@@ -1711,9 +1942,72 @@ components:
         id: { type: string, format: uuid }
         listingId: { type: string, format: uuid }
         requesterId: { type: string, format: uuid }
-        status: { type: string, enum: [PENDING, ACCEPTED, REJECTED, CANCELED] }
+        status: { type: string, enum: [PENDING, ACCEPTED, REJECTED, CANCELLED] }
         message: { type: string, maxLength: 4000 }
         createdAt: { type: string, format: date-time }
+    CreateSavedSearchInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 120 }
+        query: { type: string, maxLength: 200 }
+        city: { type: string, maxLength: 200 }
+        broadLocation: { type: string, maxLength: 200 }
+        roomType: { type: string, maxLength: 20 }
+        minPrice: { type: number, format: double }
+        maxPrice: { type: number, format: double }
+        availableFrom: { type: string, format: date }
+        furnished: { type: boolean }
+        alertsEnabled: { type: boolean }
+    SavedSearch:
+      type: object
+      additionalProperties: false
+      required: [id, userId, name, alertsEnabled, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        name: { type: string, maxLength: 120 }
+        query: { type: string, maxLength: 200 }
+        city: { type: string, maxLength: 200 }
+        broadLocation: { type: string, maxLength: 200 }
+        roomType: { type: string, maxLength: 20 }
+        minPrice: { type: number, format: double }
+        maxPrice: { type: number, format: double }
+        availableFrom: { type: string, format: date }
+        furnished: { type: boolean }
+        alertsEnabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    CreateReportInput:
+      type: object
+      additionalProperties: false
+      required: [listingId, reason]
+      properties:
+        listingId: { type: string, format: uuid }
+        reason: { type: string, maxLength: 80 }
+        description: { type: string, maxLength: 4000 }
+    RoomReport:
+      type: object
+      additionalProperties: false
+      required: [id, listingId, reporterId, reason, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        reporterId: { type: string, format: uuid }
+        reason: { type: string, maxLength: 80 }
+        description: { type: string, maxLength: 4000 }
+        status: { type: string, enum: [OPEN, IN_REVIEW, RESOLVED, DISMISSED] }
+        resolution: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
+        reviewedAt: { type: string, format: date-time }
+    RoomAnalytics:
+      type: object
+      additionalProperties: false
+      required: [views, saves, inquiries]
+      properties:
+        views: { type: integer }
+        saves: { type: integer }
+        inquiries: { type: integer }
     RideOffer:
       type: object
       additionalProperties: false
@@ -1727,7 +2021,7 @@ components:
         seatsTotal: { type: integer }
         seatsAvailable: { type: integer }
         contribution: { type: string, maxLength: 200 }
-        status: { type: string, enum: [OPEN, FULL, COMPLETED, CANCELED] }
+        status: { type: string, enum: [DRAFT, ACTIVE, COMPLETED, CANCELLED] }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     CreateRideOfferInput:
@@ -1757,7 +2051,7 @@ components:
         riderId: { type: string, format: uuid }
         seatsRequested: { type: integer }
         message: { type: string, maxLength: 4000 }
-        status: { type: string, enum: [PENDING, ACCEPTED, REJECTED, CANCELED] }
+        status: { type: string, enum: [PENDING, ACCEPTED, REJECTED, WITHDRAWN] }
         createdAt: { type: string, format: date-time }
     RideParticipant:
       type: object

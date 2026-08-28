@@ -24,6 +24,11 @@ public class RideOfferService {
     }
 
     @Transactional(readOnly = true)
+    public List<RideOffer> findAllForAdmin() {
+        return repository.findAll();
+    }
+
+    @Transactional(readOnly = true)
     public Optional<RideOffer> findById(UUID id) {
         return repository.findById(id);
     }

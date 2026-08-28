@@ -12,16 +12,16 @@ import org.springframework.stereotype.Service;
 @Service
 class RoomsContentService {
 
+    private final RoomListingService listingService;
+
+    RoomsContentService(RoomListingService listingService) {
+        this.listingService = listingService;
+    }
+
     CatalogScreenContent screen(String screenId) {
         return switch (screenId) {
-            case "home" -> content("Find a trusted place", "Browse shared rooms and rentals with privacy-aware location, host signals, and saved filters.", "Rooms",
-                    List.of(new CatalogMetric("Nearby listings", "24"), new CatalogMetric("Verified hosts", "15")),
-                    List.of(item("demo-room-1", "Sunny private room", "Irving - furnished - utilities included.", "$850/mo", "/rooms/demo-room-1"),
-                            item("demo-room-2", "Shared apartment near transit", "Plano - flexible lease - vegetarian household.", "$720/mo", "/rooms/demo-room-2")));
-            case "search" -> content("Search rooms", "Search by city, budget, move-in date, household preference, commute, and trust signals.", "Rooms",
-                    List.of(new CatalogMetric("Filters", "9"), new CatalogMetric("Saved searches", "2")),
-                    List.of(item("budget", "Budget range", "Set monthly rent, utilities, deposit, and lease flexibility.", "Core filter", "/rooms/filters"),
-                            item("household", "Household match", "Find listings by lifestyle, language, food, and visitor preferences.", "Compatibility", "/rooms/map")));
+            case "home" -> home();
+            case "search" -> search();
             case "map" -> content("Map view", "Understand commute zones and nearby services without exposing exact private addresses.", "Rooms",
                     List.of(new CatalogMetric("Visible areas", "6"), new CatalogMetric("Transit pins", "12")),
                     List.of(item("privacy", "Approximate locations", "Pins show general areas until a trusted contact exchange is approved.", "Privacy protected", "/rooms/search"),
@@ -30,26 +30,68 @@ class RoomsContentService {
                     List.of(new CatalogMetric("Active filters", "4"), new CatalogMetric("Matches", "11")),
                     List.of(item("availability", "Move-in window", "This week, this month, or custom dates.", "Availability", "/rooms/search"),
                             item("amenities", "Amenities", "Parking, private bath, furnished, laundry, kitchen, and pets.", "Comfort", "/rooms/search")));
-            case "saved" -> content("Saved rooms", "Track listings you want to compare, revisit, or message about later.", "Rooms",
-                    List.of(new CatalogMetric("Saved", "5"), new CatalogMetric("Price drops", "1")),
-                    List.of(item("demo-room-1", "Sunny private room", "Move-in date still matches your onboarding preferences.", "Saved", "/rooms/demo-room-1")));
-            case "my-listings" -> content("My listings", "Manage your posted rooms, availability, moderation state, and applicant conversations.", "Rooms",
-                    List.of(new CatalogMetric("Active", "1"), new CatalogMetric("Drafts", "2")),
-                    List.of(item("draft", "Complete your draft", "Add photos, broad location, rent, amenities, and house rules.", "Draft", "/rooms/create-listing")));
+            case "saved" -> saved();
+            case "my-listings" -> myListings();
             case "create-listing" -> content("Create listing", "Post a room with clear expectations, privacy-aware location, and moderation-friendly details.", "Rooms",
                     List.of(new CatalogMetric("Steps", "5"), new CatalogMetric("Required fields", "8")),
                     List.of(item("basics", "Basics", "Rent, availability, room type, broad area, and preferred contact method.", "Step 1", "/rooms/my-listings"),
-                            item("trust", "Trust and safety", "House rules, verification, reporting, and contact privacy settings.", "Step 2", "/rooms/demo-room-1")));
-            case "details" -> content("Room details", "A focused listing page with price, availability, household fit, safety notes, and contact handoff.", "Rooms",
-                    List.of(new CatalogMetric("Rent", "$850"), new CatalogMetric("Available", "Sep 1")),
-                    List.of(item("summary", "Sunny private room in Irving", "Furnished room with utilities included and verified host signals.", "Broad location only", "/rooms/demo-room-1/edit"),
-                            item("next", "Request details", "Ask a question or request a safe contact exchange after review.", "Protected handoff", "/notifications")));
-            case "edit" -> content("Edit listing", "Update a room listing while preserving moderation, ownership, and location privacy boundaries.", "Rooms",
-                    List.of(new CatalogMetric("Sections", "6"), new CatalogMetric("Last saved", "Today")),
-                    List.of(item("pricing", "Pricing and availability", "Keep rent, deposit, and move-in date current.", "Editable", "/rooms/demo-room-1"),
-                            item("visibility", "Visibility", "Pause, publish, or send for moderation review.", "Owner only", "/rooms/my-listings")));
+                            item("trust", "Trust and safety", "House rules, verification, reporting, and contact privacy settings.", "Step 2", "/rooms/my-listings")));
+            case "details", "edit" -> content("Room details", "A focused listing page with price, availability, household fit, safety notes, and contact handoff.", "Rooms",
+                    List.of(new CatalogMetric("Listings", String.valueOf(listingService.findAllPublished().size())), new CatalogMetric("Saved", "—")),
+                    List.of(item("summary", "Browse listings", "Open a listing to see price, availability, and approximate location.", "Browse", "/rooms/search")));
             default -> throw new UnknownCatalogScreenException(screenId);
         };
+    }
+
+    private CatalogScreenContent home() {
+        var published = listingService.findAllPublished();
+        var items = published.stream().limit(6).map(l ->
+                item(l.getId().toString(), l.getTitle(),
+                        broadLocation(l) + " - " + l.getRoomType() + ".",
+                        price(l), "/rooms/" + l.getId())).toList();
+        var fallback = List.of(
+                item("browse", "Browse rooms", "Search shared rooms and rentals with privacy-aware location.", "Start", "/rooms/search"),
+                item("map", "View on map", "Discover listings by approximate area without exposing exact addresses.", "Map", "/rooms/map"));
+        return content("Find a trusted place",
+                "Browse shared rooms and rentals with privacy-aware location, host signals, and saved filters.",
+                "Rooms",
+                List.of(new CatalogMetric("Published listings", String.valueOf(published.size())),
+                        new CatalogMetric("Saved", "—")),
+                items.isEmpty() ? fallback : items);
+    }
+
+    private CatalogScreenContent search() {
+        var published = listingService.findAllPublished();
+        var items = published.stream().limit(12).map(l ->
+                item(l.getId().toString(), l.getTitle(),
+                        broadLocation(l) + " - " + l.getRoomType() + ".",
+                        price(l), "/rooms/" + l.getId())).toList();
+        return content("Search rooms",
+                "Search by city, budget, move-in date, household preference, commute, and trust signals.",
+                "Rooms",
+                List.of(new CatalogMetric("Published listings", String.valueOf(published.size())),
+                        new CatalogMetric("Saved", "—")),
+                items);
+    }
+
+    private CatalogScreenContent saved() {
+        return content("Saved rooms", "Track listings you want to compare, revisit, or message about later.", "Rooms",
+                List.of(new CatalogMetric("Saved", "—")),
+                List.of(item("saved", "Sign in to see saved rooms", "Saved published listings appear here for easy comparison.", "Search rooms", "/rooms/search")));
+    }
+
+    private CatalogScreenContent myListings() {
+        return content("My listings", "Manage your posted rooms, availability, moderation state, and applicant conversations.", "Rooms",
+                List.of(new CatalogMetric("Your listings", "—")),
+                List.of(item("create", "Create your first listing", "Add photos, broad location, rent, amenities, and house rules.", "Create", "/rooms/create-listing")));
+    }
+
+    private static String broadLocation(RoomListing l) {
+        return l.getBroadLocation() == null ? "Location pending" : l.getBroadLocation();
+    }
+
+    private static String price(RoomListing l) {
+        return l.getPrice() == null ? "Contact for price" : ("$" + l.getPrice());
     }
 
     private static CatalogScreenContent content(String title, String subtitle, String eyebrow, List<CatalogMetric> metrics, List<CatalogItem> items) {

@@ -33,7 +33,7 @@ class RidesServiceTest {
         assertThat(offer).isNotNull();
         assertThat(offer.getDriverId()).isEqualTo(driverId);
         assertThat(offer.getSeatsAvailable()).isEqualTo(3);
-        assertThat(offer.getStatus()).isEqualTo("open");
+        assertThat(offer.getStatus()).isEqualTo("active");
         verify(offerRepo).save(any(RideOffer.class));
     }
 
@@ -70,5 +70,40 @@ class RidesServiceTest {
         assertThat(rating.getRideId()).isEqualTo(rideId);
         assertThat(rating.getRating()).isEqualTo(5);
         verify(ratingRepo).save(any(RideRating.class));
+    }
+
+    @Test
+    void findAllOpenReturnsOnlyActiveOffersWithAvailableSeats() {
+        var offerRepo = mock(RideOfferRepository.class);
+        var requestRepo = mock(RideRequestRepository.class);
+        var participantRepo = mock(RideParticipantRepository.class);
+        var ratingRepo = mock(RideRatingRepository.class);
+        var service = new RidesService(offerRepo, requestRepo, participantRepo, ratingRepo);
+        var active = new RideOffer(UUID.randomUUID(), "Irving", "DFW", Instant.now().plusSeconds(3600),
+                3, 2, "$15", "active");
+        var draft = new RideOffer(UUID.randomUUID(), "Dallas", "Austin", Instant.now().plusSeconds(3600),
+                2, 2, "$10", "draft");
+        var completed = new RideOffer(UUID.randomUUID(), "Plano", "Frisco", Instant.now().minusSeconds(3600),
+                4, 0, "$20", "completed");
+        var cancelled = new RideOffer(UUID.randomUUID(), "Houston", "San Antonio", Instant.now().plusSeconds(3600),
+                2, 2, "$25", "cancelled");
+        when(offerRepo.findByStatusOrderByDepartureAtAsc("active")).thenReturn(List.of(active));
+
+        var open = service.findAllOpen();
+
+        assertThat(open).containsExactly(active);
+    }
+
+    @Test
+    void findSavedDoesNotQueryInvalidOfferStatus() {
+        var offerRepo = mock(RideOfferRepository.class);
+        var requestRepo = mock(RideRequestRepository.class);
+        var participantRepo = mock(RideParticipantRepository.class);
+        var ratingRepo = mock(RideRatingRepository.class);
+        var service = new RidesService(offerRepo, requestRepo, participantRepo, ratingRepo);
+
+        var saved = service.findSaved();
+
+        assertThat(saved).isEmpty();
     }
 }

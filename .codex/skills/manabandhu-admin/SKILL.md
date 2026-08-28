@@ -91,6 +91,7 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 ## Current Implementation Status
 
 - **Partial**: Dashboard and all list screens (users, reports, rooms, rides, community, jobs, events, audit log) are UI-complete. Moderation actions and automation executions are placeholders pending backend wiring. Authorization is not yet enforced client-side beyond route gating.
+- Rides moderation is backed by `GET /api/v1/admin/rides` returning ride projections with `from`, `to`, `driverId`, `status`, `reported`, and `createdAt`.
 - Recent fixes: admin detail navigation uses typed `Href` casts, and screen JSX formatting was normalized for readability.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.

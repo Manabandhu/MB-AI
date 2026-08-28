@@ -13,6 +13,7 @@ type AppButtonProps = {
   variant?: AppButtonVariant;
   icon?: AppIconName;
   loading?: boolean;
+  disabled?: boolean;
 };
 
 export function AppButton({
@@ -22,6 +23,7 @@ export function AppButton({
   variant = 'primary',
   icon,
   loading,
+  disabled,
 }: AppButtonProps) {
   const isPrimary = variant === 'primary';
   const gluestackVariant = isPrimary ? 'default' : variant === 'secondary' ? 'outline' : 'ghost';
@@ -32,7 +34,7 @@ export function AppButton({
       className="min-h-12 rounded-xl px-4"
       onPress={onPress ?? (() => route && router.push(route as Href))}
       variant={gluestackVariant}
-      isDisabled={loading}
+      isDisabled={loading || disabled}
     >
       {icon ? <AppIcon color={textColor} name={icon} size={18} /> : null}
       <ButtonText

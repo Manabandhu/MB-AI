@@ -25,15 +25,24 @@ public class RoomImageService {
     }
 
     @Transactional
-    public RoomImage add(UUID listingId, String url, int sortOrder) {
-        if (!listingRepository.existsById(listingId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found");
-        }
+    public RoomImage add(UUID listingId, UUID actorId, boolean isAdmin, String url, int sortOrder) {
+        requireOwnedListing(listingId, actorId, isAdmin);
         return repository.save(new RoomImage(listingId, url, sortOrder));
     }
 
     @Transactional
-    public void delete(UUID imageId) {
+    public void delete(UUID imageId, UUID actorId, boolean isAdmin) {
+        var image = repository.findById(imageId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room image not found"));
+        requireOwnedListing(image.getListingId(), actorId, isAdmin);
         repository.deleteById(imageId);
+    }
+
+    private void requireOwnedListing(UUID listingId, UUID actorId, boolean isAdmin) {
+        var listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
+        if (!isAdmin && !listing.getOwnerId().equals(actorId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this listing");
+        }
     }
 }

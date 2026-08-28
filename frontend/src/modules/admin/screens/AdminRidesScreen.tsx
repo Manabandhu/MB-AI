@@ -26,7 +26,7 @@ export default function AdminRidesScreen() {
     return rides.filter(
       (r) =>
         `${r.from} ${r.to}`.toLowerCase().includes(query.toLowerCase()) ||
-        r.driverName.toLowerCase().includes(query.toLowerCase()),
+        (r.driverName ?? r.driverId).toLowerCase().includes(query.toLowerCase()),
     );
   }, [rides, query]);
 
@@ -71,7 +71,7 @@ export default function AdminRidesScreen() {
                     <Text style={styles.itemTitle}>
                       {r.from} → {r.to}
                     </Text>
-                    <Text style={styles.itemSubtitle}>Driver: {r.driverName}</Text>
+                    <Text style={styles.itemSubtitle}>Driver: {r.driverName ?? r.driverId}</Text>
                     <Text style={styles.itemMeta}>
                       {r.status} {r.reported ? '· Reported' : ''}
                     </Text>

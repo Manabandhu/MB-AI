@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,11 +31,14 @@ class RoomAvailabilityServiceTest {
 
     @Test
     void createMapsInputToEntity() {
+        var ownerId = UUID.randomUUID();
         var listingId = UUID.randomUUID();
         var input = new CreateRoomAvailabilityInput(LocalDate.now(), LocalDate.now().plusMonths(6), 3);
-        when(listingRepository.existsById(listingId)).thenReturn(true);
+        var listing = new RoomListing(ownerId, "Room", null, BigDecimal.valueOf(800),
+                "private", "active", "Irving", null, null, null);
+        when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
         when(availabilityRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        var availability = service.create(listingId, input);
+        var availability = service.create(listingId, ownerId, false, input);
         assertThat(availability.getMinStayMonths()).isEqualTo(3);
         assertThat(availability.getListingId()).isEqualTo(listingId);
     }
@@ -43,8 +47,8 @@ class RoomAvailabilityServiceTest {
     void createThrowsNotFoundForMissingListing() {
         var listingId = UUID.randomUUID();
         var input = new CreateRoomAvailabilityInput(LocalDate.now(), LocalDate.now().plusMonths(6), 3);
-        when(listingRepository.existsById(listingId)).thenReturn(false);
-        assertThatThrownBy(() -> service.create(listingId, input))
+        when(listingRepository.findById(listingId)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.create(listingId, UUID.randomUUID(), false, input))
                 .isInstanceOf(ResponseStatusException.class);
     }
 }

@@ -1,5 +1,5 @@
-import { RoomsScreen } from '@/modules/rooms/screens/RoomsScreen';
+import { RoomFavoritesScreen } from '@/modules/rooms/screens/RoomListScreens';
 
 export default function RoomsSavedRoute() {
-  return <RoomsScreen screenId="saved" />;
+  return <RoomFavoritesScreen />;
 }

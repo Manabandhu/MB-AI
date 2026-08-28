@@ -52,7 +52,8 @@ export type AdminRide = {
   id: string;
   from: string;
   to: string;
-  driverName: string;
+  driverId: string;
+  driverName?: string;
   status: string;
   reported: boolean;
   createdAt: string;

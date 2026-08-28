@@ -31,19 +31,25 @@ public class RoomAvailabilityService {
     }
 
     @Transactional
-    public RoomAvailability create(UUID listingId, CreateRoomAvailabilityInput input) {
-        if (!listingRepository.existsById(listingId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found");
-        }
+    public RoomAvailability create(UUID listingId, UUID actorId, boolean isAdmin, CreateRoomAvailabilityInput input) {
+        requireOwnedListing(listingId, actorId, isAdmin);
         var availability = new RoomAvailability(listingId, input.availableFrom(), input.availableTo(), input.minStayMonths());
         return repository.save(availability);
     }
 
     @Transactional
-    public void delete(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room availability not found");
-        }
+    public void delete(UUID id, UUID actorId, boolean isAdmin) {
+        var availability = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room availability not found"));
+        requireOwnedListing(availability.getListingId(), actorId, isAdmin);
         repository.deleteById(id);
+    }
+
+    private void requireOwnedListing(UUID listingId, UUID actorId, boolean isAdmin) {
+        var listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
+        if (!isAdmin && !listing.getOwnerId().equals(actorId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this listing");
+        }
     }
 }

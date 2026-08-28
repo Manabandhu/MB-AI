@@ -28,12 +28,12 @@ public class RidesService {
 
     @Transactional(readOnly = true)
     public List<RideOffer> findAllOpen() {
-        return offerRepository.findByStatusOrderByDepartureAtAsc("open");
+        return offerRepository.findByStatusOrderByDepartureAtAsc("active");
     }
 
     @Transactional(readOnly = true)
     public List<RideOffer> findSaved() {
-        return offerRepository.findByStatusOrderByDepartureAtAsc("saved");
+        return List.of();
     }
 
     @Transactional(readOnly = true)
@@ -65,7 +65,7 @@ public class RidesService {
     public RideOffer createOffer(UUID driverId, String originArea, String destinationArea, Instant departureAt,
                                  int seatsTotal, String contribution) {
         return offerRepository.save(new RideOffer(driverId, originArea, destinationArea, departureAt, seatsTotal,
-                seatsTotal, contribution, "open"));
+                seatsTotal, contribution, "active"));
     }
 
     @Transactional

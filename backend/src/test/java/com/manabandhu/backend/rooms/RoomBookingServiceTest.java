@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,10 +28,15 @@ class RoomBookingServiceTest {
 
     @Test
     void createMapsInputToEntity() {
-        var listingId = UUID.randomUUID();
+        var ownerId = UUID.randomUUID();
         var requesterId = UUID.randomUUID();
+        var listingId = UUID.randomUUID();
         var input = new CreateRoomBookingInput("I'm interested in this room.");
-        when(listingRepository.existsById(listingId)).thenReturn(true);
+        var listing = new RoomListing(ownerId, "Room", null, BigDecimal.valueOf(800),
+                "private", "active", "Irving", null, null, null);
+        when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
+        when(bookingRepository.existsByListingIdAndRequesterIdAndStatus(listingId, requesterId, "pending"))
+                .thenReturn(false);
         when(bookingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var booking = service.create(listingId, requesterId, input);
         assertThat(booking.getStatus()).isEqualTo("pending");
@@ -39,12 +45,18 @@ class RoomBookingServiceTest {
     }
 
     @Test
-    void updateStatusSetsNewStatus() {
+    void updateStatusSetsNewStatusForOwner() {
+        var ownerId = UUID.randomUUID();
+        var requesterId = UUID.randomUUID();
         var bookingId = UUID.randomUUID();
-        var booking = new RoomBooking(UUID.randomUUID(), UUID.randomUUID(), "pending", null);
+        var listingId = UUID.randomUUID();
+        var listing = new RoomListing(ownerId, "Room", null, BigDecimal.valueOf(800),
+                "private", "active", "Irving", null, null, null);
+        var booking = new RoomBooking(listingId, requesterId, "pending", null);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
         when(bookingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        var result = service.updateStatus(bookingId, "accepted");
+        var result = service.updateStatus(bookingId, ownerId, false, "accepted");
         assertThat(result.getStatus()).isEqualTo("accepted");
     }
 }
