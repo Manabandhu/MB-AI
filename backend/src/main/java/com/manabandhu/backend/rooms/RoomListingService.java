@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,18 +49,18 @@ public class RoomListingService {
     }
 
     @Transactional(readOnly = true)
-    public List<RoomListing> search(String location, String roomType) {
+    public Page<RoomListing> search(String location, String roomType, Pageable pageable) {
         if (location != null && roomType != null) {
             return repository.findByStatusAndRoomTypeAndBroadLocationContainingIgnoreCaseOrderByCreatedAtDesc(
-                    "active", roomType, location);
+                    "active", roomType, location, pageable);
         }
         if (location != null) {
-            return repository.findByBroadLocationContainingIgnoreCaseAndStatusOrderByCreatedAtDesc(location, "active");
+            return repository.findByBroadLocationContainingIgnoreCaseAndStatusOrderByCreatedAtDesc(location, "active", pageable);
         }
         if (roomType != null) {
-            return repository.findByRoomTypeAndStatusOrderByCreatedAtDesc(roomType, "active");
+            return repository.findByRoomTypeAndStatusOrderByCreatedAtDesc(roomType, "active", pageable);
         }
-        return findAllPublished();
+        return repository.findByStatusOrderByCreatedAtDesc("active", pageable);
     }
 
     @Transactional

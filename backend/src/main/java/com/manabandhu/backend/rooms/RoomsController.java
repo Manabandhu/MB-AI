@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -69,13 +72,14 @@ public class RoomsController {
     }
 
     @GetMapping("/listings")
-    List<RoomListingResponse> listings(
+    Page<RoomListingResponse> listings(
             Authentication authentication,
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) String roomType) {
+            @RequestParam(required = false) String roomType,
+            Pageable pageable) {
         var viewerId = authentication == null ? null : actorId(authentication);
-        var listings = listingService.search(location, roomType);
-        return listings.stream().map(l -> toResponse(l, viewerId)).toList();
+        var listings = listingService.search(location, roomType, pageable);
+        return listings.map(l -> toResponse(l, viewerId));
     }
 
     @PostMapping("/listings")

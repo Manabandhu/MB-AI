@@ -4,6 +4,9 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.manabandhu.backend.foundation.CatalogScreenContent;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -58,8 +61,8 @@ public class JobsController {
     }
 
     @GetMapping
-    List<JobPosting> postings() {
-        return postingService.findAll();
+    Page<JobPosting> postings(Pageable pageable) {
+        return postingService.findAll(pageable);
     }
 
     @PostMapping

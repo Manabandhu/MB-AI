@@ -42,6 +42,12 @@ public class Notification {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "dispatched", nullable = false)
+    private boolean dispatched;
+
+    @Column(name = "dispatched_at")
+    private Instant dispatchedAt;
+
     protected Notification() {}
 
     Notification(UUID userId, String title, String body, NotificationType type, String actionRoute) {
@@ -53,6 +59,7 @@ public class Notification {
         this.read = false;
         this.actionRoute = actionRoute;
         this.createdAt = Instant.now();
+        this.dispatched = false;
     }
 
     public UUID getId() { return id; }
@@ -64,10 +71,17 @@ public class Notification {
     public Instant getReadAt() { return readAt; }
     public String getActionRoute() { return actionRoute; }
     public Instant getCreatedAt() { return createdAt; }
+    public boolean isDispatched() { return dispatched; }
+    public Instant getDispatchedAt() { return dispatchedAt; }
 
     public void markRead() {
         this.read = true;
         this.readAt = Instant.now();
+    }
+
+    public void markDispatched() {
+        this.dispatched = true;
+        this.dispatchedAt = Instant.now();
     }
 
     public enum NotificationType {

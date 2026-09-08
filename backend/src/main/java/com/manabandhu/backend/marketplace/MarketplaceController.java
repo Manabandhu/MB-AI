@@ -4,6 +4,9 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.manabandhu.backend.foundation.CatalogScreenContent;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -61,8 +64,8 @@ public class MarketplaceController {
     }
 
     @GetMapping("/listings")
-    List<Listing> listings() {
-        return listingService.findAll();
+    Page<Listing> listings(Pageable pageable) {
+        return listingService.findAll(pageable);
     }
 
     @PostMapping("/listings")
