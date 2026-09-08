@@ -25,9 +25,12 @@ export default function CreateEventScreen() {
       createEvent({
         title: title.trim(),
         description: description.trim(),
-        date: date.trim(),
+        startAt: date.trim() || new Date().toISOString(),
+        endAt: date.trim() || new Date().toISOString(),
         location: location.trim(),
-        category: category.trim(),
+        latitude: 0,
+        longitude: 0,
+        categoryId: category.trim() || 'general',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });

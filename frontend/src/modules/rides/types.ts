@@ -82,6 +82,8 @@ export type CreateRideOfferInput = {
 export type CreateRideRequestInput = {
   rideId: string;
   pickupArea: string;
+  destination: string;
+  departureAt: string;
   seatsRequested: number;
   message?: string;
 };

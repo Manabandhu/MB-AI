@@ -24,6 +24,8 @@ export function PostJobScreen() {
   const {
     control,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
@@ -73,7 +75,11 @@ export function PostJobScreen() {
         </View>
         <View style={styles.field}>
           <Text style={styles.label}>Description</Text>
-          <TextArea placeholder="Describe the role..." {...control.register('description')} />
+          <TextArea
+            value={watch('description') ?? ''}
+            onChangeText={(text) => setValue('description', text)}
+            placeholder="Describe the role..."
+          />
           {errors.description ? (
             <Text style={styles.error}>{errors.description.message}</Text>
           ) : null}

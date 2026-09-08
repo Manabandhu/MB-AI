@@ -24,6 +24,8 @@ export function SellItemScreen() {
   const {
     control,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<ListingFormData>({
     resolver: zodResolver(listingSchema),
@@ -77,8 +79,9 @@ export function SellItemScreen() {
         <View style={styles.field}>
           <Text style={styles.label}>Description</Text>
           <TextArea
+            value={watch('description') ?? ''}
+            onChangeText={(text) => setValue('description', text)}
             placeholder="Describe condition, pickup location, etc."
-            {...control.register('description')}
           />
           {errors.description ? (
             <Text style={styles.error}>{errors.description.message}</Text>

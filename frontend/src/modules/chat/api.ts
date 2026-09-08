@@ -17,12 +17,14 @@ export type Message = {
   body: string;
   messageType: 'TEXT' | 'IMAGE' | 'SYSTEM';
   createdAt: string;
+  sent?: boolean;
 };
 
 export type Participant = {
   id: string;
   conversationId: string;
   userId: string;
+  name?: string;
   role: 'OWNER' | 'MEMBER';
   joinedAt: string;
 };

@@ -11,6 +11,7 @@ import {
   getExploreShell,
   getHomeShell,
   getProfileShell,
+  type HomeShellData,
 } from '@/modules/foundation/homeApi';
 import { homeShellFallbacks } from '@/modules/foundation/homeShellFallbacks';
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
@@ -364,7 +365,7 @@ export function ProfileShell({ data }: { data: HomeShellData }) {
         onPress={() => useAuthStore.getState().signOut()}
         style={styles.logOutRow}
       >
-        <AppIcon color={colors.warm} name="exit" size={20} />
+        <AppIcon color={colors.warm} name="logout" size={20} />
         <Text style={styles.logOutText}>Log Out</Text>
       </Pressable>
     </>

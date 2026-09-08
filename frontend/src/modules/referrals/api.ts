@@ -16,6 +16,8 @@ export type Referral = {
   status: string;
   title: string;
   description: string;
+  category?: string;
+  contactInfo?: string;
   createdAt: string;
   updatedAt: string;
 };

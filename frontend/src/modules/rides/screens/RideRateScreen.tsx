@@ -9,6 +9,7 @@ import { getRideDetail, getRideRating, submitRideRating } from '@/modules/rides/
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { StarRating } from '@/modules/shared/components/StarRating';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
 export function RideRateScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
@@ -33,7 +34,8 @@ export function RideRateScreen() {
   });
 
   const mutation = useMutation({
-    mutationFn: submitRideRating,
+    mutationFn: (input: { safetyRating: number; timelinessRating: number; comfortRating: number; comment?: string }) =>
+      submitRideRating(rideId, input),
     onSuccess: () => setSuccess(true),
     onError: (err: Error) => setError(err.message),
   });
