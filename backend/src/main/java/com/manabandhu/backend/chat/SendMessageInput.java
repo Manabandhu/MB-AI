@@ -5,4 +5,4 @@ import jakarta.validation.constraints.Size;
 
 public record SendMessageInput(
         @NotBlank @Size(max = 4000) String body,
-        @NotBlank String messageType) {}
+        @NotBlank @Size(max = 20) String messageType) {}

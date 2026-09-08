@@ -37,4 +37,14 @@ public class NotificationService {
         notification.markRead();
         return notification;
     }
+
+    @Transactional(readOnly = true)
+    public List<Notification> findPendingDigests() {
+        return repository.findByDispatchedFalseOrderByCreatedAtAsc();
+    }
+
+    @Transactional
+    public Notification save(Notification notification) {
+        return repository.save(notification);
+    }
 }

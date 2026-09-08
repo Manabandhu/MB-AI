@@ -4,6 +4,9 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,10 +50,11 @@ public class RidesController {
     }
 
     @GetMapping("/offers")
-    List<RideOffer> offers(
+    Page<RideOffer> offers(
             @RequestParam(required = false) String origin,
-            @RequestParam(required = false) String destination) {
-        return offerService.search(origin, destination);
+            @RequestParam(required = false) String destination,
+            Pageable pageable) {
+        return offerService.search(origin, destination, pageable);
     }
 
     @PostMapping("/offers")

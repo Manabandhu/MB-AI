@@ -3,6 +3,7 @@ package com.manabandhu.backend.expenses;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -20,6 +21,11 @@ public class ExpenseService {
     @Transactional(readOnly = true)
     public List<Expense> findByGroupId(UUID groupId) {
         return repository.findByGroupIdOrderByExpenseDateDesc(groupId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Expense> findById(UUID id) {
+        return repository.findById(id);
     }
 
     @Transactional

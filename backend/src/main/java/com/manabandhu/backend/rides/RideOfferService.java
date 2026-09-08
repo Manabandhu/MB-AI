@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,20 +41,18 @@ public class RideOfferService {
     }
 
     @Transactional(readOnly = true)
-    public List<RideOffer> search(String origin, String destination) {
+    public Page<RideOffer> search(String origin, String destination, Pageable pageable) {
         if (origin != null && destination != null) {
-            return repository.findByStatusOrderByDepartureAtAsc("active").stream()
-                    .filter(o -> origin != null && o.getOriginArea().toLowerCase().contains(origin.toLowerCase()))
-                    .filter(o -> destination != null && o.getDestinationArea().toLowerCase().contains(destination.toLowerCase()))
-                    .toList();
+            return repository.findByStatusAndOriginAreaContainingIgnoreCaseAndDestinationAreaContainingIgnoreCaseOrderByDepartureAtAsc(
+                    "active", origin, destination, pageable);
         }
         if (origin != null) {
-            return repository.findByOriginAreaContainingIgnoreCaseAndStatusOrderByDepartureAtAsc(origin, "active");
+            return repository.findByOriginAreaContainingIgnoreCaseAndStatusOrderByDepartureAtAsc(origin, "active", pageable);
         }
         if (destination != null) {
-            return repository.findByDestinationAreaContainingIgnoreCaseAndStatusOrderByDepartureAtAsc(destination, "active");
+            return repository.findByDestinationAreaContainingIgnoreCaseAndStatusOrderByDepartureAtAsc(destination, "active", pageable);
         }
-        return findAll();
+        return repository.findByStatusOrderByDepartureAtAsc("active", pageable);
     }
 
     @Transactional

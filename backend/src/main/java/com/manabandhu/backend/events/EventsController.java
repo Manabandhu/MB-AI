@@ -4,8 +4,11 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+
+import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,25 +29,19 @@ public class EventsController {
     }
 
     @GetMapping
-    List<Event> list(@RequestParam(required = false) String q) {
+    Page<Event> list(@RequestParam(required = false) String q, Pageable pageable) {
         if (q != null && !q.isBlank()) {
-            return service.findAll().stream()
-                    .filter(e -> e.getTitle().toLowerCase().contains(q.toLowerCase())
-                            || e.getLocation().toLowerCase().contains(q.toLowerCase()))
-                    .toList();
+            return service.search(q, pageable);
         }
-        return service.findAll();
+        return service.findAll(pageable);
     }
 
     @GetMapping("/search")
-    List<Event> search(@RequestParam(required = false) String q) {
+    Page<Event> search(@RequestParam(required = false) String q, Pageable pageable) {
         if (q != null && !q.isBlank()) {
-            return service.findAll().stream()
-                    .filter(e -> e.getTitle().toLowerCase().contains(q.toLowerCase())
-                            || e.getLocation().toLowerCase().contains(q.toLowerCase()))
-                    .toList();
+            return service.search(q, pageable);
         }
-        return service.findAll();
+        return service.findAll(pageable);
     }
 
     @GetMapping("/saved")

@@ -4,6 +4,7 @@ import java.net.URI;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.manabandhu.backend.foundation.CatalogScreenContent;
@@ -88,9 +89,7 @@ public class ExpensesController {
 
     @GetMapping("/expenses/{expenseId}")
     Expense expense(@PathVariable UUID expenseId) {
-        return expenseService.findByGroupId(expenseId).stream()
-                .filter(e -> e.getId().equals(expenseId))
-                .findFirst()
+        return expenseService.findById(expenseId)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Expense not found"));
     }
@@ -110,28 +109,18 @@ public class ExpensesController {
 
     @GetMapping("/settlements")
     List<Settlement> settlements() {
-        return settlementService.findByGroupId(null);
+        return settlementService.findAll();
     }
 
     @GetMapping("/settlements/{settlementId}")
     Settlement settlement(@PathVariable UUID settlementId) {
-        return settlementService.findByGroupId(null).stream()
-                .filter(s -> s.getId().equals(settlementId))
-                .findFirst()
+        return settlementService.findById(settlementId)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Settlement not found"));
     }
 
     @PatchMapping("/settlements/{settlementId}")
     Settlement updateSettlement(@PathVariable UUID settlementId, @Valid @RequestBody UpdateSettlementInput input) {
-        var settlements = settlementService.findByGroupId(null);
-        var settlement = settlements.stream()
-                .filter(s -> s.getId().equals(settlementId))
-                .findFirst()
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Settlement not found"));
-        if (input.status() != null) settlement.status = input.status();
-        if (input.settledAt() != null) settlement.settledAt = input.settledAt();
-        return settlement;
+        return settlementService.updateStatus(settlementId, input.status(), input.settledAt());
     }
 }

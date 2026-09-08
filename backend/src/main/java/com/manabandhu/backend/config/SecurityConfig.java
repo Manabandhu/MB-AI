@@ -26,23 +26,18 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            @Value("${app.admin.public-access-enabled:false}") boolean adminPublicAccessEnabled) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         var publicGetEndpoints = new String[] {
                 "/api/v1/health",
                 "/api/v1/foundation/welcome",
                 "/api/v1/foundation/screens/**",
-                "/api/v1/notifications/inbox",
                 "/api/v1/rooms/screens/**",
                 "/api/v1/rooms/listings",
                 "/api/v1/rooms/{roomId}",
-                "/api/v1/rooms/{roomId}/owner",
                 "/api/v1/rooms/listings/{listingId}",
                 "/api/v1/rides/screens/**",
                 "/api/v1/rides/offers",
                 "/api/v1/rides/{rideId}",
-                "/api/v1/rides/{rideId}/owner",
                 "/api/v1/communities",
                 "/api/v1/communities/{id}",
                 "/api/v1/communities/{id}/posts",
@@ -67,13 +62,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, publicGetEndpoints).permitAll()
                         .requestMatchers("/actuator/info").permitAll()
-                        .requestMatchers("/api/v1/admin/automations/**").access(
-                                (authentication, context) -> {
-                                    var candidate = authentication.get();
-                                    return new org.springframework.security.authorization.AuthorizationDecision(
-                                            adminPublicAccessEnabled
-                                                    || (candidate != null && candidate.isAuthenticated()));
-                                })
+                        .requestMatchers("/api/v1/admin/automations/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .build();
