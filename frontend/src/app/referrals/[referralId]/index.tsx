@@ -1,7 +1,7 @@
 import { useRequireAuth } from '@/lib/authStore';
 import { ReferralDetailsScreen } from '@/modules/referrals/screens/ReferralDetailsScreen';
 
-export default function ReferralDetailsRoute({ params }: { params: { referralId: string } }) {
+export default function ReferralDetailsRoute() {
   useRequireAuth('/sign-in');
-  return <ReferralDetailsScreen referralId={params.referralId} />;
+  return <ReferralDetailsScreen />;
 }

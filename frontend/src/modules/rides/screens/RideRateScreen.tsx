@@ -10,6 +10,7 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { StarRating } from '@/modules/shared/components/StarRating';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { CreateRideRatingInput } from '@/modules/rides/types';
 
 export function RideRateScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();

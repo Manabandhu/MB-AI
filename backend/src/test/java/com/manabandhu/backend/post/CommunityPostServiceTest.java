@@ -23,7 +23,8 @@ class CommunityPostServiceTest {
         when(postRepo.save(any(CommunityPost.class))).thenAnswer(invocation -> invocation.getArgument(0));
         var service = new CommunityPostService(postRepo, communityRepo, commentRepo, reactionRepo);
         var ownerId = UUID.randomUUID();
-        var post = service.create(ownerId, new CreatePostInput("Hello", "World"));
+        var communityId = UUID.randomUUID();
+        var post = service.create(ownerId, new CreatePostInput(communityId, "Hello", "World"));
 
         assertThat(post).isNotNull();
         assertThat(post.getOwnerId()).isEqualTo(ownerId);

@@ -120,4 +120,4 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 
 - Recent backend changes: added aliased routes to `RidesController` (`/{rideId}`, `/{rideId}/owner`, `/{rideId}` PATCH/DELETE, `/mine`, `/history`, `/saved`) alongside existing `/offers/{offerId}` paths to match frontend API calls.
 
-- Recent fixes: added `destination` and `departureAt` to `CreateRideRequestInput` so `RideRequestScreen` payload typechecks; fixed `RideRateScreen` mutation to pass the rating object directly to `submitRideRating` (was passing `(rideId, input)` which mismatched `MutationFunction`); added `Input`/`InputField` imports to `RideRateScreen`.
+- Recent fixes: added `destination` and `departureAt` to `CreateRideRequestInput` so `RideRequestScreen` payload typechecks; fixed `RideRateScreen` mutation to pass the rating object directly to `submitRideRating` (was passing `(rideId, input)` which mismatched `MutationFunction`); added `Input`/`InputField` imports to `RideRateScreen`; added `isReported()` getter to `RideOffer` so `AdminRidesController` compiles.

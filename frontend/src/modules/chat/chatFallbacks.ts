@@ -22,8 +22,8 @@ export const chatScreenFallbacks: Record<string, ChatScreenContent> = {
         lastMessageAt: new Date().toISOString(),
         unreadCount: 2,
         participants: [
-          { id: 'u1', name: 'Ravi', role: 'Member' },
-          { id: 'u2', name: 'You', role: 'Member' },
+          { id: 'u1', name: 'Ravi', role: 'MEMBER' },
+          { id: 'u2', name: 'You', role: 'MEMBER' },
         ],
       },
       {
@@ -33,8 +33,8 @@ export const chatScreenFallbacks: Record<string, ChatScreenContent> = {
         lastMessageAt: new Date(Date.now() - 86400000).toISOString(),
         unreadCount: 0,
         participants: [
-          { id: 'u3', name: 'Priya', role: 'Member' },
-          { id: 'u2', name: 'You', role: 'Member' },
+          { id: 'u3', name: 'Priya', role: 'MEMBER' },
+          { id: 'u2', name: 'You', role: 'MEMBER' },
         ],
       },
       {
@@ -44,8 +44,8 @@ export const chatScreenFallbacks: Record<string, ChatScreenContent> = {
         lastMessageAt: new Date(Date.now() - 172800000).toISOString(),
         unreadCount: 1,
         participants: [
-          { id: 'u4', name: 'Sam', role: 'Member' },
-          { id: 'u2', name: 'You', role: 'Member' },
+          { id: 'u4', name: 'Sam', role: 'MEMBER' },
+          { id: 'u2', name: 'You', role: 'MEMBER' },
         ],
       },
     ],
@@ -65,7 +65,6 @@ export const chatScreenFallbacks: Record<string, ChatScreenContent> = {
         id: 'm1',
         conversationId: 'conv1',
         senderId: 'u1',
-        senderName: 'Ravi',
         body: 'Hey! Are we still on for tomorrow?',
         createdAt: new Date().toISOString(),
         sent: false,
@@ -74,7 +73,6 @@ export const chatScreenFallbacks: Record<string, ChatScreenContent> = {
         id: 'm2',
         conversationId: 'conv1',
         senderId: 'u2',
-        senderName: 'You',
         body: 'Yes, leaving at 7am.',
         createdAt: new Date().toISOString(),
         sent: true,
@@ -83,15 +81,14 @@ export const chatScreenFallbacks: Record<string, ChatScreenContent> = {
         id: 'm3',
         conversationId: 'conv1',
         senderId: 'u1',
-        senderName: 'Ravi',
         body: 'Perfect, see you then.',
         createdAt: new Date().toISOString(),
         sent: false,
       },
     ],
     participants: [
-      { id: 'u1', name: 'Ravi', role: 'Member' },
-      { id: 'u2', name: 'You', role: 'Member' },
+      { id: 'u1', name: 'Ravi', role: 'MEMBER' },
+      { id: 'u2', name: 'You', role: 'MEMBER' },
     ],
   },
   info: {
@@ -99,8 +96,8 @@ export const chatScreenFallbacks: Record<string, ChatScreenContent> = {
     title: 'Ride to Austin',
     subtitle: 'Conversation details',
     participants: [
-      { id: 'u1', name: 'Ravi', role: 'Admin' },
-      { id: 'u2', name: 'You', role: 'Member' },
+      { id: 'u1', name: 'Ravi', role: 'OWNER' },
+      { id: 'u2', name: 'You', role: 'MEMBER' },
     ],
   },
 };

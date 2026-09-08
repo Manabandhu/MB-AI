@@ -30,13 +30,19 @@ export type AssistantMessage = {
   conversationId: string;
   role: 'USER' | 'ASSISTANT' | 'SYSTEM';
   content: string;
+  body?: string;
   createdAt: string;
+  time?: string;
+  sent?: boolean;
 };
 
 export type AssistantConversation = {
   id: string;
   userId?: string;
   title: string;
+  body?: string;
+  meta?: string;
+  route?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -47,5 +53,8 @@ export type AssistantCitation = {
   title: string;
   url: string;
   snippet: string;
+  body?: string;
+  meta?: string;
+  source?: string;
   createdAt: string;
 };

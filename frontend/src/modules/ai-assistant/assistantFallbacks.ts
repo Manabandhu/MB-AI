@@ -24,7 +24,7 @@ export const assistantScreenFallbacks = {
       time: '10:31 AM',
       sent: false,
     },
-  ] as AssistantMessage[],
+  ] satisfies AssistantMessage[],
   history: [
     {
       id: 'conv-1',
@@ -40,7 +40,7 @@ export const assistantScreenFallbacks = {
       meta: '3 days ago',
       route: '/assistant',
     },
-  ] as AssistantConversation[],
+  ] satisfies AssistantConversation[],
   citations: [
     {
       id: 'cite-1',
@@ -56,5 +56,5 @@ export const assistantScreenFallbacks = {
       meta: 'Help center',
       source: 'app://help',
     },
-  ] as AssistantCitation[],
+  ] satisfies AssistantCitation[],
 };

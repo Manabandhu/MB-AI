@@ -22,7 +22,7 @@ export function AssistantScreen() {
   const send = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    sendAssistantMessage({ text: trimmed }).catch(() => setOffline(true));
+    sendAssistantMessage({ content: trimmed }).catch(() => setOffline(true));
     setText('');
   };
 
