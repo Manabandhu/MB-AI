@@ -6,11 +6,11 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getRideDetail, getRideRating, submitRideRating } from '@/modules/rides/api';
+import type { CreateRideRatingInput } from '@/modules/rides/types';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { StarRating } from '@/modules/shared/components/StarRating';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
-import { CreateRideRatingInput } from '@/modules/rides/types';
 
 export function RideRateScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
