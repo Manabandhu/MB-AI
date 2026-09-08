@@ -13,6 +13,8 @@ interface AuthState {
   status: AuthStatus;
   isLoading: boolean;
   error: string | null;
+  otpIdentifier: string | null;
+  otpType: 'email' | 'sms' | null;
 }
 
 interface AuthActions {
@@ -26,6 +28,7 @@ interface AuthActions {
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
   clearError: () => void;
+  clearOtpContext: () => void;
   _setSession: (session: Session | null) => void;
 }
 
@@ -35,6 +38,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   status: 'loading',
   isLoading: true,
   error: null,
+  otpIdentifier: null,
+  otpType: null,
 
   checkSession: async () => {
     set({ isLoading: true, status: 'loading' });
@@ -127,7 +132,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     try {
       const { error } = await supabase.auth.signInWithOtp({ phone });
       if (error) throw error;
-      set({ isLoading: false });
+      set({ otpIdentifier: phone, otpType: 'sms', isLoading: false });
       router.push('/otp-verification');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'SMS sending failed';
@@ -140,7 +145,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     try {
       const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) throw error;
-      set({ isLoading: false });
+      set({ otpIdentifier: email, otpType: 'email', isLoading: false });
+      router.push('/otp-verification');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Magic link sending failed';
       set({ error: message, isLoading: false });
@@ -161,6 +167,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
         user: data.user ?? null,
         status: 'authenticated',
         isLoading: false,
+        otpIdentifier: null,
+        otpType: null,
       });
       router.replace('/home');
     } catch (err) {
@@ -213,6 +221,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  clearOtpContext: () => set({ otpIdentifier: null, otpType: null }),
 
   _setSession: (session) => {
     set({

@@ -22,6 +22,11 @@ public class AssistantConversationService {
     }
 
     @Transactional(readOnly = true)
+    public List<AssistantConversation> listRecent() {
+        return repository.findTop20ByOrderByUpdatedAtDesc();
+    }
+
+    @Transactional(readOnly = true)
     public AssistantConversation find(UUID id) {
         return repository.findById(id).orElseThrow();
     }

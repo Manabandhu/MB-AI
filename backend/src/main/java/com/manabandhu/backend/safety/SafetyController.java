@@ -21,11 +21,18 @@ public class SafetyController {
     private final SafetyReportService reportService;
     private final BlockedUserService blockedUserService;
     private final TrustedContactService trustedContactService;
+    private final SafetyContentService contentService;
 
-    SafetyController(SafetyReportService reportService, BlockedUserService blockedUserService, TrustedContactService trustedContactService) {
+    SafetyController(SafetyReportService reportService, BlockedUserService blockedUserService, TrustedContactService trustedContactService, SafetyContentService contentService) {
         this.reportService = reportService;
         this.blockedUserService = blockedUserService;
         this.trustedContactService = trustedContactService;
+        this.contentService = contentService;
+    }
+
+    @GetMapping("/center")
+    com.manabandhu.backend.foundation.CatalogScreenContent center() {
+        return contentService.center();
     }
 
     @GetMapping("/reports")

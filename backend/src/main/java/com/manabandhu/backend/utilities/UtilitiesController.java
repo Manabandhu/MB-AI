@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.manabandhu.backend.foundation.CatalogItem;
+import com.manabandhu.backend.foundation.CatalogMetric;
+import com.manabandhu.backend.foundation.CatalogScreenContent;
+
 @RestController
 @RequestMapping("/api/v1/utilities")
 public class UtilitiesController {
@@ -27,6 +31,20 @@ public class UtilitiesController {
         this.packageService = packageService;
         this.nearbyService = nearbyService;
         this.emergencyService = emergencyService;
+    }
+
+    @GetMapping("/home")
+    CatalogScreenContent home() {
+        return new CatalogScreenContent(
+                "Utilities",
+                "Track packages, find nearby services, and access emergency resources.",
+                "Utilities",
+                List.of(
+                        new CatalogMetric("Packages", "3"),
+                        new CatalogMetric("Nearby", "12")),
+                List.of(
+                        new CatalogItem("package", "Package tracking", "Track your shipments and delivery status.", "Packages", null, "active"),
+                        new CatalogItem("nearby", "Nearby services", "Find nearby places and emergency resources.", "Services", null, "active")));
     }
 
     @GetMapping("/packages")

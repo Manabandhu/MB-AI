@@ -81,3 +81,5 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - **Partial**: Events home, search, details, and create event screens are implemented. Saved and my events screens are UI-complete but rely on demo fallbacks. Backend moderation, capacity, and attendance rules are enforced server-side.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent changes: added `useRequireAuth('/sign-in')` to all events routes; fixed `EventDetailsScreen` to accept optional `eventId` prop with `useLocalSearchParams` fallback; added `@GetMapping("/search")` to `EventsController`; aligned `createEvent` payload with backend `CreateEventInput` fields (`startAt`, `endAt`, `location`, `latitude`, `longitude`, `categoryId`); added `@NotNull` to `CreateEventInput` lat/lng.

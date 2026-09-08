@@ -45,6 +45,9 @@ public class RideOffer {
     @Column(name = "updated_at", nullable = false)
     Instant updatedAt;
 
+    @Column(name = "reported", nullable = false)
+    boolean reported;
+
     protected RideOffer() {}
 
     RideOffer(UUID driverId, String originArea, String destinationArea, Instant departureAt, int seatsTotal,
@@ -58,6 +61,7 @@ public class RideOffer {
         this.seatsAvailable = seatsAvailable;
         this.contribution = contribution;
         this.status = status;
+        this.reported = false;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }

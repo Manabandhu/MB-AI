@@ -3,8 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -26,13 +25,13 @@ export function SignInScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const storeError = useAuthStore((s) => s.error);
+
   async function handleSignIn() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      router.replace('/home');
+      await useAuthStore.getState().signIn(email, password);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign in failed';
       setError(message);
@@ -45,12 +44,7 @@ export function SignInScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: 'demo@manabandhu.local',
-        password: 'DemoPass123',
-      });
-      if (error) throw error;
-      router.replace('/home');
+      await useAuthStore.getState().signIn('demo@manabandhu.local', 'DemoPass123');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Demo sign in failed';
       setError(message);
@@ -98,7 +92,7 @@ export function SignInScreen() {
               />
             </Input>
           </View>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error || storeError ? <Text style={styles.errorText}>{error || storeError}</Text> : null}
           <View style={styles.demoCredentials}>
             <Text style={styles.demoTitle}>Test user</Text>
             <Text style={styles.demoLine}>Email: demo@manabandhu.local</Text>

@@ -95,3 +95,5 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 - Recent fixes: admin detail navigation uses typed `Href` casts, and screen JSX formatting was normalized for readability.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent admin guard changes: added `useRequireAuth('/sign-in')` to all admin routes (`/admin`, `/admin/users`, `/admin/reports`, `/admin/rooms`, `/admin/rides`, `/admin/community`, `/admin/jobs`, `/admin/events`, `/admin/audit-log`).

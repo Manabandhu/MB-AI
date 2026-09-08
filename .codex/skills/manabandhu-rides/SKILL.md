@@ -117,3 +117,5 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 - Admin rides read endpoint exists at `GET /api/v1/admin/rides`.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent backend changes: added aliased routes to `RidesController` (`/{rideId}`, `/{rideId}/owner`, `/{rideId}` PATCH/DELETE, `/mine`, `/history`, `/saved`) alongside existing `/offers/{offerId}` paths to match frontend API calls.

@@ -21,7 +21,6 @@ type ListingFormData = z.infer<typeof listingSchema>;
 
 export function SellItemScreen() {
   const [submitted, setSubmitted] = useState(false);
-  const [description, setDescription] = useState('');
   const {
     control,
     handleSubmit,
@@ -79,8 +78,7 @@ export function SellItemScreen() {
           <Text style={styles.label}>Description</Text>
           <TextArea
             placeholder="Describe condition, pickup location, etc."
-            value={description}
-            onChangeText={setDescription}
+            {...control.register('description')}
           />
           {errors.description ? (
             <Text style={styles.error}>{errors.description.message}</Text>

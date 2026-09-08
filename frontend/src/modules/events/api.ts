@@ -41,9 +41,12 @@ export async function getEvent(id: string): Promise<Event> {
 export async function createEvent(input: {
   title: string;
   description: string;
-  date: string;
+  startAt: string;
+  endAt: string;
   location: string;
-  category: string;
+  latitude: number;
+  longitude: number;
+  categoryId: string;
 }): Promise<Event> {
   return parseJson(
     await apiFetch('/api/v1/events', {

@@ -1,7 +1,8 @@
 import { color, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import { apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/apiClient';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
@@ -14,11 +15,9 @@ type ListingDetailContent = {
   meta?: string;
 };
 
-type ListingDetailsScreenProps = {
-  listingId: string;
-};
-
-export function ListingDetailsScreen({ listingId }: ListingDetailsScreenProps) {
+export function ListingDetailsScreen() {
+  const router = useRouter();
+  const { listingId } = useLocalSearchParams<{ listingId: string }>();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['marketplace', 'listing', listingId],
     queryFn: async (): Promise<ListingDetailContent> => {
@@ -64,8 +63,8 @@ export function ListingDetailsScreen({ listingId }: ListingDetailsScreenProps) {
       <SectionHeader eyebrow={content.eyebrow} title={content.title} subtitle={content.meta} />
       <Text style={styles.body}>{content.body}</Text>
       <View style={styles.actions}>
-        <AppButton label="Message seller" route="/marketplace/saved" />
-        <AppButton label="Save item" route="/marketplace/saved" variant="secondary" />
+        <AppButton label="Message seller" onPress={() => router.push('/chat/new')} />
+        <AppButton label="Save item" onPress={() => {}} variant="secondary" />
       </View>
     </ScreenShell>
   );

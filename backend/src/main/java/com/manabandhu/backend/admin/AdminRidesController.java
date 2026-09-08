@@ -43,7 +43,7 @@ public class AdminRidesController {
                         offer.getDestinationArea(),
                         offer.getDriverId().toString(),
                         offer.getStatus(),
-                        false,
+                        offer.isReported(),
                         offer.getCreatedAt().toString()))
                 .toList();
     }

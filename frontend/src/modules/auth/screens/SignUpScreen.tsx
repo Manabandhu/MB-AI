@@ -1,10 +1,9 @@
 import { color as baseColors, space } from '@manabandhu/design-system';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -28,6 +27,8 @@ export function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const storeError = useAuthStore((s) => s.error);
+
   async function handleSignUp() {
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -36,9 +37,7 @@ export function SignUpScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-      router.replace('/home');
+      await useAuthStore.getState().signUp(email, password, name);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign up failed';
       setError(message);
@@ -110,7 +109,7 @@ export function SignUpScreen() {
               />
             </Input>
           </View>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error || storeError ? <Text style={styles.errorText}>{error || storeError}</Text> : null}
           <AppButton label="Create account" onPress={handleSignUp} loading={loading} />
           <Text style={styles.orText}>or</Text>
           <AppButton label="Sign In" route="/sign-in" variant="secondary" />

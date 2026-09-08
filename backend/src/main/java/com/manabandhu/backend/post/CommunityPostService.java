@@ -32,7 +32,7 @@ public class CommunityPostService {
 
     @Transactional
     public CommunityPost create(UUID ownerId, CreatePostInput input) {
-        return postRepository.save(new CommunityPost(ownerId, input.title(), input.body()));
+        return postRepository.save(new CommunityPost(input.communityId(), ownerId, input.title(), input.body()));
     }
 
     @Transactional(readOnly = true)
@@ -43,6 +43,17 @@ public class CommunityPostService {
     @Transactional(readOnly = true)
     public Optional<Community> findCommunityById(UUID id) {
         return communityRepository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public Community findCommunity(UUID id) {
+        return communityRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Community not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<CommunityPost> findPostsByCommunity(UUID communityId) {
+        return postRepository.findByCommunityIdOrderByCreatedAtDesc(communityId);
     }
 
     @Transactional

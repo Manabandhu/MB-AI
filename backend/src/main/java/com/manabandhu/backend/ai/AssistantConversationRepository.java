@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface AssistantConversationRepository extends JpaRepository<AssistantConversation, UUID> {
     List<AssistantConversation> findByUserIdOrderByUpdatedAtDesc(UUID userId);
+
+    List<AssistantConversation> findTop20ByOrderByUpdatedAtDesc();
 }

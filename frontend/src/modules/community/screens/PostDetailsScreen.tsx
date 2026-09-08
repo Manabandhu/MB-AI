@@ -1,7 +1,7 @@
 import { color as colors, contentWidth, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getPost } from '@/modules/community/api';
@@ -29,14 +29,7 @@ export function PostDetailsScreen() {
   const fallback = communityScreenFallbacks['post-details'];
   const post = data ?? fallback.posts?.[0];
 
-  const comments = useMemo(() => {
-    if (!post) return [];
-    return [
-      { id: 'cm1', authorName: 'Alice', body: 'Great post!', createdAt: post.createdAt },
-      { id: 'cm2', authorName: 'Bob', body: 'Thanks for sharing.', createdAt: post.createdAt },
-      { id: 'cm3', authorName: 'Carol', body: 'Very helpful.', createdAt: post.createdAt },
-    ];
-  }, [post]);
+  const comments = data?.comments ?? [];
 
   if (isError) {
     return (

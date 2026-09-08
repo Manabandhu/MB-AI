@@ -31,19 +31,25 @@ export type Comment = {
 };
 
 export async function listCommunities(): Promise<Community[]> {
-  return parseJson(await apiFetch('/api/v1/communities'));
+  return parseJson(await apiFetch('/api/v1/posts/communities'));
 }
 
 export async function getCommunity(id: string): Promise<Community> {
-  return parseJson(await apiFetch(`/api/v1/communities/${encodeURIComponent(id)}`));
+  return parseJson(await apiFetch(`/api/v1/posts/communities/${encodeURIComponent(id)}`));
 }
 
 export async function listPosts(communityId: string): Promise<Post[]> {
-  return parseJson(await apiFetch(`/api/v1/communities/${encodeURIComponent(communityId)}/posts`));
+  return parseJson(
+    await apiFetch(`/api/v1/posts/communities/${encodeURIComponent(communityId)}/posts`),
+  );
 }
 
 export async function getPost(postId: string): Promise<Post & { comments: Comment[] }> {
-  return parseJson(await apiFetch(`/api/v1/communities/posts/${encodeURIComponent(postId)}`));
+  const post = await parseJson<Post>(await apiFetch(`/api/v1/posts/${encodeURIComponent(postId)}`));
+  const comments = await parseJson<Comment[]>(
+    await apiFetch(`/api/v1/posts/${encodeURIComponent(postId)}/comments`),
+  );
+  return { ...post, comments };
 }
 
 export async function createPost(input: {
@@ -52,9 +58,33 @@ export async function createPost(input: {
   body: string;
 }): Promise<Post> {
   return parseJson(
-    await apiFetch('/api/v1/communities/posts', {
+    await apiFetch('/api/v1/posts', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
   );
+}
+
+export async function addComment(postId: string, body: string): Promise<Comment> {
+  return parseJson(
+    await apiFetch(`/api/v1/posts/${encodeURIComponent(postId)}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+  );
+}
+
+export async function reactPost(postId: string, type: string): Promise<void> {
+  await apiFetch(`/api/v1/posts/${encodeURIComponent(postId)}/reactions`, {
+    method: 'POST',
+    body: JSON.stringify({ type }),
+  });
+}
+
+export async function joinCommunity(id: string): Promise<void> {
+  await apiFetch(`/api/v1/posts/communities/${encodeURIComponent(id)}/join`, { method: 'POST' });
+}
+
+export async function leaveCommunity(id: string): Promise<void> {
+  await apiFetch(`/api/v1/posts/communities/${encodeURIComponent(id)}/leave`, { method: 'POST' });
 }

@@ -1,5 +1,7 @@
-import { CommunityHomeScreen } from '@/modules/community/screens/CommunityHomeScreen';
+import { useRequireAuth } from '@/lib/authStore';
+import { StitchAppShellScreen } from '@/modules/foundation/screens/StitchAppShellScreen';
 
 export default function CommunityRoute() {
-  return <CommunityHomeScreen />;
+  useRequireAuth('/sign-in');
+  return <StitchAppShellScreen kind="community" />;
 }

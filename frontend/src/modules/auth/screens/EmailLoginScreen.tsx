@@ -3,8 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -25,13 +24,13 @@ export function EmailLoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const storeError = useAuthStore((s) => s.error);
+
   async function handleEmailLogin() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) throw error;
-      router.push('/home');
+      await useAuthStore.getState().signInWithEmailOtp(email);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Email login failed';
       setError(message);
@@ -68,7 +67,7 @@ export function EmailLoginScreen() {
               />
             </Input>
           </View>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error || storeError ? <Text style={styles.errorText}>{error || storeError}</Text> : null}
           <AppButton label="Continue" onPress={handleEmailLogin} loading={loading} />
           <Pressable
             accessibilityRole="link"

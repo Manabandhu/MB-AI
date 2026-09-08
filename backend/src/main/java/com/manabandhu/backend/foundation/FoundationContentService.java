@@ -52,6 +52,31 @@ public class FoundationContentService {
 
     CatalogScreenContent screen(String screenId) {
         return switch (screenId) {
+            case "home" -> new CatalogScreenContent(
+                    "Your day at a glance",
+                    "Rooms, rides, jobs, community, and chat updates tailored to your interests and location.",
+                    "Home",
+                    List.of(new CatalogMetric("Active listings", "12"), new CatalogMetric("New this week", "6")),
+                    List.of(
+                            item("rooms", "Find a room", "Browse shared housing with privacy-aware location.", "Open rooms", "/rooms"),
+                            item("rides", "Offer a ride", "Post a ride with route, time, and seats.", "Open rides", "/rides/offer"),
+                            item("jobs", "Ask a question", "Join communities and chat safely.", "Open chat", "/community")));
+            case "chat" -> new CatalogScreenContent(
+                    "Stay in touch",
+                    "Your conversations, group chats, and support threads in one inbox.",
+                    "Chat",
+                    List.of(new CatalogMetric("Conversations", "8"), new CatalogMetric("Unread", "3")),
+                    List.of(
+                            item("all", "All conversations", "Jump into any open chat thread.", "Inbox", "/chat"),
+                            item("groups", "Group chats", "Communities, rides, and rooms group chats.", "Groups", "/chat/new")));
+            case "community" -> new CatalogScreenContent(
+                    "Community hubs",
+                    "Join groups, read posts, and find help from people nearby.",
+                    "Community",
+                    List.of(new CatalogMetric("Groups", "14"), new CatalogMetric("Posts today", "31")),
+                    List.of(
+                            item("discover", "Discover groups", "Find communities by interest, location, and need.", "Explore", "/community/discover"),
+                            item("posts", "Recent posts", "Read and reply to posts from joined communities.", "Feed", "/community")));
             case "onboarding" -> new CatalogScreenContent(
                     "Set up your ManaBandhu space",
                     "Choose your city, interests, and safety preferences so the app feels useful from day one.",

@@ -15,6 +15,9 @@ public class CommunityPost {
     @Id
     private UUID id;
 
+    @Column(name = "community_id")
+    private UUID communityId;
+
     @Column(name = "owner_id", nullable = false, updatable = false)
     private UUID ownerId;
 
@@ -37,7 +40,17 @@ public class CommunityPost {
         this.createdAt = Instant.now();
     }
 
+    CommunityPost(UUID communityId, UUID ownerId, String title, String body) {
+        this.id = UUID.randomUUID();
+        this.communityId = communityId;
+        this.ownerId = ownerId;
+        this.title = title;
+        this.body = body;
+        this.createdAt = Instant.now();
+    }
+
     public UUID getId() { return id; }
+    public UUID getCommunityId() { return communityId; }
     public UUID getOwnerId() { return ownerId; }
     public String getTitle() { return title; }
     public String getBody() { return body; }

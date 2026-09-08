@@ -76,3 +76,5 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 - **Backend**: REST and GraphQL APIs implemented under `/api/v1/chat` with conversations, messages, participants, and Flyway migration V14.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent fixes: aligned frontend `api.ts` types with backend entity fields (`type`, `senderId`, `messageType`, `userId`, `role`); fixed `sendMessage` to include required `messageType: 'TEXT'`; fixed `ConversationScreen` crash on `participants.map` by using optional chaining; added `createConversation` API function; added `@Valid` to `addParticipant` endpoint.

@@ -1,83 +1,103 @@
-import { color, space, typography } from '@manabandhu/design-system';
+import { color as colors, radius, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, Text, View } from 'react-native';
-import { apiFetch } from '@/lib/api';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { getReferralDetail } from '@/modules/referrals/api';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { ScreenShell } from '@/modules/shared/components/ScreenShell';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 
-type ReferralDetailContent = {
-  title: string;
-  body: string;
-  eyebrow: string;
-  meta?: string;
-};
+export function ReferralDetailsScreen() {
+  const { referralId } = useLocalSearchParams<{ referralId: string }>();
+  const router = useRouter();
 
-type ReferralDetailsScreenProps = {
-  referralId: string;
-};
-
-export function ReferralDetailsScreen({ referralId }: ReferralDetailsScreenProps) {
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['referrals', 'detail', referralId],
-    queryFn: async (): Promise<ReferralDetailContent> => {
-      const response = await apiFetch(`/api/v1/referrals/${referralId}`);
-      if (!response.ok) throw new Error(`Referral failed: ${response.status}`);
-      return response.json() as Promise<ReferralDetailContent>;
-    },
+    queryFn: () => getReferralDetail(referralId),
+    enabled: Boolean(referralId),
   });
-
-  const fallback: ReferralDetailContent = {
-    eyebrow: 'Referrals',
-    title: 'Need a plumber',
-    body: 'Looking for a reliable plumber near Irving. Two community members have offered referrals.',
-    meta: 'Open · 2 offers',
-  };
-
-  const content = data ?? fallback;
 
   if (isLoading) {
     return (
-      <ScreenShell>
-        <SectionHeader title="Loading..." />
-        <Text style={styles.loadingText}>Loading referral...</Text>
-      </ScreenShell>
+      <SafeAreaView style={styles.safeArea}>
+        <LoadingState />
+      </SafeAreaView>
     );
   }
 
-  if (error) {
+  if (isError || !data) {
     return (
-      <ScreenShell>
+      <SafeAreaView style={styles.safeArea}>
         <ErrorState
           title="Unable to load referral"
-          body="There was a problem loading this referral."
+          body="Please check your connection and try again."
           retryLabel="Retry"
-          onRetry={() => refetch()}
+          onRetry={refetch}
         />
-      </ScreenShell>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScreenShell>
-      <SectionHeader eyebrow={content.eyebrow} title={content.title} subtitle={content.meta} />
-      <Text style={styles.body}>{content.body}</Text>
-      <View style={styles.actions}>
-        <AppButton label="Back to referrals" route="/referrals" variant="secondary" />
-        <AppButton label="Request referral" route="/referrals/request" />
-      </View>
-    </ScreenShell>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.page}>
+        <View style={styles.container}>
+          <Text style={styles.eyebrow}>Referral</Text>
+          <Text style={styles.title}>{data.title}</Text>
+          <Text style={styles.subtitle}>{data.description}</Text>
+          <Text style={styles.meta}>
+            Type: {data.type} · Status: {data.status}
+          </Text>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Details</Text>
+            {data.category ? <DetailRow label="Category" value={data.category} /> : null}
+            {data.contactInfo ? <DetailRow label="Contact" value={data.contactInfo} /> : null}
+          </View>
+
+          <View style={styles.actions}>
+            <AppButton label="Back" onPress={() => router.back()} variant="secondary" />
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  body: {
-    color: color.ink,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    marginTop: space.x4,
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
+  container: { alignSelf: 'center', gap: space.x5, maxWidth: 640, width: '100%' },
+  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
+  title: { ...typography.h1, color: colors.ink },
+  subtitle: { ...typography.body, color: colors.muted, marginTop: space.x2 },
+  meta: { ...typography.caption, color: colors.primary, marginTop: space.x2 },
+  card: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    gap: space.x2,
+    padding: space.x4,
   },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x6 },
-  loadingText: { color: color.muted, fontSize: typography.body.fontSize, padding: space.x6 },
+  cardTitle: { ...typography.h4, color: colors.ink },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: space.x1,
+  },
+  detailLabel: { ...typography.body, color: colors.muted },
+  detailValue: { ...typography.bodyStrong, color: colors.ink },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
 });

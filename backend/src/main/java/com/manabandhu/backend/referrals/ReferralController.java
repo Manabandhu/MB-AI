@@ -22,11 +22,18 @@ public class ReferralController {
     private final ReferralService referralService;
     private final ReferralRequestService requestService;
     private final ReferralOfferService offerService;
+    private final ReferralsContentService contentService;
 
-    ReferralController(ReferralService referralService, ReferralRequestService requestService, ReferralOfferService offerService) {
+    ReferralController(ReferralService referralService, ReferralRequestService requestService, ReferralOfferService offerService, ReferralsContentService contentService) {
         this.referralService = referralService;
         this.requestService = requestService;
         this.offerService = offerService;
+        this.contentService = contentService;
+    }
+
+    @GetMapping("/screens/{screenId}")
+    com.manabandhu.backend.foundation.CatalogScreenContent screen(@PathVariable String screenId) {
+        return contentService.screen(screenId);
     }
 
     @GetMapping

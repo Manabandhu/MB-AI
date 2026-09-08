@@ -89,3 +89,7 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 - **Partial**: Splash, welcome, onboarding, app shell, search, saved, profile, and settings are implemented. Explore shell and catalog-backed screens are functional but rely on demo fallbacks pending backend content. Stitch prototype screens are translated from HTML and will be refined.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent refactor: `StitchAppShellScreen` now dispatches the correct shell API per `kind` (home/chat/explore/community/profile) instead of always calling `getHomeShell`. Foundation screens now use `useAdaptiveLayout`. Removed dead `StitchPrototypeScreens.tsx` barrel and consolidated duplicate fallback data between `homeShellFallbacks.ts` and `foundationScreenFallbacks.ts`.
+
+- Recent backend changes: expanded `FoundationContentService` switch to include `home`, `chat`, `community`, `explore`, `search`, `saved`, `profile`, and `settings` screen IDs (previously only handled `onboarding`).

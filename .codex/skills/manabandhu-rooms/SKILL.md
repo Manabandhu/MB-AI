@@ -121,3 +121,5 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rejected`. Booking s
 - The legacy GraphQL rooms path and the `AdminRoomsScreen` retain their original shape; the canonical rooms APIs are REST under `/api/v1/rooms`.
 
 - Recent backend fixes: rooms controller/service method signatures now consistently pass actor/admin flags, room listing ownership checks are enforced in services, and room booking/availability/delete flows require authenticated ownership or admin override.
+
+- Recent backend changes: added aliased routes to `RoomsController` (`/{roomId}`, `/{roomId}/owner`, `/{roomId}` PATCH/DELETE, `/{roomId}/publish`, `/{roomId}/pause`, `/{roomId}/archive`) alongside existing `/listings/{listingId}` paths to match frontend API calls.

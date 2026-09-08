@@ -66,9 +66,42 @@ public class RidesController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
     }
 
+    @GetMapping("/{rideId}")
+    RideOffer rideDetail(@PathVariable UUID rideId) {
+        return offerService.findById(rideId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+    }
+
+    @GetMapping("/offers/{offerId}/owner")
+    RideOffer offerForOwner(Authentication authentication, @PathVariable UUID offerId) {
+        var driverId = UUID.fromString(authentication.getName());
+        var offer = offerService.findById(offerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!offer.getDriverId().equals(driverId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your ride");
+        }
+        return offer;
+    }
+
+    @GetMapping("/{rideId}/owner")
+    RideOffer rideDetailForOwner(Authentication authentication, @PathVariable UUID rideId) {
+        var driverId = UUID.fromString(authentication.getName());
+        var offer = offerService.findById(rideId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!offer.getDriverId().equals(driverId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your ride");
+        }
+        return offer;
+    }
+
     @PatchMapping("/offers/{offerId}")
     RideOffer updateOffer(@PathVariable UUID offerId, @Valid @RequestBody UpdateRideOfferInput input) {
         return offerService.update(offerId, input);
+    }
+
+    @PatchMapping("/{rideId}")
+    RideOffer updateRide(@PathVariable UUID rideId, @Valid @RequestBody UpdateRideOfferInput input) {
+        return offerService.update(rideId, input);
     }
 
     @DeleteMapping("/offers/{offerId}")
@@ -77,8 +110,29 @@ public class RidesController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{rideId}")
+    ResponseEntity<Void> deleteRide(@PathVariable UUID rideId) {
+        offerService.delete(rideId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/my-offers")
     List<RideOffer> myOffers(Authentication authentication) {
+        return offerService.findByDriver(UUID.fromString(authentication.getName()));
+    }
+
+    @GetMapping("/mine")
+    List<RideOffer> myRides(Authentication authentication) {
+        return offerService.findByDriver(UUID.fromString(authentication.getName()));
+    }
+
+    @GetMapping("/history")
+    List<RideOffer> history(Authentication authentication) {
+        return offerService.findByDriver(UUID.fromString(authentication.getName()));
+    }
+
+    @GetMapping("/saved")
+    List<RideOffer> saved(Authentication authentication) {
         return offerService.findByDriver(UUID.fromString(authentication.getName()));
     }
 

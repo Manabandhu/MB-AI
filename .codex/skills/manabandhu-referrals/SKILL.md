@@ -79,3 +79,7 @@ Owns referral discovery, requests, offers, details, status tracking, user-owned 
 - **Partial**: Home via `FeatureScreen`, request, offer, details, and my referrals screens are UI-complete. Backend referral lifecycle, consent enforcement, and privacy boundaries are pending.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent fixes: rewrote `api.ts` to add missing `getReferralDetail`, `createReferralRequest`, `createReferralOffer`, and `getMyReferrals` functions; aligned `Referral` type with backend entity fields (`ownerId`, `recipientId`, `type`, `status`, `title`, `description`, `createdAt`, `updatedAt`).
+
+- Recent backend changes: created `ReferralsContentService` with `home`, `mine` screen IDs; added `@GetMapping("/screens/{screenId}")` to `ReferralController`.

@@ -24,13 +24,21 @@ public class MarketplaceController {
     private final ListingService listingService;
     private final ListingImageService imageService;
     private final ListingFavoriteService favoriteService;
+    private final MarketplaceContentService contentService;
 
     MarketplaceController(ListingCategoryService categoryService, ListingService listingService,
-                          ListingImageService imageService, ListingFavoriteService favoriteService) {
+                          ListingImageService imageService, ListingFavoriteService favoriteService,
+                          MarketplaceContentService contentService) {
         this.categoryService = categoryService;
         this.listingService = listingService;
         this.imageService = imageService;
         this.favoriteService = favoriteService;
+        this.contentService = contentService;
+    }
+
+    @GetMapping("/screens/{screenId}")
+    CatalogScreenContent screen(@PathVariable String screenId) {
+        return contentService.screen(screenId);
     }
 
     @GetMapping("/categories")

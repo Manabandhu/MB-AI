@@ -23,12 +23,19 @@ public class JobsController {
     private final JobCategoryService categoryService;
     private final JobPostingService postingService;
     private final JobApplicationService applicationService;
+    private final JobsContentService contentService;
 
     JobsController(JobCategoryService categoryService, JobPostingService postingService,
-                   JobApplicationService applicationService) {
+                   JobApplicationService applicationService, JobsContentService contentService) {
         this.categoryService = categoryService;
         this.postingService = postingService;
         this.applicationService = applicationService;
+        this.contentService = contentService;
+    }
+
+    @GetMapping("/screens/{screenId}")
+    CatalogScreenContent screen(@PathVariable String screenId) {
+        return contentService.screen(screenId);
     }
 
     @GetMapping("/categories")

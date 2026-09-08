@@ -41,6 +41,18 @@ public class CommunityPostController {
         return service.findAllCommunities();
     }
 
+    @GetMapping("/communities/{communityId}")
+    Community community(@PathVariable UUID communityId) {
+        return service.findCommunityById(communityId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Community not found"));
+    }
+
+    @GetMapping("/communities/{communityId}/posts")
+    List<CommunityPost> postsByCommunity(@PathVariable UUID communityId) {
+        return service.findPostsByCommunity(communityId);
+    }
+
     @PostMapping("/communities")
     ResponseEntity<Community> createCommunity(Authentication authentication, @Valid @RequestBody CreateCommunityInput input) {
         var community = service.createCommunity(UUID.fromString(authentication.getName()), input.name(), input.description());

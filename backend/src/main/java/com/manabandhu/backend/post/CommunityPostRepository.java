@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface CommunityPostRepository extends JpaRepository<CommunityPost, UUID> {
     List<CommunityPost> findAllByOrderByCreatedAtDesc();
+
+    List<CommunityPost> findByCommunityIdOrderByCreatedAtDesc(UUID communityId);
 }

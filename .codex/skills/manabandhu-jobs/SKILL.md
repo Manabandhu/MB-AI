@@ -79,3 +79,7 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - **Partial**: Home via `FeatureScreen`, search, filters, saved, and job details are UI-complete. Post job screen is a placeholder. Backend job posting, employer context, and moderation are pending.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent fixes: `JobDetailsScreen` "Apply now" button now routes to `/jobs/post` via `router.push` instead of static route prop; added missing `employmentType`, `remoteType`, `salaryMin`, `salaryMax`, `category`, `experienceLevel` fields to `types.ts` and aligned `CreateJobInput` with `JobListing` enum types.
+
+- Recent backend changes: created `JobsContentService` with `home`, `search`, `filters`, `saved`, `post` screen IDs; added `@GetMapping("/screens/{screenId}")` to `JobsController`.

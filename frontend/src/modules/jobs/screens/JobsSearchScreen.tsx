@@ -1,10 +1,11 @@
-import { color, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { apiFetch } from '@/lib/api';
+import { useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { View } from 'react-native';
+import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SearchBar } from '@/modules/shared/components/SearchBar';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
@@ -26,13 +27,14 @@ type JobsSearchContent = {
 };
 
 export function JobsSearchScreen() {
-  const [query, setQuery] = useState('');
+  const { q } = useLocalSearchParams<{ q: string }>();
+  const [query, setQuery] = useState(q ?? '');
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['jobs', 'search', query],
     queryFn: async (): Promise<JobsSearchContent> => {
-      const response = await apiFetch(`/api/v1/jobs/search?q=${encodeURIComponent(query)}`);
-      if (!response.ok) throw new Error(`Jobs search failed: ${response.status}`);
-      return response.json() as Promise<JobsSearchContent>;
+      const suffix = query ? `?q=${encodeURIComponent(query)}` : '';
+      const response = await apiFetch(`/api/v1/jobs/search${suffix}`);
+      return parseJsonOrThrow(response, 'Jobs search');
     },
   });
 
@@ -53,19 +55,19 @@ export function JobsSearchScreen() {
   };
 
   const content = data ?? fallback;
-  const filtered = query
-    ? content.jobs.filter(
-        (j) =>
-          j.title.toLowerCase().includes(query.toLowerCase()) ||
-          j.body.toLowerCase().includes(query.toLowerCase()),
-      )
-    : content.jobs;
+  const filtered = useMemo(() => {
+    if (!query.trim()) return content.jobs;
+    return content.jobs.filter(
+      (j) =>
+        j.title.toLowerCase().includes(query.toLowerCase()) ||
+        j.body.toLowerCase().includes(query.toLowerCase()),
+    );
+  }, [content.jobs, query]);
 
   if (isLoading) {
     return (
       <ScreenShell>
-        <SectionHeader title="Loading..." />
-        <Text style={styles.loadingText}>Searching jobs...</Text>
+        <LoadingState />
       </ScreenShell>
     );
   }
@@ -95,7 +97,7 @@ export function JobsSearchScreen() {
           onAction={() => setQuery('')}
         />
       ) : (
-        <View style={styles.list}>
+        <View style={{ gap: 12, marginTop: 16 }}>
           {filtered.map((job) => (
             <AppButton key={job.id} label={job.title} route={job.route} variant="secondary" />
           ))}
@@ -104,8 +106,3 @@ export function JobsSearchScreen() {
     </ScreenShell>
   );
 }
-
-const styles = StyleSheet.create({
-  list: { gap: space.x3, marginTop: space.x4 },
-  loadingText: { color: color.muted, fontSize: typography.body.fontSize, padding: space.x6 },
-});

@@ -2,8 +2,7 @@ import { color as baseColors, space } from '@manabandhu/design-system';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -26,6 +25,8 @@ export function ResetPasswordScreen() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const storeError = useAuthStore((s) => s.error);
+
   async function handleReset() {
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -34,8 +35,7 @@ export function ResetPasswordScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      await useAuthStore.getState().updatePassword(password);
       setSuccess(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Password reset failed';
@@ -91,7 +91,9 @@ export function ResetPasswordScreen() {
                   />
                 </Input>
               </View>
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+              {error || storeError ? (
+                <Text style={styles.errorText}>{error || storeError}</Text>
+              ) : null}
               <AppButton label="Reset password" onPress={handleReset} loading={loading} />
             </>
           )}

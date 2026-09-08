@@ -3,8 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -26,12 +25,13 @@ export function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const storeError = useAuthStore((s) => s.error);
+
   async function handleReset() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
+      await useAuthStore.getState().resetPassword(email);
       setSent(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Reset request failed';
@@ -79,7 +79,9 @@ export function ForgotPasswordScreen() {
                   />
                 </Input>
               </View>
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+              {error || storeError ? (
+                <Text style={styles.errorText}>{error || storeError}</Text>
+              ) : null}
               <AppButton label="Send reset link" onPress={handleReset} loading={loading} />
               <Pressable
                 accessibilityRole="link"

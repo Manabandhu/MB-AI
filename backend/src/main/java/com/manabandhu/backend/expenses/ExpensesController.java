@@ -26,13 +26,21 @@ public class ExpensesController {
     private final ExpenseService expenseService;
     private final ExpenseSplitService splitService;
     private final SettlementService settlementService;
+    private final ExpensesContentService contentService;
 
     ExpensesController(ExpenseGroupService groupService, ExpenseService expenseService,
-                       ExpenseSplitService splitService, SettlementService settlementService) {
+                       ExpenseSplitService splitService, SettlementService settlementService,
+                       ExpensesContentService contentService) {
         this.groupService = groupService;
         this.expenseService = expenseService;
         this.splitService = splitService;
         this.settlementService = settlementService;
+        this.contentService = contentService;
+    }
+
+    @GetMapping("/screens/{screenId}")
+    CatalogScreenContent screen(@PathVariable String screenId) {
+        return contentService.screen(screenId);
     }
 
     @GetMapping("/groups")

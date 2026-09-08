@@ -24,13 +24,20 @@ public class ImmigrationController {
     private final ImmigrationChecklistService checklistService;
     private final ImmigrationNewsService newsService;
     private final FaqItemService faqService;
+    private final ImmigrationContentService contentService;
 
-    ImmigrationController(ImmigrationResourceService resourceService, ImmigrationGuideService guideService, ImmigrationChecklistService checklistService, ImmigrationNewsService newsService, FaqItemService faqService) {
+    ImmigrationController(ImmigrationResourceService resourceService, ImmigrationGuideService guideService, ImmigrationChecklistService checklistService, ImmigrationNewsService newsService, FaqItemService faqService, ImmigrationContentService contentService) {
         this.resourceService = resourceService;
         this.guideService = guideService;
         this.checklistService = checklistService;
         this.newsService = newsService;
         this.faqService = faqService;
+        this.contentService = contentService;
+    }
+
+    @GetMapping("/screens/{screenId}")
+    CatalogScreenContent screen(@PathVariable String screenId) {
+        return contentService.screen(screenId);
     }
 
     @GetMapping("/resources")

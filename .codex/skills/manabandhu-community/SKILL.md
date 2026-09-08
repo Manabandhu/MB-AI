@@ -79,3 +79,7 @@ Owns Community Home, Discover, Joined Communities, Community Details, Create Pos
 - **Partial**: Community home, discover, joined, details, create post, and post details screens are implemented. Backend moderation and visibility rules are enforced server-side. Some community/post CRUD is UI-complete pending full backend wiring.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent fixes: aligned frontend `api.ts` to backend paths (`/api/v1/posts/communities`, `/api/v1/posts/{id}`, `/api/v1/posts/{id}/comments`); added `communityId` to `CreatePostInput` and updated `CommunityPostService.create()`; added V17 migration adding `community_id` column to `community_posts`; fixed `PostDetailsScreen` to use real comments from `getPost` response instead of hardcoded mock data; added `addComment`, `reactPost`, `joinCommunity`, `leaveCommunity` API functions.
+
+- Recent backend changes: added `@GetMapping("/communities/{communityId}")` and `@GetMapping("/communities/{communityId}/posts")` to `CommunityPostController`; added `communityId` field to `CommunityPost` entity with new constructor; added `findCommunity()` and `findPostsByCommunity()` to `CommunityPostService`; added `findByCommunityIdOrderByCreatedAtDesc()` to `CommunityPostRepository`.
