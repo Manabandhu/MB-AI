@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
+import com.manabandhu.backend.foundation.CatalogScreenContent;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;

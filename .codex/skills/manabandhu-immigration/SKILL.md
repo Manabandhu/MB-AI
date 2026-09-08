@@ -101,3 +101,5 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 - **Backend**: REST and GraphQL APIs implemented under `/api/v1/immigration` with resources, guides, checklists, news, FAQ, and Flyway migration V10.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent backend fixes: added missing `import com.manabandhu.backend.foundation.CatalogScreenContent;` to `ImmigrationController` so the `@GetMapping("/screens/{screenId}")` endpoint compiles against the `ImmigrationContentService` switch.

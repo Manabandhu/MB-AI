@@ -82,4 +82,6 @@ Owns Community Home, Discover, Joined Communities, Community Details, Create Pos
 
 - Recent fixes: aligned frontend `api.ts` to backend paths (`/api/v1/posts/communities`, `/api/v1/posts/{id}`, `/api/v1/posts/{id}/comments`); added `communityId` to `CreatePostInput` and updated `CommunityPostService.create()`; added V17 migration adding `community_id` column to `community_posts`; fixed `PostDetailsScreen` to use real comments from `getPost` response instead of hardcoded mock data; added `addComment`, `reactPost`, `joinCommunity`, `leaveCommunity` API functions.
 
+- Recent fixes: added `authorName?: string` to the `Comment` type so `PostDetailsScreen` (`c.authorName`) typechecks.
+
 - Recent backend changes: added `@GetMapping("/communities/{communityId}")` and `@GetMapping("/communities/{communityId}/posts")` to `CommunityPostController`; added `communityId` field to `CommunityPost` entity with new constructor; added `findCommunity()` and `findPostsByCommunity()` to `CommunityPostService`; added `findByCommunityIdOrderByCreatedAtDesc()` to `CommunityPostRepository`.

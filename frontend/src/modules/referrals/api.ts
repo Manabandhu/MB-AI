@@ -29,7 +29,7 @@ export async function getReferralDetail(referralId: string): Promise<Referral> {
 export async function createReferralRequest(input: {
   title: string;
   description: string;
-  category: string;
+  category?: string;
   details?: string;
   urgency: string;
   desiredOutcome?: string;

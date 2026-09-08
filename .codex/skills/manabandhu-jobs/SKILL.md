@@ -83,3 +83,5 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - Recent fixes: `JobDetailsScreen` "Apply now" button now routes to `/jobs/post` via `router.push` instead of static route prop; added missing `employmentType`, `remoteType`, `salaryMin`, `salaryMax`, `category`, `experienceLevel` fields to `types.ts` and aligned `CreateJobInput` with `JobListing` enum types.
 
 - Recent backend changes: created `JobsContentService` with `home`, `search`, `filters`, `saved`, `post` screen IDs; added `@GetMapping("/screens/{screenId}")` to `JobsController`.
+
+- Recent fixes: added missing `import com.manabandhu.backend.foundation.CatalogScreenContent;` to `JobsController` so the screens endpoint compiles; fixed `PostJobScreen` `TextArea` to use `watch`/`setValue` from `useForm` instead of `control.register` (the shared `TextArea` requires `value`/`onChangeText` props, not react-hook-form spread props).

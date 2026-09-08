@@ -78,3 +78,5 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 
 - Recent fixes: aligned frontend `api.ts` types with backend entity fields (`type`, `senderId`, `messageType`, `userId`, `role`); fixed `sendMessage` to include required `messageType: 'TEXT'`; fixed `ConversationScreen` crash on `participants.map` by using optional chaining; added `createConversation` API function; added `@Valid` to `addParticipant` endpoint.
+
+- Recent fixes: added `sent?: boolean` to the `Message` type and `name?: string` to the `Participant` type so `ConversationScreen` (`m.sent`) and `ConversationInfoScreen` (`p.name`) typecheck; added `unreadCount?: number` to `Conversation` so `ChatListScreen` (`c.unreadCount`) typechecks; added `title?: string` to `Conversation` so `NewChatScreen` (`c.title`) typechecks.

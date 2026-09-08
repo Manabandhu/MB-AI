@@ -14,7 +14,7 @@ export function OfferReferralScreen() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [serviceType, setServiceType] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -34,10 +34,9 @@ export function OfferReferralScreen() {
       return;
     }
     mutation.mutate({
-      type: 'offer',
       title: title.trim(),
       description: description.trim(),
-      category: category.trim() || undefined,
+      serviceType: serviceType.trim(),
     });
   }
 
@@ -94,12 +93,12 @@ export function OfferReferralScreen() {
               </Input>
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Category (optional)</Text>
+              <Text style={styles.inputLabel}>Service type</Text>
               <Input className="min-h-14 rounded-xl bg-secondary/70">
                 <InputField
                   placeholder="e.g. Tech, Healthcare, Legal"
-                  value={category}
-                  onChangeText={setCategory}
+                  value={serviceType}
+                  onChangeText={setServiceType}
                 />
               </Input>
             </View>

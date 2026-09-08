@@ -77,3 +77,5 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 
 - Recent fixes: aligned frontend `api.ts` types with backend entity fields (`content`, `createdAt`, `role`, `snippet`, `url`); fixed `sendAssistantMessage` payload from `{ text }` to `{ content }`; updated `AssistantMessageService.sendRecent()` to persist USER message and generate an ASSISTANT reply; made `userId` nullable in `AssistantConversation` for recent-message conversations.
+
+- Recent fixes: fixed `AssistantController` import typo — `annotationPathVariable` corrected to `annotation/path/PathVariable` (Spring Boot 3 compilation break).

@@ -77,3 +77,5 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 - **Partial**: Home via `FeatureScreen` is complete. Expense groups, group details, balances, and settlements are UI-complete with demo fallbacks. Add expense form is implemented with local validation. Backend API for expenses is not yet fully defined.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent backend fixes: added missing `import com.manabandhu.backend.foundation.CatalogScreenContent;` to `ExpensesController` so the `@GetMapping("/screens/{screenId}")` endpoint compiles against the `ExpensesContentService` switch.

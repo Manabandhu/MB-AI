@@ -29,15 +29,14 @@ export function RequestReferralScreen() {
 
   function handleSubmit() {
     setError(null);
-    if (!title.trim() || !description.trim()) {
+    if (!title.trim() || !description.trim() || !category.trim()) {
       setError('Please fill in all required fields.');
       return;
     }
     mutation.mutate({
-      type: 'request',
       title: title.trim(),
       description: description.trim(),
-      category: category.trim() || undefined,
+      category: category.trim(),
     });
   }
 

@@ -34,8 +34,12 @@ export function RideRateScreen() {
   });
 
   const mutation = useMutation({
-    mutationFn: (input: { safetyRating: number; timelinessRating: number; comfortRating: number; comment?: string }) =>
-      submitRideRating(rideId, input),
+    mutationFn: (input: {
+      safetyRating: number;
+      timelinessRating: number;
+      comfortRating: number;
+      comment?: string;
+    }) => submitRideRating(rideId, input as CreateRideRatingInput),
     onSuccess: () => setSuccess(true),
     onError: (err: Error) => setError(err.message),
   });
@@ -46,7 +50,7 @@ export function RideRateScreen() {
       setError('Please rate all three categories.');
       return;
     }
-    mutation.mutate(rideId, {
+    mutation.mutate({
       safetyRating: safety,
       timelinessRating: timeliness,
       comfortRating: comfort,
