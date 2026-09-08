@@ -78,6 +78,7 @@ public class RideOffer {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public boolean isReported() { return reported; }
+    void setReported(boolean reported) { this.reported = reported; }
 
     void setOriginArea(String originArea) { this.originArea = originArea; }
     void setDestinationArea(String destinationArea) { this.destinationArea = destinationArea; }
