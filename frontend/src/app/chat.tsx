@@ -1,5 +1,7 @@
-import ChatListScreen from '@/modules/chat/screens/ChatListScreen';
+import { useRequireAuth } from '@/lib/authStore';
+import { StitchAppShellScreen } from '@/modules/foundation/screens/StitchAppShellScreen';
 
 export default function ChatRoute() {
-  return <ChatListScreen />;
+  useRequireAuth('/sign-in');
+  return <StitchAppShellScreen kind="chat" />;
 }

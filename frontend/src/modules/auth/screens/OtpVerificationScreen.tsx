@@ -3,8 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -29,6 +28,10 @@ export function OtpVerificationScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const otpIdentifier = useAuthStore((s) => s.otpIdentifier);
+  const otpType = useAuthStore((s) => s.otpType);
+  const storeError = useAuthStore((s) => s.error);
+
   useEffect(() => {
     if (countdown <= 0) {
       setResendAvailable(true);
@@ -38,17 +41,21 @@ export function OtpVerificationScreen() {
     return () => clearInterval(timer);
   }, [countdown]);
 
+  useEffect(() => {
+    if (storeError) {
+      setError(storeError);
+    }
+  }, [storeError]);
+
   async function handleVerify() {
+    if (!otpIdentifier || !otpType) {
+      setError('No verification session found. Please request a code again.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: 'demo@manabandhu.local',
-        token: code,
-        type: 'email',
-      });
-      if (error) throw error;
-      router.replace('/home');
+      await useAuthStore.getState().verifyOtp(otpIdentifier, code, otpType);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Verification failed';
       setError(message);
@@ -58,8 +65,15 @@ export function OtpVerificationScreen() {
   }
 
   function handleResend() {
+    if (!otpIdentifier || !otpType) return;
     setResendAvailable(false);
     setCountdown(OTP_COUNTDOWN_SECONDS);
+    useAuthStore
+      .getState()
+      [otpType === 'email' ? 'signInWithEmailOtp' : 'signInWithPhone'](otpIdentifier)
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Resend failed');
+      });
   }
 
   return (
@@ -75,7 +89,10 @@ export function OtpVerificationScreen() {
         </View>
         <View style={styles.authHero}>
           <Text style={styles.authTitle}>OTP Verification</Text>
-          <Text style={styles.authBody}>Enter the verification code we sent you.</Text>
+          <Text style={styles.authBody}>
+            Enter the verification code we sent to{' '}
+            <Text style={styles.identifierText}>{otpIdentifier || 'your contact'}</Text>.
+          </Text>
         </View>
         <View style={styles.form}>
           <View style={styles.inputGroup}>
@@ -102,6 +119,16 @@ export function OtpVerificationScreen() {
               <Text style={styles.resendCountdown}>Resend in {countdown}s</Text>
             )}
           </View>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => {
+              useAuthStore.getState().clearOtpContext();
+              router.push('/sign-in');
+            }}
+            style={styles.backLink}
+          >
+            <Text style={styles.backLinkText}>Back to Sign In</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -135,6 +162,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   authBody: { color: colors.muted, fontSize: 18, lineHeight: 28, textAlign: 'center' },
+  identifierText: { color: colors.ink, fontWeight: '700' },
   form: { gap: space.x4 },
   inputGroup: { gap: space.x2 },
   inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
@@ -142,5 +170,7 @@ const styles = StyleSheet.create({
   resendLabel: { color: colors.muted, fontSize: 14, fontWeight: '700' },
   resendAction: { color: colors.primary, fontSize: 14, fontWeight: '800' },
   resendCountdown: { color: colors.muted, fontSize: 14, fontWeight: '700' },
+  backLink: { alignSelf: 'center', marginTop: space.x3 },
+  backLinkText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
   errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
 });

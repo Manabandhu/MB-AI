@@ -1,5 +1,7 @@
-import { RidesScreen } from '@/modules/rides/screens/RidesScreen';
+import { useRequireAuth } from '@/lib/authStore';
+import { RideMyListingsScreen } from '@/modules/rides/screens/RideMyListingsScreen';
 
 export default function RidesMineRoute() {
-  return <RidesScreen screenId="mine" />;
+  useRequireAuth('/sign-in');
+  return <RideMyListingsScreen />;
 }

@@ -8,12 +8,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.bind.annotationPathVariable;
 
 @RestController
 @RequestMapping("/api/v1/assistant")
@@ -29,6 +28,27 @@ public class AssistantController {
         this.citationService = citationService;
     }
 
+    @GetMapping("/messages")
+    List<AssistantMessage> messages() {
+        return messageService.listRecent();
+    }
+
+    @PostMapping("/messages")
+    ResponseEntity<AssistantMessage> sendMessage(@Valid @RequestBody SendAssistantMessageInput input) {
+        var message = messageService.sendRecent(input.content());
+        return ResponseEntity.created(URI.create("/api/v1/assistant/messages/" + message.getId())).body(message);
+    }
+
+    @GetMapping("/history")
+    List<AssistantConversation> history() {
+        return conversationService.listRecent();
+    }
+
+    @GetMapping("/citations")
+    List<AssistantCitation> citations() {
+        return citationService.listRecent();
+    }
+
     @GetMapping("/conversations")
     List<AssistantConversation> conversations(Authentication authentication) {
         return conversationService.findByUser(UUID.fromString(authentication.getName()));
@@ -41,27 +61,12 @@ public class AssistantController {
     }
 
     @GetMapping("/conversations/{id}/messages")
-    List<AssistantMessage> messages(@PathVariable UUID id) {
+    List<AssistantMessage> messagesByConversation(@PathVariable UUID id) {
         return messageService.findByConversation(id);
     }
 
-    @PostMapping("/conversations/{id}/messages")
-    ResponseEntity<AssistantMessage> sendMessage(@PathVariable UUID id, @Valid @RequestBody SendAssistantMessageInput input) {
-        var message = messageService.send(id, AssistantMessage.MessageRole.USER, input.content());
-        return ResponseEntity.created(URI.create("/api/v1/assistant/conversations/" + id + "/messages/" + message.getId())).body(message);
-    }
-
-    @GetMapping("/conversations/{id}/stream")
-    SseEmitter stream(@PathVariable UUID id) {
-        var emitter = new SseEmitter(300_000L);
-        emitter.onTimeout(() -> emitter.complete());
-        emitter.onCompletion(emitter::complete);
-        emitter.onError(throwable -> emitter.complete());
-        return emitter;
-    }
-
     @GetMapping("/messages/{id}/citations")
-    List<AssistantCitation> citations(@PathVariable UUID id) {
+    List<AssistantCitation> citationsByMessage(@PathVariable UUID id) {
         return citationService.findByMessage(id);
     }
 

@@ -15,7 +15,7 @@ public class AssistantConversation {
     @Id
     private UUID id;
 
-    @Column(name = "user_id", nullable = false, updatable = false)
+    @Column(name = "user_id")
     private UUID userId;
 
     @Column(length = 200)

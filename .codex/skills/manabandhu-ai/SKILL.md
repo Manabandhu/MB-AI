@@ -75,3 +75,5 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - **Backend**: REST and GraphQL APIs implemented under `/api/v1/assistant` with conversations, messages, citations, SSE streaming endpoint, and Flyway migration V15.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent fixes: aligned frontend `api.ts` types with backend entity fields (`content`, `createdAt`, `role`, `snippet`, `url`); fixed `sendAssistantMessage` payload from `{ text }` to `{ content }`; updated `AssistantMessageService.sendRecent()` to persist USER message and generate an ASSISTANT reply; made `userId` nullable in `AssistantConversation` for recent-message conversations.

@@ -36,6 +36,17 @@ public class EventsController {
         return service.findAll();
     }
 
+    @GetMapping("/search")
+    List<Event> search(@RequestParam(required = false) String q) {
+        if (q != null && !q.isBlank()) {
+            return service.findAll().stream()
+                    .filter(e -> e.getTitle().toLowerCase().contains(q.toLowerCase())
+                            || e.getLocation().toLowerCase().contains(q.toLowerCase()))
+                    .toList();
+        }
+        return service.findAll();
+    }
+
     @GetMapping("/saved")
     List<Event> saved() {
         return service.findSaved();

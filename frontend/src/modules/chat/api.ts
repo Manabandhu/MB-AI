@@ -1,29 +1,30 @@
-import { apiFetch, parseJson } from '@/lib/apiClient';
+import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/apiClient';
 
 export type Conversation = {
   id: string;
-  title: string;
-  lastMessage: string;
-  lastMessageAt: string;
-  unreadCount: number;
-  participants: Participant[];
+  type: 'DIRECT' | 'GROUP';
+  title?: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  unreadCount?: number;
+  participants?: Participant[];
 };
 
 export type Message = {
   id: string;
   conversationId: string;
   senderId: string;
-  senderName: string;
   body: string;
+  messageType: 'TEXT' | 'IMAGE' | 'SYSTEM';
   createdAt: string;
-  sent: boolean;
 };
 
 export type Participant = {
   id: string;
-  name: string;
-  avatar?: string;
-  role: string;
+  conversationId: string;
+  userId: string;
+  role: 'OWNER' | 'MEMBER';
+  joinedAt: string;
 };
 
 export async function listConversations(): Promise<Conversation[]> {
@@ -41,16 +42,31 @@ export async function listMessages(conversationId: string): Promise<Message[]> {
 }
 
 export async function sendMessage(conversationId: string, body: string): Promise<Message> {
-  return parseJson(
+  return parseJsonOrThrow(
     await apiFetch(`/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, messageType: 'TEXT' }),
     }),
+    'SendMessage',
   );
 }
 
 export async function getParticipants(conversationId: string): Promise<Participant[]> {
   return parseJson(
     await apiFetch(`/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/participants`),
+  );
+}
+
+export async function createConversation(input: {
+  type: 'DIRECT' | 'GROUP';
+  title?: string;
+  participantIds: string[];
+}): Promise<Conversation> {
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/chat/conversations', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+    'CreateConversation',
   );
 }

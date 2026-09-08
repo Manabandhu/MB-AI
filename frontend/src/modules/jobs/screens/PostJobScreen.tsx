@@ -21,11 +21,10 @@ type JobFormData = z.infer<typeof jobSchema>;
 
 export function PostJobScreen() {
   const [submitted, setSubmitted] = useState(false);
-  const [description, setDescription] = useState('');
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
     defaultValues: { title: '', company: '', description: '', location: '' },
@@ -74,16 +73,12 @@ export function PostJobScreen() {
         </View>
         <View style={styles.field}>
           <Text style={styles.label}>Description</Text>
-          <TextArea
-            placeholder="Describe the role..."
-            value={description}
-            onChangeText={setDescription}
-          />
+          <TextArea placeholder="Describe the role..." {...control.register('description')} />
           {errors.description ? (
             <Text style={styles.error}>{errors.description.message}</Text>
           ) : null}
         </View>
-        <AppButton label="Post job" onPress={handleSubmit(onSubmit)} />
+        <AppButton label="Post job" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
       </View>
     </ScreenShell>
   );

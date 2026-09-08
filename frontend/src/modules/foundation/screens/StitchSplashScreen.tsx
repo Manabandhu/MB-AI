@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuthStore } from '@/lib/authStore';
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
 
 const colors = {
@@ -18,10 +19,21 @@ const colors = {
 };
 
 export function StitchSplashScreen() {
+  const status = useAuthStore((s) => s.status);
+  const isLoading = useAuthStore((s) => s.isLoading);
+
   useEffect(() => {
-    const timer = setTimeout(() => router.replace('/welcome'), 1400);
-    return () => clearTimeout(timer);
+    useAuthStore.getState().checkSession();
   }, []);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (status === 'authenticated') {
+      router.replace('/home');
+    } else {
+      router.replace('/welcome');
+    }
+  }, [status, isLoading]);
 
   return (
     <SafeAreaView style={styles.splash}>

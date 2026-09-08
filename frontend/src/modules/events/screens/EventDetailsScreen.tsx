@@ -11,13 +11,18 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 
-export default function EventDetailsScreen() {
+interface EventDetailsScreenProps {
+  eventId?: string;
+}
+
+export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps) {
   const router = useRouter();
-  const { eventId } = useLocalSearchParams<{ eventId: string }>();
+  const params = useLocalSearchParams<{ eventId: string }>();
+  const resolvedEventId = eventId ?? params.eventId;
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['events', eventId],
-    queryFn: () => getEvent(eventId),
-    enabled: !!eventId,
+    queryKey: ['events', resolvedEventId],
+    queryFn: () => getEvent(resolvedEventId),
+    enabled: !!resolvedEventId,
   });
 
   const fallback = eventsScreenFallbacks.details;

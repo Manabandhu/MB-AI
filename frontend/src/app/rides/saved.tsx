@@ -1,5 +1,7 @@
-import { RidesScreen } from '@/modules/rides/screens/RidesScreen';
+import { useRequireAuth } from '@/lib/authStore';
+import { RideSavedScreen } from '@/modules/rides/screens/RideSavedScreen';
 
 export default function RidesSavedRoute() {
-  return <RidesScreen screenId="saved" />;
+  useRequireAuth('/sign-in');
+  return <RideSavedScreen />;
 }

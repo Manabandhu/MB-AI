@@ -20,6 +20,11 @@ public class AssistantCitationService {
         return repository.findByMessageIdOrderByCreatedAtAsc(messageId);
     }
 
+    @Transactional(readOnly = true)
+    public List<AssistantCitation> listRecent() {
+        return repository.findTop20ByOrderByCreatedAtDesc();
+    }
+
     @Transactional
     public AssistantCitation create(UUID messageId, String title, String url, String snippet) {
         return repository.save(new AssistantCitation(messageId, title, url, snippet));

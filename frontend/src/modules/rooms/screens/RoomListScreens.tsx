@@ -3,7 +3,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getFavorites, getMyListings, unsaveRoom } from '@/modules/rooms/api';
+import {
+  archiveRoomListing,
+  getFavorites,
+  getMyListings,
+  pauseRoomListing,
+  publishRoomListing,
+  unsaveRoom,
+} from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -71,6 +78,7 @@ export function RoomFavoritesScreen() {
 
 export function RoomMyListingsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['rooms', 'my-listings'],
@@ -78,6 +86,21 @@ export function RoomMyListingsScreen() {
   });
 
   const listings = data ?? [];
+
+  const publish = useMutation({
+    mutationFn: publishRoomListing,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] }),
+  });
+
+  const pause = useMutation({
+    mutationFn: pauseRoomListing,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] }),
+  });
+
+  const archive = useMutation({
+    mutationFn: archiveRoomListing,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] }),
+  });
 
   if (isLoading) {
     return (
@@ -118,6 +141,34 @@ export function RoomMyListingsScreen() {
                     label="Edit"
                     onPress={() => router.push(`/rooms/${listing.id}/edit`)}
                     variant="secondary"
+                  />
+                  {listing.status === 'DRAFT' ? (
+                    <AppButton
+                      label="Publish"
+                      onPress={() => publish.mutate(listing.id)}
+                      loading={publish.isPending}
+                      variant="primary"
+                    />
+                  ) : listing.status === 'ACTIVE' ? (
+                    <AppButton
+                      label="Pause"
+                      onPress={() => pause.mutate(listing.id)}
+                      loading={pause.isPending}
+                      variant="secondary"
+                    />
+                  ) : listing.status === 'PAUSED' ? (
+                    <AppButton
+                      label="Publish"
+                      onPress={() => publish.mutate(listing.id)}
+                      loading={publish.isPending}
+                      variant="primary"
+                    />
+                  ) : null}
+                  <AppButton
+                    label="Archive"
+                    onPress={() => archive.mutate(listing.id)}
+                    loading={archive.isPending}
+                    variant="ghost"
                   />
                 </View>
               </View>

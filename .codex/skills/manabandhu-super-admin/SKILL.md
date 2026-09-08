@@ -19,3 +19,5 @@ description: Maintain ManaBandhu's privileged operations control plane across th
 12. Skill remains synchronized with admin route ownership; recent admin UI typing fixes are tracked under the admin module skill.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+
+- Recent admin guard changes: added `useRequireAuth('/sign-in')` to all admin routes (`/admin`, `/admin/users`, `/admin/reports`, `/admin/rooms`, `/admin/rides`, `/admin/community`, `/admin/jobs`, `/admin/events`, `/admin/audit-log`). Fixed `RideOffer` entity to include `reported` field and updated `AdminRidesController` to use `offer.isReported()` instead of hardcoded `false`.

@@ -4,13 +4,16 @@ export async function getAssistantMessages(): Promise<AssistantMessage[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/assistant/messages'), 'Assistant messages');
 }
 
-export async function sendAssistantMessage(body: { text: string }): Promise<AssistantMessage> {
+export async function sendAssistantMessage(body: {
+  content: string;
+  conversationId?: string;
+}): Promise<AssistantMessage> {
   return parseJsonOrThrow(
     await apiFetch('/api/v1/assistant/messages', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-    'Send message',
+    'SendMessage',
   );
 }
 
@@ -24,23 +27,25 @@ export async function getAssistantCitations(): Promise<AssistantCitation[]> {
 
 export type AssistantMessage = {
   id: string;
-  body: string;
-  time: string;
-  sent: boolean;
+  conversationId: string;
+  role: 'USER' | 'ASSISTANT' | 'SYSTEM';
+  content: string;
+  createdAt: string;
 };
 
 export type AssistantConversation = {
   id: string;
+  userId?: string;
   title: string;
-  body: string;
-  meta: string;
-  route: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AssistantCitation = {
   id: string;
+  messageId: string;
   title: string;
-  body: string;
-  meta: string;
-  source: string;
+  url: string;
+  snippet: string;
+  createdAt: string;
 };

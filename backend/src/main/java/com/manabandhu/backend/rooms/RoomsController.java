@@ -95,10 +95,25 @@ public class RoomsController {
         return toResponse(listing, viewerId);
     }
 
+    @GetMapping("/{roomId}")
+    RoomListingResponse roomDetail(Authentication authentication, @PathVariable UUID roomId) {
+        var viewerId = authentication == null ? null : actorId(authentication);
+        var listing = listingService.findPublishedById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
+        return toResponse(listing, viewerId);
+    }
+
     @GetMapping("/listings/{listingId}/owner")
     OwnerRoomListingResponse listingForOwner(Authentication authentication, @PathVariable UUID listingId) {
         var actorId = actorId(authentication);
         var listing = listingService.requireOwnedListingListing(actorId, isAdmin(authentication), listingId);
+        return toOwnerResponse(listing);
+    }
+
+    @GetMapping("/{roomId}/owner")
+    OwnerRoomListingResponse roomDetailForOwner(Authentication authentication, @PathVariable UUID roomId) {
+        var actorId = actorId(authentication);
+        var listing = listingService.requireOwnedListingListing(actorId, isAdmin(authentication), roomId);
         return toOwnerResponse(listing);
     }
 
@@ -110,10 +125,24 @@ public class RoomsController {
         return toOwnerResponse(listing);
     }
 
+    @PatchMapping("/{roomId}")
+    OwnerRoomListingResponse updateRoom(Authentication authentication, @PathVariable UUID roomId,
+                                        @Valid @RequestBody UpdateRoomListingInput input) {
+        var actorId = actorId(authentication);
+        var listing = listingService.update(roomId, actorId, isAdmin(authentication), input);
+        return toOwnerResponse(listing);
+    }
+
     @PatchMapping("/listings/{listingId}/publish")
     OwnerRoomListingResponse publish(Authentication authentication, @PathVariable UUID listingId) {
         var actorId = actorId(authentication);
         return toOwnerResponse(listingService.setOwnerOnlyStatus(listingId, actorId, "active", "publish"));
+    }
+
+    @PatchMapping("/{roomId}/publish")
+    OwnerRoomListingResponse publishRoom(Authentication authentication, @PathVariable UUID roomId) {
+        var actorId = actorId(authentication);
+        return toOwnerResponse(listingService.setOwnerOnlyStatus(roomId, actorId, "active", "publish"));
     }
 
     @PatchMapping("/listings/{listingId}/pause")
@@ -122,15 +151,33 @@ public class RoomsController {
         return toOwnerResponse(listingService.setOwnerOnlyStatus(listingId, actorId, "paused", "pause"));
     }
 
+    @PatchMapping("/{roomId}/pause")
+    OwnerRoomListingResponse pauseRoom(Authentication authentication, @PathVariable UUID roomId) {
+        var actorId = actorId(authentication);
+        return toOwnerResponse(listingService.setOwnerOnlyStatus(roomId, actorId, "paused", "pause"));
+    }
+
     @PatchMapping("/listings/{listingId}/archive")
     OwnerRoomListingResponse archive(Authentication authentication, @PathVariable UUID listingId) {
         var actorId = actorId(authentication);
         return toOwnerResponse(listingService.setOwnerOnlyStatus(listingId, actorId, "archived", "archive"));
     }
 
+    @PatchMapping("/{roomId}/archive")
+    OwnerRoomListingResponse archiveRoom(Authentication authentication, @PathVariable UUID roomId) {
+        var actorId = actorId(authentication);
+        return toOwnerResponse(listingService.setOwnerOnlyStatus(roomId, actorId, "archived", "archive"));
+    }
+
     @DeleteMapping("/listings/{listingId}")
     ResponseEntity<Void> deleteListing(Authentication authentication, @PathVariable UUID listingId) {
         listingService.delete(listingId, actorId(authentication), isAdmin(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{roomId}")
+    ResponseEntity<Void> deleteRoom(Authentication authentication, @PathVariable UUID roomId) {
+        listingService.delete(roomId, actorId(authentication), isAdmin(authentication));
         return ResponseEntity.noContent().build();
     }
 

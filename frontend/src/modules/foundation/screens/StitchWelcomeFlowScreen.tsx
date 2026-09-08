@@ -1,9 +1,10 @@
 import { color as baseColors, space } from '@manabandhu/design-system';
 import { Link, router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuthStore } from '@/lib/authStore';
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
 
 const colors = {
@@ -65,6 +66,15 @@ export function StitchWelcomeFlowScreen() {
       },
     }),
   ).current;
+
+  const status = useAuthStore((s) => s.status);
+  const isLoading = useAuthStore((s) => s.isLoading);
+
+  useEffect(() => {
+    if (!isLoading && status === 'authenticated') {
+      router.replace('/home');
+    }
+  }, [status, isLoading]);
 
   function advance() {
     if (isFinal) router.push('/sign-in');

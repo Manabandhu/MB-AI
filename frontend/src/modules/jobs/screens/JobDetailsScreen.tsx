@@ -1,8 +1,10 @@
 import { color, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -14,18 +16,17 @@ type JobDetailContent = {
   meta?: string;
 };
 
-type JobDetailsScreenProps = {
-  jobId: string;
-};
+export function JobDetailsScreen() {
+  const { jobId } = useLocalSearchParams<{ jobId: string }>();
+  const router = useRouter();
 
-export function JobDetailsScreen({ jobId }: JobDetailsScreenProps) {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['jobs', 'detail', jobId],
     queryFn: async (): Promise<JobDetailContent> => {
       const response = await apiFetch(`/api/v1/jobs/${jobId}`);
-      if (!response.ok) throw new Error(`Job failed: ${response.status}`);
-      return response.json() as Promise<JobDetailContent>;
+      return parseJsonOrThrow(response, 'Job detail');
     },
+    enabled: Boolean(jobId),
   });
 
   const fallback: JobDetailContent = {
@@ -40,8 +41,7 @@ export function JobDetailsScreen({ jobId }: JobDetailsScreenProps) {
   if (isLoading) {
     return (
       <ScreenShell>
-        <SectionHeader title="Loading..." />
-        <Text style={styles.loadingText}>Loading job details...</Text>
+        <LoadingState />
       </ScreenShell>
     );
   }
@@ -64,8 +64,8 @@ export function JobDetailsScreen({ jobId }: JobDetailsScreenProps) {
       <SectionHeader eyebrow={content.eyebrow} title={content.title} subtitle={content.meta} />
       <Text style={styles.body}>{content.body}</Text>
       <View style={styles.actions}>
-        <AppButton label="Apply now" route="/jobs/post" />
-        <AppButton label="Save job" route="/jobs/saved" variant="secondary" />
+        <AppButton label="Apply now" onPress={() => router.push('/jobs/post')} />
+        <AppButton label="Back to search" onPress={() => router.back()} variant="secondary" />
       </View>
     </ScreenShell>
   );
@@ -79,5 +79,4 @@ const styles = StyleSheet.create({
     marginTop: space.x4,
   },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x6 },
-  loadingText: { color: color.muted, fontSize: typography.body.fontSize, padding: space.x6 },
 });

@@ -56,6 +56,9 @@ export default function ConversationScreen() {
   const fallback = chatScreenFallbacks.conversation;
   const title = conversation?.title ?? fallback.title;
   const messageList = messages ?? fallback.messages ?? [];
+  const participantNames = conversation?.participants
+    ? conversation.participants.map((p) => p.userId).join(', ')
+    : undefined;
 
   if (errorConversation || errorMessages) {
     return (
@@ -77,10 +80,7 @@ export default function ConversationScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader
-            title={title}
-            subtitle={conversation?.participants.map((p) => p.name).join(', ') ?? fallback.subtitle}
-          />
+          <SectionHeader title={title} subtitle={participantNames ?? fallback.subtitle} />
           {offline ? (
             <Banner
               title="Offline"

@@ -1,10 +1,21 @@
 import { color as baseColors, space } from '@manabandhu/design-system';
+import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { useAuthStore } from '@/lib/authStore';
+import {
+  getChatShell,
+  getCommunityShell,
+  getExploreShell,
+  getHomeShell,
+  getProfileShell,
+} from '@/modules/foundation/homeApi';
+import { homeShellFallbacks } from '@/modules/foundation/homeShellFallbacks';
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 
@@ -53,7 +64,25 @@ const tabs = [
   },
 ] as const;
 
+const shellApi: Record<ShellKind, () => Promise<HomeShellData>> = {
+  home: getHomeShell,
+  chat: getChatShell,
+  explore: getExploreShell,
+  community: getCommunityShell,
+  profile: getProfileShell,
+};
+
 export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['foundation', 'shell', kind],
+    queryFn: shellApi[kind],
+  });
+  const shellData = data ?? homeShellFallbacks[kind];
+
+  const user = useAuthStore((s) => s.user);
+  const displayName = user?.user_metadata?.full_name ?? shellData.greetingName;
+  const avatarInitial = (displayName?.[0] ?? 'U').toUpperCase();
+
   return (
     <SafeAreaView style={styles.shellSafe}>
       <View style={styles.shellHeader}>
@@ -71,16 +100,31 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
             <AppIcon color={colors.primary} name="bell" size={20} />
           </Pressable>
           <Avatar className="h-8 w-8 bg-primary">
-            <AvatarFallbackText className="text-primary-foreground">MB</AvatarFallbackText>
+            <AvatarFallbackText className="text-primary-foreground">
+              {avatarInitial}
+            </AvatarFallbackText>
           </Avatar>
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.shellContent}>
-        {kind === 'home' ? <HomeShell /> : null}
-        {kind === 'chat' ? <ChatShell /> : null}
-        {kind === 'explore' ? <ExploreShell /> : null}
-        {kind === 'community' ? <CommunityShell /> : null}
-        {kind === 'profile' ? <ProfileShell /> : null}
+        {isLoading ? (
+          <LoadingState />
+        ) : isError ? (
+          <ErrorState
+            title="Unable to load content"
+            body="Please check your connection and try again."
+            retryLabel="Retry"
+            onRetry={refetch}
+          />
+        ) : (
+          <>
+            {kind === 'home' ? <HomeShell data={shellData} displayName={displayName} /> : null}
+            {kind === 'chat' ? <ChatShell data={shellData} /> : null}
+            {kind === 'explore' ? <ExploreShell data={shellData} /> : null}
+            {kind === 'community' ? <CommunityShell data={shellData} /> : null}
+            {kind === 'profile' ? <ProfileShell data={shellData} /> : null}
+          </>
+        )}
       </ScrollView>
       <View style={styles.tabBar}>
         {tabs.map((tab) => (
@@ -102,12 +146,20 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
   );
 }
 
-export function HomeShell() {
+export function HomeShell({ data, displayName }: { data: HomeShellData; displayName: string }) {
   return (
     <>
       <View style={styles.heroBlock}>
-        <Text style={styles.display}>Hello, Surya! 👋</Text>
-        <Text style={styles.lead}>Here’s what’s happening in your community today.</Text>
+        <Text style={styles.display}>Hello, {displayName}! 👋</Text>
+        <Text style={styles.lead}>{data.subtitle}</Text>
+      </View>
+      <View style={styles.metricsRow}>
+        {data.metrics.map((metric) => (
+          <View key={metric.label} style={styles.metricCard}>
+            <Text style={styles.metricValue}>{metric.value}</Text>
+            <Text style={styles.metricLabel}>{metric.label}</Text>
+          </View>
+        ))}
       </View>
       <View style={styles.bentoGrid}>
         <Link href="/rooms" asChild>
@@ -121,35 +173,20 @@ export function HomeShell() {
         <MiniAction icon="help" label="Ask a Question" route="/community" />
       </View>
       <SectionTitle title="For You" />
-      <View style={styles.horizontalCards}>
-        <ImageCard
-          image="https://lh3.googleusercontent.com/aida-public/AB6AXuAyUigpCMPxDs43S2hib_i5VB-rtt1kfqIu6nV4OVbVDw6Sk6k_U0HN6cLkGfTl-wX6sXPwQFpxrG3hU5_zNOdbA937Us-Rabbtpbo18JBRijXY5bV4wWz0o1qiTB2TNWyosxtqYUJp00_LPQjEqCNo5X2kYuKUhQdT8MNiksIpSHwt37PLgQ-tJh9soFRwHy3KZZhU2GczR1jlFsk2b-ra85_M10W93gACL-P-93_GSY43EUVR5mpa"
-          meta="$850/mo"
-          title="Sunny room in Downtown"
+      {data.feed.map((item) => (
+        <FeedItem
+          key={item.id}
+          icon={feedIconFor(item.kind)}
+          title={item.title}
+          body={item.body}
+          meta={item.meta}
         />
-        <InfoCard
-          accent
-          title="Tech Meetup & Mixer"
-          body="Sat, Oct 14 • 6:00 PM"
-          meta="Community Event"
-        />
-      </View>
-      <SectionTitle title="Trending in your area" />
-      <FeedItem
-        icon="car"
-        title="Ride offered to SF"
-        body="Driving from SJ to SF this Friday at 5 PM. Have 2 seats available."
-      />
-      <FeedItem
-        icon="message"
-        title="Kiran asked a question"
-        body="Does anyone know a good, affordable moving service for a 1BHK?"
-      />
+      ))}
     </>
   );
 }
 
-export function ChatShell() {
+export function ChatShell({ data }: { data: HomeShellData }) {
   return (
     <>
       <View style={styles.searchBox}>
@@ -163,19 +200,28 @@ export function ChatShell() {
           </Text>
         ))}
       </View>
-      {[
-        ['Sarah Jenkins', 'Are we still on for coffee later? ☕️', '10:42 AM'],
-        ['Design Team', 'I uploaded the new assets to the drive.', 'Yesterday'],
-        ['Marcus Chen', 'Thanks for the help yesterday!', 'Mon'],
-        ['Dog Walkers Club', 'Elena: We are meeting at the park at 8am!', 'Sun'],
-      ].map(([title, body, time]) => (
-        <FeedItem key={title} icon="message" title={title} body={body} meta={time} />
+      <View style={styles.metricsRow}>
+        {data.metrics.map((metric) => (
+          <View key={metric.label} style={styles.metricCard}>
+            <Text style={styles.metricValue}>{metric.value}</Text>
+            <Text style={styles.metricLabel}>{metric.label}</Text>
+          </View>
+        ))}
+      </View>
+      {data.feed.map((item) => (
+        <FeedItem
+          key={item.id}
+          icon="message"
+          title={item.title}
+          body={item.body}
+          meta={item.meta}
+        />
       ))}
     </>
   );
 }
 
-export function ExploreShell() {
+export function ExploreShell({ data }: { data: HomeShellData }) {
   return (
     <>
       <View style={styles.searchBox}>
@@ -228,19 +274,28 @@ export function ExploreShell() {
       />
 
       <SectionTitle title="For You" />
-      <View style={styles.recommendationStrip}>
-        <InfoCard
-          title="Sunny room in Irving"
-          body="$850/mo • verified host notes"
-          meta="Room match"
-        />
-        <InfoCard title="Tech meetup tonight" body="Central Library • 6:00 PM" meta="Near you" />
+      <View style={styles.metricsRow}>
+        {data.metrics.map((metric) => (
+          <View key={metric.label} style={styles.metricCard}>
+            <Text style={styles.metricValue}>{metric.value}</Text>
+            <Text style={styles.metricLabel}>{metric.label}</Text>
+          </View>
+        ))}
       </View>
+      {data.feed.map((item) => (
+        <FeedItem
+          key={item.id}
+          icon={feedIconFor(item.kind)}
+          title={item.title}
+          body={item.body}
+          meta={item.meta}
+        />
+      ))}
     </>
   );
 }
 
-export function CommunityShell() {
+export function CommunityShell({ data }: { data: HomeShellData }) {
   return (
     <>
       <View style={styles.searchBox}>
@@ -255,60 +310,63 @@ export function CommunityShell() {
         ))}
       </View>
       <SectionTitle title="Your Hubs" />
-      <View style={styles.categoryGrid}>
-        <MiniAction icon="community" label="Bay Area Indians" route="/community" />
-        <MiniAction icon="message" label="Telugu Techies" route="/community" />
-        <MiniAction icon="plus" label="Create Hub" route="/community" />
+      <View style={styles.metricsRow}>
+        {data.metrics.map((metric) => (
+          <View key={metric.label} style={styles.metricCard}>
+            <Text style={styles.metricValue}>{metric.value}</Text>
+            <Text style={styles.metricLabel}>{metric.label}</Text>
+          </View>
+        ))}
       </View>
-      <SectionTitle title="Activity Feed" />
-      <InfoCard
-        title="Priya Reddy"
-        body="Planning a casual meetup this Saturday at Dolores Park! We'll bring homemade snacks and maybe a frisbee."
-        meta="in Bay Area Indians • 2h ago"
-      />
+      {data.feed.map((item) => (
+        <FeedItem
+          key={item.id}
+          icon={feedIconFor(item.kind)}
+          title={item.title}
+          body={item.body}
+          meta={item.meta}
+        />
+      ))}
     </>
   );
 }
 
-export function ProfileShell() {
+export function ProfileShell({ data }: { data: HomeShellData }) {
+  const user = useAuthStore((s) => s.user);
+  const displayName = user?.user_metadata?.full_name ?? data.greetingName;
+  const avatarInitial = (displayName?.[0] ?? 'U').toUpperCase();
+
   return (
     <>
       <View style={styles.profileHero}>
         <View style={styles.profileAvatar}>
-          <Text style={styles.profileAvatarText}>A</Text>
+          <Text style={styles.profileAvatarText}>{avatarInitial}</Text>
         </View>
-        <Text style={styles.profileName}>Aria Thompson</Text>
-        <Text style={styles.lead}>San Francisco, CA</Text>
-        <Text style={styles.profileBio}>
-          UX Designer passionate about crafting digital experiences that feel human and engaging.
-          Coffee enthusiast.
-        </Text>
+        <Text style={styles.profileName}>{displayName}</Text>
+        <Text style={styles.lead}>ManaBandhu member</Text>
       </View>
       <View style={styles.statRow}>
-        <Stat value="124" label="Posts" />
-        <Stat value="892" label="Connections" />
-        <Stat value="4.9" label="Helpful" />
+        {data.metrics.map((metric) => (
+          <Stat key={metric.label} value={metric.value} label={metric.label} />
+        ))}
       </View>
-      {['Account Settings', 'Trust & Safety', 'Help & Support', 'Privacy Policy', 'Log Out'].map(
-        (item) => (
-          <FeedItem
-            key={item}
-            icon={
-              item === 'Account Settings'
-                ? 'user'
-                : item === 'Trust & Safety'
-                  ? 'shield'
-                  : 'chevron-right'
-            }
-            title={item}
-            body={
-              item === 'Account Settings'
-                ? 'Update profile, email, and password'
-                : 'Privacy controls and support'
-            }
-          />
-        ),
-      )}
+      {data.feed.map((item) => (
+        <FeedItem
+          key={item.id}
+          icon="chevron-right"
+          title={item.title}
+          body={item.body}
+          meta={item.meta}
+        />
+      ))}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => useAuthStore.getState().signOut()}
+        style={styles.logOutRow}
+      >
+        <AppIcon color={colors.warm} name="exit" size={20} />
+        <Text style={styles.logOutText}>Log Out</Text>
+      </Pressable>
     </>
   );
 }
@@ -446,6 +504,21 @@ export function Stat({ value, label }: { value: string; label: string }) {
 
 function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function feedIconFor(kind: string): AppIconName {
+  switch (kind) {
+    case 'room':
+      return 'home';
+    case 'ride':
+      return 'car';
+    case 'job':
+      return 'briefcase';
+    case 'event':
+      return 'calendar';
+    default:
+      return 'message';
+  }
 }
 
 const styles = StyleSheet.create({
@@ -638,6 +711,33 @@ const styles = StyleSheet.create({
   stat: { alignItems: 'center', gap: space.x1 },
   statValue: { color: colors.primary, fontSize: 20, fontWeight: '800' },
   statLabel: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  metricsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.x3,
+  },
+  metricCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    minWidth: 120,
+    padding: space.x3,
+  },
+  metricValue: { color: colors.primary, fontSize: 20, fontWeight: '800' },
+  metricLabel: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  logOutRow: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: space.x2,
+    padding: space.x3,
+  },
+  logOutText: { color: colors.warm, fontSize: 14, fontWeight: '700' },
   tabBar: {
     backgroundColor: 'rgba(250,248,255,0.96)',
     flexDirection: 'row',
