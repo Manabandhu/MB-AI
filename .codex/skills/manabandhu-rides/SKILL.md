@@ -119,3 +119,5 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 
 - Recent backend changes: added aliased routes to `RidesController` (`/{rideId}`, `/{rideId}/owner`, `/{rideId}` PATCH/DELETE, `/mine`, `/history`, `/saved`) alongside existing `/offers/{offerId}` paths to match frontend API calls.
+
+- Recent fixes: added `destination` and `departureAt` to `CreateRideRequestInput` so `RideRequestScreen` payload typechecks; fixed `RideRateScreen` mutation to pass the rating object directly to `submitRideRating` (was passing `(rideId, input)` which mismatched `MutationFunction`); added `Input`/`InputField` imports to `RideRateScreen`.
