@@ -7,7 +7,7 @@ ManaBandhu is an adaptive community platform built as a governed monorepo. Its c
 - Mobile: Expo SDK 54, React Native 0.81, React 19.1, Expo Router 6, TypeScript 5.9
 - Client data: TanStack Query, GraphQL Request, Zod, Zustand, React Hook Form
 - Authentication: Supabase Auth with sessions stored in Expo Secure Store
-- Backend: Java 25, Spring Boot 4.1, Spring Security, Spring Data JPA
+- Backend: Java 21, Spring Boot 3.4, Spring Security, Spring Data JPA
 - APIs: versioned REST under `/api/v1` and GraphQL at `/graphql`
 - Database: Supabase Postgres 17 with Flyway migrations
 - Quality: pnpm workspaces, Biome, TypeScript strict mode, Maven tests
@@ -39,7 +39,7 @@ Every governed module has a repo-local skill under `.codex/skills`. Root `AGENTS
 
 - Node.js 22.13 or newer
 - pnpm 11.21
-- Java 25
+- Java 21
 - Maven is optional because the Maven wrapper is included
 
 The current machine may use older global tooling; `.nvmrc` and `.tool-versions` define the repository versions.

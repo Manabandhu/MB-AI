@@ -8,6 +8,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -16,6 +17,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 class AutomationService {
@@ -28,6 +32,7 @@ class AutomationService {
             .build();
     private final String repository;
     private final String token;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     AutomationService(
             AutomationCatalog catalog,
@@ -65,10 +70,7 @@ class AutomationService {
             ExecuteAutomationRequest input,
             String actorId,
             UUID executionId) {
-        var body = """
-                {"ref":"%s","inputs":{"environment":"%s","reason":"%s","actor_id":"%s","execution_id":"%s"}}
-                """.formatted(
-                json(input.ref()), json(input.environment()), json(input.reason()), json(actorId), executionId);
+        var body = writePayload(input, actorId, executionId);
         var request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.github.com/repos/" + repository + "/actions/workflows/" + workflow + "/dispatches"))
                 .header("Accept", "application/vnd.github+json")
@@ -91,7 +93,20 @@ class AutomationService {
         }
     }
 
-    private static String json(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
+    private String writePayload(ExecuteAutomationRequest input, String actorId, UUID executionId) {
+        try {
+            var payload = Map.of(
+                    "ref", input.ref(),
+                    "inputs", Map.of(
+                            "environment", input.environment(),
+                            "reason", input.reason(),
+                            "actor_id", actorId,
+                            "execution_id", executionId.toString()
+                    )
+            );
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to serialize automation payload", exception);
+        }
     }
 }
