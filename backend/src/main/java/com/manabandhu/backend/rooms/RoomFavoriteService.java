@@ -32,12 +32,7 @@ public class RoomFavoriteService {
 
     @Transactional(readOnly = true)
     public List<RoomListing> findSavedListings(UUID userId) {
-        var favorites = repository.findByUserIdOrderByCreatedAtDesc(userId);
-        return favorites.stream()
-                .map(f -> listingRepository.findById(f.getListingId()))
-                .flatMap(Optional::stream)
-                .filter(l -> "active".equals(l.getStatus()) || "paused".equals(l.getStatus()))
-                .toList();
+        return listingRepository.findSavedListingsByUserId(userId);
     }
 
     @Transactional(readOnly = true)

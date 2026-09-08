@@ -49,10 +49,8 @@ public class RoomListingService {
     @Transactional(readOnly = true)
     public List<RoomListing> search(String location, String roomType) {
         if (location != null && roomType != null) {
-            return repository.findByRoomTypeAndStatusOrderByCreatedAtDesc(roomType, "active").stream()
-                    .filter(l -> l.getBroadLocation() != null
-                            && l.getBroadLocation().toLowerCase().contains(location.toLowerCase()))
-                    .toList();
+            return repository.findByStatusAndRoomTypeAndBroadLocationContainingIgnoreCaseOrderByCreatedAtDesc(
+                    "active", roomType, location);
         }
         if (location != null) {
             return repository.findByBroadLocationContainingIgnoreCaseAndStatusOrderByCreatedAtDesc(location, "active");

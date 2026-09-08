@@ -41,10 +41,8 @@ public class RideOfferService {
     @Transactional(readOnly = true)
     public List<RideOffer> search(String origin, String destination) {
         if (origin != null && destination != null) {
-            return repository.findByStatusOrderByDepartureAtAsc("active").stream()
-                    .filter(o -> origin != null && o.getOriginArea().toLowerCase().contains(origin.toLowerCase()))
-                    .filter(o -> destination != null && o.getDestinationArea().toLowerCase().contains(destination.toLowerCase()))
-                    .toList();
+            return repository.findByStatusAndOriginAreaContainingIgnoreCaseAndDestinationAreaContainingIgnoreCaseOrderByDepartureAtAsc(
+                    "active", origin, destination);
         }
         if (origin != null) {
             return repository.findByOriginAreaContainingIgnoreCaseAndStatusOrderByDepartureAtAsc(origin, "active");

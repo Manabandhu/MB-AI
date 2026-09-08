@@ -14,4 +14,7 @@ interface RideOfferRepository extends JpaRepository<RideOffer, UUID> {
     List<RideOffer> findByOriginAreaContainingIgnoreCaseAndStatusOrderByDepartureAtAsc(String origin, String status);
 
     List<RideOffer> findByDestinationAreaContainingIgnoreCaseAndStatusOrderByDepartureAtAsc(String destination, String status);
+
+    List<RideOffer> findByStatusAndOriginAreaContainingIgnoreCaseAndDestinationAreaContainingIgnoreCaseOrderByDepartureAtAsc(
+            String status, String origin, String destination);
 }

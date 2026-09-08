@@ -28,10 +28,7 @@ public class EventsController {
     @GetMapping
     List<Event> list(@RequestParam(required = false) String q) {
         if (q != null && !q.isBlank()) {
-            return service.findAll().stream()
-                    .filter(e -> e.getTitle().toLowerCase().contains(q.toLowerCase())
-                            || e.getLocation().toLowerCase().contains(q.toLowerCase()))
-                    .toList();
+            return service.search(q);
         }
         return service.findAll();
     }
@@ -39,10 +36,7 @@ public class EventsController {
     @GetMapping("/search")
     List<Event> search(@RequestParam(required = false) String q) {
         if (q != null && !q.isBlank()) {
-            return service.findAll().stream()
-                    .filter(e -> e.getTitle().toLowerCase().contains(q.toLowerCase())
-                            || e.getLocation().toLowerCase().contains(q.toLowerCase()))
-                    .toList();
+            return service.search(q);
         }
         return service.findAll();
     }

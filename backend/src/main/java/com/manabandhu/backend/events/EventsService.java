@@ -29,6 +29,11 @@ public class EventsService {
     }
 
     @Transactional(readOnly = true)
+    public List<Event> search(String q) {
+        return eventRepository.searchPublished("published", q);
+    }
+
+    @Transactional(readOnly = true)
     public List<Event> findSaved() {
         return eventRepository.findByStatusOrderByStartAtAsc("saved");
     }
