@@ -45,7 +45,12 @@ export function AssistantScreen() {
         ) : null}
         <View style={styles.chat}>
           {sorted.map((item) => (
-            <MessageBubble key={item.id} body={item.body} sent={item.sent} time={item.time} />
+            <MessageBubble
+              key={item.id}
+              body={item.body ?? ''}
+              sent={item.sent ?? false}
+              time={item.time ?? ''}
+            />
           ))}
         </View>
         <View style={styles.inputRow}>

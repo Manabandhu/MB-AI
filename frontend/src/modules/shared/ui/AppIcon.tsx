@@ -11,6 +11,7 @@ import {
   DeliveryTruck,
   HelpCircle,
   Home,
+  LogOut,
   Map as MapIcon,
   MessageText,
   NavArrowRight,
@@ -39,6 +40,7 @@ export type AppIconName =
   | 'delivery'
   | 'help'
   | 'home'
+  | 'logout'
   | 'map'
   | 'marketplace'
   | 'message'
@@ -64,6 +66,7 @@ const iconMap = {
   delivery: DeliveryTruck,
   help: HelpCircle,
   home: Home,
+  logout: LogOut,
   map: MapIcon,
   marketplace: Cart,
   message: MessageText,

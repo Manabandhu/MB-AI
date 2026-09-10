@@ -107,7 +107,7 @@ export default function ConversationScreen() {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
-                  sent={m.sent}
+                  sent={m.sent ?? false}
                 />
               ))}
             </View>

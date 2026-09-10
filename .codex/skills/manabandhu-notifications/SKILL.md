@@ -22,3 +22,4 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 10. Recent fixes: `NotificationsInboxScreen` import grouping was cleaned up and inline JSX props were expanded for readability without changing behavior.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+- Recent inbox fallback fix: `NotificationsInboxScreen` `useQuery` now uses local `fallbackNotifications` via `placeholderData` with `retry: false`, removing the `LoadingState`/`ErrorState` error/loading branches.

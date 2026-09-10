@@ -85,3 +85,4 @@ Owns referral discovery, requests, offers, details, status tracking, user-owned 
 - Recent backend changes: created `ReferralsContentService` with `home`, `mine` screen IDs; added `@GetMapping("/screens/{screenId}")` to `ReferralController`.
 
 - Recent fixes: made `category` optional on `createReferralRequest` input and added `serviceType` as a required field on `createReferralOffer` input to match backend `@NotBlank` validation; rewrote `OfferReferralScreen` to use `serviceType`/`availability` state instead of `category`; made `RequestReferralScreen` require a non-empty `category` before submitting.
+- Recent urgency fix: `RequestReferralScreen` adds an `urgency` input, validates it as required, and sends `urgency` in the `createReferralRequest` payload; `category` is now optional (`category.trim() || undefined`).

@@ -8,8 +8,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getNotificationsInbox } from '@/modules/notifications/api';
 import { CatalogScreen } from '@/modules/shared/components/CatalogScreen';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SearchBar } from '@/modules/shared/components/SearchBar';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 
@@ -19,12 +17,24 @@ const styles = StyleSheet.create({
   container: { alignSelf: 'center', gap: space.x6, width: '100%' },
 });
 
+const fallbackNotifications = [
+  {
+    id: 'fallback-1',
+    title: 'Welcome to ManaBandhu',
+    body: 'Discover rooms, rides, jobs, and community.',
+    meta: 'Just now',
+    read: false,
+  },
+];
+
 export function NotificationsInboxScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data } = useQuery({
     queryKey: ['notifications', 'inbox'],
     queryFn: getNotificationsInbox,
+    placeholderData: { items: fallbackNotifications },
+    retry: false,
   });
 
   const items = data?.items ?? [];
@@ -32,19 +42,6 @@ export function NotificationsInboxScreen() {
     if (!query.trim()) return items;
     return items.filter((item) => item.title.toLowerCase().includes(query.toLowerCase()));
   }, [items, query]);
-
-  if (isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ErrorState
-          title="Unable to load notifications"
-          body="Please check your connection and try again."
-          retryLabel="Retry"
-          onRetry={refetch}
-        />
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -60,12 +57,10 @@ export function NotificationsInboxScreen() {
             placeholder="Search notifications"
             accessibilityLabel="Search notifications"
           />
-          {isLoading ? (
-            <LoadingState />
-          ) : filtered.length === 0 ? (
+          {filtered.length === 0 ? (
             <EmptyState
               title="No notifications"
-              body="You’re all caught up."
+              body="You're all caught up."
               actionLabel="Explore"
               onAction={() => router.push('/explore')}
             />

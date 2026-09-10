@@ -27,7 +27,7 @@ export default function NewChatScreen() {
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations;
-    return conversations.filter((c) => c.title.toLowerCase().includes(query.toLowerCase()));
+    return conversations.filter((c) => (c.title ?? '').toLowerCase().includes(query.toLowerCase()));
   }, [conversations, query]);
 
   if (isError) {
@@ -64,14 +64,14 @@ export default function NewChatScreen() {
                 <Pressable
                   key={c.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`Start chat with ${c.title}`}
+                  accessibilityLabel={`Start chat with ${c.title ?? ''}`}
                   onPress={() => router.push(`/chat/${c.id}`)}
                   style={styles.item}
                 >
                   <View style={styles.itemBody}>
-                    <Text style={styles.itemTitle}>{c.title}</Text>
+                    <Text style={styles.itemTitle}>{c.title ?? ''}</Text>
                     <Text style={styles.itemSubtitle} numberOfLines={1}>
-                      {c.lastMessage}
+                      {c.lastMessage ?? ''}
                     </Text>
                   </View>
                   <Text style={styles.itemAction}>Message</Text>

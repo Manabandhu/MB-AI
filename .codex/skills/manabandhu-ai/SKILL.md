@@ -81,3 +81,4 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - Recent fixes: fixed `AssistantController` import typo — `annotationPathVariable` corrected to `annotation/path/PathVariable` (Spring Boot 3 compilation break).
 
 - Recent typecheck fixes: added optional UI fields (`body`, `time`, `sent`) to `AssistantMessage`, (`body`, `meta`, `route`) to `AssistantConversation`, and (`body`, `meta`, `source`) to `AssistantCitation`; switched `assistantFallbacks.ts` casts from `as` to `satisfies`; fixed `AssistantScreen` send payload from `{ text }` to `{ content }`.
+- Recent fixture/type fix: `assistantFallbacks.ts` added `conversationId`, `role`, `content`, `createdAt` to message fixtures, `createdAt`/`updatedAt` to conversation fixtures, and `messageId`/`url`/`snippet`/`createdAt` to citation fixtures; `AssistantScreen` now null-coalesces `body`/`sent`/`time` when rendering message bubbles.

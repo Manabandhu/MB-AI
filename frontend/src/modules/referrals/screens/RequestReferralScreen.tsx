@@ -15,6 +15,7 @@ export function RequestReferralScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [urgency, setUrgency] = useState('Medium');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -29,14 +30,15 @@ export function RequestReferralScreen() {
 
   function handleSubmit() {
     setError(null);
-    if (!title.trim() || !description.trim() || !category.trim()) {
+    if (!title.trim() || !description.trim() || !urgency.trim()) {
       setError('Please fill in all required fields.');
       return;
     }
     mutation.mutate({
       title: title.trim(),
       description: description.trim(),
-      category: category.trim(),
+      category: category.trim() || undefined,
+      urgency: urgency.trim(),
     });
   }
 
@@ -99,6 +101,16 @@ export function RequestReferralScreen() {
                   placeholder="e.g. Tech, Healthcare, Legal"
                   value={category}
                   onChangeText={setCategory}
+                />
+              </Input>
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Urgency</Text>
+              <Input className="min-h-14 rounded-xl bg-secondary/70">
+                <InputField
+                  placeholder="e.g. High, Medium, Low"
+                  value={urgency}
+                  onChangeText={setUrgency}
                 />
               </Input>
             </View>

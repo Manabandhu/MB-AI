@@ -28,7 +28,7 @@ export default function ChatListScreen() {
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations;
-    return conversations.filter((c) => c.title.toLowerCase().includes(query.toLowerCase()));
+    return conversations.filter((c) => (c.title ?? '').toLowerCase().includes(query.toLowerCase()));
   }, [conversations, query]);
 
   if (isError) {
@@ -65,20 +65,20 @@ export default function ChatListScreen() {
                 <Pressable
                   key={c.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`Open chat with ${c.title}`}
+                  accessibilityLabel={`Open chat with ${c.title ?? ''}`}
                   onPress={() => router.push(`/chat/${c.id}`)}
                   style={styles.item}
                 >
                   <View style={styles.itemBody}>
-                    <Text style={styles.itemTitle}>{c.title}</Text>
+                    <Text style={styles.itemTitle}>{c.title ?? ''}</Text>
                     <Text style={styles.itemSubtitle} numberOfLines={1}>
-                      {c.lastMessage}
+                      {c.lastMessage ?? ''}
                     </Text>
                     <Text style={styles.itemMeta}>
-                      {new Date(c.lastMessageAt).toLocaleDateString()}
+                      {c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleDateString() : ''}
                     </Text>
                   </View>
-                  {c.unreadCount > 0 ? (
+                  {(c.unreadCount ?? 0) > 0 ? (
                     <View style={styles.badge}>
                       <Text style={styles.badgeText}>{c.unreadCount}</Text>
                     </View>

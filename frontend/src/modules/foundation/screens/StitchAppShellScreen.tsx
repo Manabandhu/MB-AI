@@ -15,8 +15,6 @@ import {
 } from '@/modules/foundation/homeApi';
 import { homeShellFallbacks } from '@/modules/foundation/homeShellFallbacks';
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 
@@ -74,9 +72,11 @@ const shellApi: Record<ShellKind, () => Promise<HomeShellData>> = {
 };
 
 export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data } = useQuery({
     queryKey: ['foundation', 'shell', kind],
     queryFn: shellApi[kind],
+    placeholderData: homeShellFallbacks[kind],
+    retry: false,
   });
   const shellData = data ?? homeShellFallbacks[kind];
 
@@ -108,24 +108,11 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.shellContent}>
-        {isLoading ? (
-          <LoadingState />
-        ) : isError ? (
-          <ErrorState
-            title="Unable to load content"
-            body="Please check your connection and try again."
-            retryLabel="Retry"
-            onRetry={refetch}
-          />
-        ) : (
-          <>
-            {kind === 'home' ? <HomeShell data={shellData} displayName={displayName} /> : null}
-            {kind === 'chat' ? <ChatShell data={shellData} /> : null}
-            {kind === 'explore' ? <ExploreShell data={shellData} /> : null}
-            {kind === 'community' ? <CommunityShell data={shellData} /> : null}
-            {kind === 'profile' ? <ProfileShell data={shellData} /> : null}
-          </>
-        )}
+        {kind === 'home' ? <HomeShell data={shellData} displayName={displayName} /> : null}
+        {kind === 'chat' ? <ChatShell data={shellData} /> : null}
+        {kind === 'explore' ? <ExploreShell data={shellData} /> : null}
+        {kind === 'community' ? <CommunityShell data={shellData} /> : null}
+        {kind === 'profile' ? <ProfileShell data={shellData} /> : null}
       </ScrollView>
       <View style={styles.tabBar}>
         {tabs.map((tab) => (
@@ -136,7 +123,9 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
                 name={tab.icon}
                 size={20}
               />
-              <Text style={StyleSheet.flatten([styles.tabLabel, tab.key === kind && styles.tabActive])}>
+              <Text
+                style={StyleSheet.flatten([styles.tabLabel, tab.key === kind && styles.tabActive])}
+              >
                 {tab.shortLabel}
               </Text>
             </Pressable>
