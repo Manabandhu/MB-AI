@@ -2,7 +2,7 @@
 
 Owns Sign In, Sign Up, Forgot Password, session lifecycle, account recovery, identity verification, authorization-aware navigation, and Supabase Auth adapters.
 
-The current auth routes `/sign-in`, `/sign-up`, `/forgot-password`, and related login/reset steps render through dedicated screen files in `frontend/src/modules/auth/screens/`; current demo submission can use `demo@manabandhu.local` / `DemoPass123` and returns to `/home` until Supabase auth actions are wired.
+The current auth routes `/sign-in`, `/sign-up`, `/forgot-password`, and related login/reset steps render through dedicated screen files in `frontend/src/modules/auth/screens/`; demo submission uses a local demo session with `demo@manabandhu.local` / `DemoPass123` and returns to `/home`, while regular password authentication uses Supabase.
 
 `frontend/src/lib/supabase.ts` owns the shared Supabase client and includes a static-render WebSocket fallback for Node runtimes that do not expose `globalThis.WebSocket`.
 

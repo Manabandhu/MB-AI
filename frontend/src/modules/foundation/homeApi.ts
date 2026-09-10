@@ -18,25 +18,67 @@ export type HomeShellData = {
   feed: HomeFeedItem[];
 };
 
+type CatalogScreenPayload = Omit<HomeShellData, 'feed' | 'greetingName'> & {
+  items: Omit<HomeFeedItem, 'kind'>[];
+};
+
+function feedKindFor(item: Omit<HomeFeedItem, 'kind'>): HomeFeedItem['kind'] {
+  if (item.route.startsWith('/rooms') || item.id.includes('room')) return 'room';
+  if (item.route.startsWith('/rides') || item.id.includes('ride')) return 'ride';
+  if (item.route.startsWith('/jobs') || item.id.includes('job')) return 'job';
+  if (item.route.startsWith('/events') || item.id.includes('event')) return 'event';
+  return 'post';
+}
+
+function normalizeShellData(payload: CatalogScreenPayload): HomeShellData {
+  return {
+    ...payload,
+    greetingName: 'friend',
+    feed: payload.items.map((item) => ({ ...item, kind: feedKindFor(item) })),
+  };
+}
+
 export async function getHomeShell(): Promise<HomeShellData> {
-  return parseJsonOrThrow(await apiFetch('/api/v1/foundation/screens/home'), 'Home shell');
+  return normalizeShellData(
+    await parseJsonOrThrow<CatalogScreenPayload>(
+      await apiFetch('/api/v1/foundation/screens/home'),
+      'Home shell',
+    ),
+  );
 }
 
 export async function getProfileShell(): Promise<HomeShellData> {
-  return parseJsonOrThrow(await apiFetch('/api/v1/foundation/screens/profile'), 'Profile shell');
+  return normalizeShellData(
+    await parseJsonOrThrow<CatalogScreenPayload>(
+      await apiFetch('/api/v1/foundation/screens/profile'),
+      'Profile shell',
+    ),
+  );
 }
 
 export async function getExploreShell(): Promise<HomeShellData> {
-  return parseJsonOrThrow(await apiFetch('/api/v1/foundation/screens/explore'), 'Explore shell');
+  return normalizeShellData(
+    await parseJsonOrThrow<CatalogScreenPayload>(
+      await apiFetch('/api/v1/foundation/screens/explore'),
+      'Explore shell',
+    ),
+  );
 }
 
 export async function getChatShell(): Promise<HomeShellData> {
-  return parseJsonOrThrow(await apiFetch('/api/v1/foundation/screens/chat'), 'Chat shell');
+  return normalizeShellData(
+    await parseJsonOrThrow<CatalogScreenPayload>(
+      await apiFetch('/api/v1/foundation/screens/chat'),
+      'Chat shell',
+    ),
+  );
 }
 
 export async function getCommunityShell(): Promise<HomeShellData> {
-  return parseJsonOrThrow(
-    await apiFetch('/api/v1/foundation/screens/community'),
-    'Community shell',
+  return normalizeShellData(
+    await parseJsonOrThrow<CatalogScreenPayload>(
+      await apiFetch('/api/v1/foundation/screens/community'),
+      'Community shell',
+    ),
   );
 }

@@ -136,7 +136,7 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
                 name={tab.icon}
                 size={20}
               />
-              <Text style={[styles.tabLabel, tab.key === kind && styles.tabActive]}>
+              <Text style={StyleSheet.flatten([styles.tabLabel, tab.key === kind && styles.tabActive])}>
                 {tab.shortLabel}
               </Text>
             </Pressable>
@@ -196,7 +196,10 @@ export function ChatShell({ data }: { data: HomeShellData }) {
       </View>
       <View style={styles.segmentRow}>
         {['All', 'Groups', 'Support'].map((item, index) => (
-          <Text key={item} style={[styles.segment, index === 0 && styles.segmentActive]}>
+          <Text
+            key={item}
+            style={StyleSheet.flatten([styles.segment, index === 0 && styles.segmentActive])}
+          >
             {item}
           </Text>
         ))}
@@ -305,7 +308,10 @@ export function CommunityShell({ data }: { data: HomeShellData }) {
       </View>
       <View style={styles.segmentRow}>
         {['All', 'Tech & Career', 'Culture', 'Sports'].map((item, index) => (
-          <Text key={item} style={[styles.segment, index === 0 && styles.segmentActive]}>
+          <Text
+            key={item}
+            style={StyleSheet.flatten([styles.segment, index === 0 && styles.segmentActive])}
+          >
             {item}
           </Text>
         ))}
@@ -424,9 +430,9 @@ export function SuperTile({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label} service`}
-        style={[styles.superTile, featured && styles.superTileFeatured]}
+        style={StyleSheet.flatten([styles.superTile, featured && styles.superTileFeatured])}
       >
-        <View style={[styles.superIcon, featured && styles.superIconFeatured]}>
+        <View style={StyleSheet.flatten([styles.superIcon, featured && styles.superIconFeatured])}>
           <AppIcon color={featured ? colors.surface : colors.primary} name={icon} size={24} />
         </View>
         <Text style={styles.superLabel}>{label}</Text>
@@ -457,7 +463,7 @@ export function InfoCard({
   accent?: boolean;
 }) {
   return (
-    <View style={[styles.infoCard, accent && styles.infoCardAccent]}>
+    <View style={StyleSheet.flatten([styles.infoCard, accent && styles.infoCardAccent])}>
       <Text style={styles.cardMeta}>{meta}</Text>
       <Text style={styles.cardTitle}>{title}</Text>
       <Text style={styles.cardBody}>{body}</Text>

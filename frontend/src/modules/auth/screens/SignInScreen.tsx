@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
+import { authCredentialsFixture } from '@/modules/auth/fixtures';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -44,7 +45,7 @@ export function SignInScreen() {
     setLoading(true);
     setError(null);
     try {
-      await useAuthStore.getState().signIn('demo@manabandhu.local', 'DemoPass123');
+      await useAuthStore.getState().signInDemo();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Demo sign in failed';
       setError(message);
@@ -95,8 +96,8 @@ export function SignInScreen() {
           {error || storeError ? <Text style={styles.errorText}>{error || storeError}</Text> : null}
           <View style={styles.demoCredentials}>
             <Text style={styles.demoTitle}>Test user</Text>
-            <Text style={styles.demoLine}>Email: demo@manabandhu.local</Text>
-            <Text style={styles.demoLine}>Password: DemoPass123</Text>
+            <Text style={styles.demoLine}>Email: {authCredentialsFixture.email}</Text>
+            <Text style={styles.demoLine}>Password: {authCredentialsFixture.password}</Text>
             <AppButton
               label="Use demo account"
               onPress={handleDemoSignIn}

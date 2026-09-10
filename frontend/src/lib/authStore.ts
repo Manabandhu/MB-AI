@@ -19,6 +19,7 @@ interface AuthState {
 
 interface AuthActions {
   signIn: (email: string, password: string) => Promise<void>;
+  signInDemo: () => Promise<void>;
   signUp: (email: string, password: string, name?: string) => Promise<void>;
   signInWithPhone: (phone: string) => Promise<void>;
   signInWithEmailOtp: (email: string) => Promise<void>;
@@ -93,6 +94,17 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       const message = err instanceof Error ? err.message : 'Sign in failed';
       set({ error: message, status: 'unauthenticated', isLoading: false });
     }
+  },
+
+  signInDemo: async () => {
+    set({
+      session: null,
+      user: null,
+      status: 'authenticated',
+      isLoading: false,
+      error: null,
+    });
+    router.replace('/home');
   },
 
   signUp: async (email, password, name) => {

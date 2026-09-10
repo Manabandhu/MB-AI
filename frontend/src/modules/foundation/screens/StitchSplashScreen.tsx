@@ -1,5 +1,5 @@
 import { color as baseColors, space } from '@manabandhu/design-system';
-import { router } from 'expo-router';
+import { router, useRootNavigationState } from 'expo-router';
 import { useEffect } from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ const colors = {
 };
 
 export function StitchSplashScreen() {
+  const rootNavigationState = useRootNavigationState();
   const status = useAuthStore((s) => s.status);
   const isLoading = useAuthStore((s) => s.isLoading);
 
@@ -27,20 +28,31 @@ export function StitchSplashScreen() {
   }, []);
 
   useEffect(() => {
-    if (isLoading) return;
-    if (status === 'authenticated') {
-      router.replace('/home');
-    } else {
+    if (!rootNavigationState?.key || isLoading) return;
+
+    const redirectTimer = setTimeout(() => {
+      if (status === 'authenticated') {
+        router.replace('/home');
+      } else {
+        router.replace('/welcome');
+      }
+    }, 0);
+
+    return () => clearTimeout(redirectTimer);
+  }, [isLoading, rootNavigationState?.key, status]);
+
+  const navigateToWelcome = () => {
+    if (rootNavigationState?.key) {
       router.replace('/welcome');
     }
-  }, [status, isLoading]);
+  };
 
   return (
     <SafeAreaView style={styles.splash}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Skip splash and go to welcome"
-        onPress={() => router.replace('/welcome')}
+        onPress={navigateToWelcome}
         style={styles.splashInner}
       >
         <Image accessibilityIgnoresInvertColors source={welcomeLogo} style={styles.splashLogo} />

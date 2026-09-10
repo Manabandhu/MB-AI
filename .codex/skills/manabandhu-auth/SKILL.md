@@ -37,7 +37,7 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 ## API Surface
 
 - Supabase Auth client in `frontend/src/lib/supabase.ts`
-- Demo submission uses `demo@manabandhu.local` / `DemoPass123` and returns to `/home` until Supabase auth actions are wired
+- Demo submission uses `demo@manabandhu.local` / `DemoPass123` as a local demo session and returns to `/home`; it does not call Supabase until a real demo user is provisioned
 - No custom REST endpoints; auth state is derived from verified JWT claims
 
 ## Demo Fixtures
@@ -82,7 +82,7 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 
 ## Current Implementation Status
 
-- **Partial**: All auth screens are implemented with demo credentials. Supabase auth actions are not yet fully wired; demo login returns to `/home`. Phone/email login, OTP, and password reset screens are UI-complete.
+- **Partial**: All auth screens are implemented with demo credentials. The demo button uses a local session because the fixture user is not provisioned in Supabase; regular password auth, phone/email login, OTP, and password reset use Supabase.
 - Recent fixes: auth screen imports now group the Supabase client import with other client imports, `authStore.ts` uses `_get` to avoid an unused getter lint, and `SignInScreen.tsx` removed an unused `AuthError` import.
 
 - Recent auth guard changes: added `useRequireAuth('/sign-in')` to protected routes and `useRedirectIfAuthenticated('/home')` to auth routes (`/email-login`, `/phone-login`, `/otp-verification`, `/forgot-password`, `/reset-password`).

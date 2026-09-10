@@ -59,6 +59,8 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 - **Offline**: banner indicating offline mode, cached data shown
 - **Permission**: location and notification permission education during onboarding
 
+Splash navigation waits for the Expo Router root navigation state to expose its key, then defers `router.replace` by one event-loop tick so the root navigator has completed its first mount.
+
 ## Navigation Actions and Cross-Module Links
 
 - Tab navigation: Home, Explore, Search, Saved, Profile
