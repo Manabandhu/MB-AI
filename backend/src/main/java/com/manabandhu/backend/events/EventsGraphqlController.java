@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -23,7 +24,7 @@ public class EventsGraphqlController {
 
     @QueryMapping
     List<Event> events() {
-        return service.findAll();
+        return service.findAll(Pageable.unpaged()).getContent();
     }
 
     @QueryMapping

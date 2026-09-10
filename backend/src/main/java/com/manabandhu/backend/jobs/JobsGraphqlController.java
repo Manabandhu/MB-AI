@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -31,7 +32,7 @@ public class JobsGraphqlController {
 
     @QueryMapping
     List<JobPosting> jobPostings() {
-        return postingService.findAll();
+        return postingService.findAll(Pageable.unpaged()).getContent();
     }
 
     @QueryMapping

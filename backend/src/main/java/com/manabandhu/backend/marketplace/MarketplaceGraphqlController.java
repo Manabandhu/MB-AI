@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -34,7 +35,7 @@ public class MarketplaceGraphqlController {
 
     @QueryMapping
     List<Listing> listings() {
-        return listingService.findAll();
+        return listingService.findAll(Pageable.unpaged()).getContent();
     }
 
     @QueryMapping

@@ -16,10 +16,11 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 9. Baseline existing Supabase schemas at Flyway version `0` so repository migrations still run from `V1`. New V2 (`room_listings`, `room_images`, `room_availabilities`, `room_bookings`, `room_favorites`) and V3 (`ride_offers`, `ride_requests`, `ride_participants`, `ride_bookings`, `ride_ratings`) migrations follow this baseline.
 10. Use `pnpm dev:backend` for local backend startup; it loads `backend/.env` when present while preserving shell environment overrides, then runs the Maven wrapper.
 11. Run Maven tests on Java 25.
-12. Module boundaries: immigration, safety, utilities, notifications, chat, ai, community, rooms, rides, jobs, events, expenses, marketplace, referrals, foundation, admin, auth, analytics, observability.
-13. GraphQL controllers must expose all queries and mutations defined in the canonical schema; recent additions include `rideRatings` and `eventAttendance` queries mapped through `RidesGraphqlController` and `EventsGraphqlController`.
-14. Update this skill when backend structure, dependencies, security, contracts, or commands change.
-15. Admin reads for rides are exposed through `AdminRidesController` under the `admin` package and reuse the existing `AdminAccessPolicy`.
+12. Keep the backend parent on Spring Boot 4.1.0 with Java 25; use the managed `jackson-databind`, `spring-boot-starter-webmvc`, and `*-test` dependencies with that parent.
+13. Module boundaries: immigration, safety, utilities, notifications, chat, ai, community, rooms, rides, jobs, events, expenses, marketplace, referrals, foundation, admin, auth, analytics, observability.
+14. GraphQL controllers must expose all queries and mutations defined in the canonical schema; recent additions include `rideRatings` and `eventAttendance` queries mapped through `RidesGraphqlController` and `EventsGraphqlController`.
+15. Update this skill when backend structure, dependencies, security, contracts, or commands change.
+16. Admin reads for rides are exposed through `AdminRidesController` under the `admin` package and reuse the existing `AdminAccessPolicy`.
 
 - Recent backend fixes: fixed duplicate Flyway V16 migration (renamed to V18/V19); added V17 migration adding `community_id` column to `community_posts`; created missing `NotificationSettings.java` record; added `reported` field to `RideOffer` entity and constructor; added inline `home()` catalog endpoint to `UtilitiesController`; expanded `SecurityConfig` public GET endpoints to include rooms listings/offers, rides offers, communities, posts, utilities, referrals, and safety center; added `communityId` to `CreatePostInput` and updated `CommunityPostService.create()`; added `@Valid` to AssistantController and ChatController endpoints; added `@NotNull` to CreateEventInput lat/lng; added ownership/participation checks to rides sub-resources, chat endpoints, and events attendance.
 
