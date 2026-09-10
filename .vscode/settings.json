@@ -1,3 +1,4 @@
 {
-  "git.useEditorAsCommitInput": true
+  "git.useEditorAsCommitInput": true,
+  "java.compile.nullAnalysis.mode": "automatic"
 }
