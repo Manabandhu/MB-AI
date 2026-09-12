@@ -1,32 +1,19 @@
-import { color as baseColors, space } from '@manabandhu/design-system';
+import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+
 import { useAuthStore } from '@/lib/authStore';
-import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
-import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
 
-const colors = {
-  ...baseColors,
-  appPrimary: '#2c0096',
-  primaryContainer: '#5b3fd6',
-  surfaceContainer: '#eaedff',
-  surfaceContainerLow: '#f2f3ff',
-  surfaceContainerHigh: '#e2e7ff',
-  appShellSurface: '#efedf4',
-  warm: '#ff7e33',
-};
-
-const OTP_COUNTDOWN_SECONDS = 60;
+const OTP_COUNTDOWN = 60;
 
 export function OtpVerificationScreen() {
   const [code, setCode] = useState('');
-  const [countdown, setCountdown] = useState(OTP_COUNTDOWN_SECONDS);
+  const [countdown, setCountdown] = useState(OTP_COUNTDOWN);
   const [resendAvailable, setResendAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const otpIdentifier = useAuthStore((s) => s.otpIdentifier);
   const otpType = useAuthStore((s) => s.otpType);
@@ -41,136 +28,212 @@ export function OtpVerificationScreen() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  useEffect(() => {
-    if (storeError) {
-      setError(storeError);
-    }
-  }, [storeError]);
-
   async function handleVerify() {
+    const trimmed = code.trim();
+    if (trimmed.length < 6) {
+      setLocalError('Please enter all 6 digits of the code.');
+      return;
+    }
     if (!otpIdentifier || !otpType) {
-      setError('No verification session found. Please request a code again.');
+      setLocalError('Verification session expired. Please request a new code.');
       return;
     }
     setLoading(true);
-    setError(null);
+    setLocalError(null);
     try {
-      await useAuthStore.getState().verifyOtp(otpIdentifier, code, otpType);
+      await useAuthStore.getState().verifyOtp(otpIdentifier, trimmed, otpType);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Verification failed';
-      setError(message);
+      const msg = err instanceof Error ? err.message : 'Invalid or expired code';
+      setLocalError(msg);
     } finally {
       setLoading(false);
     }
   }
 
   function handleResend() {
-    if (!otpIdentifier || !otpType) return;
+    if (!otpIdentifier || !otpType || !resendAvailable) return;
     setResendAvailable(false);
-    setCountdown(OTP_COUNTDOWN_SECONDS);
+    setCountdown(OTP_COUNTDOWN);
+    setLocalError(null);
     useAuthStore
       .getState()
       [otpType === 'email' ? 'signInWithEmailOtp' : 'signInWithPhone'](otpIdentifier)
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Resend failed');
+        setLocalError(err instanceof Error ? err.message : 'Failed to resend code');
       });
   }
 
+  const error = localError || storeError;
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.authHeader}>
-          <View style={styles.brandRow}>
-            <Text style={styles.headerTitle}>ManaBandhu</Text>
-          </View>
-          <Avatar className="h-8 w-8 bg-primary">
-            <AvatarFallbackText className="text-primary-foreground">MB</AvatarFallbackText>
-          </Avatar>
+    <AuthPageLayout
+      title="Verify 6-Digit Code"
+      subtitle={`Enter the one-time code sent to ${otpIdentifier || 'your contact'}`}
+      badgeText="🛡️ Multi-Factor Verification"
+      backHref="/sign-in"
+    >
+      {/* Code Input */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Verification Code</Text>
+        <TextInput
+          placeholder="• • • • • •"
+          placeholderTextColor={color.muted}
+          keyboardType="number-pad"
+          maxLength={6}
+          value={code}
+          onChangeText={(v) => {
+            setCode(v.replace(/\D/g, ''));
+            if (error) setLocalError(null);
+          }}
+          style={styles.otpInput}
+          accessibilityLabel="6-Digit OTP Input"
+        />
+        <Text style={styles.helperText}>
+          Didn’t receive it? Check spam folder or ensure carrier isn’t blocking shortcodes.
+        </Text>
+      </View>
+
+      {/* Inline Error Banner */}
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
-        <View style={styles.authHero}>
-          <Text style={styles.authTitle}>OTP Verification</Text>
-          <Text style={styles.authBody}>
-            Enter the verification code we sent to{' '}
-            <Text style={styles.identifierText}>{otpIdentifier || 'your contact'}</Text>.
-          </Text>
-        </View>
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Verification code</Text>
-            <Input className="min-h-14 rounded-xl bg-secondary/70">
-              <InputField
-                placeholder="Enter 6-digit code"
-                keyboardType="number-pad"
-                maxLength={6}
-                value={code}
-                onChangeText={setCode}
-              />
-            </Input>
-          </View>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <AppButton label="Verify" onPress={handleVerify} loading={loading} />
-          <View style={styles.resendRow}>
-            <Text style={styles.resendLabel}>Didn’t get the code? </Text>
-            {resendAvailable ? (
-              <Pressable onPress={handleResend} accessibilityRole="button">
-                <Text style={styles.resendAction}>Resend</Text>
-              </Pressable>
-            ) : (
-              <Text style={styles.resendCountdown}>Resend in {countdown}s</Text>
-            )}
-          </View>
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => {
-              useAuthStore.getState().clearOtpContext();
-              router.push('/sign-in');
-            }}
-            style={styles.backLink}
-          >
-            <Text style={styles.backLinkText}>Back to Sign In</Text>
+      ) : null}
+
+      {/* Verify Button */}
+      <Pressable
+        onPress={handleVerify}
+        disabled={loading}
+        style={[styles.primaryButton, loading && styles.buttonDisabled]}
+        accessibilityRole="button"
+      >
+        <Text style={styles.primaryButtonText}>
+          {loading ? 'Verifying Code…' : 'Verify & Continue →'}
+        </Text>
+      </Pressable>
+
+      {/* Resend Row */}
+      <View style={styles.resendRow}>
+        <Text style={styles.resendPrompt}>Didn’t receive the code? </Text>
+        {resendAvailable ? (
+          <Pressable onPress={handleResend} accessibilityRole="button">
+            <Text style={styles.resendActiveText}>Resend Code</Text>
           </Pressable>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        ) : (
+          <Text style={styles.resendCountdownText}>Resend in {countdown}s</Text>
+        )}
+      </View>
+
+      {/* Return / Change Identifier */}
+      <Pressable
+        onPress={() => {
+          useAuthStore.getState().clearOtpContext();
+          router.push('/sign-in');
+        }}
+        style={styles.backLink}
+        accessibilityRole="link"
+      >
+        <Text style={styles.backLinkText}>Use a different sign-in method</Text>
+      </Pressable>
+    </AuthPageLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: colors.background, flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center', padding: space.x4 },
-  authHeader: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(250,248,255,0.92)',
-    flexDirection: 'row',
-    height: 64,
-    justifyContent: 'space-between',
-    marginBottom: space.x6,
-    paddingHorizontal: space.x4,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+  inputGroup: {
+    gap: space.x2,
   },
-  brandRow: { alignItems: 'center', flexDirection: 'row', gap: space.x2 },
-  headerTitle: { color: colors.ink, fontSize: 20, fontWeight: '700' },
-  authHero: { alignItems: 'center', gap: space.x2, marginBottom: space.x6, marginTop: space.x16 },
-  authTitle: {
-    color: colors.ink,
-    fontSize: 36,
-    fontWeight: '800',
-    lineHeight: 44,
+  inputLabel: {
+    color: color.ink,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  otpInput: {
+    backgroundColor: '#ffffff',
+    borderColor: 'rgba(67, 30, 190, 0.25)',
+    borderRadius: 14,
+    borderWidth: 2,
+    color: color.ink,
+    fontSize: 26,
+    fontWeight: '900',
+    height: 60,
+    letterSpacing: 10,
     textAlign: 'center',
   },
-  authBody: { color: colors.muted, fontSize: 18, lineHeight: 28, textAlign: 'center' },
-  identifierText: { color: colors.ink, fontWeight: '700' },
-  form: { gap: space.x4 },
-  inputGroup: { gap: space.x2 },
-  inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
-  resendRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-  resendLabel: { color: colors.muted, fontSize: 14, fontWeight: '700' },
-  resendAction: { color: colors.primary, fontSize: 14, fontWeight: '800' },
-  resendCountdown: { color: colors.muted, fontSize: 14, fontWeight: '700' },
-  backLink: { alignSelf: 'center', marginTop: space.x3 },
-  backLinkText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
-  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
+  helperText: {
+    color: color.muted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  errorBanner: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(186, 26, 26, 0.08)',
+    borderColor: 'rgba(186, 26, 26, 0.25)',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: space.x2,
+    padding: space.x3,
+  },
+  errorIcon: {
+    fontSize: 14,
+  },
+  errorText: {
+    color: '#ba1a1a',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  primaryButton: {
+    alignItems: 'center',
+    backgroundColor: color.primary,
+    borderRadius: 999,
+    justifyContent: 'center',
+    minHeight: 50,
+    shadowColor: '#431ebe',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  resendRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: space.x1,
+  },
+  resendPrompt: {
+    color: color.muted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  resendActiveText: {
+    color: color.primary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  resendCountdownText: {
+    color: color.muted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  backLink: {
+    alignSelf: 'center',
+    marginTop: space.x1,
+    paddingVertical: space.x1,
+  },
+  backLinkText: {
+    color: color.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });

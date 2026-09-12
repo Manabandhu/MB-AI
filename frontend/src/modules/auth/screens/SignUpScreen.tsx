@@ -3,11 +3,11 @@ import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
+
 import { useAuthStore } from '@/lib/authStore';
-import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
+import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
@@ -69,323 +69,271 @@ export function SignUpScreen() {
     }
   }
 
+  async function handleSocial(provider: 'apple' | 'google') {
+    setLoading(true);
+    setError(null);
+    try {
+      await useAuthStore.getState().signInWithOAuth(provider);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `${provider} sign-in failed`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content} bounces={false}>
-        <View style={styles.pageContainer}>
-          {/* Top Bar */}
-          <View style={styles.topBar}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-              onPress={() => router.back()}
-              style={styles.backButton}
-            >
-              <Text style={styles.backIcon}>←</Text>
-            </Pressable>
+    <AuthPageLayout
+      title="Join ManaBandhu 🤝"
+      subtitle="Create your verified account to connect with Telugu rooms, carpools & jobs."
+      badgeText="✨ 50,000+ Verified Members"
+      backHref="/sign-in"
+    >
+      {needsConfirmation ? (
+        <View style={styles.confirmationBox}>
+          <Text style={styles.confirmationTitle}>Check your inbox</Text>
+          <Text style={styles.confirmationBody}>
+            We've sent a verification email. Click the confirmation link to activate your account!
+          </Text>
+        </View>
+      ) : null}
 
-            <View style={styles.brandBadge}>
-              <Image source={welcomeLogo} style={styles.brandEmblem} />
-              <Text style={styles.brandBadgeText}>ManaBandhu</Text>
-              <View style={styles.verifiedDot}>
-                <Text style={styles.verifiedCheck}>✓</Text>
+      {/* Form Fields */}
+      <View style={styles.form}>
+        {/* Full Name */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>FULL NAME</Text>
+          <Controller
+            control={control}
+            name="name"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.inputWrapper}>
+                <Text style={styles.leadingIcon}>👤</Text>
+                <Input className="flex-1 border-0 bg-transparent">
+                  <InputField
+                    placeholder="e.g. Rajesh Reddy"
+                    accessibilityLabel="Full name"
+                    value={value}
+                    onChangeText={(val) => {
+                      onChange(val);
+                      if (displayError) setError(null);
+                    }}
+                    style={styles.field}
+                  />
+                </Input>
               </View>
-            </View>
+            )}
+          />
+          {errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
+        </View>
 
-            <View style={styles.topSpacer} />
-          </View>
+        {/* Email Address */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.inputWrapper}>
+                <Text style={styles.leadingIcon}>✉</Text>
+                <Input className="flex-1 border-0 bg-transparent">
+                  <InputField
+                    placeholder="name@example.com"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    accessibilityLabel="Email address"
+                    value={value}
+                    onChangeText={(val) => {
+                      onChange(val);
+                      if (displayError) setError(null);
+                    }}
+                    style={styles.field}
+                  />
+                </Input>
+              </View>
+            )}
+          />
+          {errors.email ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
+        </View>
 
-          {/* Hero Section */}
-          <View style={styles.authHero}>
-            <View style={styles.memberTag}>
-              <Text style={styles.memberTagText}>✨ Join 25,000+ Verified Members</Text>
-            </View>
-            <Text style={styles.authTitle}>Join ManaBandhu 🎉</Text>
-            <Text style={styles.authBody}>
-              Create your account to connect with trusted community housing, carpools, and job
-              referrals.
-            </Text>
-          </View>
+        {/* Password */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>CREATE PASSWORD</Text>
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.inputWrapper}>
+                <Text style={styles.leadingIcon}>🔒</Text>
+                <Input className="flex-1 border-0 bg-transparent">
+                  <InputField
+                    placeholder="Minimum 8 characters"
+                    secureTextEntry={!showPassword}
+                    accessibilityLabel="Password"
+                    value={value}
+                    onChangeText={(val) => {
+                      onChange(val);
+                      if (displayError) setError(null);
+                    }}
+                    style={styles.field}
+                  />
+                </Input>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeToggle}
+                >
+                  <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                </Pressable>
+              </View>
+            )}
+          />
 
-          {needsConfirmation ? (
-            <View style={styles.confirmationBox}>
-              <Text style={styles.confirmationTitle}>Check your email</Text>
-              <Text style={styles.confirmationBody}>
-                A confirmation link has been sent to your email. Tap the link to verify your
-                account, then sign in.
+          {/* Dynamic Password Strength Meter */}
+          {passwordLength > 0 ? (
+            <View style={styles.strengthBlock}>
+              <View style={styles.strengthMeterRow}>
+                {[1, 2, 3, 4].map((bar) => (
+                  <View
+                    key={bar}
+                    style={[
+                      styles.strengthBar,
+                      bar <= strengthScore && {
+                        backgroundColor:
+                          strengthScore <= 1
+                            ? '#ba1a1a'
+                            : strengthScore === 2
+                              ? '#ff7e33'
+                              : strengthScore === 3
+                                ? color.primary
+                                : color.teal,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+              <Text style={styles.strengthText}>
+                {strengthScore <= 1
+                  ? 'Weak — Use 8+ characters with uppercase and numbers'
+                  : strengthScore === 2
+                    ? 'Fair — Add numbers or symbols'
+                    : strengthScore === 3
+                      ? 'Good password'
+                      : 'Strong password 💪'}
               </Text>
             </View>
           ) : null}
 
-          {/* Form */}
-          <View style={styles.form}>
-            {/* Full Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>FULL NAME</Text>
-              <Controller
-                control={control}
-                name="name"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <Text style={styles.leadingIcon}>👤</Text>
-                    <Input className="flex-1 border-0 bg-transparent">
-                      <InputField
-                        placeholder="e.g. Rajesh Koyi"
-                        autoComplete="name"
-                        accessibilityLabel="Full name"
-                        value={value}
-                        onChangeText={onChange}
-                        style={styles.field}
-                      />
-                    </Input>
-                  </View>
-                )}
-              />
-              {errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
-            </View>
-
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
-              <Controller
-                control={control}
-                name="email"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <Text style={styles.leadingIcon}>✉</Text>
-                    <Input className="flex-1 border-0 bg-transparent">
-                      <InputField
-                        placeholder="e.g. rajesh@example.com"
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                        accessibilityLabel="Email address"
-                        value={value}
-                        onChangeText={onChange}
-                        style={styles.field}
-                      />
-                    </Input>
-                  </View>
-                )}
-              />
-              {errors.email ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
-            </View>
-
-            {/* Password */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>CREATE PASSWORD</Text>
-              <Controller
-                control={control}
-                name="password"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <Text style={styles.leadingIcon}>🔒</Text>
-                    <Input className="flex-1 border-0 bg-transparent">
-                      <InputField
-                        placeholder="At least 8 characters"
-                        secureTextEntry={!showPassword}
-                        accessibilityLabel="Password"
-                        value={value}
-                        onChangeText={onChange}
-                        style={styles.field}
-                      />
-                    </Input>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                      onPress={() => setShowPassword(!showPassword)}
-                      style={styles.eyeToggle}
-                    >
-                      <Text style={styles.eyeIcon}>{showPassword ? '👁' : '👁‍🗨'}</Text>
-                    </Pressable>
-                  </View>
-                )}
-              />
-              {/* Password Strength Indicator */}
-              {passwordLength > 0 ? (
-                <View style={styles.strengthContainer}>
-                  <View style={styles.strengthBars}>
-                    {[1, 2, 3, 4].map((level) => (
-                      <View
-                        key={level}
-                        style={[
-                          styles.strengthBar,
-                          level <= strengthScore &&
-                            (strengthScore <= 2 ? styles.barWeak : styles.barStrong),
-                        ]}
-                      />
-                    ))}
-                  </View>
-                  <Text style={styles.strengthText}>
-                    {strengthScore <= 2 ? 'Weak' : strengthScore === 3 ? 'Good' : 'Strong'}
-                  </Text>
-                </View>
-              ) : null}
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password.message}</Text>
-              ) : null}
-            </View>
-
-            {/* Confirm Password */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>CONFIRM PASSWORD</Text>
-              <Controller
-                control={control}
-                name="confirmPassword"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <Text style={styles.leadingIcon}>🛡️</Text>
-                    <Input className="flex-1 border-0 bg-transparent">
-                      <InputField
-                        placeholder="Re-enter your password"
-                        secureTextEntry={!showPassword}
-                        accessibilityLabel="Confirm password"
-                        value={value}
-                        onChangeText={onChange}
-                        style={styles.field}
-                      />
-                    </Input>
-                  </View>
-                )}
-              />
-              {errors.confirmPassword ? (
-                <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>
-              ) : null}
-            </View>
-
-            {/* Trust & Safety Banner */}
-            <View style={styles.trustBanner}>
-              <Text style={styles.trustBannerIcon}>🛡️</Text>
-              <View style={styles.trustBannerContent}>
-                <Text style={styles.trustBannerTitle}>Verified Community</Text>
-                <Text style={styles.trustBannerDesc}>
-                  Safe spaces, verified roommates & zero brokerage guaranteed.
-                </Text>
-              </View>
-            </View>
-
-            {displayError ? <Text style={styles.errorText}>{displayError}</Text> : null}
-
-            <AppButton
-              label="Create Account →"
-              onPress={handleSubmit(handleSignUp)}
-              loading={loading}
-            />
-
-            {/* Alternative Auth */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.quickAuthRow}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/phone-login')}
-                style={styles.quickAuthBtn}
-              >
-                <Text style={styles.quickAuthIcon}>📱</Text>
-                <Text style={styles.quickAuthText}>Phone OTP</Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/email-login')}
-                style={styles.quickAuthBtn}
-              >
-                <Text style={styles.quickAuthIcon}>✉</Text>
-                <Text style={styles.quickAuthText}>Magic Link</Text>
-              </Pressable>
-            </View>
-
-            {/* Switch to Sign In */}
-            <View style={styles.loginPromptRow}>
-              <Text style={styles.loginPromptText}>Already have an account? </Text>
-              <Pressable accessibilityRole="link" onPress={() => router.push('/sign-in')}>
-                <Text style={styles.loginLink}>Sign In ›</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Privacy Note */}
-          <View style={styles.disclaimerContainer}>
-            <Text style={styles.disclaimerText}>
-              By creating an account, you agree to ManaBandhu Terms of Service & Privacy Policy.
-            </Text>
-          </View>
+          {errors.password ? <Text style={styles.errorText}>{errors.password.message}</Text> : null}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+
+        {/* Confirm Password */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>CONFIRM PASSWORD</Text>
+          <Controller
+            control={control}
+            name="confirmPassword"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.inputWrapper}>
+                <Text style={styles.leadingIcon}>🔒</Text>
+                <Input className="flex-1 border-0 bg-transparent">
+                  <InputField
+                    placeholder="Re-enter password"
+                    secureTextEntry={!showPassword}
+                    accessibilityLabel="Confirm Password"
+                    value={value}
+                    onChangeText={(val) => {
+                      onChange(val);
+                      if (displayError) setError(null);
+                    }}
+                    style={styles.field}
+                  />
+                </Input>
+              </View>
+            )}
+          />
+          {errors.confirmPassword ? (
+            <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>
+          ) : null}
+        </View>
+
+        {/* Safety Callout */}
+        <View style={styles.safetyBox}>
+          <Text style={styles.safetyIcon}>🛡️</Text>
+          <Text style={styles.safetyText}>
+            ManaBandhu is a spam-free, verified network. Your contact details are never shared
+            without your explicit permission.
+          </Text>
+        </View>
+
+        {displayError ? <Text style={styles.errorText}>{displayError}</Text> : null}
+
+        <AppButton
+          label="Create Account →"
+          onPress={handleSubmit(handleSignUp)}
+          loading={loading}
+        />
+
+        {/* Alternative Logins */}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR SIGN UP WITH</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Apple & Google Social Buttons */}
+        <View style={styles.socialRow}>
+          <Pressable
+            onPress={() => handleSocial('apple')}
+            style={styles.socialBtnApple}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Apple"
+          >
+            <Text style={styles.socialAppleText}> Apple</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleSocial('google')}
+            style={styles.socialBtnGoogle}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+          >
+            <Text style={styles.socialGoogleText}>🌐 Google</Text>
+          </Pressable>
+        </View>
+
+        {/* Quick Auth Options */}
+        <View style={styles.quickAuthRow}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/phone-login')}
+            style={styles.quickAuthBtn}
+          >
+            <Text style={styles.quickAuthIcon}>📱</Text>
+            <Text style={styles.quickAuthText}>Phone Sign Up</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/magic-link')}
+            style={styles.quickAuthBtn}
+          >
+            <Text style={styles.quickAuthIcon}>🪄</Text>
+            <Text style={styles.quickAuthText}>Magic Link</Text>
+          </Pressable>
+        </View>
+
+        {/* Already have an account? Sign In */}
+        <View style={styles.signInPromptRow}>
+          <Text style={styles.signInPromptText}>Already have an account? </Text>
+          <Pressable accessibilityRole="link" onPress={() => router.push('/sign-in')}>
+            <Text style={styles.signInLink}>Sign In ›</Text>
+          </Pressable>
+        </View>
+      </View>
+    </AuthPageLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: color.background, flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center', padding: space.x4 },
-  pageContainer: {
-    maxWidth: 460,
-    width: '100%',
-    alignSelf: 'center',
-    gap: space.x4,
-    paddingVertical: space.x2,
-  },
-  topBar: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x1,
-  },
-  backButton: {
-    alignItems: 'center',
-    backgroundColor: color.surface,
-    borderColor: color.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
-  },
-  backIcon: { color: color.ink, fontSize: 18, fontWeight: '700' },
-  topSpacer: { width: 38 },
-  brandBadge: {
-    alignItems: 'center',
-    backgroundColor: color.surface,
-    borderColor: color.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x2,
-    paddingHorizontal: space.x3,
-    paddingVertical: 4,
-  },
-  brandEmblem: { borderRadius: 8, height: 22, width: 22 },
-  brandBadgeText: { color: color.primary, fontSize: 14, fontWeight: '800' },
-  verifiedDot: {
-    alignItems: 'center',
-    backgroundColor: color.teal,
-    borderRadius: 6,
-    height: 14,
-    justifyContent: 'center',
-    width: 14,
-  },
-  verifiedCheck: { color: '#ffffff', fontSize: 9, fontWeight: '800' },
-  authHero: { alignItems: 'center', gap: space.x2, marginTop: space.x2 },
-  memberTag: {
-    backgroundColor: 'rgba(0, 105, 107, 0.08)',
-    borderRadius: 999,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x1,
-  },
-  memberTagText: { color: color.teal, fontSize: 12, fontWeight: '700' },
-  authTitle: {
-    color: color.ink,
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    lineHeight: 38,
-    textAlign: 'center',
-  },
-  authBody: { color: color.muted, fontSize: 14, lineHeight: 21, textAlign: 'center' },
   confirmationBox: {
     backgroundColor: color.primarySoft,
     borderRadius: 16,
@@ -394,7 +342,7 @@ const styles = StyleSheet.create({
   },
   confirmationTitle: { color: color.ink, fontSize: 15, fontWeight: '800' },
   confirmationBody: { color: color.muted, fontSize: 13, lineHeight: 19 },
-  form: { gap: space.x3 },
+  form: { gap: space.x4 },
   inputGroup: { gap: space.x1 },
   inputLabel: { color: color.ink, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   inputWrapper: {
@@ -404,44 +352,33 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
-    minHeight: 52,
+    minHeight: 54,
     paddingHorizontal: space.x3,
   },
   leadingIcon: { fontSize: 16, marginRight: space.x2 },
   field: { color: color.ink, fontSize: 15, fontWeight: '500' },
   eyeToggle: { padding: space.x2 },
   eyeIcon: { fontSize: 16 },
-  strengthContainer: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x2,
-    marginTop: 4,
-    paddingHorizontal: space.x1,
-  },
-  strengthBars: { flexDirection: 'row', flex: 1, gap: 4 },
+  strengthBlock: { gap: 4, marginTop: 4 },
+  strengthMeterRow: { flexDirection: 'row', gap: 4, height: 4 },
   strengthBar: {
-    backgroundColor: color.border,
+    backgroundColor: 'rgba(0,0,0,0.08)',
     borderRadius: 2,
     flex: 1,
-    height: 4,
   },
-  barWeak: { backgroundColor: color.warning },
-  barStrong: { backgroundColor: color.teal },
-  strengthText: { color: color.muted, fontSize: 11, fontWeight: '700' },
-  trustBanner: {
+  strengthText: { color: color.muted, fontSize: 11, fontWeight: '600' },
+  safetyBox: {
     alignItems: 'center',
     backgroundColor: 'rgba(0, 105, 107, 0.06)',
-    borderColor: 'rgba(0, 105, 107, 0.18)',
-    borderRadius: 16,
+    borderColor: 'rgba(0, 105, 107, 0.15)',
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: space.x3,
+    gap: space.x2,
     padding: space.x3,
   },
-  trustBannerIcon: { fontSize: 24 },
-  trustBannerContent: { flex: 1, gap: 2 },
-  trustBannerTitle: { color: color.teal, fontSize: 13, fontWeight: '800' },
-  trustBannerDesc: { color: color.ink, fontSize: 12, lineHeight: 16 },
+  safetyIcon: { fontSize: 18 },
+  safetyText: { color: color.ink, flex: 1, fontSize: 12, lineHeight: 17 },
   dividerRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -450,6 +387,38 @@ const styles = StyleSheet.create({
   },
   dividerLine: { backgroundColor: color.border, flex: 1, height: 1 },
   dividerText: { color: color.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  socialRow: {
+    flexDirection: 'row',
+    gap: space.x3,
+  },
+  socialBtnApple: {
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    borderRadius: 14,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 46,
+  },
+  socialAppleText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  socialBtnGoogle: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: color.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 46,
+  },
+  socialGoogleText: {
+    color: color.ink,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   quickAuthRow: { flexDirection: 'row', gap: space.x3 },
   quickAuthBtn: {
     alignItems: 'center',
@@ -465,20 +434,13 @@ const styles = StyleSheet.create({
   },
   quickAuthIcon: { fontSize: 16 },
   quickAuthText: { color: color.ink, fontSize: 13, fontWeight: '700' },
-  loginPromptRow: {
+  signInPromptRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: space.x1,
   },
-  loginPromptText: { color: color.muted, fontSize: 14, fontWeight: '600' },
-  loginLink: { color: color.primary, fontSize: 14, fontWeight: '800' },
-  disclaimerContainer: { paddingHorizontal: space.x2, marginTop: space.x1 },
-  disclaimerText: {
-    color: color.muted,
-    fontSize: 11,
-    lineHeight: 16,
-    textAlign: 'center',
-  },
+  signInPromptText: { color: color.muted, fontSize: 14, fontWeight: '600' },
+  signInLink: { color: color.primary, fontSize: 14, fontWeight: '800' },
   errorText: { color: color.error, fontSize: 13, fontWeight: '700' },
 });

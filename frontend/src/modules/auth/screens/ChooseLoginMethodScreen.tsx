@@ -1,87 +1,260 @@
-import { color as baseColors, space } from '@manabandhu/design-system';
+import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
-
-const colors = {
-  ...baseColors,
-  appPrimary: '#2c0096',
-  primaryContainer: '#5b3fd6',
-  surfaceContainer: '#eaedff',
-  surfaceContainerLow: '#f2f3ff',
-  surfaceContainerHigh: '#e2e7ff',
-  appShellSurface: '#efedf4',
-  warm: '#ff7e33',
-};
+import { useAuthStore } from '@/lib/authStore';
+import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
 
 export function ChooseLoginMethodScreen() {
+  const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSocial(provider: 'apple' | 'google') {
+    setLoadingProvider(provider);
+    setError(null);
+    try {
+      await useAuthStore.getState().signInWithOAuth(provider);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : `${provider} login failed`;
+      setError(msg);
+    } finally {
+      setLoadingProvider(null);
+    }
+  }
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.authHeader}>
-          <View style={styles.brandRow}>
-            <Text style={styles.headerTitle}>ManaBandhu</Text>
+    <AuthPageLayout
+      title="Choose Sign-In Method"
+      subtitle="Select your preferred way to authenticate with ManaBandhu"
+      badgeText="🔐 Flexible & Secure Sign-In"
+      backHref="/sign-in"
+    >
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      <View style={styles.methodsCol}>
+        {/* Method 1: Phone Login */}
+        <Pressable
+          onPress={() => router.push('/phone-login')}
+          style={styles.methodCard}
+          accessibilityRole="button"
+        >
+          <View style={styles.methodIconWrap}>
+            <Text style={styles.methodIcon}>📱</Text>
           </View>
-          <Avatar className="h-8 w-8 bg-primary">
-            <AvatarFallbackText className="text-primary-foreground">MB</AvatarFallbackText>
-          </Avatar>
-        </View>
-        <View style={styles.authHero}>
-          <Text style={styles.authTitle}>Choose Login Method</Text>
-          <Text style={styles.authBody}>Pick how you would like to continue.</Text>
-        </View>
-        <View style={styles.form}>
-          <AppButton icon="message" label="Continue with phone" route="/phone-login" />
-          <AppButton
-            icon="user"
-            label="Continue with email"
-            route="/email-login"
-            variant="secondary"
-          />
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => router.push('/sign-in')}
-            style={styles.backLink}
-          >
-            <Text style={styles.backLinkText}>Back to Sign In</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          <View style={styles.methodTextCol}>
+            <Text style={styles.methodTitle}>Phone Number</Text>
+            <Text style={styles.methodDesc}>Instant SMS verification code to your mobile</Text>
+          </View>
+          <Text style={styles.methodArrow}>→</Text>
+        </Pressable>
+
+        {/* Method 2: Email & Password */}
+        <Pressable
+          onPress={() => router.push('/email-login')}
+          style={styles.methodCard}
+          accessibilityRole="button"
+        >
+          <View style={styles.methodIconWrap}>
+            <Text style={styles.methodIcon}>✉️</Text>
+          </View>
+          <View style={styles.methodTextCol}>
+            <Text style={styles.methodTitle}>Email & Password</Text>
+            <Text style={styles.methodDesc}>Standard credentials with saved password</Text>
+          </View>
+          <Text style={styles.methodArrow}>→</Text>
+        </Pressable>
+
+        {/* Method 3: Magic Link */}
+        <Pressable
+          onPress={() => router.push('/magic-link')}
+          style={styles.methodCard}
+          accessibilityRole="button"
+        >
+          <View style={[styles.methodIconWrap, styles.magicIconWrap]}>
+            <Text style={styles.methodIcon}>🪄</Text>
+          </View>
+          <View style={styles.methodTextCol}>
+            <View style={styles.methodTitleRow}>
+              <Text style={styles.methodTitle}>Magic Sign-In Link</Text>
+              <View style={styles.popularBadge}>
+                <Text style={styles.popularText}>Popular</Text>
+              </View>
+            </View>
+            <Text style={styles.methodDesc}>One-click link sent straight to your inbox</Text>
+          </View>
+          <Text style={styles.methodArrow}>→</Text>
+        </Pressable>
+
+        {/* Method 4: Apple Sign In */}
+        <Pressable
+          onPress={() => handleSocial('apple')}
+          disabled={loadingProvider !== null}
+          style={[styles.socialPill, styles.applePill]}
+          accessibilityRole="button"
+        >
+          <Text style={styles.appleLogoIcon}></Text>
+          <Text style={styles.applePillText}>
+            {loadingProvider === 'apple' ? 'Connecting to Apple…' : 'Continue with Apple'}
+          </Text>
+        </Pressable>
+
+        {/* Method 5: Google Sign In */}
+        <Pressable
+          onPress={() => handleSocial('google')}
+          disabled={loadingProvider !== null}
+          style={[styles.socialPill, styles.googlePill]}
+          accessibilityRole="button"
+        >
+          <Text style={styles.googleIcon}>🌐</Text>
+          <Text style={styles.googlePillText}>
+            {loadingProvider === 'google' ? 'Connecting to Google…' : 'Continue with Google'}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Return to Sign In */}
+      <Pressable
+        onPress={() => router.push('/sign-in')}
+        style={styles.backLink}
+        accessibilityRole="link"
+      >
+        <Text style={styles.backLinkText}>Return to main Sign In</Text>
+      </Pressable>
+    </AuthPageLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: colors.background, flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center', padding: space.x4 },
-  authHeader: {
+  errorBanner: {
     alignItems: 'center',
-    backgroundColor: 'rgba(250,248,255,0.92)',
+    backgroundColor: 'rgba(186, 26, 26, 0.08)',
+    borderColor: 'rgba(186, 26, 26, 0.25)',
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: 'row',
-    height: 64,
-    justifyContent: 'space-between',
-    marginBottom: space.x6,
-    paddingHorizontal: space.x4,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    gap: space.x2,
+    padding: space.x3,
   },
-  brandRow: { alignItems: 'center', flexDirection: 'row', gap: space.x2 },
-  headerTitle: { color: colors.ink, fontSize: 20, fontWeight: '700' },
-  authHero: { alignItems: 'center', gap: space.x2, marginBottom: space.x6, marginTop: space.x16 },
-  authTitle: {
-    color: colors.ink,
-    fontSize: 36,
+  errorIcon: {
+    fontSize: 14,
+  },
+  errorText: {
+    color: '#ba1a1a',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  methodsCol: {
+    gap: space.x3,
+  },
+  methodCard: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: color.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: space.x3,
+    padding: space.x4,
+  },
+  methodIconWrap: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(67, 30, 190, 0.08)',
+    borderRadius: 12,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  magicIconWrap: {
+    backgroundColor: 'rgba(255, 126, 51, 0.12)',
+  },
+  methodIcon: {
+    fontSize: 22,
+  },
+  methodTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  methodTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: space.x2,
+  },
+  methodTitle: {
+    color: color.ink,
+    fontSize: 15,
     fontWeight: '800',
-    lineHeight: 44,
-    textAlign: 'center',
   },
-  authBody: { color: colors.muted, fontSize: 18, lineHeight: 28, textAlign: 'center' },
-  form: { gap: space.x4 },
-  backLink: { alignSelf: 'center', marginTop: space.x3 },
-  backLinkText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  popularBadge: {
+    backgroundColor: 'rgba(255, 126, 51, 0.15)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  popularText: {
+    color: color.warm,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  methodDesc: {
+    color: color.muted,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  methodArrow: {
+    color: color.muted,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  socialPill: {
+    alignItems: 'center',
+    borderRadius: 999,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    minHeight: 50,
+  },
+  applePill: {
+    backgroundColor: '#000000',
+  },
+  appleLogoIcon: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginRight: space.x2,
+  },
+  applePillText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  googlePill: {
+    backgroundColor: '#ffffff',
+    borderColor: color.border,
+    borderWidth: 1,
+  },
+  googleIcon: {
+    fontSize: 16,
+    marginRight: space.x2,
+  },
+  googlePillText: {
+    color: color.ink,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  backLink: {
+    alignSelf: 'center',
+    marginTop: space.x2,
+    paddingVertical: space.x1,
+  },
+  backLinkText: {
+    color: color.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });

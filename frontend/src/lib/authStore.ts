@@ -31,6 +31,7 @@ interface AuthActions {
   signUp: (email: string, password: string, name?: string) => Promise<void>;
   signInWithPhone: (phone: string) => Promise<void>;
   signInWithEmailOtp: (email: string) => Promise<void>;
+  signInWithOAuth: (provider: 'apple' | 'google') => Promise<void>;
   verifyOtp: (emailOrPhone: string, token: string, type: 'email' | 'sms') => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
@@ -178,6 +179,26 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       router.push('/otp-verification');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Magic link sending failed';
+      set({ error: message, isLoading: false });
+    }
+  },
+
+  signInWithOAuth: async (provider) => {
+    set({ isLoading: true, error: null });
+    try {
+      const redirectTo =
+        typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo },
+      });
+      if (error) throw error;
+      if (data?.url && typeof window !== 'undefined') {
+        window.location.href = data.url;
+      }
+      set({ isLoading: false });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `${provider} sign-in failed`;
       set({ error: message, isLoading: false });
     }
   },

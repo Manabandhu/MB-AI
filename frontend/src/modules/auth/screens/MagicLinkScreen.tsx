@@ -8,7 +8,7 @@ import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
 
 const RESEND_COOLDOWN = 60;
 
-export function ForgotPasswordScreen() {
+export function MagicLinkScreen() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
@@ -24,7 +24,7 @@ export function ForgotPasswordScreen() {
     return () => clearInterval(timer);
   }, [sent, countdown]);
 
-  async function handleSendReset() {
+  async function handleSendMagicLink() {
     const trimmed = email.trim();
     if (!trimmed?.includes('@')) {
       setLocalError('Please enter a valid email address.');
@@ -33,11 +33,11 @@ export function ForgotPasswordScreen() {
     setLoading(true);
     setLocalError(null);
     try {
-      await useAuthStore.getState().resetPassword(trimmed);
+      await useAuthStore.getState().signInWithEmailOtp(trimmed);
       setSent(true);
       setCountdown(RESEND_COOLDOWN);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to send password reset email';
+      const msg = err instanceof Error ? err.message : 'Failed to send magic link';
       setLocalError(msg);
     } finally {
       setLoading(false);
@@ -46,31 +46,31 @@ export function ForgotPasswordScreen() {
 
   function handleResend() {
     if (countdown > 0) return;
-    handleSendReset();
+    handleSendMagicLink();
   }
 
   const error = localError || storeError;
 
   return (
     <AuthPageLayout
-      title={sent ? 'Check Your Email' : 'Forgot Password'}
+      title={sent ? 'Check Your Inbox' : 'Instant Magic Link'}
       subtitle={
         sent
-          ? `We’ve dispatched password recovery instructions to ${email}`
-          : 'Enter your registered email and we’ll help you reset your password'
+          ? `We sent a secure, one-click sign-in link to ${email}`
+          : 'Sign in effortlessly without remembering any passwords'
       }
-      badgeText="🔑 Account Access Recovery"
+      badgeText="🪄 Passwordless Sign In"
       backHref="/sign-in"
     >
       {sent ? (
         <View style={styles.successCard}>
-          <View style={styles.keyIconWrap}>
-            <Text style={styles.keyIcon}>🔐</Text>
+          <View style={styles.mailboxIconWrap}>
+            <Text style={styles.mailboxIcon}>📬</Text>
           </View>
-          <Text style={styles.successTitle}>Recovery Email Sent</Text>
+          <Text style={styles.successTitle}>Magic Link Dispatched!</Text>
           <Text style={styles.successBody}>
-            Follow the secure link sent to <Text style={styles.emailHighlight}>{email}</Text> to
-            create a new password for your account.
+            Open the link from <Text style={styles.emailHighlight}>{email}</Text> on this device to
+            instantly access your ManaBandhu account.
           </Text>
 
           <View style={styles.resendBlock}>
@@ -84,25 +84,25 @@ export function ForgotPasswordScreen() {
                 accessibilityRole="button"
               >
                 <Text style={styles.resendButtonText}>
-                  {loading ? 'Resending…' : 'Resend Reset Link'}
+                  {loading ? 'Resending…' : 'Resend Magic Link'}
                 </Text>
               </Pressable>
             )}
           </View>
 
           <Pressable
-            onPress={() => router.push('/sign-in')}
-            style={styles.returnButton}
+            onPress={() => setSent(false)}
+            style={styles.changeEmailButton}
             accessibilityRole="button"
           >
-            <Text style={styles.returnButtonText}>Back to Sign In →</Text>
+            <Text style={styles.changeEmailText}>Try a different email address</Text>
           </Pressable>
         </View>
       ) : (
         <>
           {/* Email Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Registered Email Address</Text>
+            <Text style={styles.inputLabel}>Your Email Address</Text>
             <View style={styles.textInputRow}>
               <Text style={styles.inputIcon}>✉️</Text>
               <TextInput
@@ -120,7 +120,7 @@ export function ForgotPasswordScreen() {
               />
             </View>
             <Text style={styles.helperText}>
-              We’ll check our records and email you a password reset link.
+              We’ll send an authentication link directly to your inbox. No passwords required.
             </Text>
           </View>
 
@@ -132,25 +132,48 @@ export function ForgotPasswordScreen() {
             </View>
           ) : null}
 
-          {/* Send Reset Link CTA */}
+          {/* Send Magic Link Button */}
           <Pressable
-            onPress={handleSendReset}
+            onPress={handleSendMagicLink}
             disabled={loading}
             style={[styles.primaryButton, loading && styles.buttonDisabled]}
             accessibilityRole="button"
           >
             <Text style={styles.primaryButtonText}>
-              {loading ? 'Sending Instructions…' : 'Send Reset Link →'}
+              {loading ? 'Sending Magic Link…' : 'Send Magic Link 🪄'}
             </Text>
           </Pressable>
 
-          {/* Back to Sign In */}
+          {/* Other Auth Links */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or continue with</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.altLinksRow}>
+            <Pressable
+              onPress={() => router.push('/email-login')}
+              style={styles.altLinkPill}
+              accessibilityRole="button"
+            >
+              <Text style={styles.altLinkText}>✉️ Password Login</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/phone-login')}
+              style={styles.altLinkPill}
+              accessibilityRole="button"
+            >
+              <Text style={styles.altLinkText}>📱 Phone OTP</Text>
+            </Pressable>
+          </View>
+
           <Pressable
             onPress={() => router.push('/sign-in')}
             style={styles.backLink}
             accessibilityRole="link"
           >
-            <Text style={styles.backLinkText}>Remembered your password? Sign In</Text>
+            <Text style={styles.backLinkText}>Return to main Sign In options</Text>
           </Pressable>
         </>
       )}
@@ -232,9 +255,41 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
+  dividerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: space.x3,
+    marginVertical: space.x1,
+  },
+  dividerLine: {
+    backgroundColor: color.border,
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    color: color.muted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  altLinksRow: {
+    flexDirection: 'row',
+    gap: space.x2,
+    justifyContent: 'center',
+  },
+  altLinkPill: {
+    backgroundColor: 'rgba(67, 30, 190, 0.06)',
+    borderRadius: 999,
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x2,
+  },
+  altLinkText: {
+    color: color.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   backLink: {
     alignSelf: 'center',
-    marginTop: space.x2,
+    marginTop: space.x1,
     paddingVertical: space.x1,
   },
   backLinkText: {
@@ -252,7 +307,7 @@ const styles = StyleSheet.create({
     gap: space.x3,
     padding: space.x5,
   },
-  keyIconWrap: {
+  mailboxIconWrap: {
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 24,
@@ -265,8 +320,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-  keyIcon: {
-    fontSize: 30,
+  mailboxIcon: {
+    fontSize: 32,
   },
   successTitle: {
     color: color.ink,
@@ -303,19 +358,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
-  returnButton: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: color.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    marginTop: space.x2,
-    paddingHorizontal: space.x6,
-    paddingVertical: space.x3,
+  changeEmailButton: {
+    paddingVertical: space.x1,
   },
-  returnButtonText: {
-    color: color.ink,
-    fontSize: 14,
+  changeEmailText: {
+    color: color.primary,
+    fontSize: 13,
     fontWeight: '700',
   },
 });

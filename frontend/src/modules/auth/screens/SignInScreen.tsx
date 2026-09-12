@@ -3,11 +3,11 @@ import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
+
 import { useAuthStore } from '@/lib/authStore';
-import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
+import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
@@ -47,262 +47,203 @@ export function SignInScreen() {
     }
   }
 
+  async function handleSocial(provider: 'apple' | 'google') {
+    setLoading(true);
+    setError(null);
+    try {
+      await useAuthStore.getState().signInWithOAuth(provider);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `${provider} sign-in failed`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const displayError = error || storeError;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content} bounces={false}>
-        <View style={styles.pageContainer}>
-          {/* Top Bar Navigation */}
-          <View style={styles.topBar}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-              onPress={() => router.back()}
-              style={styles.backButton}
-            >
-              <Text style={styles.backIcon}>←</Text>
-            </Pressable>
+    <AuthPageLayout
+      title="Welcome Back 👋"
+      subtitle="Sign in to access your trusted rooms, rides, jobs, and community network."
+      badgeText="Trusted Community Network"
+      backHref="/welcome"
+    >
+      {needsConfirmation ? (
+        <View style={styles.confirmationBox}>
+          <Text style={styles.confirmationTitle}>Check your email</Text>
+          <Text style={styles.confirmationBody}>
+            A confirmation link has been sent to your email. Tap the link to verify your account,
+            then sign in.
+          </Text>
+        </View>
+      ) : null}
 
-            <View style={styles.brandBadge}>
-              <Image source={welcomeLogo} style={styles.brandEmblem} />
-              <Text style={styles.brandBadgeText}>ManaBandhu</Text>
-              <View style={styles.verifiedDot}>
-                <Text style={styles.verifiedCheck}>✓</Text>
+      {/* Form */}
+      <View style={styles.form}>
+        {/* Email Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.inputWrapper}>
+                <Text style={styles.leadingIcon}>✉</Text>
+                <Input className="flex-1 border-0 bg-transparent">
+                  <InputField
+                    placeholder="name@example.com"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    accessibilityLabel="Email address"
+                    value={value}
+                    onChangeText={(val) => {
+                      onChange(val);
+                      if (displayError) setError(null);
+                    }}
+                    style={styles.field}
+                  />
+                </Input>
               </View>
-            </View>
+            )}
+          />
+          {errors.email ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
+        </View>
 
-            <View style={styles.topSpacer} />
+        {/* Password Input */}
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Text style={styles.inputLabel}>PASSWORD</Text>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.push('/forgot-password')}
+              style={styles.forgot}
+            >
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
           </View>
-
-          {/* Hero Welcome Header */}
-          <View style={styles.authHero}>
-            <View style={styles.tagChip}>
-              <Text style={styles.tagText}>Trusted Community Network</Text>
-            </View>
-            <Text style={styles.authTitle}>Welcome Back 👋</Text>
-            <Text style={styles.authBody}>
-              Sign in to access your trusted rooms, rides, jobs, and community network.
-            </Text>
-          </View>
-
-          {needsConfirmation ? (
-            <View style={styles.confirmationBox}>
-              <Text style={styles.confirmationTitle}>Check your email</Text>
-              <Text style={styles.confirmationBody}>
-                A confirmation link has been sent to your email. Tap the link to verify your
-                account, then sign in.
-              </Text>
-            </View>
-          ) : null}
-
-          {/* Form */}
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
-              <Controller
-                control={control}
-                name="email"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <Text style={styles.leadingIcon}>✉</Text>
-                    <Input className="flex-1 border-0 bg-transparent">
-                      <InputField
-                        placeholder="name@example.com"
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                        accessibilityLabel="Email address"
-                        value={value}
-                        onChangeText={onChange}
-                        style={styles.field}
-                      />
-                    </Input>
-                  </View>
-                )}
-              />
-              {errors.email ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={styles.inputLabel}>PASSWORD</Text>
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.inputWrapper}>
+                <Text style={styles.leadingIcon}>🔒</Text>
+                <Input className="flex-1 border-0 bg-transparent">
+                  <InputField
+                    placeholder="••••••••"
+                    secureTextEntry={!showPassword}
+                    accessibilityLabel="Password"
+                    value={value}
+                    onChangeText={(val) => {
+                      onChange(val);
+                      if (displayError) setError(null);
+                    }}
+                    style={styles.field}
+                  />
+                </Input>
                 <Pressable
-                  accessibilityRole="link"
-                  onPress={() => router.push('/forgot-password')}
-                  style={styles.forgot}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeToggle}
                 >
-                  <Text style={styles.forgotText}>Forgot password?</Text>
+                  <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
                 </Pressable>
               </View>
-              <Controller
-                control={control}
-                name="password"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <Text style={styles.leadingIcon}>🔒</Text>
-                    <Input className="flex-1 border-0 bg-transparent">
-                      <InputField
-                        placeholder="••••••••••••"
-                        secureTextEntry={!showPassword}
-                        accessibilityLabel="Password"
-                        value={value}
-                        onChangeText={onChange}
-                        style={styles.field}
-                      />
-                    </Input>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                      onPress={() => setShowPassword(!showPassword)}
-                      style={styles.eyeToggle}
-                    >
-                      <Text style={styles.eyeIcon}>{showPassword ? '👁' : '👁‍🗨'}</Text>
-                    </Pressable>
-                  </View>
-                )}
-              />
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password.message}</Text>
-              ) : null}
+            )}
+          />
+          {errors.password ? <Text style={styles.errorText}>{errors.password.message}</Text> : null}
+        </View>
+
+        {/* Remember Device Toggle */}
+        <View style={styles.rememberRow}>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: rememberDevice }}
+            onPress={() => setRememberDevice(!rememberDevice)}
+            style={styles.rememberCheckRow}
+          >
+            <View style={[styles.checkbox, rememberDevice && styles.checkboxActive]}>
+              {rememberDevice ? <Text style={styles.checkMark}>✓</Text> : null}
             </View>
-
-            {/* Remember Device Toggle */}
-            <View style={styles.rememberRow}>
-              <Pressable
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: rememberDevice }}
-                onPress={() => setRememberDevice(!rememberDevice)}
-                style={styles.rememberCheckRow}
-              >
-                <View style={[styles.checkbox, rememberDevice && styles.checkboxActive]}>
-                  {rememberDevice ? <Text style={styles.checkMark}>✓</Text> : null}
-                </View>
-                <Text style={styles.rememberLabel}>Remember this device</Text>
-              </Pressable>
-              <View style={styles.trustedBadge}>
-                <Text style={styles.trustedText}>🛡️ Trusted Session</Text>
-              </View>
-            </View>
-
-            {displayError ? <Text style={styles.errorText}>{displayError}</Text> : null}
-
-            <AppButton label="Sign In →" onPress={handleSubmit(handleSignIn)} loading={loading} />
-
-            {/* Alternative Logins */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.quickAuthRow}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/phone-login')}
-                style={styles.quickAuthBtn}
-              >
-                <Text style={styles.quickAuthIcon}>📱</Text>
-                <Text style={styles.quickAuthText}>Phone OTP</Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/email-login')}
-                style={styles.quickAuthBtn}
-              >
-                <Text style={styles.quickAuthIcon}>✉</Text>
-                <Text style={styles.quickAuthText}>Magic Link</Text>
-              </Pressable>
-            </View>
-
-            {/* Switch to Sign Up */}
-            <View style={styles.registerPromptRow}>
-              <Text style={styles.registerPromptText}>Don't have an account? </Text>
-              <Pressable accessibilityRole="link" onPress={() => router.push('/sign-up')}>
-                <Text style={styles.registerLink}>Create Account ›</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Security Trust Footnote */}
-          <View style={styles.securityBadge}>
-            <Text style={styles.securityText}>
-              🔒 Bank-grade 256-bit encryption • Supabase verified security
-            </Text>
+            <Text style={styles.rememberLabel}>Remember this device</Text>
+          </Pressable>
+          <View style={styles.trustedBadge}>
+            <Text style={styles.trustedText}>🛡️ Trusted Session</Text>
           </View>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+
+        {displayError ? <Text style={styles.errorText}>{displayError}</Text> : null}
+
+        <AppButton label="Sign In →" onPress={handleSubmit(handleSignIn)} loading={loading} />
+
+        {/* Alternative Logins */}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Apple & Google Social Buttons */}
+        <View style={styles.socialRow}>
+          <Pressable
+            onPress={() => handleSocial('apple')}
+            style={styles.socialBtnApple}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Apple"
+          >
+            <Text style={styles.socialAppleText}> Apple</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleSocial('google')}
+            style={styles.socialBtnGoogle}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+          >
+            <Text style={styles.socialGoogleText}>🌐 Google</Text>
+          </Pressable>
+        </View>
+
+        {/* Quick Auth: Phone & Magic Link */}
+        <View style={styles.quickAuthRow}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/phone-login')}
+            style={styles.quickAuthBtn}
+          >
+            <Text style={styles.quickAuthIcon}>📱</Text>
+            <Text style={styles.quickAuthText}>Phone OTP</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/magic-link')}
+            style={styles.quickAuthBtn}
+          >
+            <Text style={styles.quickAuthIcon}>🪄</Text>
+            <Text style={styles.quickAuthText}>Magic Link</Text>
+          </Pressable>
+        </View>
+
+        {/* Switch to Sign Up */}
+        <View style={styles.registerPromptRow}>
+          <Text style={styles.registerPromptText}>Don't have an account? </Text>
+          <Pressable accessibilityRole="link" onPress={() => router.push('/sign-up')}>
+            <Text style={styles.registerLink}>Create Account ›</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Security Trust Footnote */}
+      <View style={styles.securityBadge}>
+        <Text style={styles.securityText}>
+          🔒 Bank-grade 256-bit encryption • Supabase verified security
+        </Text>
+      </View>
+    </AuthPageLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: color.background, flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center', padding: space.x4 },
-  pageContainer: {
-    maxWidth: 460,
-    width: '100%',
-    alignSelf: 'center',
-    gap: space.x5,
-    paddingVertical: space.x2,
-  },
-  topBar: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x1,
-  },
-  backButton: {
-    alignItems: 'center',
-    backgroundColor: color.surface,
-    borderColor: color.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
-  },
-  backIcon: { color: color.ink, fontSize: 18, fontWeight: '700' },
-  topSpacer: { width: 38 },
-  brandBadge: {
-    alignItems: 'center',
-    backgroundColor: color.surface,
-    borderColor: color.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x2,
-    paddingHorizontal: space.x3,
-    paddingVertical: 4,
-  },
-  brandEmblem: { borderRadius: 8, height: 22, width: 22 },
-  brandBadgeText: { color: color.primary, fontSize: 14, fontWeight: '800' },
-  verifiedDot: {
-    alignItems: 'center',
-    backgroundColor: color.teal,
-    borderRadius: 6,
-    height: 14,
-    justifyContent: 'center',
-    width: 14,
-  },
-  verifiedCheck: { color: '#ffffff', fontSize: 9, fontWeight: '800' },
-  authHero: { alignItems: 'center', gap: space.x2, marginTop: space.x2 },
-  tagChip: {
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    borderRadius: 999,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x1,
-  },
-  tagText: { color: color.primary, fontSize: 12, fontWeight: '700' },
-  authTitle: {
-    color: color.ink,
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    lineHeight: 38,
-    textAlign: 'center',
-  },
-  authBody: { color: color.muted, fontSize: 14, lineHeight: 21, textAlign: 'center' },
   confirmationBox: {
     backgroundColor: color.primarySoft,
     borderRadius: 16,
@@ -368,6 +309,38 @@ const styles = StyleSheet.create({
   },
   dividerLine: { backgroundColor: color.border, flex: 1, height: 1 },
   dividerText: { color: color.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  socialRow: {
+    flexDirection: 'row',
+    gap: space.x3,
+  },
+  socialBtnApple: {
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    borderRadius: 14,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 46,
+  },
+  socialAppleText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  socialBtnGoogle: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: color.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 46,
+  },
+  socialGoogleText: {
+    color: color.ink,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   quickAuthRow: { flexDirection: 'row', gap: space.x3 },
   quickAuthBtn: {
     alignItems: 'center',
