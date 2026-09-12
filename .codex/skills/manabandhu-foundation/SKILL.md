@@ -96,3 +96,4 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 
 - Recent backend changes: expanded `FoundationContentService` switch to include `home`, `chat`, `community`, `explore`, `search`, `saved`, `profile`, and `settings` screen IDs (previously only handled `onboarding`).
 - Recent shell fallback fix: `StitchAppShellScreen` `useQuery` now uses `placeholderData: homeShellFallbacks[kind]` with `retry: false`, removing the `LoadingState`/`ErrorState` branches in favor of falling back to `homeShellFallbacks[kind]` directly.
+- Recent welcome flow fix: wrapped `StitchWelcomeFlowScreen` in `ScrollView` with responsive container constraints (`maxWidth: 440`, bounded visual height) to prevent action buttons from being pushed below viewport fold on laptop and desktop screens; made `Skip` an accessible, interactive pressable on non-final slides that navigates directly to `/sign-in`.

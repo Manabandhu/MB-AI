@@ -1,7 +1,7 @@
 import { color as baseColors, space } from '@manabandhu/design-system';
 import { Link, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Image, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
@@ -81,88 +81,125 @@ export function StitchWelcomeFlowScreen() {
     else setIndex((current) => Math.min(current + 1, welcomeSteps.length - 1));
   }
 
+  function skip() {
+    router.push('/sign-in');
+  }
+
   return (
     <SafeAreaView style={styles.welcomeSafe}>
-      <View style={styles.welcomePage} {...panResponder.panHandlers}>
-        <View style={styles.welcomeTop}>
-          {isFinal ? <Text style={styles.skip}>Skip</Text> : <Text />}
-        </View>
-        <View style={[styles.welcomeVisual, isFinal && styles.welcomeLogoFrame]}>
-          {step.image ? (
-            <Image source={{ uri: step.image }} style={styles.welcomeImage} />
-          ) : (
-            <Image source={welcomeLogo} style={styles.welcomeLogo} />
-          )}
-        </View>
-        <View style={styles.welcomeCopy}>
-          <Text style={styles.welcomeTitle}>{step.title}</Text>
-          <Text style={styles.welcomeBody}>{step.body}</Text>
-        </View>
-        <View style={styles.dots}>
-          {welcomeSteps.map((item, dotIndex) => (
-            <View key={item.title} style={[styles.dot, dotIndex === index && styles.dotActive]} />
-          ))}
-        </View>
-        <Pressable accessibilityRole="button" onPress={advance} style={styles.primaryPill}>
-          <Text style={styles.primaryPillText}>{step.action}</Text>
-        </Pressable>
-        {isFinal ? (
-          <>
-            <Link href="/sign-in" asChild>
-              <Pressable accessibilityRole="button" style={styles.secondaryPill}>
-                <Text style={styles.secondaryPillText}>Sign In</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+        <View style={styles.welcomePage} {...panResponder.panHandlers}>
+          <View style={styles.welcomeTop}>
+            {!isFinal ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Skip welcome"
+                onPress={skip}
+                style={styles.skipButton}
+              >
+                <Text style={styles.skip}>Skip</Text>
               </Pressable>
-            </Link>
-            <Text style={styles.safeNote}>
-              Your data is safe and private. We never share your personal information.
-            </Text>
-          </>
-        ) : null}
-      </View>
+            ) : (
+              <View style={styles.welcomeTopSpacer} />
+            )}
+          </View>
+          <View style={[styles.welcomeVisual, isFinal && styles.welcomeLogoFrame]}>
+            {step.image ? (
+              <Image source={{ uri: step.image }} style={styles.welcomeImage} resizeMode="cover" />
+            ) : (
+              <Image source={welcomeLogo} style={styles.welcomeLogo} resizeMode="contain" />
+            )}
+          </View>
+          <View style={styles.welcomeCopy}>
+            <Text style={styles.welcomeTitle}>{step.title}</Text>
+            <Text style={styles.welcomeBody}>{step.body}</Text>
+          </View>
+          <View style={styles.dots}>
+            {welcomeSteps.map((item, dotIndex) => (
+              <View key={item.title} style={[styles.dot, dotIndex === index && styles.dotActive]} />
+            ))}
+          </View>
+          <Pressable accessibilityRole="button" onPress={advance} style={styles.primaryPill}>
+            <Text style={styles.primaryPillText}>{step.action}</Text>
+          </Pressable>
+          {isFinal ? (
+            <>
+              <Link href="/sign-in" asChild>
+                <Pressable accessibilityRole="button" style={styles.secondaryPill}>
+                  <Text style={styles.secondaryPillText}>Sign In</Text>
+                </Pressable>
+              </Link>
+              <Text style={styles.safeNote}>
+                Your data is safe and private. We never share your personal information.
+              </Text>
+            </>
+          ) : null}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   welcomeSafe: { backgroundColor: colors.background, flex: 1 },
-  welcomePage: { flex: 1, gap: space.x6, justifyContent: 'center', padding: space.x4 },
-  welcomeTop: { minHeight: 28 },
-  skip: { alignSelf: 'flex-end', color: colors.primary, fontSize: 14, fontWeight: '700' },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: space.x4 },
+  welcomePage: {
+    maxWidth: 440,
+    width: '100%',
+    alignSelf: 'center',
+    gap: space.x4,
+    paddingVertical: space.x2,
+  },
+  welcomeTop: { minHeight: 32, justifyContent: 'center' },
+  welcomeTopSpacer: { height: 32 },
+  skipButton: { alignSelf: 'flex-end', padding: space.x2 },
+  skip: { color: colors.primary, fontSize: 14, fontWeight: '700' },
   welcomeVisual: {
     alignItems: 'center',
-    aspectRatio: 1,
+    maxHeight: 240,
+    maxWidth: 320,
+    width: '100%',
+    alignSelf: 'center',
+    aspectRatio: 4 / 3,
     backgroundColor: colors.surface,
     borderRadius: 24,
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  welcomeLogoFrame: { alignSelf: 'center', borderRadius: 80, height: 160, width: 160 },
+  welcomeLogoFrame: {
+    alignSelf: 'center',
+    borderRadius: 80,
+    height: 140,
+    width: 140,
+    maxHeight: 140,
+    aspectRatio: 1,
+  },
   welcomeImage: { height: '100%', width: '100%' },
-  welcomeLogo: { borderRadius: 72, height: 144, width: 144 },
-  welcomeCopy: { alignItems: 'center', gap: space.x3 },
+  welcomeLogo: { borderRadius: 60, height: 120, width: 120 },
+  welcomeCopy: { alignItems: 'center', gap: space.x2 },
   welcomeTitle: {
     color: colors.ink,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
-    lineHeight: 36,
+    lineHeight: 32,
     textAlign: 'center',
   },
-  welcomeBody: { color: colors.muted, fontSize: 17, lineHeight: 27, textAlign: 'center' },
-  dots: { flexDirection: 'row', gap: space.x2, justifyContent: 'center' },
+  welcomeBody: { color: colors.muted, fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  dots: { flexDirection: 'row', gap: space.x2, justifyContent: 'center', marginVertical: space.x1 },
   dot: { backgroundColor: colors.border, borderRadius: 4, height: 8, width: 8 },
   dotActive: { backgroundColor: colors.primary, width: 32 },
   primaryPill: {
     alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: 999,
-    minHeight: 56,
+    minHeight: 52,
     justifyContent: 'center',
   },
   primaryPillText: { color: colors.surface, fontSize: 15, fontWeight: '800' },
   secondaryPill: {
     alignItems: 'center',
     borderRadius: 999,
-    minHeight: 52,
+    minHeight: 48,
     justifyContent: 'center',
   },
   secondaryPillText: { color: colors.primary, fontSize: 15, fontWeight: '800' },
