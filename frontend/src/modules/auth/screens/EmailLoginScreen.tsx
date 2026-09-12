@@ -1,10 +1,11 @@
 import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/lib/authStore';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
+import { AuthSuccessCelebration } from '@/modules/auth/components/AuthSuccessCelebration';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -16,8 +17,17 @@ export function EmailLoginScreen() {
   const [rememberDevice, setRememberDevice] = useState(true);
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
 
+  const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   const storeError = useAuthStore((s) => s.error);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      setShowCelebration(true);
+    }
+  }, [status]);
 
   async function handleEmailSignIn() {
     const trimmedEmail = email.trim();
@@ -29,6 +39,7 @@ export function EmailLoginScreen() {
     setLocalError(null);
     try {
       await useAuthStore.getState().signIn(trimmedEmail, password);
+      setShowCelebration(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sign in failed';
       setLocalError(msg);
@@ -42,6 +53,7 @@ export function EmailLoginScreen() {
     setLocalError(null);
     try {
       await useAuthStore.getState().signInWithOAuth(provider);
+      setShowCelebration(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : `${provider} sign-in failed`;
       setLocalError(msg);
@@ -59,6 +71,14 @@ export function EmailLoginScreen() {
       badgeText="Email & Password Authentication"
       backHref="/sign-in"
     >
+      {showCelebration ? (
+        <AuthSuccessCelebration
+          userName={user?.user_metadata?.full_name ?? user?.email ?? 'Member'}
+          title="Welcome Back! 🎉"
+          subtitle="Your verified session is ready. Redirecting you home..."
+          onComplete={() => router.replace('/home')}
+        />
+      ) : null}
       {/* Email Input using Gluestack */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>

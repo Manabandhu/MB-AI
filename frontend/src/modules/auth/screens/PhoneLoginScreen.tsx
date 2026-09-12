@@ -1,39 +1,33 @@
 import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/lib/authStore';
+import { type CountryItem, supportedCountries } from '@/modules/auth/authConstants';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
+import { AuthSuccessCelebration } from '@/modules/auth/components/AuthSuccessCelebration';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
-interface CountryItem {
-  code: string;
-  flag: string;
-  name: string;
-}
-
-const countries: CountryItem[] = [
-  { code: '+1', flag: '🇺🇸', name: 'United States & Canada' },
-  { code: '+91', flag: '🇮🇳', name: 'India' },
-  { code: '+44', flag: '🇬🇧', name: 'United Kingdom' },
-  { code: '+61', flag: '🇦🇺', name: 'Australia' },
-  { code: '+971', flag: '🇦🇪', name: 'United Arab Emirates' },
-  { code: '+65', flag: '🇸🇬', name: 'Singapore' },
-  { code: '+49', flag: '🇩🇪', name: 'Germany' },
-  { code: '+353', flag: '🇮🇪', name: 'Ireland' },
-];
-
 export function PhoneLoginScreen() {
-  const [selectedCountry, setSelectedCountry] = useState<CountryItem>(countries[0]);
+  const [selectedCountry, setSelectedCountry] = useState<CountryItem>(supportedCountries[0]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [phoneDigits, setPhoneDigits] = useState('');
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
 
+  const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   const storeError = useAuthStore((s) => s.error);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      setShowCelebration(true);
+    }
+  }, [status]);
 
   async function handleSendCode() {
     const trimmed = phoneDigits.trim();
@@ -63,6 +57,15 @@ export function PhoneLoginScreen() {
       badgeText="Fast & Secure Mobile Login"
       backHref="/sign-in"
     >
+      {showCelebration ? (
+        <AuthSuccessCelebration
+          userName={user?.user_metadata?.full_name ?? user?.email ?? 'Member'}
+          title="Welcome Back! 🎉"
+          subtitle="Your verified session is ready. Redirecting you home..."
+          onComplete={() => router.replace('/home')}
+        />
+      ) : null}
+
       {/* Country Code Dropdown Trigger */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>COUNTRY / REGION</Text>
@@ -101,7 +104,7 @@ export function PhoneLoginScreen() {
               </Pressable>
             </View>
             <ScrollView style={styles.modalScroll} bounces={false}>
-              {countries.map((c) => {
+              {supportedCountries.map((c) => {
                 const isSelected = c.code === selectedCountry.code;
                 return (
                   <Pressable

@@ -101,6 +101,8 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 - Recent Welcome flow & website design enhancement: `StitchWelcomeFlowScreen` upgraded with an interactive multi-slide carousel featuring 4 feature pillar slides (Verified Rooms, Carpools, Tech Referrals, Community Hub) with previous/next controls, direct category navigation pills, animated clickable indicator dots, and a 4.5s auto-advance timer with interaction pause. On desktop web (viewport width >= 768px), provides a complete responsive website experience with a top navigation bar, 2-column hero with value checkpoints and live trust metrics ticker, interactive carousel device preview, full feature matrix grid, safety pledge banner, and footer.
 - Recent icon & catalog update: updated `StitchWelcomeFlowScreen` with exact vector icons from `AppIcon` (`home`, `car`, `briefcase`, `community`, `check`, `shield`, `star`, `sparks`, `chevron-left`, `chevron-right`); removed magic link route entry from `screen-catalog.ts` per design update.
 - Recent brand & community positioning update: updated `StitchWelcomeFlowScreen` and foundation fallbacks to position ManaBandhu for the broader Desi community (removing narrow diaspora restrictions); eliminated all mentions of "brokerage" in favor of direct community listings and transparent pricing; removed the green verified checkmark beside the "ManaBandhu" title in navigation and top bars.
+- Inclusivity & Language expansion: updated `StitchOnboardingScreen` and `fixtures.ts` to feature broad multi-lingual Desi language selections (`English`, `Hindi`, `Telugu`, `Tamil`, `Kannada`, `Punjabi`, `Gujarati`, `Bengali`, `Spanish`) ensuring no single community is highlighted exclusively.
+
 
 
 

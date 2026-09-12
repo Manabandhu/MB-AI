@@ -61,7 +61,17 @@ const onboardingSteps = {
     title: 'Languages',
     body: 'Choose languages you are comfortable using.',
     inputs: [],
-    options: ['English', 'Telugu', 'Hindi', 'Tamil', 'Kannada', 'Spanish'],
+    options: [
+      'English',
+      'Hindi',
+      'Telugu',
+      'Tamil',
+      'Kannada',
+      'Punjabi',
+      'Gujarati',
+      'Bengali',
+      'Spanish',
+    ],
     next: '/onboarding/interests',
   },
   interests: {

@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/lib/authStore';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
+import { AuthSuccessCelebration } from '@/modules/auth/components/AuthSuccessCelebration';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -17,10 +18,19 @@ export function OtpVerificationScreen() {
   const [resendAvailable, setResendAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
 
+  const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   const otpIdentifier = useAuthStore((s) => s.otpIdentifier);
   const otpType = useAuthStore((s) => s.otpType);
   const storeError = useAuthStore((s) => s.error);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      setShowCelebration(true);
+    }
+  }, [status]);
 
   useEffect(() => {
     if (countdown <= 0) {
@@ -45,6 +55,7 @@ export function OtpVerificationScreen() {
     setLocalError(null);
     try {
       await useAuthStore.getState().verifyOtp(otpIdentifier, trimmed, otpType);
+      setShowCelebration(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Invalid or expired code';
       setLocalError(msg);
@@ -75,6 +86,14 @@ export function OtpVerificationScreen() {
       badgeText="Multi-Factor Verification"
       backHref="/sign-in"
     >
+      {showCelebration ? (
+        <AuthSuccessCelebration
+          userName={user?.user_metadata?.full_name ?? user?.email ?? 'Member'}
+          title="Verification Successful! 🎉"
+          subtitle="Your verified session is ready. Redirecting you home..."
+          onComplete={() => router.replace('/home')}
+        />
+      ) : null}
       {/* Code Input using Gluestack */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>VERIFICATION CODE</Text>

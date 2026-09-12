@@ -26,12 +26,23 @@ export function AuthPageLayout({
   backHref = '/welcome',
 }: AuthPageLayoutProps) {
   const { windowClass } = useAdaptiveLayout();
-  const isDesktop = windowClass !== 'compact';
+  const isDesktop = windowClass === 'expanded' || windowClass === 'wide';
+  const isTablet = windowClass === 'medium';
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-        <View style={[styles.mainWrapper, isDesktop && styles.mainWrapperDesktop]}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
+        <View
+          style={[
+            styles.mainWrapper,
+            isTablet && styles.mainWrapperTablet,
+            isDesktop && styles.mainWrapperDesktop,
+          ]}
+        >
           {/* Left Branded Showcase for Desktop Web */}
           {isDesktop ? (
             <View style={styles.showcasePane}>
@@ -193,10 +204,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: space.x3,
   },
+  scrollContentDesktop: {
+    padding: space.x5,
+  },
   mainWrapper: {
     alignSelf: 'center',
-    maxWidth: 500,
+    maxWidth: 460,
     width: '100%',
+  },
+  mainWrapperTablet: {
+    maxWidth: 540,
   },
   mainWrapperDesktop: {
     alignItems: 'stretch',
