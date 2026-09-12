@@ -28,6 +28,12 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 - `StitchSplashScreen` - brand splash with auto-advance
 - `StitchWelcomeFlowScreen` - welcome carousel and entry points
 - `StitchOnboardingScreen` - multi-step onboarding with progress
+- `StitchAppShellScreen({ kind })` - unified tabbed shell for home/explore/chat/community/profile
+  - `HomeShell` - greeting header, location chip, search bar, 2×4 quick-action grid (Rooms/Rides/Jobs/Community/Chat/Events/Market/Safety), live stats pill row, Rooms Near You horizontal scroll, Community Feed post cards, Hot Job Referrals rows
+  - `ExploreShell` - category filter chips, featured event card, 2-col explore item grid (rooms/jobs/events)
+  - `ChatShell` - pinned alert, conversation list rows with online dots, unread badges, timestamps
+  - `CommunityShell` - tab bar, story bubbles, trending topic chips, post cards with reactions, FAB
+  - `ProfileShell` - gradient indigo hero, stats row (Connections/Posts/Referrals), trust badges, completion progress card, quick links, account settings, sign-out
 - `StitchAppShellScreen` - adaptive shell with tab bar, header, and module shells
 - `SearchScreen` - global search with filter chips
 - `SavedScreen` - cross-module saved aggregation
