@@ -41,6 +41,7 @@ const colors = {
 export function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const storeError = useAuthStore((s) => s.error);
   const needsConfirmation = useAuthStore((s) => s.needsEmailConfirmation);
 
   const {
@@ -51,6 +52,8 @@ export function SignUpScreen() {
     resolver: zodResolver(signUpSchema),
     defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
   });
+
+  const displayError = error || storeError;
 
   async function handleSignUp(data: SignUpValues) {
     setLoading(true);
@@ -172,7 +175,7 @@ export function SignUpScreen() {
               <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>
             ) : null}
           </View>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {displayError ? <Text style={styles.errorText}>{displayError}</Text> : null}
           <AppButton
             label="Create account"
             onPress={handleSubmit(handleSignUp)}

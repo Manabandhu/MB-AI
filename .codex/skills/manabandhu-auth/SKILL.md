@@ -77,4 +77,5 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 ## Current Implementation Status
 
 - **Done (Day 01)**: Email/password sign-up with required email verification; email confirmation callback via `/auth/callback`; real email/password sign-in; identity endpoint `GET /api/v1/me` integrated; session lifecycle with startup hydration, restoration, `onAuthStateChange` listener, and sign-out; protected navigation via `useRequireAuth` / `useRedirectIfAuthenticated`; zod client-side validation on sign-in and sign-up forms; demo sign-in path removed.
+- **Recent Auth Verification**: Verified end-to-end live Supabase Auth and Spring Boot token validation (`GET /api/v1/me`). Updated `SignUpScreen` to subscribe to `storeError` from `useAuthStore` so that Supabase authentication errors and rate limit feedback are rendered inline. Tested sign-in flow with confirmed Supabase account (`rajesh@manabandhu.com`), successfully hydrating user session and navigating to `/home`.
 - **Pending**: Phone OTP, email magic link (non-OTP), Google, and Apple providers remain explicitly unverified.
