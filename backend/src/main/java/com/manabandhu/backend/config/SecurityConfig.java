@@ -1,5 +1,7 @@
 package com.manabandhu.backend.config;
 
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -14,12 +16,27 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtAudienceValidator;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 
 @Configuration
 @EnableMethodSecurity
@@ -91,6 +108,44 @@ public class SecurityConfig {
         if (value instanceof List<?> roles) return roles.stream().map(String::valueOf).toList();
         if (value instanceof String role && !role.isBlank()) return List.of(role);
         return List.of();
+    }
+
+    @Bean
+    JwtDecoder jwtDecoder(
+            @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}") String jwkSetUri,
+            @Value("${app.supabase.jwt.issuer:}") String expectedIssuer,
+            @Value("${app.supabase.jwt.audience:authenticated}") String expectedAudience) {
+        if (jwkSetUri == null || jwkSetUri.isBlank()) {
+            return jwt -> {
+                throw new JwtException("JWT validation is not configured");
+            };
+        }
+        var jwkSource = jwkSourceFromUri(jwkSetUri);
+        var decoder = NimbusJwtDecoder.withJwkSource(jwkSource)
+                .jwsAlgorithm(SignatureAlgorithm.ES256)
+                .build();
+        var validators = new ArrayList<OAuth2TokenValidator<Jwt>>();
+        validators.add(new JwtTimestampValidator());
+        if (expectedIssuer != null && !expectedIssuer.isBlank()) {
+            validators.add(new JwtIssuerValidator(expectedIssuer));
+        }
+        if (expectedAudience != null && !expectedAudience.isBlank()) {
+            validators.add(new JwtAudienceValidator(expectedAudience));
+        }
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators));
+        return decoder;
+    }
+
+    private static JWKSource<SecurityContext> jwkSourceFromUri(String jwkSetUri) {
+        try {
+            var client = java.net.http.HttpClient.newHttpClient();
+            var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create(jwkSetUri)).build();
+            var response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            var jwkSet = JWKSet.parse(response.body());
+            return new ImmutableJWKSet<>(jwkSet);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to load JWK set from " + jwkSetUri, ex);
+        }
     }
 
     @Bean

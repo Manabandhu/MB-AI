@@ -58,7 +58,7 @@ export function BottomSheet({
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'flex-end',
     zIndex: 100,
   },

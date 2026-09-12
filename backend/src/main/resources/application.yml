@@ -45,7 +45,7 @@ management:
 
 app:
   admin:
-    public-access-enabled: ${ADMIN_PUBLIC_ACCESS_ENABLED:true}
+    public-access-enabled: ${ADMIN_PUBLIC_ACCESS_ENABLED:false}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:19006}
   automation:
@@ -55,3 +55,6 @@ app:
   supabase:
     project-url: ${SUPABASE_PROJECT_URL:https://lpzaioyurvgdysdfktzc.supabase.co}
     service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    jwt:
+      issuer: ${SUPABASE_JWT_ISSUER:https://lpzaioyurvgdysdfktzc.supabase.co/auth/v1}
+      audience: ${SUPABASE_JWT_AUDIENCE:authenticated}

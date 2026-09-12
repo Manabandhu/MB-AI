@@ -39,6 +39,21 @@ export async function getApiHealth(): Promise<ApiHealth> {
   return response.json() as Promise<ApiHealth>;
 }
 
+export async function getIdentity(): Promise<IdentityResponse> {
+  const response = await apiFetch('/api/v1/me');
+  if (!response.ok) {
+    throw new AuthError(`Identity fetch failed: ${response.status}`, response.status);
+  }
+  return response.json() as Promise<IdentityResponse>;
+}
+
+export interface IdentityResponse {
+  id: string;
+  email: string | null;
+  fullName: string | null;
+  role: string;
+}
+
 export async function graphqlClient() {
   return new GraphQLClient(`${env.apiUrl}/graphql`, {
     headers: await authorizationHeaders(),

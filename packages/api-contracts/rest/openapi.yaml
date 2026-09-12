@@ -16,6 +16,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Health'
+  /me:
+    get:
+      operationId: getIdentity
+      description: Returns the identity of the authenticated user derived from the verified JWT principal. The role is read from trusted app_metadata, never from user-editable metadata.
+      responses:
+        '200':
+          description: Authenticated user identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Identity'
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /foundation/welcome:
     get:
       operationId: getWelcomeFlow
@@ -1400,12 +1412,21 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    Health:
+     Health:
       type: object
       required: [status, service]
       properties:
         status: { type: string }
         service: { type: string }
+    Identity:
+      type: object
+      additionalProperties: false
+      required: [id, email, fullName, role]
+      properties:
+        id: { type: string, description: JWT subject (Supabase user UUID) }
+        email: { type: string, format: email, nullable: true, description: Verified email from the JWT }
+        fullName: { type: string, nullable: true, description: Display name from user_metadata }
+        role: { type: string, description: Primary role from trusted app_metadata; defaults to user }
     WelcomeFlow:
       type: object
       additionalProperties: false

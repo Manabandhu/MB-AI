@@ -1,13 +1,22 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { color as baseColors, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { z } from 'zod';
 import { useAuthStore } from '@/lib/authStore';
-import { authCredentialsFixture } from '@/modules/auth/fixtures';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+
+const signInSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Enter a valid email'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type SignInValues = z.infer<typeof signInSchema>;
 
 const colors = {
   ...baseColors,
@@ -21,38 +30,33 @@ const colors = {
 };
 
 export function SignInScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const storeError = useAuthStore((s) => s.error);
+  const needsConfirmation = useAuthStore((s) => s.needsEmailConfirmation);
 
-  async function handleSignIn() {
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
+  async function handleSignIn(data: SignInValues) {
     setLoading(true);
     setError(null);
     try {
-      await useAuthStore.getState().signIn(email, password);
+      await useAuthStore.getState().signIn(data.email, data.password);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sign in failed';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleDemoSignIn() {
-    setLoading(true);
-    setError(null);
-    try {
-      await useAuthStore.getState().signInDemo();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Demo sign in failed';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const displayError = error || storeError;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -69,42 +73,58 @@ export function SignInScreen() {
           <Text style={styles.authTitle}>Sign In</Text>
           <Text style={styles.authBody}>Welcome back to your community.</Text>
         </View>
+        {needsConfirmation ? (
+          <View style={styles.confirmationBox}>
+            <Text style={styles.confirmationTitle}>Check your email</Text>
+            <Text style={styles.confirmationBody}>
+              A confirmation link has been sent to your email. Tap the link to verify your account,
+              then sign in.
+            </Text>
+          </View>
+        ) : null}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Email</Text>
-            <Input className="min-h-14 rounded-xl bg-secondary/70">
-              <InputField
-                placeholder="Enter your email"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </Input>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, value } }) => (
+                <Input className="min-h-14 rounded-xl bg-secondary/70">
+                  <InputField
+                    placeholder="Enter your email"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    accessibilityLabel="Email address"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                </Input>
+              )}
+            />
+            {errors.email ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Password</Text>
-            <Input className="min-h-14 rounded-xl bg-secondary/70">
-              <InputField
-                placeholder="Enter your password"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-            </Input>
-          </View>
-          {error || storeError ? <Text style={styles.errorText}>{error || storeError}</Text> : null}
-          <View style={styles.demoCredentials}>
-            <Text style={styles.demoTitle}>Test user</Text>
-            <Text style={styles.demoLine}>Email: {authCredentialsFixture.email}</Text>
-            <Text style={styles.demoLine}>Password: {authCredentialsFixture.password}</Text>
-            <AppButton
-              label="Use demo account"
-              onPress={handleDemoSignIn}
-              variant="secondary"
-              loading={loading}
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, value } }) => (
+                <Input className="min-h-14 rounded-xl bg-secondary/70">
+                  <InputField
+                    placeholder="Enter your password"
+                    secureTextEntry
+                    accessibilityLabel="Password"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                </Input>
+              )}
             />
+            {errors.password ? (
+              <Text style={styles.errorText}>{errors.password.message}</Text>
+            ) : null}
           </View>
+          {displayError ? <Text style={styles.errorText}>{displayError}</Text> : null}
           <Pressable
             accessibilityRole="link"
             onPress={() => router.push('/forgot-password')}
@@ -112,7 +132,7 @@ export function SignInScreen() {
           >
             <Text style={styles.forgotText}>Forgot password?</Text>
           </Pressable>
-          <AppButton label="Continue" onPress={handleSignIn} loading={loading} />
+          <AppButton label="Continue" onPress={handleSubmit(handleSignIn)} loading={loading} />
           <Text style={styles.orText}>or</Text>
           <AppButton label="Create account" route="/sign-up" variant="secondary" />
         </View>
@@ -151,17 +171,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   authBody: { color: colors.muted, fontSize: 18, lineHeight: 28, textAlign: 'center' },
-  form: { gap: space.x4 },
-  inputGroup: { gap: space.x2 },
-  inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
-  demoCredentials: {
+  confirmationBox: {
     backgroundColor: colors.surfaceContainerLow,
     borderRadius: 16,
     gap: space.x2,
+    marginBottom: space.x4,
     padding: space.x4,
   },
-  demoTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-  demoLine: { color: colors.muted, fontSize: 13, fontWeight: '700' },
+  confirmationTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
+  confirmationBody: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+  form: { gap: space.x4 },
+  inputGroup: { gap: space.x2 },
+  inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
   forgot: { alignSelf: 'flex-end' },
   forgotText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
   orText: {

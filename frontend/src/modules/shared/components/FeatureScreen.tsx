@@ -70,7 +70,7 @@ export function FeatureScreen({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityState={{ selected: isActive }}
-                    style={[styles.navItem, isActive && styles.navItemActive]}
+                    style={StyleSheet.flatten([styles.navItem, isActive && styles.navItemActive])}
                   >
                     <Text style={[styles.navText, isActive && styles.navTextActive]}>
                       {item.label}

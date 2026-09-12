@@ -1,12 +1,31 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { color as baseColors, space } from '@manabandhu/design-system';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { z } from 'zod';
 import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+
+const signUpSchema = z
+  .object({
+    name: z.string().min(1, 'Full name is required').max(120),
+    email: z.string().min(1, 'Email is required').email('Enter a valid email'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(72, 'Password must be at most 72 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Passwords do not match',
+  });
+
+type SignUpValues = z.infer<typeof signUpSchema>;
 
 const colors = {
   ...baseColors,
@@ -20,27 +39,26 @@ const colors = {
 };
 
 export function SignUpScreen() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const needsConfirmation = useAuthStore((s) => s.needsEmailConfirmation);
 
-  const storeError = useAuthStore((s) => s.error);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
+  });
 
-  async function handleSignUp() {
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+  async function handleSignUp(data: SignUpValues) {
     setLoading(true);
     setError(null);
     try {
-      await useAuthStore.getState().signUp(email, password, name);
+      await useAuthStore.getState().signUp(data.email, data.password, data.name);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sign up failed';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'Sign up failed');
     } finally {
       setLoading(false);
     }
@@ -63,54 +81,103 @@ export function SignUpScreen() {
             Join ManaBandhu and start building your trusted community.
           </Text>
         </View>
+        {needsConfirmation ? (
+          <View style={styles.confirmationBox}>
+            <Text style={styles.confirmationTitle}>Check your email</Text>
+            <Text style={styles.confirmationBody}>
+              A confirmation link has been sent to your email. Tap the link to verify your account,
+              then sign in.
+            </Text>
+          </View>
+        ) : null}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Full name</Text>
-            <Input className="min-h-14 rounded-xl bg-secondary/70">
-              <InputField
-                placeholder="Enter your full name"
-                autoComplete="name"
-                value={name}
-                onChangeText={setName}
-              />
-            </Input>
+            <Controller
+              control={control}
+              name="name"
+              render={({ field: { onChange, value } }) => (
+                <Input className="min-h-14 rounded-xl bg-secondary/70">
+                  <InputField
+                    placeholder="Enter your full name"
+                    autoComplete="name"
+                    accessibilityLabel="Full name"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                </Input>
+              )}
+            />
+            {errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Email</Text>
-            <Input className="min-h-14 rounded-xl bg-secondary/70">
-              <InputField
-                placeholder="Enter your email"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </Input>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, value } }) => (
+                <Input className="min-h-14 rounded-xl bg-secondary/70">
+                  <InputField
+                    placeholder="Enter your email"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    accessibilityLabel="Email address"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                </Input>
+              )}
+            />
+            {errors.email ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Password</Text>
-            <Input className="min-h-14 rounded-xl bg-secondary/70">
-              <InputField
-                placeholder="Create a password"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-            </Input>
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, value } }) => (
+                <Input className="min-h-14 rounded-xl bg-secondary/70">
+                  <InputField
+                    placeholder="Create a password"
+                    secureTextEntry
+                    accessibilityLabel="Password"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                </Input>
+              )}
+            />
+            {errors.password ? (
+              <Text style={styles.errorText}>{errors.password.message}</Text>
+            ) : null}
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Confirm password</Text>
-            <Input className="min-h-14 rounded-xl bg-secondary/70">
-              <InputField
-                placeholder="Confirm your password"
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-            </Input>
+            <Controller
+              control={control}
+              name="confirmPassword"
+              render={({ field: { onChange, value } }) => (
+                <Input className="min-h-14 rounded-xl bg-secondary/70">
+                  <InputField
+                    placeholder="Confirm your password"
+                    secureTextEntry
+                    accessibilityLabel="Confirm password"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                </Input>
+              )}
+            />
+            {errors.confirmPassword ? (
+              <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>
+            ) : null}
           </View>
-          {error || storeError ? <Text style={styles.errorText}>{error || storeError}</Text> : null}
-          <AppButton label="Create account" onPress={handleSignUp} loading={loading} />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <AppButton
+            label="Create account"
+            onPress={handleSubmit(handleSignUp)}
+            loading={loading}
+          />
           <Text style={styles.orText}>or</Text>
           <AppButton label="Sign In" route="/sign-in" variant="secondary" />
         </View>
@@ -149,6 +216,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   authBody: { color: colors.muted, fontSize: 18, lineHeight: 28, textAlign: 'center' },
+  confirmationBox: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: 16,
+    gap: space.x2,
+    marginBottom: space.x4,
+    padding: space.x4,
+  },
+  confirmationTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
+  confirmationBody: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   form: { gap: space.x4 },
   inputGroup: { gap: space.x2 },
   inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },

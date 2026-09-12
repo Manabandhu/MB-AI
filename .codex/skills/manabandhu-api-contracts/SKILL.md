@@ -13,6 +13,10 @@ description: Maintain ManaBandhu's canonical OpenAPI, GraphQL, and AsyncAPI cont
 6. The Super Admin REST surface is `/api/v1/admin/automations`; changes require synchronized frontend types and backend records plus explicit 401, 403, confirmation, provider failure, and temporary public-admin override documentation.
 7. Public demo content is exposed through additive REST endpoints under `/api/v1/foundation`, `/api/v1/notifications`, `/api/v1/rooms`, and `/api/v1/rides`; it must not require authentication or expose user data.
  8. Run `pnpm verify:contracts`, then validate every affected producer and consumer.
-  9. Covered modules: community, rooms, rides, jobs, events, expenses, marketplace, referrals, immigration, safety, utilities, notifications, chat, ai, foundation, admin.
+  9. Covered modules: community, rooms, rides, jobs, events, expenses, marketplace, referrals, immigration, safety, utilities, notifications, chat, ai, foundation, admin, auth.
+
+- Day 01: added `GET /me` identity endpoint to the REST OpenAPI contract with `Identity` schema (`id`, `email`, `fullName`, `role`); documented that role is derived from trusted `app_metadata.roles` and the endpoint requires a verified JWT; added references to the backend `IdentityController`.
   10. Update this skill when contract locations, generators, compatibility policy, or validation commands change.
 - Ride contract enums are aligned: offers use `DRAFT`, `ACTIVE`, `COMPLETED`, `CANCELLED`; requests use `PENDING`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`; participants use `DRIVER`/`RIDER`; bookings use `pending`/`confirmed`/`cancelled`; ratings enforce 1-5 with optional comment.
+
+- Day 01: added `GET /me` identity endpoint to the REST OpenAPI contract with `Identity` schema (`id`, `email`, `fullName`, `role`); documented that role is derived from trusted `app_metadata.roles` and the endpoint requires a verified JWT; added references to the backend `IdentityController`.

@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: space.x4,
   },
-  backdropTouch: { ...StyleSheet.absoluteFillObject },
+  backdropTouch: { ...StyleSheet.absoluteFill },
   container: {
     borderRadius: radius.control,
     maxWidth: '90%',

@@ -2,7 +2,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { create } from 'zustand';
-
+import { getIdentity } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -13,13 +13,21 @@ interface AuthState {
   status: AuthStatus;
   isLoading: boolean;
   error: string | null;
+  identity: IdentityResponse | null;
+  needsEmailConfirmation: boolean;
   otpIdentifier: string | null;
   otpType: 'email' | 'sms' | null;
 }
 
+export interface IdentityResponse {
+  id: string;
+  email: string | null;
+  fullName: string | null;
+  role: string;
+}
+
 interface AuthActions {
   signIn: (email: string, password: string) => Promise<void>;
-  signInDemo: () => Promise<void>;
   signUp: (email: string, password: string, name?: string) => Promise<void>;
   signInWithPhone: (phone: string) => Promise<void>;
   signInWithEmailOtp: (email: string) => Promise<void>;
@@ -28,6 +36,7 @@ interface AuthActions {
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
+  loadIdentity: () => Promise<void>;
   clearError: () => void;
   clearOtpContext: () => void;
   _setSession: (session: Session | null) => void;
@@ -39,6 +48,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   status: 'loading',
   isLoading: true,
   error: null,
+  identity: null,
+  needsEmailConfirmation: false,
   otpIdentifier: null,
   otpType: null,
 
@@ -51,6 +62,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
           error: sessionError.message,
           status: 'unauthenticated',
           isLoading: false,
+          identity: null,
         });
         return;
       }
@@ -61,10 +73,12 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
           status: 'authenticated',
           isLoading: false,
         });
+        await _get().loadIdentity();
       } else {
         set({
           session: null,
           user: null,
+          identity: null,
           status: 'unauthenticated',
           isLoading: false,
         });
@@ -76,39 +90,38 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   },
 
   signIn: async (email, password) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, needsEmailConfirmation: false });
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
-      set({
-        session: data.session,
-        user: data.user ?? null,
-        status: 'authenticated',
-        isLoading: false,
-      });
-      router.replace('/home');
+      if (data.session?.user) {
+        await _get().loadIdentity();
+        set({
+          session: data.session,
+          user: data.user,
+          status: 'authenticated',
+          isLoading: false,
+        });
+        router.replace('/home');
+      } else {
+        set({
+          session: data.session ?? null,
+          user: data.user ?? null,
+          status: 'unauthenticated',
+          isLoading: false,
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign in failed';
       set({ error: message, status: 'unauthenticated', isLoading: false });
     }
   },
 
-  signInDemo: async () => {
-    set({
-      session: null,
-      user: null,
-      status: 'authenticated',
-      isLoading: false,
-      error: null,
-    });
-    router.replace('/home');
-  },
-
   signUp: async (email, password, name) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, needsEmailConfirmation: false });
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -117,10 +130,12 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       });
       if (error) throw error;
       if (data.session) {
+        await _get().loadIdentity();
         set({
           session: data.session,
-          user: data.user ?? null,
+          user: data.user,
           status: 'authenticated',
+          needsEmailConfirmation: false,
           isLoading: false,
         });
         router.replace('/home');
@@ -128,7 +143,9 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
         set({
           session: null,
           user: data.user ?? null,
+          identity: null,
           status: 'unauthenticated',
+          needsEmailConfirmation: true,
           isLoading: false,
         });
         router.replace('/sign-in');
@@ -174,15 +191,20 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
           : { phone: emailOrPhone, token, type: 'sms' as const };
       const { data, error } = await supabase.auth.verifyOtp(payload);
       if (error) throw error;
+      if (data.session?.user) {
+        await _get().loadIdentity();
+      }
       set({
         session: data.session ?? null,
         user: data.user ?? null,
-        status: 'authenticated',
+        status: data.session ? 'authenticated' : 'unauthenticated',
         isLoading: false,
         otpIdentifier: null,
         otpType: null,
       });
-      router.replace('/home');
+      if (data.session) {
+        router.replace('/home');
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'OTP verification failed';
       set({ error: message, isLoading: false });
@@ -222,6 +244,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       set({
         session: null,
         user: null,
+        identity: null,
         status: 'unauthenticated',
         isLoading: false,
       });
@@ -232,7 +255,16 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     }
   },
 
-  clearError: () => set({ error: null }),
+  loadIdentity: async () => {
+    try {
+      const identity = await getIdentity();
+      set({ identity });
+    } catch {
+      set({ identity: null });
+    }
+  },
+
+  clearError: () => set({ error: null, needsEmailConfirmation: false }),
 
   clearOtpContext: () => set({ otpIdentifier: null, otpType: null }),
 
@@ -246,8 +278,14 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   },
 }));
 
-supabase.auth.onAuthStateChange((_event, session) => {
-  useAuthStore.getState()._setSession(session);
+supabase.auth.onAuthStateChange(async (_event, session) => {
+  const store = useAuthStore.getState();
+  store._setSession(session);
+  if (session) {
+    await store.loadIdentity();
+  } else {
+    useAuthStore.setState({ identity: null, needsEmailConfirmation: false });
+  }
 });
 
 export function useRedirectIfAuthenticated(redirectTo = '/home') {
@@ -275,5 +313,7 @@ export function useAuthStatus() {
     status: state.status,
     isLoading: state.isLoading,
     error: state.error,
+    identity: state.identity,
+    needsEmailConfirmation: state.needsEmailConfirmation,
   }));
 }

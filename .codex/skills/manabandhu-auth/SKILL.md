@@ -13,32 +13,27 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 
 | Route | Screen Component | Type | States |
 |---|---|---|---|
-| `/sign-in` | `SignInScreen` | auth | normal, error, loading |
-| `/sign-up` | `SignUpScreen` | auth | normal, error, loading |
+| `/sign-in` | `SignInScreen` | auth | normal, error, loading, needs-confirmation |
+| `/sign-up` | `SignUpScreen` | auth | normal, error, loading, needs-confirmation |
 | `/forgot-password` | `ForgotPasswordScreen` | auth | normal, success, error |
-| `/phone-login` | `PhoneLoginScreen` | auth | normal, error, loading |
-| `/email-login` | `EmailLoginScreen` | auth | normal, error, loading |
 | `/otp-verification` | `OtpVerificationScreen` | auth | normal, error, loading |
 | `/reset-password` | `ResetPasswordScreen` | auth | normal, success, error |
-| `/choose-login-method` | `ChooseLoginMethodScreen` | auth | normal |
+| `/auth/callback` | `AuthCallbackScreen` | auth | confirming, error |
 
 ## Component Inventory
 
-- `SignInScreen` - email/password sign-in with demo credentials
-- `SignUpScreen` - account creation form
+- `SignInScreen` - email/password sign-in with zod client validation
+- `SignUpScreen` - account creation form with zod client validation
 - `ForgotPasswordScreen` - password reset initiation
-- `PhoneLoginScreen` - phone number entry
-- `EmailLoginScreen` - email magic link / OAuth entry
 - `OtpVerificationScreen` - OTP entry with countdown
 - `ResetPasswordScreen` - new password form
-- `ChooseLoginMethodScreen` - auth method selector
-- Shared: `ScreenShell`, `FormScreen`, `Input`, `AppButton`, `Text`, `Link`, `CountdownTimer`
+- `AuthCallbackScreen` - email confirmation / OAuth callback handler
 
 ## API Surface
 
 - Supabase Auth client in `frontend/src/lib/supabase.ts`
-- Demo submission uses `demo@manabandhu.local` / `DemoPass123` as a local demo session and returns to `/home`; it does not call Supabase until a real demo user is provisioned
-- No custom REST endpoints; auth state is derived from verified JWT claims
+- Identity fetched from `GET /api/v1/me` (backend-derived, not client-supplied)
+- No demo sign-in path; production auth is Supabase-backed end-to-end
 
 ## Demo Fixtures
 
@@ -49,20 +44,19 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 - **Loading**: spinner while auth action is in flight
 - **Empty**: not applicable
 - **Error**: inline error message with retry
-- **Success**: auto-navigate to `/home`
+- **Success**: auto-navigate to `/home` (or `/auth/callback` for confirmation)
+- **Waiting**: needs-email-confirmation state shows "check your email" prompt
 - **Offline**: disable submit, show offline banner
 - **Permission**: not applicable
 
 ## Navigation Actions and Cross-Module Links
 
 - `/sign-in` -> `/home` on success, `/forgot-password`
-- `/sign-up` -> `/home` on success, `/sign-in`
-- `/forgot-password` -> `/reset-password`
-- `/phone-login` -> `/otp-verification`
-- `/email-login` -> `/home` on success
+- `/sign-up` -> show confirmation prompt, `/sign-in` (or `/auth/callback` after email confirmation clicks through)
+- `/forgot-password` -> `/sign-in`
 - `/otp-verification` -> `/home` on success
 - `/reset-password` -> `/home` on success
-- `/choose-login-method` -> `/phone-login` or `/email-login`
+- `/auth/callback` -> redirect target after confirmation (typically `/home` via onAuthStateChange)
 
 ## Implementation Notes for Expo React Native
 
@@ -82,7 +76,5 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 
 ## Current Implementation Status
 
-- **Partial**: All auth screens are implemented with demo credentials. The demo button uses a local session because the fixture user is not provisioned in Supabase; regular password auth, phone/email login, OTP, and password reset use Supabase.
-- Recent fixes: auth screen imports now group the Supabase client import with other client imports, `authStore.ts` uses `_get` to avoid an unused getter lint, and `SignInScreen.tsx` removed an unused `AuthError` import.
-
-- Recent auth guard changes: added `useRequireAuth('/sign-in')` to protected routes and `useRedirectIfAuthenticated('/home')` to auth routes (`/email-login`, `/phone-login`, `/otp-verification`, `/forgot-password`, `/reset-password`).
+- **Done (Day 01)**: Email/password sign-up with required email verification; email confirmation callback via `/auth/callback`; real email/password sign-in; identity endpoint `GET /api/v1/me` integrated; session lifecycle with startup hydration, restoration, `onAuthStateChange` listener, and sign-out; protected navigation via `useRequireAuth` / `useRedirectIfAuthenticated`; zod client-side validation on sign-in and sign-up forms; demo sign-in path removed.
+- **Pending**: Phone OTP, email magic link (non-OTP), Google, and Apple providers remain explicitly unverified.
