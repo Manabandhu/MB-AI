@@ -1,15 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { color, radius, space } from '@manabandhu/design-system';
+import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 
 import { useAuthStore } from '@/lib/authStore';
 import { type CountryItem, supportedCountries } from '@/modules/auth/authConstants';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
 import { AuthSuccessCelebration } from '@/modules/auth/components/AuthSuccessCelebration';
+import { InlinePhoneInput } from '@/modules/auth/components/InlinePhoneInput';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
@@ -41,7 +42,6 @@ export function SignUpScreen() {
   // Phone Sign-Up States
   const [phoneName, setPhoneName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<CountryItem>(supportedCountries[0]);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [phoneDigits, setPhoneDigits] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -238,340 +238,324 @@ export function SignUpScreen() {
 
       {/* Main Form Fields */}
       <View style={styles.form}>
-        {authMethod === 'email' ? (
-          <>
-            {/* Full Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>FULL NAME</Text>
-              <Controller
-                control={control}
-                name="name"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <AppIcon name="user" size={18} color={color.muted} />
-                    <Input className="flex-1 border-0 bg-transparent min-h-12">
-                      <InputField
-                        placeholder="e.g. Priya Sharma"
-                        accessibilityLabel="Full name"
-                        value={value}
-                        onChangeText={(val) => {
-                          onChange(val);
-                          if (displayError) setError(null);
-                        }}
-                        style={styles.field}
-                      />
-                    </Input>
-                  </View>
-                )}
-              />
-              {errors.name ? (
-                <Text style={styles.fieldErrorText}>{errors.name.message}</Text>
-              ) : null}
-            </View>
-
-            {/* Email Address */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
-              <Controller
-                control={control}
-                name="email"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <AppIcon name="mail" size={18} color={color.muted} />
-                    <Input className="flex-1 border-0 bg-transparent min-h-12">
-                      <InputField
-                        placeholder="name@example.com"
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                        accessibilityLabel="Email address"
-                        value={value}
-                        onChangeText={(val) => {
-                          onChange(val);
-                          if (displayError) setError(null);
-                        }}
-                        style={styles.field}
-                      />
-                    </Input>
-                  </View>
-                )}
-              />
-              {errors.email ? (
-                <Text style={styles.fieldErrorText}>{errors.email.message}</Text>
-              ) : null}
-            </View>
-
-            {/* Password */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>CREATE PASSWORD</Text>
-              <Controller
-                control={control}
-                name="password"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <AppIcon name="lock" size={18} color={color.muted} />
-                    <Input className="flex-1 border-0 bg-transparent min-h-12">
-                      <InputField
-                        placeholder="Min 8 characters"
-                        secureTextEntry={!showPassword}
-                        accessibilityLabel="Password"
-                        value={value}
-                        onChangeText={(val) => {
-                          onChange(val);
-                          if (displayError) setError(null);
-                        }}
-                        style={styles.field}
-                      />
-                    </Input>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                      onPress={() => setShowPassword(!showPassword)}
-                      style={styles.eyeToggle}
-                    >
-                      <AppIcon
-                        name={showPassword ? 'eye-closed' : 'eye'}
-                        size={18}
-                        color={color.muted}
-                      />
-                    </Pressable>
-                  </View>
-                )}
-              />
-              {errors.password ? (
-                <Text style={styles.fieldErrorText}>{errors.password.message}</Text>
-              ) : null}
-
-              {/* Dynamic 4-Bar Password Strength Meter */}
-              {passwordLength > 0 ? (
-                <View style={styles.strengthContainer}>
-                  <View style={styles.strengthBarsRow}>
-                    <View
-                      style={[
-                        styles.strengthBar,
-                        strengthScore >= 1 && {
-                          backgroundColor:
-                            strengthScore === 1
-                              ? '#ba1a1a'
-                              : strengthScore === 2
-                                ? '#e28743'
-                                : color.teal,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.strengthBar,
-                        strengthScore >= 2 && {
-                          backgroundColor: strengthScore === 2 ? '#e28743' : color.teal,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.strengthBar,
-                        strengthScore >= 3 && { backgroundColor: color.teal },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.strengthBar,
-                        strengthScore >= 4 && { backgroundColor: color.teal },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.strengthLabel}>
-                    {strengthScore <= 1
-                      ? 'Weak'
-                      : strengthScore === 2
-                        ? 'Fair'
-                        : strengthScore === 3
-                          ? 'Good'
-                          : 'Strong'}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-
-            {/* Confirm Password */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>CONFIRM PASSWORD</Text>
-              <Controller
-                control={control}
-                name="confirmPassword"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.inputWrapper}>
-                    <AppIcon name="lock" size={18} color={color.muted} />
-                    <Input className="flex-1 border-0 bg-transparent min-h-12">
-                      <InputField
-                        placeholder="Re-enter password"
-                        secureTextEntry={!showPassword}
-                        accessibilityLabel="Confirm password"
-                        value={value}
-                        onChangeText={(val) => {
-                          onChange(val);
-                          if (displayError) setError(null);
-                        }}
-                        style={styles.field}
-                      />
-                    </Input>
-                  </View>
-                )}
-              />
-              {errors.confirmPassword ? (
-                <Text style={styles.fieldErrorText}>{errors.confirmPassword.message}</Text>
-              ) : null}
-            </View>
-
-            {displayError ? (
-              <View style={styles.errorBanner}>
-                <AppIcon name="warning" size={16} color="#ba1a1a" />
-                <Text style={styles.errorText}>{displayError}</Text>
+        <View style={styles.formContentBlock}>
+          {authMethod === 'email' ? (
+            <>
+              {/* Full Name */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>FULL NAME</Text>
+                <Controller
+                  control={control}
+                  name="name"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={styles.inputWrapper}>
+                      <AppIcon name="user" size={18} color={color.muted} />
+                      <Input className="flex-1 border-0 bg-transparent min-h-12">
+                        <InputField
+                          placeholder="First and last name"
+                          accessibilityLabel="Full name"
+                          value={value}
+                          onChangeText={(val) => {
+                            onChange(val);
+                            if (displayError) setError(null);
+                          }}
+                          style={styles.field}
+                        />
+                      </Input>
+                    </View>
+                  )}
+                />
+                {errors.name ? (
+                  <Text style={styles.fieldErrorText}>{errors.name.message}</Text>
+                ) : null}
               </View>
-            ) : null}
 
-            <AppButton
-              label="Create Free Account →"
-              onPress={handleSubmit(handleEmailSignUp)}
-              loading={loading}
-            />
-          </>
-        ) : (
-          <>
-            {/* Phone Sign Up Form */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>YOUR FULL NAME</Text>
-              <View style={styles.inputWrapper}>
-                <AppIcon name="user" size={18} color={color.muted} />
-                <Input className="flex-1 border-0 bg-transparent min-h-12">
-                  <InputField
-                    placeholder="e.g. Rajesh Reddy"
-                    accessibilityLabel="Your full name"
-                    value={phoneName}
-                    onChangeText={(val) => {
-                      setPhoneName(val);
-                      if (displayError) setError(null);
-                    }}
-                    editable={!otpSent}
-                    style={styles.field}
-                  />
-                </Input>
+              {/* Email Address */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+                <Controller
+                  control={control}
+                  name="email"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={styles.inputWrapper}>
+                      <AppIcon name="mail" size={18} color={color.muted} />
+                      <Input className="flex-1 border-0 bg-transparent min-h-12">
+                        <InputField
+                          placeholder="name@example.com"
+                          autoCapitalize="none"
+                          keyboardType="email-address"
+                          accessibilityLabel="Email address"
+                          value={value}
+                          onChangeText={(val) => {
+                            onChange(val);
+                            if (displayError) setError(null);
+                          }}
+                          style={styles.field}
+                        />
+                      </Input>
+                    </View>
+                  )}
+                />
+                {errors.email ? (
+                  <Text style={styles.fieldErrorText}>{errors.email.message}</Text>
+                ) : null}
               </View>
-            </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>MOBILE PHONE NUMBER</Text>
+              {/* Password */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>CREATE PASSWORD</Text>
+                <Controller
+                  control={control}
+                  name="password"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={styles.inputWrapper}>
+                      <AppIcon name="lock" size={18} color={color.muted} />
+                      <Input className="flex-1 border-0 bg-transparent min-h-12">
+                        <InputField
+                          placeholder="Min 8 characters"
+                          secureTextEntry={!showPassword}
+                          accessibilityLabel="Password"
+                          value={value}
+                          onChangeText={(val) => {
+                            onChange(val);
+                            if (displayError) setError(null);
+                          }}
+                          style={styles.field}
+                        />
+                      </Input>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                        onPress={() => setShowPassword(!showPassword)}
+                        style={styles.eyeToggle}
+                      >
+                        <AppIcon
+                          name={showPassword ? 'eye-closed' : 'eye'}
+                          size={18}
+                          color={color.muted}
+                        />
+                      </Pressable>
+                    </View>
+                  )}
+                />
+                {errors.password ? (
+                  <Text style={styles.fieldErrorText}>{errors.password.message}</Text>
+                ) : null}
 
-              {/* Country Code Dropdown Trigger */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Select country dialing code"
-                onPress={() => setDropdownOpen(true)}
-                style={styles.countryDropdownTrigger}
-              >
-                <View style={styles.countryTriggerLeft}>
-                  <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
-                  <Text style={styles.countryName} numberOfLines={1}>
-                    {selectedCountry.name}
-                  </Text>
-                </View>
-                <View style={styles.countryTriggerRight}>
-                  <Text style={styles.countryCodeBadge}>{selectedCountry.code}</Text>
-                  <AppIcon name="chevron-down" size={16} color={color.muted} />
-                </View>
-              </Pressable>
-
-              {/* Phone Input with Country Prefix */}
-              <View style={styles.inputWrapper}>
-                <View style={styles.countryPrefixBadge}>
-                  <Text style={styles.countryPrefixText}>{selectedCountry.code}</Text>
-                </View>
-                <Input className="flex-1 border-0 bg-transparent min-h-12">
-                  <InputField
-                    placeholder="(555) 000-0000"
-                    keyboardType="phone-pad"
-                    accessibilityLabel="Mobile phone number"
-                    value={phoneDigits}
-                    onChangeText={(val) => {
-                      setPhoneDigits(val);
-                      if (displayError) setError(null);
-                    }}
-                    editable={!otpSent}
-                    style={styles.field}
-                  />
-                </Input>
-                <AppIcon name="phone" size={18} color={color.muted} />
-              </View>
-            </View>
-
-            {/* OTP Code Input Step */}
-            {otpSent ? (
-              <View style={styles.otpCard}>
-                <View style={styles.otpHeaderRow}>
-                  <View style={styles.otpHeaderTitleRow}>
-                    <AppIcon name="shield" size={16} color={color.teal} />
-                    <Text style={styles.otpCardTitle}>Enter 6-Digit Code</Text>
+                {/* Dynamic 4-Bar Password Strength Meter */}
+                {passwordLength > 0 ? (
+                  <View style={styles.strengthContainer}>
+                    <View style={styles.strengthBarsRow}>
+                      <View
+                        style={[
+                          styles.strengthBar,
+                          strengthScore >= 1 && {
+                            backgroundColor:
+                              strengthScore === 1
+                                ? '#ba1a1a'
+                                : strengthScore === 2
+                                  ? '#e28743'
+                                  : color.teal,
+                          },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.strengthBar,
+                          strengthScore >= 2 && {
+                            backgroundColor: strengthScore === 2 ? '#e28743' : color.teal,
+                          },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.strengthBar,
+                          strengthScore >= 3 && { backgroundColor: color.teal },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.strengthBar,
+                          strengthScore >= 4 && { backgroundColor: color.teal },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.strengthLabel}>
+                      {strengthScore <= 1
+                        ? 'Weak'
+                        : strengthScore === 2
+                          ? 'Fair'
+                          : strengthScore === 3
+                            ? 'Good'
+                            : 'Strong'}
+                    </Text>
                   </View>
-                  <Pressable
-                    onPress={() => {
-                      setOtpSent(false);
-                      setOtpCode('');
-                    }}
-                    style={styles.editPhoneBtn}
-                  >
-                    <Text style={styles.editPhoneText}>Edit Phone</Text>
-                  </Pressable>
-                </View>
+                ) : null}
+              </View>
 
-                <View style={styles.otpInputWrapper}>
+              {/* Confirm Password */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>CONFIRM PASSWORD</Text>
+                <Controller
+                  control={control}
+                  name="confirmPassword"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={styles.inputWrapper}>
+                      <AppIcon name="lock" size={18} color={color.muted} />
+                      <Input className="flex-1 border-0 bg-transparent min-h-12">
+                        <InputField
+                          placeholder="Re-enter password"
+                          secureTextEntry={!showPassword}
+                          accessibilityLabel="Confirm password"
+                          value={value}
+                          onChangeText={(val) => {
+                            onChange(val);
+                            if (displayError) setError(null);
+                          }}
+                          style={styles.field}
+                        />
+                      </Input>
+                    </View>
+                  )}
+                />
+                {errors.confirmPassword ? (
+                  <Text style={styles.fieldErrorText}>{errors.confirmPassword.message}</Text>
+                ) : null}
+              </View>
+
+              {displayError ? (
+                <View style={styles.errorBanner}>
+                  <AppIcon name="warning" size={16} color="#ba1a1a" />
+                  <Text style={styles.errorText}>{displayError}</Text>
+                </View>
+              ) : null}
+
+              <AppButton
+                label="Create Free Account →"
+                onPress={handleSubmit(handleEmailSignUp)}
+                loading={loading}
+              />
+            </>
+          ) : (
+            <>
+              {/* Phone Sign Up Form */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>YOUR FULL NAME</Text>
+                <View style={styles.inputWrapper}>
+                  <AppIcon name="user" size={18} color={color.muted} />
                   <Input className="flex-1 border-0 bg-transparent min-h-12">
                     <InputField
-                      placeholder="• • • • • •"
-                      keyboardType="number-pad"
-                      maxLength={6}
-                      autoFocus
-                      accessibilityLabel="6-digit verification code"
-                      value={otpCode}
+                      placeholder="First and last name"
+                      accessibilityLabel="Your full name"
+                      value={phoneName}
                       onChangeText={(val) => {
-                        setOtpCode(val);
+                        setPhoneName(val);
                         if (displayError) setError(null);
                       }}
-                      style={styles.otpField}
+                      editable={!otpSent}
+                      style={styles.field}
                     />
                   </Input>
                 </View>
+              </View>
 
-                <View style={styles.otpResendRow}>
-                  {timerCount > 0 ? (
-                    <Text style={styles.timerText}>Resend code in {timerCount}s</Text>
-                  ) : (
-                    <Pressable onPress={handleSendPhoneOtp} disabled={loading}>
-                      <Text style={styles.resendAction}>Resend verification code</Text>
-                    </Pressable>
-                  )}
-                </View>
-
-                <AppButton
-                  label="Verify & Join ManaBandhu →"
-                  onPress={handleVerifyPhoneOtp}
-                  loading={loading}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>MOBILE PHONE NUMBER</Text>
+                <InlinePhoneInput
+                  selectedCountry={selectedCountry}
+                  onSelectCountry={setSelectedCountry}
+                  phoneDigits={phoneDigits}
+                  onChangePhoneDigits={(val) => {
+                    setPhoneDigits(val);
+                    if (displayError) setError(null);
+                  }}
+                  editable={!otpSent}
                 />
               </View>
-            ) : (
-              <AppButton
-                label="Send Verification Code →"
-                onPress={handleSendPhoneOtp}
-                loading={loading}
-              />
-            )}
 
-            {displayError ? (
-              <View style={styles.errorBanner}>
-                <AppIcon name="warning" size={16} color="#ba1a1a" />
-                <Text style={styles.errorText}>{displayError}</Text>
-              </View>
-            ) : null}
-          </>
-        )}
+              {/* OTP Code Input Step */}
+              {otpSent ? (
+                <View style={styles.otpCard}>
+                  <View style={styles.otpHeaderRow}>
+                    <View style={styles.otpHeaderTitleRow}>
+                      <AppIcon name="shield" size={16} color={color.teal} />
+                      <Text style={styles.otpCardTitle}>Enter 6-Digit Code</Text>
+                    </View>
+                    <Pressable
+                      onPress={() => {
+                        setOtpSent(false);
+                        setOtpCode('');
+                      }}
+                      style={styles.editPhoneBtn}
+                    >
+                      <Text style={styles.editPhoneText}>Edit Phone</Text>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.otpInputWrapper}>
+                    <Input className="flex-1 border-0 bg-transparent min-h-12">
+                      <InputField
+                        placeholder="• • • • • •"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        autoFocus
+                        accessibilityLabel="6-digit verification code"
+                        value={otpCode}
+                        onChangeText={(val) => {
+                          setOtpCode(val);
+                          if (displayError) setError(null);
+                        }}
+                        style={styles.otpField}
+                      />
+                    </Input>
+                  </View>
+
+                  <View style={styles.otpResendRow}>
+                    {timerCount > 0 ? (
+                      <Text style={styles.timerText}>Resend code in {timerCount}s</Text>
+                    ) : (
+                      <Pressable onPress={handleSendPhoneOtp} disabled={loading}>
+                        <Text style={styles.resendAction}>Resend verification code</Text>
+                      </Pressable>
+                    )}
+                  </View>
+
+                  <AppButton
+                    label="Verify & Join ManaBandhu →"
+                    onPress={handleVerifyPhoneOtp}
+                    loading={loading}
+                  />
+                </View>
+              ) : (
+                <>
+                  <View style={styles.phoneTrustCard}>
+                    <View style={styles.phoneTrustHeader}>
+                      <AppIcon name="shield" size={15} color={color.teal} />
+                      <Text style={styles.phoneTrustTitle}>Fast & Passwordless Registration</Text>
+                    </View>
+                    <Text style={styles.phoneTrustDesc}>
+                      We'll verify your mobile number with a secure 6-digit code. No complex
+                      passwords to remember or reset.
+                    </Text>
+                  </View>
+
+                  <AppButton
+                    label="Send Verification Code →"
+                    onPress={handleSendPhoneOtp}
+                    loading={loading}
+                  />
+                </>
+              )}
+
+              {displayError ? (
+                <View style={styles.errorBanner}>
+                  <AppIcon name="warning" size={16} color="#ba1a1a" />
+                  <Text style={styles.errorText}>{displayError}</Text>
+                </View>
+              ) : null}
+            </>
+          )}
+        </View>
 
         {/* Alternative Sign-Ups */}
         <View style={styles.dividerRow}>
@@ -622,58 +606,6 @@ export function SignUpScreen() {
           </Text>
         </View>
       </View>
-
-      {/* Country Code Modal */}
-      <Modal
-        animationType="slide"
-        transparent
-        visible={dropdownOpen}
-        onRequestClose={() => setDropdownOpen(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setDropdownOpen(false)}>
-          <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Your Country Code</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close country selection"
-                onPress={() => setDropdownOpen(false)}
-                style={styles.modalCloseBtn}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.countryList} bounces={false}>
-              {supportedCountries.map((c) => {
-                const isSelected = selectedCountry.code === c.code;
-                return (
-                  <Pressable
-                    key={c.code + c.name}
-                    accessibilityRole="button"
-                    onPress={() => {
-                      setSelectedCountry(c);
-                      setDropdownOpen(false);
-                    }}
-                    style={[styles.countryItemRow, isSelected && styles.countryItemRowSelected]}
-                  >
-                    <View style={styles.countryItemLeft}>
-                      <Text style={styles.countryItemFlag}>{c.flag}</Text>
-                      <Text style={styles.countryItemName}>{c.name}</Text>
-                    </View>
-                    <View style={styles.countryItemRight}>
-                      <Text style={styles.countryItemCode}>{c.code}</Text>
-                      {isSelected ? (
-                        <AppIcon name="check" size={16} color={color.teal} strokeWidth={3} />
-                      ) : null}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </Pressable>
-      </Modal>
     </AuthPageLayout>
   );
 }
@@ -719,6 +651,34 @@ const styles = StyleSheet.create({
     color: color.ink,
   },
   form: { gap: space.x3 },
+  formContentBlock: {
+    gap: space.x3,
+    justifyContent: 'space-between',
+    minHeight: 440,
+  },
+  phoneTrustCard: {
+    backgroundColor: 'rgba(0, 105, 107, 0.05)',
+    borderColor: 'rgba(0, 105, 107, 0.16)',
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 4,
+    padding: space.x3,
+  },
+  phoneTrustHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  phoneTrustTitle: {
+    color: color.teal,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  phoneTrustDesc: {
+    color: color.muted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
   inputGroup: { gap: space.x1 },
   inputLabel: { color: color.ink, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   inputWrapper: {
@@ -757,42 +717,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  countryDropdownTrigger: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(67, 30, 190, 0.04)',
-    borderColor: color.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: space.x1,
-    paddingHorizontal: space.x3,
-    paddingVertical: 10,
-  },
-  countryTriggerLeft: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flex: 1,
-    gap: space.x2,
-  },
-  countryFlag: { fontSize: 18 },
-  countryName: { color: color.ink, fontSize: 13, fontWeight: '700', flexShrink: 1 },
-  countryTriggerRight: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  countryCodeBadge: {
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    borderRadius: radius.pill,
-    color: color.primary,
-    fontSize: 12,
-    fontWeight: '800',
-    paddingHorizontal: space.x2,
-    paddingVertical: 2,
-  },
-  countryPrefixBadge: {
-    borderRightColor: color.border,
-    borderRightWidth: 1,
-    paddingRight: space.x2,
-  },
-  countryPrefixText: { color: color.primary, fontSize: 14, fontWeight: '800' },
   otpCard: {
     backgroundColor: 'rgba(0, 105, 107, 0.04)',
     borderColor: 'rgba(0, 105, 107, 0.18)',
@@ -914,59 +838,4 @@ const styles = StyleSheet.create({
     padding: space.x3,
   },
   errorText: { color: '#ba1a1a', fontSize: 13, fontWeight: '700' },
-  modalBackdrop: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
-    flex: 1,
-    justifyContent: 'center',
-    padding: space.x4,
-  },
-  modalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    elevation: 10,
-    maxHeight: 480,
-    maxWidth: 420,
-    overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    width: '100%',
-  },
-  modalHeader: {
-    alignItems: 'center',
-    borderBottomColor: color.border,
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  modalTitle: { color: color.ink, fontSize: 16, fontWeight: '800' },
-  modalCloseBtn: {
-    alignItems: 'center',
-    backgroundColor: color.primarySoft,
-    borderRadius: 14,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  modalCloseText: { color: color.primary, fontSize: 13, fontWeight: '700' },
-  countryList: { maxHeight: 380 },
-  countryItemRow: {
-    alignItems: 'center',
-    borderBottomColor: 'rgba(0,0,0,0.04)',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  countryItemRowSelected: { backgroundColor: 'rgba(0, 105, 107, 0.08)' },
-  countryItemLeft: { alignItems: 'center', flexDirection: 'row', gap: space.x3 },
-  countryItemFlag: { fontSize: 20 },
-  countryItemName: { color: color.ink, fontSize: 14, fontWeight: '600' },
-  countryItemRight: { alignItems: 'center', flexDirection: 'row', gap: space.x2 },
-  countryItemCode: { color: color.primary, fontSize: 13, fontWeight: '700' },
 });

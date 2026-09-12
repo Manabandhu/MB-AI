@@ -395,9 +395,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: space.x3,
     justifyContent: 'center',
+    width: '100%',
   },
   formPaneDesktop: {
     maxWidth: 480,
+    width: 480,
   },
   formHeaderRow: {
     alignItems: 'center',
@@ -443,6 +445,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 4,
+    width: '100%',
   },
   badgePill: {
     alignSelf: 'center',
