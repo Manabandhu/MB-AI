@@ -1,10 +1,13 @@
 import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/lib/authStore';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
 const RESEND_COOLDOWN = 60;
 
@@ -59,13 +62,13 @@ export function ForgotPasswordScreen() {
           ? `We’ve dispatched password recovery instructions to ${email}`
           : 'Enter your registered email and we’ll help you reset your password'
       }
-      badgeText="🔑 Account Access Recovery"
+      badgeText="Account Access Recovery"
       backHref="/sign-in"
     >
       {sent ? (
         <View style={styles.successCard}>
           <View style={styles.keyIconWrap}>
-            <Text style={styles.keyIcon}>🔐</Text>
+            <AppIcon name="key" size={28} color={color.primary} />
           </View>
           <Text style={styles.successTitle}>Recovery Email Sent</Text>
           <Text style={styles.successBody}>
@@ -100,24 +103,25 @@ export function ForgotPasswordScreen() {
         </View>
       ) : (
         <>
-          {/* Email Input */}
+          {/* Email Input using Gluestack */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Registered Email Address</Text>
+            <Text style={styles.inputLabel}>REGISTERED EMAIL ADDRESS</Text>
             <View style={styles.textInputRow}>
-              <Text style={styles.inputIcon}>✉️</Text>
-              <TextInput
-                placeholder="you@domain.com"
-                placeholderTextColor={color.muted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={(v) => {
-                  setEmail(v);
-                  if (error) setLocalError(null);
-                }}
-                style={styles.textInput}
-                accessibilityLabel="Email Address Input"
-              />
+              <AppIcon name="mail" size={18} color={color.muted} />
+              <Input className="flex-1 border-0 bg-transparent min-h-12">
+                <InputField
+                  placeholder="you@domain.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={(v) => {
+                    setEmail(v);
+                    if (error) setLocalError(null);
+                  }}
+                  accessibilityLabel="Registered Email Address"
+                  style={styles.field}
+                />
+              </Input>
             </View>
             <Text style={styles.helperText}>
               We’ll check our records and email you a password reset link.
@@ -127,22 +131,17 @@ export function ForgotPasswordScreen() {
           {/* Inline Error Banner */}
           {error ? (
             <View style={styles.errorBanner}>
-              <Text style={styles.errorIcon}>⚠️</Text>
+              <AppIcon name="warning" size={16} color="#ba1a1a" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
-          {/* Send Reset Link CTA */}
-          <Pressable
+          {/* Send Reset Link CTA via Gluestack AppButton */}
+          <AppButton
+            label={loading ? 'Sending Instructions…' : 'Send Reset Link →'}
             onPress={handleSendReset}
-            disabled={loading}
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.primaryButtonText}>
-              {loading ? 'Sending Instructions…' : 'Send Reset Link →'}
-            </Text>
-          </Pressable>
+            loading={loading}
+          />
 
           {/* Back to Sign In */}
           <Pressable
@@ -164,12 +163,13 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: color.ink,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   textInputRow: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: color.surface,
     borderColor: 'rgba(67, 30, 190, 0.20)',
     borderRadius: 14,
     borderWidth: 1.5,
@@ -177,16 +177,11 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: space.x3,
   },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: space.x2,
-  },
-  textInput: {
+  field: {
     color: color.ink,
-    flex: 1,
     fontSize: 15,
-    fontWeight: '600',
-    height: '100%',
+    fontWeight: '500',
+    paddingHorizontal: space.x2,
   },
   helperText: {
     color: color.muted,
@@ -203,34 +198,11 @@ const styles = StyleSheet.create({
     gap: space.x2,
     padding: space.x3,
   },
-  errorIcon: {
-    fontSize: 14,
-  },
   errorText: {
     color: '#ba1a1a',
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-  },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: color.primary,
-    borderRadius: 999,
-    justifyContent: 'center',
-    minHeight: 50,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
   },
   backLink: {
     alignSelf: 'center',
@@ -256,17 +228,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 24,
-    height: 64,
+    height: 60,
     justifyContent: 'center',
-    width: 64,
+    width: 60,
     shadowColor: '#431ebe',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.12,
     shadowRadius: 10,
     elevation: 4,
-  },
-  keyIcon: {
-    fontSize: 30,
   },
   successTitle: {
     color: color.ink,
@@ -305,7 +274,7 @@ const styles = StyleSheet.create({
   },
   returnButton: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: color.surface,
     borderColor: color.border,
     borderRadius: 999,
     borderWidth: 1,

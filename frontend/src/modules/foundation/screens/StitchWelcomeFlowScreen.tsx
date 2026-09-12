@@ -6,9 +6,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
+import type { AppIconName } from '@/modules/shared/ui/AppIcon';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
-const slides = [
+interface SlideItem {
+  category: string;
+  title: string;
+  desc: string;
+  tag: string;
+  tagBg: string;
+  tagColor: string;
+  stat: string;
+  iconName: AppIconName;
+  testimonial: string;
+  author: string;
+  bullets: string[];
+}
+
+const slides: SlideItem[] = [
   {
     category: 'Housing',
     title: 'Verified Rooms & Roommates',
@@ -17,7 +33,7 @@ const slides = [
     tagBg: 'rgba(67, 30, 190, 0.10)',
     tagColor: color.primary,
     stat: 'Avg savings: $450/mo',
-    icon: '🏠',
+    iconName: 'home',
     testimonial: '“Found my roommate in Dallas in 2 days with zero brokerage!”',
     author: 'Sravan K., Dallas TX',
     bullets: [
@@ -34,7 +50,7 @@ const slides = [
     tagBg: 'rgba(0, 105, 107, 0.12)',
     tagColor: color.teal,
     stat: '15,000+ trips shared',
-    icon: '🚗',
+    iconName: 'car',
     testimonial: '“Cut my weekly commute cost by 60% and made great friends.”',
     author: 'Madhu V., San Jose CA',
     bullets: [
@@ -51,7 +67,7 @@ const slides = [
     tagBg: 'rgba(255, 126, 51, 0.14)',
     tagColor: color.warm,
     stat: '3,500+ successful referrals',
-    icon: '💼',
+    iconName: 'briefcase',
     testimonial: '“Landed my Senior SWE interview within a week through a referral.”',
     author: 'Ananya R., Seattle WA',
     bullets: [
@@ -68,7 +84,7 @@ const slides = [
     tagBg: 'rgba(67, 30, 190, 0.10)',
     tagColor: color.primary,
     stat: '50,000+ active members',
-    icon: '🤝',
+    iconName: 'community',
     testimonial: '“Having ManaBandhu is like having family in every city I move to.”',
     author: 'Karthik N., Austin TX',
     bullets: [
@@ -134,7 +150,7 @@ export function StitchWelcomeFlowScreen() {
                 <View style={styles.brandTitleRow}>
                   <Text style={styles.brandTitle}>ManaBandhu</Text>
                   <View style={styles.verifiedDot}>
-                    <Text style={styles.verifiedCheck}>✓</Text>
+                    <AppIcon name="check" size={10} color="#ffffff" strokeWidth={3} />
                   </View>
                 </View>
                 <Text style={styles.brandSubtitle}>Telugu Diaspora Platform</Text>
@@ -197,7 +213,7 @@ export function StitchWelcomeFlowScreen() {
                   <View style={styles.brandTitleRow}>
                     <Text style={styles.brandTitle}>ManaBandhu</Text>
                     <View style={styles.verifiedDot}>
-                      <Text style={styles.verifiedCheck}>✓</Text>
+                      <AppIcon name="check" size={10} color="#ffffff" strokeWidth={3} />
                     </View>
                   </View>
                   <Text style={styles.brandSubtitle}>Telugu Diaspora Platform</Text>
@@ -221,7 +237,8 @@ export function StitchWelcomeFlowScreen() {
             {/* Left Column: Hero Text & Value Props */}
             <View style={[styles.heroTextCol, isDesktop && styles.heroTextColDesktop]}>
               <View style={styles.heroPillBadge}>
-                <Text style={styles.heroPillText}>✨ North America’s #1 Telugu Diaspora App</Text>
+                <AppIcon name="star" size={14} color={color.primary} />
+                <Text style={styles.heroPillText}>North America’s #1 Telugu Diaspora App</Text>
               </View>
               <Text style={[styles.mainHeading, isDesktop && styles.mainHeadingDesktop]}>
                 Your Trusted Telugu Community, Everywhere You Go
@@ -235,17 +252,23 @@ export function StitchWelcomeFlowScreen() {
               {/* Value Checkpoints */}
               <View style={styles.valuePointsBlock}>
                 <View style={styles.valuePointItem}>
-                  <Text style={styles.valuePointCheck}>✓</Text>
+                  <View style={styles.checkCircle}>
+                    <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
+                  </View>
                   <Text style={styles.valuePointText}>100% ID Verified & Moderated Community</Text>
                 </View>
                 <View style={styles.valuePointItem}>
-                  <Text style={styles.valuePointCheck}>✓</Text>
+                  <View style={styles.checkCircle}>
+                    <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
+                  </View>
                   <Text style={styles.valuePointText}>
                     Zero Brokerage Housing & Transparent Costs
                   </Text>
                 </View>
                 <View style={styles.valuePointItem}>
-                  <Text style={styles.valuePointCheck}>✓</Text>
+                  <View style={styles.checkCircle}>
+                    <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
+                  </View>
                   <Text style={styles.valuePointText}>
                     24/7 Peer Assistance & Local Diaspora Chapters
                   </Text>
@@ -336,7 +359,7 @@ export function StitchWelcomeFlowScreen() {
               >
                 <View style={styles.slideHeader}>
                   <View style={styles.slideIconWrap}>
-                    <Text style={styles.slideBigIcon}>{current.icon}</Text>
+                    <AppIcon name={current.iconName} size={24} color={color.primary} />
                   </View>
                   <View style={styles.slideHeaderRight}>
                     <View style={[styles.slideTag, { backgroundColor: current.tagBg }]}>
@@ -352,11 +375,11 @@ export function StitchWelcomeFlowScreen() {
                 <Text style={styles.slideTitle}>{current.title}</Text>
                 <Text style={styles.slideDesc}>{current.desc}</Text>
 
-                {/* Bullets */}
+                {/* Bullets with vector icons */}
                 <View style={styles.slideBulletsCol}>
                   {current.bullets.map((b) => (
                     <View key={b} style={styles.slideBulletRow}>
-                      <Text style={styles.slideBulletDot}>⚡</Text>
+                      <AppIcon name="sparks" size={13} color={color.primary} />
                       <Text style={styles.slideBulletText}>{b}</Text>
                     </View>
                   ))}
@@ -377,7 +400,7 @@ export function StitchWelcomeFlowScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Previous slide"
                 >
-                  <Text style={styles.arrowText}>‹</Text>
+                  <AppIcon name="chevron-left" size={18} color={color.primary} />
                 </Pressable>
 
                 {/* Clickable Animated Stepper Dots */}
@@ -399,7 +422,7 @@ export function StitchWelcomeFlowScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Next slide"
                 >
-                  <Text style={styles.arrowText}>›</Text>
+                  <AppIcon name="chevron-right" size={18} color={color.primary} />
                 </Pressable>
               </View>
             </View>
@@ -455,7 +478,9 @@ export function StitchWelcomeFlowScreen() {
                     style={[styles.matrixCard, activeSlide === idx && styles.matrixCardSelected]}
                   >
                     <View style={styles.matrixCardTop}>
-                      <Text style={styles.matrixCardIcon}>{s.icon}</Text>
+                      <View style={styles.matrixIconBubble}>
+                        <AppIcon name={s.iconName} size={22} color={color.primary} />
+                      </View>
                       <View style={[styles.matrixCardTag, { backgroundColor: s.tagBg }]}>
                         <Text style={[styles.matrixCardTagText, { color: s.tagColor }]}>
                           {s.tag}
@@ -469,9 +494,11 @@ export function StitchWelcomeFlowScreen() {
                 ))}
               </View>
 
-              {/* Safety Banner */}
+              {/* Safety Banner with exact Shield AppIcon */}
               <View style={styles.safetyPledgeBanner}>
-                <Text style={styles.safetyPledgeIcon}>🛡️</Text>
+                <View style={styles.safetyIconBubble}>
+                  <AppIcon name="shield" size={28} color={color.teal} />
+                </View>
                 <View style={styles.safetyPledgeCol}>
                   <Text style={styles.safetyPledgeTitle}>
                     ManaBandhu Safety & Moderation Pledge
@@ -591,7 +618,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 16,
   },
-  verifiedCheck: { color: '#ffffff', fontSize: 10, fontWeight: '800' },
   brandSubtitle: { color: color.muted, fontSize: 11, fontWeight: '600' },
   skipButton: { padding: space.x2 },
   skipText: { color: color.muted, fontSize: 14, fontWeight: '700' },
@@ -613,11 +639,14 @@ const styles = StyleSheet.create({
     gap: space.x4,
   },
   heroPillBadge: {
+    alignItems: 'center',
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(67, 30, 190, 0.08)',
     borderColor: 'rgba(67, 30, 190, 0.18)',
     borderRadius: 999,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
     paddingHorizontal: space.x3,
     paddingVertical: 5,
   },
@@ -658,10 +687,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: space.x2,
   },
-  valuePointCheck: {
-    color: color.teal,
-    fontSize: 14,
-    fontWeight: '900',
+  checkCircle: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 105, 107, 0.12)',
+    borderRadius: 10,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
   },
   valuePointText: {
     color: color.ink,
@@ -818,9 +850,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  slideBigIcon: {
-    fontSize: 26,
-  },
   slideHeaderRight: {
     alignItems: 'flex-end',
     gap: 4,
@@ -857,9 +886,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: space.x2,
-  },
-  slideBulletDot: {
-    fontSize: 11,
   },
   slideBulletText: {
     color: color.ink,
@@ -901,12 +927,6 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     width: 36,
-  },
-  arrowText: {
-    color: color.primary,
-    fontSize: 20,
-    fontWeight: '800',
-    lineHeight: 22,
   },
   dotsRow: {
     alignItems: 'center',
@@ -1023,8 +1043,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  matrixCardIcon: {
-    fontSize: 26,
+  matrixIconBubble: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(67, 30, 190, 0.08)',
+    borderRadius: 12,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
   },
   matrixCardTag: {
     borderRadius: 999,
@@ -1052,7 +1077,7 @@ const styles = StyleSheet.create({
     marginTop: space.x1,
   },
 
-  // Safety Pledge Banner
+  // Safety Pledge Banner with AppIcon
   safetyPledgeBanner: {
     alignItems: 'center',
     backgroundColor: 'rgba(0, 105, 107, 0.08)',
@@ -1063,8 +1088,18 @@ const styles = StyleSheet.create({
     gap: space.x4,
     padding: space.x5,
   },
-  safetyPledgeIcon: {
-    fontSize: 32,
+  safetyIconBubble: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+    shadowColor: '#00696b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
   safetyPledgeCol: {
     flex: 1,

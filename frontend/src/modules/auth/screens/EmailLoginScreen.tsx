@@ -1,10 +1,13 @@
 import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/lib/authStore';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
 export function EmailLoginScreen() {
   const [email, setEmail] = useState('');
@@ -53,59 +56,61 @@ export function EmailLoginScreen() {
     <AuthPageLayout
       title="Email Sign In"
       subtitle="Sign in with your email address and password"
-      badgeText="✉️ Email & Password Authentication"
+      badgeText="Email & Password Authentication"
       backHref="/sign-in"
     >
-      {/* Email Input */}
+      {/* Email Input using Gluestack */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Email Address</Text>
+        <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
         <View style={styles.textInputRow}>
-          <Text style={styles.inputIcon}>✉️</Text>
-          <TextInput
-            placeholder="you@domain.com"
-            placeholderTextColor={color.muted}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={(v) => {
-              setEmail(v);
-              if (error) setLocalError(null);
-            }}
-            style={styles.textInput}
-            accessibilityLabel="Email Address Input"
-          />
+          <AppIcon name="mail" size={18} color={color.muted} />
+          <Input className="flex-1 border-0 bg-transparent min-h-12">
+            <InputField
+              placeholder="you@domain.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={(v) => {
+                setEmail(v);
+                if (error) setLocalError(null);
+              }}
+              accessibilityLabel="Email Address Input"
+              style={styles.field}
+            />
+          </Input>
         </View>
       </View>
 
-      {/* Password Input */}
+      {/* Password Input using Gluestack */}
       <View style={styles.inputGroup}>
         <View style={styles.inputLabelRow}>
-          <Text style={styles.inputLabel}>Password</Text>
+          <Text style={styles.inputLabel}>PASSWORD</Text>
           <Pressable onPress={() => router.push('/forgot-password')} accessibilityRole="link">
             <Text style={styles.forgotLink}>Forgot Password?</Text>
           </Pressable>
         </View>
         <View style={styles.textInputRow}>
-          <Text style={styles.inputIcon}>🔒</Text>
-          <TextInput
-            placeholder="Enter your password"
-            placeholderTextColor={color.muted}
-            secureTextEntry={!showPassword}
-            value={password}
-            onChangeText={(v) => {
-              setPassword(v);
-              if (error) setLocalError(null);
-            }}
-            style={styles.textInput}
-            accessibilityLabel="Password Input"
-          />
+          <AppIcon name="lock" size={18} color={color.muted} />
+          <Input className="flex-1 border-0 bg-transparent min-h-12">
+            <InputField
+              placeholder="Enter your password"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={(v) => {
+                setPassword(v);
+                if (error) setLocalError(null);
+              }}
+              accessibilityLabel="Password Input"
+              style={styles.field}
+            />
+          </Input>
           <Pressable
             onPress={() => setShowPassword(!showPassword)}
             style={styles.eyeButton}
             accessibilityRole="button"
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
           >
-            <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+            <AppIcon name={showPassword ? 'eye-closed' : 'eye'} size={18} color={color.muted} />
           </Pressable>
         </View>
       </View>
@@ -118,7 +123,9 @@ export function EmailLoginScreen() {
         accessibilityState={{ checked: rememberDevice }}
       >
         <View style={[styles.checkbox, rememberDevice && styles.checkboxActive]}>
-          {rememberDevice ? <Text style={styles.checkboxCheck}>✓</Text> : null}
+          {rememberDevice ? (
+            <AppIcon name="check" size={12} color="#ffffff" strokeWidth={3} />
+          ) : null}
         </View>
         <Text style={styles.rememberText}>Remember this device for 30 days</Text>
       </Pressable>
@@ -126,22 +133,17 @@ export function EmailLoginScreen() {
       {/* Inline Error Banner */}
       {error ? (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <AppIcon name="warning" size={16} color="#ba1a1a" />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
 
-      {/* Primary Sign In Button */}
-      <Pressable
+      {/* Primary Sign In Button via Gluestack AppButton */}
+      <AppButton
+        label={loading ? 'Authenticating…' : 'Sign In with Email →'}
         onPress={handleEmailSignIn}
-        disabled={loading}
-        style={[styles.primaryButton, loading && styles.buttonDisabled]}
-        accessibilityRole="button"
-      >
-        <Text style={styles.primaryButtonText}>
-          {loading ? 'Authenticating…' : 'Sign In with Email →'}
-        </Text>
-      </Pressable>
+        loading={loading}
+      />
 
       {/* Social Auth Providers */}
       <View style={styles.dividerRow}>
@@ -159,7 +161,7 @@ export function EmailLoginScreen() {
           accessibilityRole="button"
           accessibilityLabel="Continue with Apple"
         >
-          <Text style={styles.appleLogoIcon}></Text>
+          <AppIcon name="apple" size={20} color="#ffffff" />
           <Text style={styles.appleButtonText}>Continue with Apple</Text>
         </Pressable>
 
@@ -171,26 +173,20 @@ export function EmailLoginScreen() {
           accessibilityRole="button"
           accessibilityLabel="Continue with Google"
         >
-          <Text style={styles.googleIcon}>🌐</Text>
+          <AppIcon name="google" size={18} color="#ea4335" />
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </Pressable>
       </View>
 
-      {/* Quick Switch to Phone / Magic Link */}
+      {/* Quick Switch to Phone Login */}
       <View style={styles.altLinksRow}>
         <Pressable
           onPress={() => router.push('/phone-login')}
           style={styles.altLinkPill}
           accessibilityRole="button"
         >
-          <Text style={styles.altLinkText}>📱 Phone OTP</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.push('/magic-link')}
-          style={styles.altLinkPill}
-          accessibilityRole="button"
-        >
-          <Text style={styles.altLinkText}>🪄 Magic Link</Text>
+          <AppIcon name="phone" size={14} color={color.primary} />
+          <Text style={styles.altLinkText}>Sign In with Phone OTP</Text>
         </Pressable>
       </View>
 
@@ -217,8 +213,9 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: color.ink,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   forgotLink: {
     color: color.primary,
@@ -227,7 +224,7 @@ const styles = StyleSheet.create({
   },
   textInputRow: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: color.surface,
     borderColor: 'rgba(67, 30, 190, 0.20)',
     borderRadius: 14,
     borderWidth: 1.5,
@@ -235,22 +232,14 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: space.x3,
   },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: space.x2,
-  },
-  textInput: {
+  field: {
     color: color.ink,
-    flex: 1,
     fontSize: 15,
-    fontWeight: '600',
-    height: '100%',
+    fontWeight: '500',
+    paddingHorizontal: space.x2,
   },
   eyeButton: {
     padding: space.x2,
-  },
-  eyeIcon: {
-    fontSize: 16,
   },
   rememberRow: {
     alignItems: 'center',
@@ -270,11 +259,6 @@ const styles = StyleSheet.create({
     backgroundColor: color.primary,
     borderColor: color.primary,
   },
-  checkboxCheck: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '900',
-  },
   rememberText: {
     color: color.ink,
     fontSize: 13,
@@ -290,34 +274,11 @@ const styles = StyleSheet.create({
     gap: space.x2,
     padding: space.x3,
   },
-  errorIcon: {
-    fontSize: 14,
-  },
   errorText: {
     color: '#ba1a1a',
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-  },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: color.primary,
-    borderRadius: 999,
-    justifyContent: 'center',
-    minHeight: 50,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
   },
   dividerRow: {
     alignItems: 'center',
@@ -343,14 +304,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     borderRadius: 999,
     flexDirection: 'row',
+    gap: space.x2,
     justifyContent: 'center',
     minHeight: 48,
-  },
-  appleLogoIcon: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '700',
-    marginRight: space.x2,
   },
   appleButtonText: {
     color: '#ffffff',
@@ -359,17 +315,14 @@ const styles = StyleSheet.create({
   },
   googleButton: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: color.surface,
     borderColor: color.border,
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
+    gap: space.x2,
     justifyContent: 'center',
     minHeight: 48,
-  },
-  googleIcon: {
-    fontSize: 16,
-    marginRight: space.x2,
   },
   googleButtonText: {
     color: color.ink,
@@ -378,18 +331,20 @@ const styles = StyleSheet.create({
   },
   altLinksRow: {
     flexDirection: 'row',
-    gap: space.x2,
     justifyContent: 'center',
   },
   altLinkPill: {
+    alignItems: 'center',
     backgroundColor: 'rgba(67, 30, 190, 0.06)',
     borderRadius: 999,
+    flexDirection: 'row',
+    gap: space.x2,
     paddingHorizontal: space.x4,
     paddingVertical: space.x2,
   },
   altLinkText: {
     color: color.primary,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   backLink: {

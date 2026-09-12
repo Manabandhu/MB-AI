@@ -27,7 +27,6 @@ export const screenCatalog = [
       screen('auth', 'sign-up', 'Sign Up', '/sign-up'),
       screen('auth', 'phone-login', 'Phone Login', '/phone-login'),
       screen('auth', 'email-login', 'Email Login', '/email-login'),
-      screen('auth', 'magic-link', 'Magic Link', '/magic-link'),
       screen('auth', 'otp-verification', 'OTP Verification', '/otp-verification'),
       screen('auth', 'forgot-password', 'Forgot Password', '/forgot-password'),
       screen('auth', 'reset-password', 'Reset Password', '/reset-password'),

@@ -1,10 +1,13 @@
 import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/lib/authStore';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
 const OTP_COUNTDOWN = 60;
 
@@ -69,25 +72,26 @@ export function OtpVerificationScreen() {
     <AuthPageLayout
       title="Verify 6-Digit Code"
       subtitle={`Enter the one-time code sent to ${otpIdentifier || 'your contact'}`}
-      badgeText="🛡️ Multi-Factor Verification"
+      badgeText="Multi-Factor Verification"
       backHref="/sign-in"
     >
-      {/* Code Input */}
+      {/* Code Input using Gluestack */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Verification Code</Text>
-        <TextInput
-          placeholder="• • • • • •"
-          placeholderTextColor={color.muted}
-          keyboardType="number-pad"
-          maxLength={6}
-          value={code}
-          onChangeText={(v) => {
-            setCode(v.replace(/\D/g, ''));
-            if (error) setLocalError(null);
-          }}
-          style={styles.otpInput}
-          accessibilityLabel="6-Digit OTP Input"
-        />
+        <Text style={styles.inputLabel}>VERIFICATION CODE</Text>
+        <Input className="min-h-16 rounded-2xl border-2 border-primary/30 bg-surface">
+          <InputField
+            placeholder="• • • • • •"
+            keyboardType="number-pad"
+            maxLength={6}
+            value={code}
+            onChangeText={(v) => {
+              setCode(v.replace(/\D/g, ''));
+              if (error) setLocalError(null);
+            }}
+            accessibilityLabel="6-Digit OTP Input"
+            style={styles.otpField}
+          />
+        </Input>
         <Text style={styles.helperText}>
           Didn’t receive it? Check spam folder or ensure carrier isn’t blocking shortcodes.
         </Text>
@@ -96,22 +100,17 @@ export function OtpVerificationScreen() {
       {/* Inline Error Banner */}
       {error ? (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <AppIcon name="warning" size={16} color="#ba1a1a" />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
 
-      {/* Verify Button */}
-      <Pressable
+      {/* Verify Button via Gluestack AppButton */}
+      <AppButton
+        label={loading ? 'Verifying Code…' : 'Verify & Continue →'}
         onPress={handleVerify}
-        disabled={loading}
-        style={[styles.primaryButton, loading && styles.buttonDisabled]}
-        accessibilityRole="button"
-      >
-        <Text style={styles.primaryButtonText}>
-          {loading ? 'Verifying Code…' : 'Verify & Continue →'}
-        </Text>
-      </Pressable>
+        loading={loading}
+      />
 
       {/* Resend Row */}
       <View style={styles.resendRow}>
@@ -146,18 +145,14 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: color.ink,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
-  otpInput: {
-    backgroundColor: '#ffffff',
-    borderColor: 'rgba(67, 30, 190, 0.25)',
-    borderRadius: 14,
-    borderWidth: 2,
+  otpField: {
     color: color.ink,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
-    height: 60,
     letterSpacing: 10,
     textAlign: 'center',
   },
@@ -176,34 +171,11 @@ const styles = StyleSheet.create({
     gap: space.x2,
     padding: space.x3,
   },
-  errorIcon: {
-    fontSize: 14,
-  },
   errorText: {
     color: '#ba1a1a',
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-  },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: color.primary,
-    borderRadius: 999,
-    justifyContent: 'center',
-    minHeight: 50,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
   },
   resendRow: {
     alignItems: 'center',

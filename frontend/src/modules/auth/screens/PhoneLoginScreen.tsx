@@ -1,20 +1,34 @@
 import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/lib/authStore';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
-const countryCodes = [
-  { code: '+1', label: '🇺🇸 US / 🇨🇦 CA' },
-  { code: '+91', label: '🇮🇳 India' },
-  { code: '+44', label: '🇬🇧 UK' },
-  { code: '+61', label: '🇦🇺 Australia' },
+interface CountryItem {
+  code: string;
+  flag: string;
+  name: string;
+}
+
+const countries: CountryItem[] = [
+  { code: '+1', flag: '🇺🇸', name: 'United States & Canada' },
+  { code: '+91', flag: '🇮🇳', name: 'India' },
+  { code: '+44', flag: '🇬🇧', name: 'United Kingdom' },
+  { code: '+61', flag: '🇦🇺', name: 'Australia' },
+  { code: '+971', flag: '🇦🇪', name: 'United Arab Emirates' },
+  { code: '+65', flag: '🇸🇬', name: 'Singapore' },
+  { code: '+49', flag: '🇩🇪', name: 'Germany' },
+  { code: '+353', flag: '🇮🇪', name: 'Ireland' },
 ];
 
 export function PhoneLoginScreen() {
-  const [selectedCountry, setSelectedCountry] = useState('+1');
+  const [selectedCountry, setSelectedCountry] = useState<CountryItem>(countries[0]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [phoneDigits, setPhoneDigits] = useState('');
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -30,7 +44,7 @@ export function PhoneLoginScreen() {
     setLoading(true);
     setLocalError(null);
     try {
-      const fullPhone = `${selectedCountry}${trimmed.replace(/\D/g, '')}`;
+      const fullPhone = `${selectedCountry.code}${trimmed.replace(/\D/g, '')}`;
       await useAuthStore.getState().signInWithPhone(fullPhone);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to send verification code';
@@ -45,101 +59,139 @@ export function PhoneLoginScreen() {
   return (
     <AuthPageLayout
       title="Phone Sign In"
-      subtitle="Enter your phone number to receive a 6-digit verification code"
-      badgeText="📱 Fast & Secure Mobile Login"
+      subtitle="Enter your mobile number to receive a 6-digit verification code"
+      badgeText="Fast & Secure Mobile Login"
       backHref="/sign-in"
     >
-      {/* Country Code Selector Chips */}
-      <View style={styles.countryGroup}>
-        <Text style={styles.inputLabel}>Select Country Code</Text>
-        <View style={styles.countryChipsRow}>
-          {countryCodes.map((c) => {
-            const isSelected = c.code === selectedCountry;
-            return (
-              <Pressable
-                key={c.code}
-                onPress={() => setSelectedCountry(c.code)}
-                style={[styles.countryChip, isSelected && styles.countryChipActive]}
-                accessibilityRole="button"
-                accessibilityLabel={`Select ${c.label}`}
-              >
-                <Text style={[styles.countryChipText, isSelected && styles.countryChipTextActive]}>
-                  {c.label} ({c.code})
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      {/* Country Code Dropdown Trigger */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>COUNTRY / REGION</Text>
+        <Pressable
+          onPress={() => setDropdownOpen(true)}
+          style={styles.dropdownTrigger}
+          accessibilityRole="combobox"
+          accessibilityLabel="Select country code"
+        >
+          <View style={styles.dropdownTriggerLeft}>
+            <Text style={styles.flagText}>{selectedCountry.flag}</Text>
+            <Text style={styles.countryNameText}>{selectedCountry.name}</Text>
+            <Text style={styles.countryCodeBadge}>{selectedCountry.code}</Text>
+          </View>
+          <AppIcon name="chevron-down" size={18} color={color.muted} />
+        </Pressable>
       </View>
 
-      {/* Phone Number Input */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Mobile Phone Number</Text>
-        <View style={styles.phoneInputRow}>
-          <View style={styles.phonePrefixBadge}>
-            <Text style={styles.phonePrefixText}>{selectedCountry}</Text>
+      {/* Country Picker Modal */}
+      <Modal
+        visible={dropdownOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDropdownOpen(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setDropdownOpen(false)}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Country Code</Text>
+              <Pressable
+                onPress={() => setDropdownOpen(false)}
+                accessibilityRole="button"
+                style={styles.modalCloseBtn}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </Pressable>
+            </View>
+            <ScrollView style={styles.modalScroll} bounces={false}>
+              {countries.map((c) => {
+                const isSelected = c.code === selectedCountry.code;
+                return (
+                  <Pressable
+                    key={c.code}
+                    onPress={() => {
+                      setSelectedCountry(c);
+                      setDropdownOpen(false);
+                    }}
+                    style={[styles.countryOption, isSelected && styles.countryOptionSelected]}
+                    accessibilityRole="button"
+                  >
+                    <View style={styles.optionLeft}>
+                      <Text style={styles.optionFlag}>{c.flag}</Text>
+                      <Text style={[styles.optionName, isSelected && styles.optionTextSelected]}>
+                        {c.name}
+                      </Text>
+                    </View>
+                    <View style={styles.optionRight}>
+                      <Text style={[styles.optionCode, isSelected && styles.optionTextSelected]}>
+                        {c.code}
+                      </Text>
+                      {isSelected ? (
+                        <AppIcon name="check" size={16} color={color.primary} strokeWidth={3} />
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
-          <TextInput
-            placeholder="(555) 000-0000"
-            placeholderTextColor={color.muted}
-            keyboardType="phone-pad"
-            value={phoneDigits}
-            onChangeText={(val) => {
-              setPhoneDigits(val);
-              if (error) setLocalError(null);
-            }}
-            style={styles.phoneInput}
-            accessibilityLabel="Phone Number Input"
-          />
+        </Pressable>
+      </Modal>
+
+      {/* Phone Number Input with Gluestack */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>MOBILE NUMBER</Text>
+        <View style={styles.phoneInputRow}>
+          <View style={styles.phonePrefixPill}>
+            <Text style={styles.prefixFlag}>{selectedCountry.flag}</Text>
+            <Text style={styles.prefixText}>{selectedCountry.code}</Text>
+          </View>
+          <Input className="flex-1 border-0 bg-transparent min-h-12">
+            <InputField
+              placeholder="(555) 000-0000"
+              keyboardType="phone-pad"
+              value={phoneDigits}
+              onChangeText={(val) => {
+                setPhoneDigits(val);
+                if (error) setLocalError(null);
+              }}
+              accessibilityLabel="Mobile phone number"
+              style={styles.phoneField}
+            />
+          </Input>
         </View>
         <Text style={styles.helperText}>
           We will send an SMS with a one-time verification code. Standard carrier rates may apply.
         </Text>
       </View>
 
-      {/* Inline Error Banner */}
+      {/* Inline Error Banner with exact AppIcon */}
       {error ? (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <AppIcon name="warning" size={16} color="#ba1a1a" />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
 
-      {/* Send Code CTA */}
-      <Pressable
+      {/* Send Code CTA using Gluestack AppButton */}
+      <AppButton
+        label={loading ? 'Sending Verification Code…' : 'Send Code →'}
         onPress={handleSendCode}
-        disabled={loading}
-        style={[styles.primaryButton, loading && styles.buttonDisabled]}
-        accessibilityRole="button"
-      >
-        <Text style={styles.primaryButtonText}>
-          {loading ? 'Sending Verification Code…' : 'Send Code →'}
-        </Text>
-      </Pressable>
+        loading={loading}
+      />
 
-      {/* Alternative Auth Links */}
+      {/* Alternative Auth Switch (Email & Password) */}
       <View style={styles.dividerRow}>
         <View style={styles.dividerLine} />
         <Text style={styles.dividerText}>or switch to</Text>
         <View style={styles.dividerLine} />
       </View>
 
-      <View style={styles.altButtonsCol}>
-        <Pressable
-          onPress={() => router.push('/email-login')}
-          style={styles.altButton}
-          accessibilityRole="button"
-        >
-          <Text style={styles.altButtonText}>✉️ Continue with Email & Password</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.push('/magic-link')}
-          style={styles.altButton}
-          accessibilityRole="button"
-        >
-          <Text style={styles.altButtonText}>🪄 Instant Magic Link</Text>
-        </Pressable>
-      </View>
+      <Pressable
+        onPress={() => router.push('/email-login')}
+        style={styles.altButton}
+        accessibilityRole="button"
+      >
+        <AppIcon name="mail" size={16} color={color.primary} />
+        <Text style={styles.altButtonText}>Continue with Email & Password</Text>
+      </Pressable>
 
       {/* Return to Sign In */}
       <Pressable
@@ -154,71 +206,166 @@ export function PhoneLoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  countryGroup: {
-    gap: space.x2,
-  },
-  countryChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.x2,
-  },
-  countryChip: {
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderColor: color.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: space.x3,
-    paddingVertical: 6,
-  },
-  countryChipActive: {
-    backgroundColor: color.primary,
-    borderColor: color.primary,
-  },
-  countryChipText: {
-    color: color.ink,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  countryChipTextActive: {
-    color: '#ffffff',
-  },
   inputGroup: {
     gap: space.x2,
   },
   inputLabel: {
     color: color.ink,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  dropdownTrigger: {
+    alignItems: 'center',
+    backgroundColor: color.surface,
+    borderColor: color.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    height: 52,
+    justifyContent: 'space-between',
+    paddingHorizontal: space.x3,
+  },
+  dropdownTriggerLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: space.x2,
+  },
+  flagText: {
+    fontSize: 18,
+  },
+  countryNameText: {
+    color: color.ink,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  countryCodeBadge: {
+    backgroundColor: 'rgba(67, 30, 190, 0.08)',
+    borderRadius: 6,
+    color: color.primary,
+    fontSize: 12,
+    fontWeight: '800',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  // Modal Dropdown
+  modalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: space.x4,
+  },
+  modalCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    maxHeight: 400,
+    maxWidth: 440,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
+    width: '100%',
+  },
+  modalHeader: {
+    alignItems: 'center',
+    borderBottomColor: color.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+  },
+  modalTitle: {
+    color: color.ink,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  modalCloseBtn: {
+    padding: space.x1,
+  },
+  modalCloseText: {
+    color: color.muted,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  modalScroll: {
+    maxHeight: 320,
+  },
+  countryOption: {
+    alignItems: 'center',
+    borderBottomColor: 'rgba(0,0,0,0.04)',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+  },
+  countryOptionSelected: {
+    backgroundColor: 'rgba(67, 30, 190, 0.06)',
+  },
+  optionLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: space.x3,
+  },
+  optionFlag: {
+    fontSize: 20,
+  },
+  optionName: {
+    color: color.ink,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  optionRight: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: space.x2,
+  },
+  optionCode: {
+    color: color.muted,
     fontSize: 13,
     fontWeight: '700',
   },
+  optionTextSelected: {
+    color: color.primary,
+    fontWeight: '800',
+  },
+  // Phone Input Row with Gluestack
   phoneInputRow: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: color.surface,
     borderColor: 'rgba(67, 30, 190, 0.20)',
     borderRadius: 14,
     borderWidth: 1.5,
     flexDirection: 'row',
     height: 52,
-    overflow: 'hidden',
     paddingHorizontal: space.x2,
   },
-  phonePrefixBadge: {
+  phonePrefixPill: {
+    alignItems: 'center',
     backgroundColor: 'rgba(67, 30, 190, 0.08)',
     borderRadius: 8,
-    paddingHorizontal: space.x3,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: space.x2,
     paddingVertical: 6,
   },
-  phonePrefixText: {
+  prefixFlag: {
+    fontSize: 14,
+  },
+  prefixText: {
     color: color.primary,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
   },
-  phoneInput: {
+  phoneField: {
     color: color.ink,
-    flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    height: '100%',
-    paddingHorizontal: space.x3,
+    paddingHorizontal: space.x2,
   },
   helperText: {
     color: color.muted,
@@ -235,34 +382,11 @@ const styles = StyleSheet.create({
     gap: space.x2,
     padding: space.x3,
   },
-  errorIcon: {
-    fontSize: 14,
-  },
   errorText: {
     color: '#ba1a1a',
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-  },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: color.primary,
-    borderRadius: 999,
-    justifyContent: 'center',
-    minHeight: 50,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
   },
   dividerRow: {
     alignItems: 'center',
@@ -280,21 +404,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  altButtonsCol: {
-    gap: space.x2,
-  },
   altButton: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: color.surface,
     borderColor: color.border,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: space.x2,
     justifyContent: 'center',
-    paddingVertical: space.x3,
+    minHeight: 48,
   },
   altButtonText: {
     color: color.ink,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
   backLink: {

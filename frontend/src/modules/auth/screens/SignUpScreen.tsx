@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { useAuthStore } from '@/lib/authStore';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
 const signUpSchema = z
@@ -85,7 +86,7 @@ export function SignUpScreen() {
     <AuthPageLayout
       title="Join ManaBandhu 🤝"
       subtitle="Create your verified account to connect with Telugu rooms, carpools & jobs."
-      badgeText="✨ 50,000+ Verified Members"
+      badgeText="50,000+ Verified Members"
       backHref="/sign-in"
     >
       {needsConfirmation ? (
@@ -107,8 +108,8 @@ export function SignUpScreen() {
             name="name"
             render={({ field: { onChange, value } }) => (
               <View style={styles.inputWrapper}>
-                <Text style={styles.leadingIcon}>👤</Text>
-                <Input className="flex-1 border-0 bg-transparent">
+                <AppIcon name="user" size={18} color={color.muted} />
+                <Input className="flex-1 border-0 bg-transparent min-h-12">
                   <InputField
                     placeholder="e.g. Rajesh Reddy"
                     accessibilityLabel="Full name"
@@ -134,8 +135,8 @@ export function SignUpScreen() {
             name="email"
             render={({ field: { onChange, value } }) => (
               <View style={styles.inputWrapper}>
-                <Text style={styles.leadingIcon}>✉</Text>
-                <Input className="flex-1 border-0 bg-transparent">
+                <AppIcon name="mail" size={18} color={color.muted} />
+                <Input className="flex-1 border-0 bg-transparent min-h-12">
                   <InputField
                     placeholder="name@example.com"
                     autoCapitalize="none"
@@ -163,8 +164,8 @@ export function SignUpScreen() {
             name="password"
             render={({ field: { onChange, value } }) => (
               <View style={styles.inputWrapper}>
-                <Text style={styles.leadingIcon}>🔒</Text>
-                <Input className="flex-1 border-0 bg-transparent">
+                <AppIcon name="lock" size={18} color={color.muted} />
+                <Input className="flex-1 border-0 bg-transparent min-h-12">
                   <InputField
                     placeholder="Minimum 8 characters"
                     secureTextEntry={!showPassword}
@@ -182,7 +183,11 @@ export function SignUpScreen() {
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeToggle}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                  <AppIcon
+                    name={showPassword ? 'eye-closed' : 'eye'}
+                    size={18}
+                    color={color.muted}
+                  />
                 </Pressable>
               </View>
             )}
@@ -218,7 +223,7 @@ export function SignUpScreen() {
                     ? 'Fair — Add numbers or symbols'
                     : strengthScore === 3
                       ? 'Good password'
-                      : 'Strong password 💪'}
+                      : 'Strong password'}
               </Text>
             </View>
           ) : null}
@@ -234,8 +239,8 @@ export function SignUpScreen() {
             name="confirmPassword"
             render={({ field: { onChange, value } }) => (
               <View style={styles.inputWrapper}>
-                <Text style={styles.leadingIcon}>🔒</Text>
-                <Input className="flex-1 border-0 bg-transparent">
+                <AppIcon name="lock" size={18} color={color.muted} />
+                <Input className="flex-1 border-0 bg-transparent min-h-12">
                   <InputField
                     placeholder="Re-enter password"
                     secureTextEntry={!showPassword}
@@ -258,14 +263,19 @@ export function SignUpScreen() {
 
         {/* Safety Callout */}
         <View style={styles.safetyBox}>
-          <Text style={styles.safetyIcon}>🛡️</Text>
+          <AppIcon name="shield" size={20} color={color.teal} />
           <Text style={styles.safetyText}>
             ManaBandhu is a spam-free, verified network. Your contact details are never shared
             without your explicit permission.
           </Text>
         </View>
 
-        {displayError ? <Text style={styles.errorText}>{displayError}</Text> : null}
+        {displayError ? (
+          <View style={styles.errorBanner}>
+            <AppIcon name="warning" size={16} color="#ba1a1a" />
+            <Text style={styles.errorText}>{displayError}</Text>
+          </View>
+        ) : null}
 
         <AppButton
           label="Create Account →"
@@ -288,7 +298,8 @@ export function SignUpScreen() {
             accessibilityRole="button"
             accessibilityLabel="Continue with Apple"
           >
-            <Text style={styles.socialAppleText}> Apple</Text>
+            <AppIcon name="apple" size={20} color="#ffffff" />
+            <Text style={styles.socialAppleText}>Apple</Text>
           </Pressable>
           <Pressable
             onPress={() => handleSocial('google')}
@@ -296,30 +307,20 @@ export function SignUpScreen() {
             accessibilityRole="button"
             accessibilityLabel="Continue with Google"
           >
-            <Text style={styles.socialGoogleText}>🌐 Google</Text>
+            <AppIcon name="google" size={18} color="#ea4335" />
+            <Text style={styles.socialGoogleText}>Google</Text>
           </Pressable>
         </View>
 
-        {/* Quick Auth Options */}
-        <View style={styles.quickAuthRow}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/phone-login')}
-            style={styles.quickAuthBtn}
-          >
-            <Text style={styles.quickAuthIcon}>📱</Text>
-            <Text style={styles.quickAuthText}>Phone Sign Up</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/magic-link')}
-            style={styles.quickAuthBtn}
-          >
-            <Text style={styles.quickAuthIcon}>🪄</Text>
-            <Text style={styles.quickAuthText}>Magic Link</Text>
-          </Pressable>
-        </View>
+        {/* Quick Auth: Phone Sign Up */}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/phone-login')}
+          style={styles.phoneAuthBtn}
+        >
+          <AppIcon name="phone" size={16} color={color.primary} />
+          <Text style={styles.phoneAuthText}>Sign Up with Phone OTP</Text>
+        </Pressable>
 
         {/* Already have an account? Sign In */}
         <View style={styles.signInPromptRow}>
@@ -355,10 +356,8 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingHorizontal: space.x3,
   },
-  leadingIcon: { fontSize: 16, marginRight: space.x2 },
-  field: { color: color.ink, fontSize: 15, fontWeight: '500' },
+  field: { color: color.ink, fontSize: 15, fontWeight: '500', paddingHorizontal: space.x2 },
   eyeToggle: { padding: space.x2 },
-  eyeIcon: { fontSize: 16 },
   strengthBlock: { gap: 4, marginTop: 4 },
   strengthMeterRow: { flexDirection: 'row', gap: 4, height: 4 },
   strengthBar: {
@@ -377,7 +376,6 @@ const styles = StyleSheet.create({
     gap: space.x2,
     padding: space.x3,
   },
-  safetyIcon: { fontSize: 18 },
   safetyText: { color: color.ink, flex: 1, fontSize: 12, lineHeight: 17 },
   dividerRow: {
     alignItems: 'center',
@@ -396,6 +394,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     borderRadius: 14,
     flex: 1,
+    flexDirection: 'row',
+    gap: space.x2,
     justifyContent: 'center',
     minHeight: 46,
   },
@@ -405,22 +405,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   socialBtnGoogle: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: color.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 46,
-  },
-  socialGoogleText: {
-    color: color.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  quickAuthRow: { flexDirection: 'row', gap: space.x3 },
-  quickAuthBtn: {
     alignItems: 'center',
     backgroundColor: color.surface,
     borderColor: color.border,
@@ -432,8 +416,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 46,
   },
-  quickAuthIcon: { fontSize: 16 },
-  quickAuthText: { color: color.ink, fontSize: 13, fontWeight: '700' },
+  socialGoogleText: {
+    color: color.ink,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  phoneAuthBtn: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(67, 30, 190, 0.06)',
+    borderRadius: 14,
+    flexDirection: 'row',
+    gap: space.x2,
+    justifyContent: 'center',
+    minHeight: 46,
+  },
+  phoneAuthText: { color: color.primary, fontSize: 13, fontWeight: '700' },
   signInPromptRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -442,5 +439,15 @@ const styles = StyleSheet.create({
   },
   signInPromptText: { color: color.muted, fontSize: 14, fontWeight: '600' },
   signInLink: { color: color.primary, fontSize: 14, fontWeight: '800' },
-  errorText: { color: color.error, fontSize: 13, fontWeight: '700' },
+  errorBanner: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(186, 26, 26, 0.08)',
+    borderColor: 'rgba(186, 26, 26, 0.25)',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: space.x2,
+    padding: space.x3,
+  },
+  errorText: { color: '#ba1a1a', fontSize: 13, fontWeight: '700' },
 });

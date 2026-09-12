@@ -1,10 +1,13 @@
 import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/lib/authStore';
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
 function evaluateStrength(pwd: string): { score: number; label: string; colorCode: string } {
   if (!pwd) return { score: 0, label: '', colorCode: color.border };
@@ -68,51 +71,46 @@ export function ResetPasswordScreen() {
           ? 'Your password has been securely changed'
           : 'Choose a strong, memorable password for your account'
       }
-      badgeText="🔒 Secure Password Reset"
+      badgeText="Secure Password Reset"
       backHref="/sign-in"
     >
       {success ? (
         <View style={styles.successCard}>
           <View style={styles.checkIconWrap}>
-            <Text style={styles.checkIcon}>✅</Text>
+            <AppIcon name="check" size={28} color={color.teal} strokeWidth={3} />
           </View>
           <Text style={styles.successTitle}>Account Secured</Text>
           <Text style={styles.successBody}>
             You can now sign in to ManaBandhu using your updated password.
           </Text>
-          <Pressable
-            onPress={() => router.push('/sign-in')}
-            style={styles.primaryButton}
-            accessibilityRole="button"
-          >
-            <Text style={styles.primaryButtonText}>Sign In with New Password →</Text>
-          </Pressable>
+          <AppButton label="Sign In with New Password →" onPress={() => router.push('/sign-in')} />
         </View>
       ) : (
         <>
-          {/* New Password Input */}
+          {/* New Password Input using Gluestack */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>New Password</Text>
+            <Text style={styles.inputLabel}>NEW PASSWORD</Text>
             <View style={styles.textInputRow}>
-              <Text style={styles.inputIcon}>🔒</Text>
-              <TextInput
-                placeholder="At least 8 characters"
-                placeholderTextColor={color.muted}
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={(v) => {
-                  setPassword(v);
-                  if (error) setLocalError(null);
-                }}
-                style={styles.textInput}
-                accessibilityLabel="New Password Input"
-              />
+              <AppIcon name="lock" size={18} color={color.muted} />
+              <Input className="flex-1 border-0 bg-transparent min-h-12">
+                <InputField
+                  placeholder="At least 8 characters"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={(v) => {
+                    setPassword(v);
+                    if (error) setLocalError(null);
+                  }}
+                  accessibilityLabel="New Password Input"
+                  style={styles.field}
+                />
+              </Input>
               <Pressable
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeButton}
                 accessibilityRole="button"
               >
-                <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                <AppIcon name={showPassword ? 'eye-closed' : 'eye'} size={18} color={color.muted} />
               </Pressable>
             </View>
 
@@ -137,29 +135,30 @@ export function ResetPasswordScreen() {
             ) : null}
           </View>
 
-          {/* Confirm Password Input */}
+          {/* Confirm Password Input using Gluestack */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Confirm New Password</Text>
+            <Text style={styles.inputLabel}>CONFIRM NEW PASSWORD</Text>
             <View style={styles.textInputRow}>
-              <Text style={styles.inputIcon}>🔒</Text>
-              <TextInput
-                placeholder="Re-enter password"
-                placeholderTextColor={color.muted}
-                secureTextEntry={!showConfirm}
-                value={confirmPassword}
-                onChangeText={(v) => {
-                  setConfirmPassword(v);
-                  if (error) setLocalError(null);
-                }}
-                style={styles.textInput}
-                accessibilityLabel="Confirm Password Input"
-              />
+              <AppIcon name="lock" size={18} color={color.muted} />
+              <Input className="flex-1 border-0 bg-transparent min-h-12">
+                <InputField
+                  placeholder="Re-enter password"
+                  secureTextEntry={!showConfirm}
+                  value={confirmPassword}
+                  onChangeText={(v) => {
+                    setConfirmPassword(v);
+                    if (error) setLocalError(null);
+                  }}
+                  accessibilityLabel="Confirm Password Input"
+                  style={styles.field}
+                />
+              </Input>
               <Pressable
                 onPress={() => setShowConfirm(!showConfirm)}
                 style={styles.eyeButton}
                 accessibilityRole="button"
               >
-                <Text style={styles.eyeIcon}>{showConfirm ? '🙈' : '👁️'}</Text>
+                <AppIcon name={showConfirm ? 'eye-closed' : 'eye'} size={18} color={color.muted} />
               </Pressable>
             </View>
           </View>
@@ -167,22 +166,17 @@ export function ResetPasswordScreen() {
           {/* Inline Error Banner */}
           {error ? (
             <View style={styles.errorBanner}>
-              <Text style={styles.errorIcon}>⚠️</Text>
+              <AppIcon name="warning" size={16} color="#ba1a1a" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
-          {/* Submit Button */}
-          <Pressable
+          {/* Submit Button via Gluestack AppButton */}
+          <AppButton
+            label={loading ? 'Updating Password…' : 'Update Password →'}
             onPress={handleReset}
-            disabled={loading}
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.primaryButtonText}>
-              {loading ? 'Updating Password…' : 'Update Password →'}
-            </Text>
-          </Pressable>
+            loading={loading}
+          />
 
           {/* Return to Sign In */}
           <Pressable
@@ -204,12 +198,13 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: color.ink,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   textInputRow: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: color.surface,
     borderColor: 'rgba(67, 30, 190, 0.20)',
     borderRadius: 14,
     borderWidth: 1.5,
@@ -217,22 +212,14 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: space.x3,
   },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: space.x2,
-  },
-  textInput: {
+  field: {
     color: color.ink,
-    flex: 1,
     fontSize: 15,
-    fontWeight: '600',
-    height: '100%',
+    fontWeight: '500',
+    paddingHorizontal: space.x2,
   },
   eyeButton: {
     padding: space.x2,
-  },
-  eyeIcon: {
-    fontSize: 16,
   },
   strengthBlock: {
     gap: 4,
@@ -262,34 +249,11 @@ const styles = StyleSheet.create({
     gap: space.x2,
     padding: space.x3,
   },
-  errorIcon: {
-    fontSize: 14,
-  },
   errorText: {
     color: '#ba1a1a',
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-  },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: color.primary,
-    borderRadius: 999,
-    justifyContent: 'center',
-    minHeight: 50,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
   },
   backLink: {
     alignSelf: 'center',
@@ -315,17 +279,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 24,
-    height: 64,
+    height: 60,
     justifyContent: 'center',
-    width: 64,
+    width: 60,
     shadowColor: '#00696b',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 4,
-  },
-  checkIcon: {
-    fontSize: 28,
   },
   successTitle: {
     color: color.ink,

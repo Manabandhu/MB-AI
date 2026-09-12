@@ -5,6 +5,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 interface AuthPageLayoutProps {
@@ -46,7 +47,7 @@ export function AuthPageLayout({
                   <View style={styles.showcaseBrandTitleRow}>
                     <Text style={styles.showcaseBrandTitle}>ManaBandhu</Text>
                     <View style={styles.showcaseVerifiedBadge}>
-                      <Text style={styles.showcaseVerifiedCheck}>✓</Text>
+                      <AppIcon name="check" size={10} color="#ffffff" strokeWidth={3} />
                     </View>
                   </View>
                   <Text style={styles.showcaseBrandSubtitle}>Telugu Diaspora Platform</Text>
@@ -56,7 +57,7 @@ export function AuthPageLayout({
               {/* Showcase Pitch */}
               <View style={styles.showcasePitchBlock}>
                 <View style={styles.showcaseTagPill}>
-                  <Text style={styles.showcaseTagText}>✨ #1 Trusted Community</Text>
+                  <Text style={styles.showcaseTagText}>#1 Trusted Community</Text>
                 </View>
                 <Text style={styles.showcaseHeadline}>
                   Connecting Telugu Hearts Across Continents
@@ -67,10 +68,12 @@ export function AuthPageLayout({
                 </Text>
               </View>
 
-              {/* Feature Highlights */}
+              {/* Feature Highlights with Vector Icons */}
               <View style={styles.showcaseFeatureList}>
                 <View style={styles.showcaseFeatureItem}>
-                  <Text style={styles.showcaseFeatureIcon}>🏠</Text>
+                  <View style={styles.featureIconBubble}>
+                    <AppIcon name="home" size={18} color="#ffffff" />
+                  </View>
                   <View style={styles.showcaseFeatureTextCol}>
                     <Text style={styles.showcaseFeatureTitle}>Verified Rooms & Roommates</Text>
                     <Text style={styles.showcaseFeatureDesc}>
@@ -78,8 +81,11 @@ export function AuthPageLayout({
                     </Text>
                   </View>
                 </View>
+
                 <View style={styles.showcaseFeatureItem}>
-                  <Text style={styles.showcaseFeatureIcon}>🚗</Text>
+                  <View style={styles.featureIconBubble}>
+                    <AppIcon name="car" size={18} color="#ffffff" />
+                  </View>
                   <View style={styles.showcaseFeatureTextCol}>
                     <Text style={styles.showcaseFeatureTitle}>Community Carpools</Text>
                     <Text style={styles.showcaseFeatureDesc}>
@@ -87,8 +93,11 @@ export function AuthPageLayout({
                     </Text>
                   </View>
                 </View>
+
                 <View style={styles.showcaseFeatureItem}>
-                  <Text style={styles.showcaseFeatureIcon}>💼</Text>
+                  <View style={styles.featureIconBubble}>
+                    <AppIcon name="briefcase" size={18} color="#ffffff" />
+                  </View>
                   <View style={styles.showcaseFeatureTextCol}>
                     <Text style={styles.showcaseFeatureTitle}>Tech Referrals & Mentorship</Text>
                     <Text style={styles.showcaseFeatureDesc}>
@@ -118,8 +127,9 @@ export function AuthPageLayout({
 
               {/* Trust Footer */}
               <View style={styles.showcaseFooterRow}>
+                <AppIcon name="shield" size={14} color="rgba(255,255,255,0.8)" />
                 <Text style={styles.showcaseSecurityText}>
-                  🛡️ 256-Bit TLS Encryption • 100% Privacy Preserved
+                  256-Bit TLS Encryption • 100% Privacy Preserved
                 </Text>
               </View>
             </View>
@@ -136,7 +146,8 @@ export function AuthPageLayout({
                   accessibilityRole="button"
                   accessibilityLabel="Back"
                 >
-                  <Text style={styles.backButtonText}>← Back</Text>
+                  <AppIcon name="chevron-left" size={16} color={color.muted} />
+                  <Text style={styles.backButtonText}>Back</Text>
                 </Pressable>
               ) : (
                 <View />
@@ -196,7 +207,6 @@ const styles = StyleSheet.create({
     maxWidth: 1120,
     paddingVertical: space.x6,
   },
-  // Left Branded Showcase for Desktop Web
   showcasePane: {
     backgroundColor: color.primary,
     borderRadius: 28,
@@ -238,11 +248,6 @@ const styles = StyleSheet.create({
     height: 16,
     justifyContent: 'center',
     width: 16,
-  },
-  showcaseVerifiedCheck: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '800',
   },
   showcaseBrandSubtitle: {
     color: 'rgba(255,255,255,0.75)',
@@ -287,8 +292,13 @@ const styles = StyleSheet.create({
     gap: space.x3,
     padding: space.x3,
   },
-  showcaseFeatureIcon: {
-    fontSize: 22,
+  featureIconBubble: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
   },
   showcaseFeatureTextCol: {
     flex: 1,
@@ -355,6 +365,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopColor: 'rgba(255,255,255,0.15)',
     borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: space.x2,
+    justifyContent: 'center',
     paddingTop: space.x3,
   },
   showcaseSecurityText: {
@@ -363,7 +376,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  // Right/Center Form Container
   formPane: {
     flex: 1,
     gap: space.x3,
@@ -379,6 +391,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.x1,
   },
   backButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
     paddingVertical: space.x2,
   },
   backButtonText: {
