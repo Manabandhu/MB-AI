@@ -21,3 +21,4 @@ description: Maintain ManaBandhu's privileged operations control plane across th
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 
 - Recent admin guard changes: added `useRequireAuth('/sign-in')` to all admin routes (`/admin`, `/admin/users`, `/admin/reports`, `/admin/rooms`, `/admin/rides`, `/admin/community`, `/admin/jobs`, `/admin/events`, `/admin/audit-log`). Fixed `RideOffer` entity to include `reported` field and updated `AdminRidesController` to use `offer.isReported()` instead of hardcoded `false`.
+- Recent authorization & fallback hardening: aligned Spring Security and `AdminAccessPolicy` to accept both `ROLE_ADMIN` and `ROLE_SUPER_ADMIN` from verified Supabase JWTs. Admin screens gracefully render fallback demo data instead of full-screen error blocks when backend is offline.

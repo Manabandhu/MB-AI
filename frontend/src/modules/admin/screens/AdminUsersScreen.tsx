@@ -38,7 +38,7 @@ export default function AdminUsersScreen() {
     );
   }, [users, query]);
 
-  if (isError) {
+  if (isError && !users.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState

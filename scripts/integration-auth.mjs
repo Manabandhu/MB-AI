@@ -1,9 +1,10 @@
 import { spawnSync } from 'node:child_process';
 
-const SUPABASE_URL = 'http://127.0.0.1:54321/auth/v1';
-const BACKEND_URL = 'http://127.0.0.1:8080';
-const PUBLISHABLE_KEY = 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
-const SECRET_KEY = 'sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321/auth/v1';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:8080';
+const PUBLISHABLE_KEY =
+  process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
+const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || 'sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz';
 
 function api(path, options = {}) {
   const opts = {

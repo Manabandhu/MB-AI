@@ -43,9 +43,23 @@ function ensureStaticRenderWebSocket() {
 
 ensureStaticRenderWebSocket();
 
+const memoryStorageMap = new Map<string, string>();
+const memoryStorage = {
+  getItem: (key: string) => memoryStorageMap.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    memoryStorageMap.set(key, value);
+  },
+  removeItem: (key: string) => {
+    memoryStorageMap.delete(key);
+  },
+};
+
+const webStorage =
+  typeof window !== 'undefined' && window.localStorage ? window.localStorage : memoryStorage;
+
 export const supabase = createClient(env.supabaseUrl, env.supabasePublishableKey, {
   auth: {
-    storage: Platform.OS === 'web' ? globalThis.localStorage : mobileStorage,
+    storage: Platform.OS === 'web' ? webStorage : mobileStorage,
     autoRefreshToken: true,
     detectSessionInUrl: Platform.OS === 'web',
     persistSession: true,

@@ -98,50 +98,99 @@ public class RidesController {
         return offer;
     }
 
+    private static UUID actorId(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        return UUID.fromString(authentication.getName());
+    }
+
+    private static boolean isAdmin(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) return false;
+        return authentication.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .anyMatch(a -> a.equals("ROLE_SUPER_ADMIN") || a.equals("ROLE_ADMIN"));
+    }
+
     @PatchMapping("/offers/{offerId}")
-    RideOffer updateOffer(@PathVariable UUID offerId, @Valid @RequestBody UpdateRideOfferInput input) {
+    RideOffer updateOffer(Authentication authentication, @PathVariable UUID offerId, @Valid @RequestBody UpdateRideOfferInput input) {
+        var actorId = actorId(authentication);
+        var offer = offerService.findById(offerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!offer.getDriverId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your ride");
+        }
         return offerService.update(offerId, input);
     }
 
     @PatchMapping("/{rideId}")
-    RideOffer updateRide(@PathVariable UUID rideId, @Valid @RequestBody UpdateRideOfferInput input) {
+    RideOffer updateRide(Authentication authentication, @PathVariable UUID rideId, @Valid @RequestBody UpdateRideOfferInput input) {
+        var actorId = actorId(authentication);
+        var offer = offerService.findById(rideId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!offer.getDriverId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your ride");
+        }
         return offerService.update(rideId, input);
     }
 
     @DeleteMapping("/offers/{offerId}")
-    ResponseEntity<Void> deleteOffer(@PathVariable UUID offerId) {
+    ResponseEntity<Void> deleteOffer(Authentication authentication, @PathVariable UUID offerId) {
+        var actorId = actorId(authentication);
+        var offer = offerService.findById(offerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!offer.getDriverId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your ride");
+        }
         offerService.delete(offerId);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{rideId}")
-    ResponseEntity<Void> deleteRide(@PathVariable UUID rideId) {
+    ResponseEntity<Void> deleteRide(Authentication authentication, @PathVariable UUID rideId) {
+        var actorId = actorId(authentication);
+        var offer = offerService.findById(rideId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!offer.getDriverId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your ride");
+        }
         offerService.delete(rideId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my-offers")
     List<RideOffer> myOffers(Authentication authentication) {
-        return offerService.findByDriver(UUID.fromString(authentication.getName()));
+        return offerService.findByDriver(actorId(authentication));
     }
 
     @GetMapping("/mine")
     List<RideOffer> myRides(Authentication authentication) {
-        return offerService.findByDriver(UUID.fromString(authentication.getName()));
+        return offerService.findByDriver(actorId(authentication));
     }
 
     @GetMapping("/history")
     List<RideOffer> history(Authentication authentication) {
-        return offerService.findByDriver(UUID.fromString(authentication.getName()));
+        return offerService.findByDriver(actorId(authentication));
     }
 
     @GetMapping("/saved")
     List<RideOffer> saved(Authentication authentication) {
-        return offerService.findByDriver(UUID.fromString(authentication.getName()));
+        var userId = actorId(authentication);
+        var participantRideIds = participantService.findByUserId(userId).stream()
+                .map(RideParticipant::getRideId).toList();
+        return offerService.findAll().stream()
+                .filter(o -> participantRideIds.contains(o.getId()))
+                .toList();
     }
 
     @PatchMapping("/offers/{offerId}/seats")
-    RideOffer adjustSeats(@PathVariable UUID offerId, @RequestParam int seats) {
+    RideOffer adjustSeats(Authentication authentication, @PathVariable UUID offerId, @RequestParam int seats) {
+        var actorId = actorId(authentication);
+        var offer = offerService.findById(offerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!offer.getDriverId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your ride");
+        }
         return offerService.adjustSeats(offerId, seats);
     }
 
@@ -153,7 +202,7 @@ public class RidesController {
     @PostMapping("/offers/{offerId}/requests")
     ResponseEntity<RideRequest> createRequest(@PathVariable UUID offerId, Authentication authentication,
                                               @Valid @RequestBody CreateRideRequestInput input) {
-        var riderId = UUID.fromString(authentication.getName());
+        var riderId = actorId(authentication);
         var request = requestService.create(offerId, riderId, input);
         return ResponseEntity.created(URI.create("/api/v1/rides/requests/" + request.getId())).body(request);
     }
@@ -165,19 +214,33 @@ public class RidesController {
     }
 
     @PatchMapping("/requests/{requestId}/status")
-    RideRequest updateRequestStatus(@PathVariable UUID requestId, @Valid @RequestBody UpdateRideRequestStatusInput input) {
+    RideRequest updateRequestStatus(Authentication authentication, @PathVariable UUID requestId, @Valid @RequestBody UpdateRideRequestStatusInput input) {
+        var actorId = actorId(authentication);
+        var request = requestService.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride request not found"));
+        var offer = offerService.findById(request.getRideId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!offer.getDriverId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only driver can update request status");
+        }
         return requestService.updateStatus(requestId, input.status());
     }
 
     @DeleteMapping("/requests/{requestId}")
-    ResponseEntity<Void> deleteRequest(@PathVariable UUID requestId) {
+    ResponseEntity<Void> deleteRequest(Authentication authentication, @PathVariable UUID requestId) {
+        var actorId = actorId(authentication);
+        var request = requestService.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride request not found"));
+        if (!request.getRiderId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your ride request");
+        }
         requestService.delete(requestId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my-requests")
     List<RideRequest> myRequests(Authentication authentication) {
-        return requestService.findByRider(UUID.fromString(authentication.getName()));
+        return requestService.findByRider(actorId(authentication));
     }
 
     @GetMapping("/offers/{offerId}/participants")
@@ -188,13 +251,21 @@ public class RidesController {
     @PostMapping("/offers/{offerId}/participants")
     ResponseEntity<RideParticipant> addParticipant(@PathVariable UUID offerId, Authentication authentication,
                                                     @RequestParam String role) {
-        var userId = UUID.fromString(authentication.getName());
+        var userId = actorId(authentication);
         var participant = participantService.addParticipant(offerId, userId, role);
         return ResponseEntity.created(URI.create("/api/v1/rides/participants/" + participant.getId())).body(participant);
     }
 
     @DeleteMapping("/participants/{participantId}")
-    ResponseEntity<Void> deleteParticipant(@PathVariable UUID participantId) {
+    ResponseEntity<Void> deleteParticipant(Authentication authentication, @PathVariable UUID participantId) {
+        var actorId = actorId(authentication);
+        var participant = participantService.findById(participantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Participant not found"));
+        var offer = offerService.findById(participant.getRideId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!participant.getUserId().equals(actorId) && !offer.getDriverId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to remove participant");
+        }
         participantService.delete(participantId);
         return ResponseEntity.noContent().build();
     }
@@ -207,7 +278,7 @@ public class RidesController {
     @PostMapping("/offers/{offerId}/bookings")
     ResponseEntity<RideBooking> createBooking(@PathVariable UUID offerId, Authentication authentication,
                                                @Valid @RequestBody CreateRideBookingInput input) {
-        var userId = UUID.fromString(authentication.getName());
+        var userId = actorId(authentication);
         var booking = bookingService.create(offerId, userId, input);
         return ResponseEntity.created(URI.create("/api/v1/rides/bookings/" + booking.getId())).body(booking);
     }
@@ -219,19 +290,35 @@ public class RidesController {
     }
 
     @PatchMapping("/bookings/{bookingId}/status")
-    RideBooking updateBookingStatus(@PathVariable UUID bookingId, @Valid @RequestBody UpdateRideBookingStatusInput input) {
+    RideBooking updateBookingStatus(Authentication authentication, @PathVariable UUID bookingId, @Valid @RequestBody UpdateRideBookingStatusInput input) {
+        var actorId = actorId(authentication);
+        var booking = bookingService.findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride booking not found"));
+        var offer = offerService.findById(booking.getRideId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!booking.getUserId().equals(actorId) && !offer.getDriverId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to update booking");
+        }
         return bookingService.updateStatus(bookingId, input.status());
     }
 
     @DeleteMapping("/bookings/{bookingId}")
-    ResponseEntity<Void> deleteBooking(@PathVariable UUID bookingId) {
+    ResponseEntity<Void> deleteBooking(Authentication authentication, @PathVariable UUID bookingId) {
+        var actorId = actorId(authentication);
+        var booking = bookingService.findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride booking not found"));
+        var offer = offerService.findById(booking.getRideId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (!booking.getUserId().equals(actorId) && !offer.getDriverId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to delete booking");
+        }
         bookingService.delete(bookingId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my-bookings")
     List<RideBooking> myBookings(Authentication authentication) {
-        return bookingService.findByUserId(UUID.fromString(authentication.getName()));
+        return bookingService.findByUserId(actorId(authentication));
     }
 
     @GetMapping("/offers/{offerId}/ratings")
@@ -242,7 +329,7 @@ public class RidesController {
     @PostMapping("/offers/{offerId}/ratings")
     ResponseEntity<RideRating> createRating(@PathVariable UUID offerId, Authentication authentication,
                                              @Valid @RequestBody CreateRideRatingInput input) {
-        var raterId = UUID.fromString(authentication.getName());
+        var raterId = actorId(authentication);
         var rating = ratingService.create(offerId, raterId, input);
         return ResponseEntity.created(URI.create("/api/v1/rides/ratings/" + rating.getId())).body(rating);
     }
@@ -254,13 +341,19 @@ public class RidesController {
     }
 
     @DeleteMapping("/ratings/{ratingId}")
-    ResponseEntity<Void> deleteRating(@PathVariable UUID ratingId) {
+    ResponseEntity<Void> deleteRating(Authentication authentication, @PathVariable UUID ratingId) {
+        var actorId = actorId(authentication);
+        var rating = ratingService.findById(ratingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride rating not found"));
+        if (!rating.getRaterId().equals(actorId) && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your rating");
+        }
         ratingService.delete(ratingId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my-ratings")
     List<RideRating> myRatings(Authentication authentication) {
-        return ratingService.findByRatee(UUID.fromString(authentication.getName()));
+        return ratingService.findByRatee(actorId(authentication));
     }
 }

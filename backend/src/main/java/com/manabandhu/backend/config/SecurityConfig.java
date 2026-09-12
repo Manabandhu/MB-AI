@@ -79,7 +79,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, publicGetEndpoints).permitAll()
                         .requestMatchers("/actuator/info").permitAll()
-                        .requestMatchers("/api/v1/admin/automations/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .build();
@@ -120,9 +120,11 @@ public class SecurityConfig {
                 throw new JwtException("JWT validation is not configured");
             };
         }
-        var jwkSource = jwkSourceFromUri(jwkSetUri);
-        var decoder = NimbusJwtDecoder.withJwkSource(jwkSource)
-                .jwsAlgorithm(SignatureAlgorithm.ES256)
+        var decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
+                .jwsAlgorithms(algs -> {
+                    algs.add(SignatureAlgorithm.ES256);
+                    algs.add(SignatureAlgorithm.RS256);
+                })
                 .build();
         var validators = new ArrayList<OAuth2TokenValidator<Jwt>>();
         validators.add(new JwtTimestampValidator());
@@ -134,18 +136,6 @@ public class SecurityConfig {
         }
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators));
         return decoder;
-    }
-
-    private static JWKSource<SecurityContext> jwkSourceFromUri(String jwkSetUri) {
-        try {
-            var client = java.net.http.HttpClient.newHttpClient();
-            var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create(jwkSetUri)).build();
-            var response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
-            var jwkSet = JWKSet.parse(response.body());
-            return new ImmutableJWKSet<>(jwkSet);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to load JWK set from " + jwkSetUri, ex);
-        }
     }
 
     @Bean

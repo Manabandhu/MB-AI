@@ -30,7 +30,7 @@ export default function AdminCommunityScreen() {
     );
   }, [posts, query]);
 
-  if (isError) {
+  if (isError && !posts.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState

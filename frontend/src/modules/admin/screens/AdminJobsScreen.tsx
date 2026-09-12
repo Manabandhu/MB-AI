@@ -30,7 +30,7 @@ export default function AdminJobsScreen() {
     );
   }, [jobs, query]);
 
-  if (isError) {
+  if (isError && !jobs.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState

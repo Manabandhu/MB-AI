@@ -29,18 +29,44 @@ public class AssistantController {
     }
 
     @GetMapping("/messages")
-    List<AssistantMessage> messages() {
+    List<AssistantMessage> messages(Authentication authentication) {
+        if (authentication != null && authentication.getName() != null) {
+            var userId = UUID.fromString(authentication.getName());
+            var userConversations = conversationService.findByUser(userId);
+            if (!userConversations.isEmpty()) {
+                return messageService.findByConversation(userConversations.get(0).getId());
+            }
+            return List.of();
+        }
         return messageService.listRecent();
     }
 
     @PostMapping("/messages")
-    ResponseEntity<AssistantMessage> sendMessage(@Valid @RequestBody SendAssistantMessageInput input) {
+    ResponseEntity<AssistantMessage> sendMessage(Authentication authentication, @Valid @RequestBody SendAssistantMessageInput input) {
+        if (authentication != null && authentication.getName() != null) {
+            var userId = UUID.fromString(authentication.getName());
+            var userConversations = conversationService.findByUser(userId);
+            UUID convId;
+            if (!userConversations.isEmpty()) {
+                convId = userConversations.get(0).getId();
+            } else {
+                var conv = conversationService.create(userId, "Assistant chat");
+                convId = conv.getId();
+            }
+            messageService.send(convId, AssistantMessage.MessageRole.USER, input.content());
+            var reply = "You said: \"" + input.content() + "\". I'm the ManaBandhu assistant. Ask me about rooms, rides, community, or safety.";
+            var assistantMessage = messageService.send(convId, AssistantMessage.MessageRole.ASSISTANT, reply);
+            return ResponseEntity.created(URI.create("/api/v1/assistant/messages/" + assistantMessage.getId())).body(assistantMessage);
+        }
         var message = messageService.sendRecent(input.content());
         return ResponseEntity.created(URI.create("/api/v1/assistant/messages/" + message.getId())).body(message);
     }
 
     @GetMapping("/history")
-    List<AssistantConversation> history() {
+    List<AssistantConversation> history(Authentication authentication) {
+        if (authentication != null && authentication.getName() != null) {
+            return conversationService.findByUser(actorId(authentication));
+        }
         return conversationService.listRecent();
     }
 
@@ -61,8 +87,24 @@ public class AssistantController {
     }
 
     @GetMapping("/conversations/{id}/messages")
-    List<AssistantMessage> messagesByConversation(@PathVariable UUID id) {
-        return messageService.findByConversation(id);
+    ResponseEntity<List<AssistantMessage>> messagesByConversation(Authentication authentication, @PathVariable UUID id) {
+        var conversation = conversationService.findById(id).orElse(null);
+        if (conversation == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (conversation.getUserId() != null && !conversation.getUserId().equals(actorId(authentication)) && !isAdmin(authentication)) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(messageService.findByConversation(id));
+    }
+
+    private UUID actorId(Authentication authentication) {
+        return UUID.fromString(authentication.getName());
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
     }
 
     @GetMapping("/messages/{id}/citations")

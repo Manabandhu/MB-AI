@@ -30,7 +30,7 @@ export default function AdminRoomsScreen() {
     );
   }, [rooms, query]);
 
-  if (isError) {
+  if (isError && !rooms.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState

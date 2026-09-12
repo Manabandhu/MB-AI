@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -16,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class NotificationDispatcherService {
 
+    private static final Logger log = LoggerFactory.getLogger(NotificationDispatcherService.class);
     private static final RestTemplate REST_TEMPLATE = new RestTemplate();
 
     private final NotificationService notificationService;
@@ -39,7 +42,7 @@ public class NotificationDispatcherService {
                 digest.markDispatched();
                 notificationService.save(digest);
             } catch (Exception exception) {
-                // retry on next cycle
+                log.warn("Failed to dispatch digest notification for user {}: {}", digest.getUserId(), exception.getMessage());
             }
         }
     }

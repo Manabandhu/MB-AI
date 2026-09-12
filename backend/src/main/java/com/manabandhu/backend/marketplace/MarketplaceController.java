@@ -50,8 +50,27 @@ public class MarketplaceController {
         return categoryService.findAll();
     }
 
+    private static UUID actorId(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        return UUID.fromString(authentication.getName());
+    }
+
+    private static boolean isAdmin(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) return false;
+        return authentication.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .anyMatch(a -> a.equals("ROLE_SUPER_ADMIN") || a.equals("ROLE_ADMIN"));
+    }
+
     @PostMapping("/categories")
-    ResponseEntity<ListingCategory> createCategory(@Valid @RequestBody CreateListingCategoryInput input) {
+    ResponseEntity<ListingCategory> createCategory(Authentication authentication, @Valid @RequestBody CreateListingCategoryInput input) {
+        if (!isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Admin access required");
+        }
         var category = categoryService.create(input.name(), input.slug());
         return ResponseEntity.created(URI.create("/api/v1/marketplace/categories/" + category.getId())).body(category);
     }
@@ -70,7 +89,7 @@ public class MarketplaceController {
 
     @PostMapping("/listings")
     ResponseEntity<Listing> create(Authentication authentication, @Valid @RequestBody CreateListingInput input) {
-        var listing = listingService.create(UUID.fromString(authentication.getName()), input.categoryId(),
+        var listing = listingService.create(actorId(authentication), input.categoryId(),
                 input.title(), input.description(), input.price(), input.currency(), input.condition(),
                 input.location(), input.negotiable());
         return ResponseEntity.created(URI.create("/api/v1/marketplace/listings/" + listing.getId())).body(listing);
@@ -84,13 +103,29 @@ public class MarketplaceController {
     }
 
     @PatchMapping("/listings/{listingId}")
-    Listing update(@PathVariable UUID listingId, @Valid @RequestBody UpdateListingInput input) {
+    Listing update(Authentication authentication, @PathVariable UUID listingId, @Valid @RequestBody UpdateListingInput input) {
+        var actorId = actorId(authentication);
+        var listing = listingService.findById(listingId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Listing not found"));
+        if (!listing.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to update this listing");
+        }
         return listingService.update(listingId, input.categoryId(), input.title(), input.description(), input.price(),
                 input.currency(), input.condition(), input.location(), input.negotiable(), input.status());
     }
 
     @DeleteMapping("/listings/{listingId}")
-    ResponseEntity<Void> delete(@PathVariable UUID listingId) {
+    ResponseEntity<Void> delete(Authentication authentication, @PathVariable UUID listingId) {
+        var actorId = actorId(authentication);
+        var listing = listingService.findById(listingId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Listing not found"));
+        if (!listing.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to delete this listing");
+        }
         listingService.delete(listingId);
         return ResponseEntity.noContent().build();
     }
@@ -101,14 +136,33 @@ public class MarketplaceController {
     }
 
     @PostMapping("/listings/{listingId}/images")
-    ResponseEntity<ListingImage> addImage(@PathVariable UUID listingId,
+    ResponseEntity<ListingImage> addImage(Authentication authentication, @PathVariable UUID listingId,
                                           @Valid @RequestBody AddListingImageInput input) {
+        var actorId = actorId(authentication);
+        var listing = listingService.findById(listingId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Listing not found"));
+        if (!listing.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to add images to this listing");
+        }
         var image = imageService.add(listingId, input.url(), input.sortOrder());
         return ResponseEntity.created(URI.create("/api/v1/marketplace/images/" + image.getId())).body(image);
     }
 
     @DeleteMapping("/images/{imageId}")
-    ResponseEntity<Void> deleteImage(@PathVariable UUID imageId) {
+    ResponseEntity<Void> deleteImage(Authentication authentication, @PathVariable UUID imageId) {
+        var actorId = actorId(authentication);
+        var image = imageService.findById(imageId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Image not found"));
+        var listing = listingService.findById(image.getListingId())
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Listing not found"));
+        if (!listing.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to delete this image");
+        }
         imageService.delete(imageId);
         return ResponseEntity.noContent().build();
     }

@@ -20,6 +20,11 @@ public class ListingImageService {
         return repository.findByListingIdOrderBySortOrderAsc(listingId);
     }
 
+    @Transactional(readOnly = true)
+    public java.util.Optional<ListingImage> findById(UUID id) {
+        return repository.findById(id);
+    }
+
     @Transactional
     public ListingImage add(UUID listingId, String url, int sortOrder) {
         var image = new ListingImage(listingId, url, sortOrder);

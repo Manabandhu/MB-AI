@@ -21,6 +21,11 @@ public class SafetyReportService {
     }
 
     @Transactional(readOnly = true)
+    public java.util.Optional<SafetyReport> findById(UUID id) {
+        return repository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
     public List<SafetyReport> findByTarget(UUID targetId) {
         return repository.findByTargetIdOrderByCreatedAtDesc(targetId);
     }

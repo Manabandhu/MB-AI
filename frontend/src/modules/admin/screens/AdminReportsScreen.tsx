@@ -38,7 +38,7 @@ export default function AdminReportsScreen() {
     );
   }, [reports, query]);
 
-  if (isError) {
+  if (isError && !reports.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState

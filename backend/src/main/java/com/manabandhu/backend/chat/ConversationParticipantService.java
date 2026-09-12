@@ -20,6 +20,13 @@ public class ConversationParticipantService {
         return repository.findByConversationIdAndLeftAtIsNull(conversationId);
     }
 
+    @Transactional(readOnly = true)
+    public boolean isParticipant(UUID conversationId, UUID userId) {
+        return repository.findByConversationIdAndUserId(conversationId, userId)
+                .map(p -> p.getLeftAt() == null)
+                .orElse(false);
+    }
+
     @Transactional
     public ConversationParticipant add(UUID conversationId, UUID userId, ConversationParticipant.ParticipantRole role) {
         return repository.save(new ConversationParticipant(conversationId, userId, role));

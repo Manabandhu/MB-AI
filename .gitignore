@@ -1,11 +1,16 @@
 .DS_Store
 .env
-.env.local
+.env.*
+!.env.example
+!.env.test
 node_modules/
 .pnpm-store/
 .expo/
 dist/
 target/
+*.class
+org/
 *.iml
 .idea/
+
 

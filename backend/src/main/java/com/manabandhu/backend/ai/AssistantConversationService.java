@@ -31,6 +31,11 @@ public class AssistantConversationService {
         return repository.findById(id).orElseThrow();
     }
 
+    @Transactional(readOnly = true)
+    public java.util.Optional<AssistantConversation> findById(UUID id) {
+        return repository.findById(id);
+    }
+
     @Transactional
     public AssistantConversation create(UUID userId, String title) {
         return repository.save(new AssistantConversation(userId, title));

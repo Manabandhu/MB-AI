@@ -113,7 +113,7 @@ export default function AdminDashboardScreen() {
   const _isLoading = usersQuery.isLoading || reportsQuery.isLoading;
   const isError = usersQuery.isError || reportsQuery.isError;
 
-  if (isError) {
+  if (isError && !quickCards.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState

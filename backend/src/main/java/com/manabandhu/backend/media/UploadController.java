@@ -34,13 +34,33 @@ public class UploadController {
     @Value("${app.supabase.service-role-key:}")
     private String serviceRoleKey;
 
+    private static final java.util.Set<String> ALLOWED_BUCKETS = java.util.Set.of(
+            "rooms", "rides", "avatars", "posts", "marketplace", "documents", "community"
+    );
+
     @PostMapping("/upload-url")
-    ResponseEntity<Map<String, String>> uploadUrl(@Valid @RequestBody UploadUrlRequest request) {
+    ResponseEntity<Map<String, String>> uploadUrl(
+            org.springframework.security.core.Authentication authentication,
+            @Valid @RequestBody UploadUrlRequest request) {
         if (supabaseProjectUrl.isBlank() || serviceRoleKey.isBlank()) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "Storage provider is not configured");
         }
-        var url = supabaseProjectUrl + "/storage/v1/object/upload/sign/" + request.bucket() + "/" + request.path();
+        var bucket = request.bucket().trim().toLowerCase(java.util.Locale.ROOT);
+        if (!ALLOWED_BUCKETS.contains(bucket)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid or unauthorized storage bucket");
+        }
+        var rawPath = request.path().trim();
+        if (rawPath.contains("..") || rawPath.contains("\\") || rawPath.startsWith("/")) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid path: directory traversal not allowed");
+        }
+
+        var actorId = authentication != null ? authentication.getName() : UUID.randomUUID().toString();
+        var safePath = actorId + "/" + rawPath;
+
+        var url = supabaseProjectUrl + "/storage/v1/object/upload/sign/" + bucket + "/" + safePath;
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(serviceRoleKey);
@@ -61,8 +81,8 @@ public class UploadController {
         }
         return ResponseEntity.ok(Map.of(
                 "uploadUrl", uploadUrl,
-                "path", request.path(),
-                "bucket", request.bucket()));
+                "path", safePath,
+                "bucket", bucket));
     }
 
     public record UploadUrlRequest(

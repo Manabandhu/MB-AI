@@ -47,8 +47,27 @@ public class JobsController {
         return categoryService.findAll();
     }
 
+    private static UUID actorId(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        return UUID.fromString(authentication.getName());
+    }
+
+    private static boolean isAdmin(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) return false;
+        return authentication.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .anyMatch(a -> a.equals("ROLE_SUPER_ADMIN") || a.equals("ROLE_ADMIN"));
+    }
+
     @PostMapping("/categories")
-    ResponseEntity<JobCategory> createCategory(@Valid @RequestBody CreateJobCategoryInput input) {
+    ResponseEntity<JobCategory> createCategory(Authentication authentication, @Valid @RequestBody CreateJobCategoryInput input) {
+        if (!isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Admin access required");
+        }
         var category = categoryService.create(input.name(), input.slug());
         return ResponseEntity.created(URI.create("/api/v1/jobs/categories/" + category.getId())).body(category);
     }
@@ -67,7 +86,7 @@ public class JobsController {
 
     @PostMapping
     ResponseEntity<JobPosting> create(Authentication authentication, @Valid @RequestBody CreateJobPostingInput input) {
-        var posting = postingService.create(UUID.fromString(authentication.getName()), input.categoryId(),
+        var posting = postingService.create(actorId(authentication), input.categoryId(),
                 input.title(), input.company(), input.location(), input.description(), input.employmentType(),
                 input.isRemote(), input.salaryMin(), input.salaryMax(), input.applicationUrl());
         return ResponseEntity.created(URI.create("/api/v1/jobs/" + posting.getId())).body(posting);
@@ -81,34 +100,69 @@ public class JobsController {
     }
 
     @PatchMapping("/{jobId}")
-    JobPosting update(@PathVariable UUID jobId, @Valid @RequestBody UpdateJobPostingInput input) {
+    JobPosting update(Authentication authentication, @PathVariable UUID jobId, @Valid @RequestBody UpdateJobPostingInput input) {
+        var actorId = actorId(authentication);
+        var posting = postingService.findById(jobId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Job posting not found"));
+        if (!posting.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to update this job posting");
+        }
         return postingService.update(jobId, input.categoryId(), input.title(), input.company(), input.location(),
                 input.description(), input.employmentType(), input.isRemote(), input.salaryMin(), input.salaryMax(),
                 input.applicationUrl(), input.status());
     }
 
     @DeleteMapping("/{jobId}")
-    ResponseEntity<Void> delete(@PathVariable UUID jobId) {
+    ResponseEntity<Void> delete(Authentication authentication, @PathVariable UUID jobId) {
+        var actorId = actorId(authentication);
+        var posting = postingService.findById(jobId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Job posting not found"));
+        if (!posting.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to delete this job posting");
+        }
         postingService.delete(jobId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{jobId}/applications")
-    List<JobApplication> applications(@PathVariable UUID jobId) {
+    List<JobApplication> applications(Authentication authentication, @PathVariable UUID jobId) {
+        var actorId = actorId(authentication);
+        var posting = postingService.findById(jobId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Job posting not found"));
+        if (!posting.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to view applicants for this job");
+        }
         return applicationService.findByJobId(jobId);
     }
 
     @PostMapping("/{jobId}/applications")
     ResponseEntity<JobApplication> apply(Authentication authentication, @PathVariable UUID jobId,
                                          @Valid @RequestBody CreateJobApplicationInput input) {
-        var application = applicationService.create(jobId, UUID.fromString(authentication.getName()),
+        var application = applicationService.create(jobId, actorId(authentication),
                 input.coverLetter(), input.resumeUrl());
         return ResponseEntity.created(URI.create("/api/v1/jobs/applications/" + application.getId())).body(application);
     }
 
     @PatchMapping("/applications/{applicationId}")
-    JobApplication updateApplication(@PathVariable UUID applicationId,
+    JobApplication updateApplication(Authentication authentication, @PathVariable UUID applicationId,
                                     @Valid @RequestBody UpdateJobApplicationInput input) {
+        var actorId = actorId(authentication);
+        var application = applicationService.findById(applicationId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Job application not found"));
+        var posting = postingService.findById(application.getJobPostingId())
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Job posting not found"));
+        if (!posting.getOwnerId().equals(actorId) && !application.getApplicantId().equals(actorId) && !isAdmin(authentication)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to update this application");
+        }
         return applicationService.updateStatus(applicationId, input.status());
     }
 }

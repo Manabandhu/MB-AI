@@ -30,7 +30,7 @@ export default function AdminRidesScreen() {
     );
   }, [rides, query]);
 
-  if (isError) {
+  if (isError && !rides.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState

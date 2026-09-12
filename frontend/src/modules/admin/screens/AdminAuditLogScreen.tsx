@@ -30,7 +30,7 @@ export default function AdminAuditLogScreen() {
     );
   }, [logs, query]);
 
-  if (isError) {
+  if (isError && !logs.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState

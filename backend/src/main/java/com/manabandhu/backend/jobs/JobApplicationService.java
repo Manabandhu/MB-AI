@@ -22,6 +22,11 @@ public class JobApplicationService {
         return repository.findByJobPostingIdOrderByAppliedAtDesc(jobId);
     }
 
+    @Transactional(readOnly = true)
+    public java.util.Optional<JobApplication> findById(UUID id) {
+        return repository.findById(id);
+    }
+
     @Transactional
     public JobApplication create(UUID jobId, UUID applicantId, String coverLetter, String resumeUrl) {
         var posting = postingRepository.findById(jobId)

@@ -30,7 +30,7 @@ export default function AdminEventsScreen() {
     );
   }, [events, query]);
 
-  if (isError) {
+  if (isError && !events.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState

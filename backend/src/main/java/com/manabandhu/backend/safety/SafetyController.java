@@ -50,9 +50,25 @@ public class SafetyController {
     }
 
     @PostMapping("/reports/{id}/resolve")
-    ResponseEntity<Void> resolveReport(@PathVariable UUID id) {
+    ResponseEntity<Void> resolveReport(Authentication authentication, @PathVariable UUID id) {
+        var report = reportService.findById(id).orElse(null);
+        if (report == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!isAdmin(authentication) && !report.getReporterId().equals(actorId(authentication))) {
+            return ResponseEntity.status(403).build();
+        }
         reportService.resolve(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private UUID actorId(Authentication authentication) {
+        return UUID.fromString(authentication.getName());
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
     }
 
     @GetMapping("/blocked-users")

@@ -15,8 +15,8 @@ class AdminAccessPolicy {
     }
 
     void require(Authentication authentication) {
-        if (publicAccessEnabled || hasSuperAdminRole(authentication)) return;
-        throw new AccessDeniedException("SUPER_ADMIN role is required");
+        if (publicAccessEnabled || hasAdminRole(authentication)) return;
+        throw new AccessDeniedException("SUPER_ADMIN or ADMIN role is required");
     }
 
     String actorId(Authentication authentication) {
@@ -24,9 +24,10 @@ class AdminAccessPolicy {
         return "public-demo";
     }
 
-    private static boolean hasSuperAdminRole(Authentication authentication) {
+    private static boolean hasAdminRole(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) return false;
         return authentication.getAuthorities().stream()
-                .anyMatch((authority) -> "ROLE_SUPER_ADMIN".equals(authority.getAuthority()));
+                .anyMatch((authority) -> "ROLE_SUPER_ADMIN".equals(authority.getAuthority())
+                        || "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 }

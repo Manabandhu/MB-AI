@@ -64,12 +64,24 @@ public class ExpensesController {
     }
 
     @PatchMapping("/groups/{groupId}")
-    ExpenseGroup updateGroup(@PathVariable UUID groupId, @Valid @RequestBody UpdateExpenseGroupInput input) {
-        return groupService.update(groupId, input.name(), input.description());
+    ResponseEntity<ExpenseGroup> updateGroup(Authentication authentication, @PathVariable UUID groupId, @Valid @RequestBody UpdateExpenseGroupInput input) {
+        var group = groupService.findById(groupId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Expense group not found"));
+        if (!isAdmin(authentication) && !group.getOwnerId().equals(actorId(authentication))) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(groupService.update(groupId, input.name(), input.description()));
     }
 
     @DeleteMapping("/groups/{groupId}")
-    ResponseEntity<Void> deleteGroup(@PathVariable UUID groupId) {
+    ResponseEntity<Void> deleteGroup(Authentication authentication, @PathVariable UUID groupId) {
+        var group = groupService.findById(groupId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Expense group not found"));
+        if (!isAdmin(authentication) && !group.getOwnerId().equals(actorId(authentication))) {
+            return ResponseEntity.status(403).build();
+        }
         groupService.delete(groupId);
         return ResponseEntity.noContent().build();
     }
@@ -81,7 +93,7 @@ public class ExpensesController {
 
     @PostMapping("/groups/{groupId}/expenses")
     ResponseEntity<Expense> addExpense(Authentication authentication, @PathVariable UUID groupId,
-                                       @Valid @RequestBody CreateExpenseInput input) {
+                                        @Valid @RequestBody CreateExpenseInput input) {
         var expense = expenseService.create(groupId, UUID.fromString(authentication.getName()), input.amount(),
                 input.currency(), input.description(), input.category(), input.expenseDate());
         return ResponseEntity.created(URI.create("/api/v1/expenses/expenses/" + expense.getId())).body(expense);
@@ -120,7 +132,23 @@ public class ExpensesController {
     }
 
     @PatchMapping("/settlements/{settlementId}")
-    Settlement updateSettlement(@PathVariable UUID settlementId, @Valid @RequestBody UpdateSettlementInput input) {
-        return settlementService.updateStatus(settlementId, input.status(), input.settledAt());
+    ResponseEntity<Settlement> updateSettlement(Authentication authentication, @PathVariable UUID settlementId, @Valid @RequestBody UpdateSettlementInput input) {
+        var settlement = settlementService.findById(settlementId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Settlement not found"));
+        var actor = actorId(authentication);
+        if (!isAdmin(authentication) && !settlement.getFromUserId().equals(actor) && !settlement.getToUserId().equals(actor)) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(settlementService.updateStatus(settlementId, input.status(), input.settledAt()));
+    }
+
+    private UUID actorId(Authentication authentication) {
+        return UUID.fromString(authentication.getName());
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
     }
 }
