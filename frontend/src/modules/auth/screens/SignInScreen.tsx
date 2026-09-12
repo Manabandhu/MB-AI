@@ -64,7 +64,7 @@ export function SignInScreen() {
 
   return (
     <AuthPageLayout
-      title="Welcome Back 👋"
+      title="Welcome Back"
       subtitle="Sign in to access your trusted rooms, rides, jobs, and community network."
       badgeText="Trusted Community Network"
       backHref="/welcome"

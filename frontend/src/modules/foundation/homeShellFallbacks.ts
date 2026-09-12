@@ -123,7 +123,7 @@ export const homeShellFallbacks: Record<string, HomeShellData> = {
       {
         id: 'hub-2',
         kind: 'post',
-        title: 'Telugu Techies',
+        title: 'Desi Techies',
         body: 'Weekly study session for system design interview prep.',
         meta: '5h ago',
         route: '/community',

@@ -84,8 +84,8 @@ export function SignUpScreen() {
 
   return (
     <AuthPageLayout
-      title="Join ManaBandhu 🤝"
-      subtitle="Create your verified account to connect with Telugu rooms, carpools & jobs."
+      title="Join ManaBandhu"
+      subtitle="Create your verified account to connect with Desi rooms, carpools & jobs."
       badgeText="50,000+ Verified Members"
       backHref="/sign-in"
     >

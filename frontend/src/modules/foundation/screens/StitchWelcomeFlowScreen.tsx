@@ -28,24 +28,24 @@ const slides: SlideItem[] = [
   {
     category: 'Housing',
     title: 'Verified Rooms & Roommates',
-    desc: 'Find verified shared rooms, 1BHK/2BHK apartments, and trusted Telugu roommates across Dallas, Bay Area, Seattle, NJ, and beyond.',
-    tag: 'Zero Brokerage',
+    desc: 'Find verified shared rooms, 1BHK/2BHK apartments, and trusted Desi roommates across Dallas, Bay Area, Seattle, NJ, and beyond.',
+    tag: 'Direct Community',
     tagBg: 'rgba(67, 30, 190, 0.10)',
     tagColor: color.primary,
     stat: 'Avg savings: $450/mo',
     iconName: 'home',
-    testimonial: '“Found my roommate in Dallas in 2 days with zero brokerage!”',
+    testimonial: '“Found my roommate in Dallas in 2 days directly from community members!”',
     author: 'Sravan K., Dallas TX',
     bullets: [
       'ID verified hosts & tenants',
       'Furnished & lease-share listings',
-      'Direct chats with zero broker fees',
+      'Direct chats with verified community hosts',
     ],
   },
   {
     category: 'Carpools',
     title: 'Community Carpools & Commute',
-    desc: 'Share rides with Telugu colleagues to office parks, airports (DFW, SFO, SEA, ORD), and weekend intercity trips. Safe and friendly.',
+    desc: 'Share rides with Desi colleagues and friends to office parks, airports (DFW, SFO, SEA, ORD), and weekend intercity trips. Safe and friendly.',
     tag: 'Trusted Routes',
     tagBg: 'rgba(0, 105, 107, 0.12)',
     tagColor: color.teal,
@@ -62,7 +62,7 @@ const slides: SlideItem[] = [
   {
     category: 'Careers',
     title: 'Insider Job Referrals & Tech Hub',
-    desc: 'Get recommended directly by Telugu engineers, managers, and recruiters at Google, Microsoft, Amazon, Meta, and high-growth startups.',
+    desc: 'Get recommended directly by Desi engineers, managers, and recruiters at Google, Microsoft, Amazon, Meta, and high-growth startups.',
     tag: 'Fast Track',
     tagBg: 'rgba(255, 126, 51, 0.14)',
     tagColor: color.warm,
@@ -79,7 +79,7 @@ const slides: SlideItem[] = [
   {
     category: 'Community',
     title: 'Vibrant Hub, Events & Support',
-    desc: 'Celebrate Ugadi, Sankranti, Diwali, and cricket screenings together. Buy & sell furniture, and get trusted answers on visa and utilities.',
+    desc: 'Celebrate Diwali, Eid, Ugadi, and cricket screenings together. Buy & sell furniture, and get trusted answers on visa and utilities.',
     tag: 'Active 24/7',
     tagBg: 'rgba(67, 30, 190, 0.10)',
     tagColor: color.primary,
@@ -149,11 +149,8 @@ export function StitchWelcomeFlowScreen() {
               <View>
                 <View style={styles.brandTitleRow}>
                   <Text style={styles.brandTitle}>ManaBandhu</Text>
-                  <View style={styles.verifiedDot}>
-                    <AppIcon name="check" size={10} color="#ffffff" strokeWidth={3} />
-                  </View>
                 </View>
-                <Text style={styles.brandSubtitle}>Telugu Diaspora Platform</Text>
+                <Text style={styles.brandSubtitle}>Desi Community Platform</Text>
               </View>
             </View>
 
@@ -212,11 +209,8 @@ export function StitchWelcomeFlowScreen() {
                 <View>
                   <View style={styles.brandTitleRow}>
                     <Text style={styles.brandTitle}>ManaBandhu</Text>
-                    <View style={styles.verifiedDot}>
-                      <AppIcon name="check" size={10} color="#ffffff" strokeWidth={3} />
-                    </View>
                   </View>
-                  <Text style={styles.brandSubtitle}>Telugu Diaspora Platform</Text>
+                  <Text style={styles.brandSubtitle}>Desi Community Platform</Text>
                 </View>
               </View>
               <Pressable
@@ -238,15 +232,15 @@ export function StitchWelcomeFlowScreen() {
             <View style={[styles.heroTextCol, isDesktop && styles.heroTextColDesktop]}>
               <View style={styles.heroPillBadge}>
                 <AppIcon name="star" size={14} color={color.primary} />
-                <Text style={styles.heroPillText}>North America’s #1 Telugu Diaspora App</Text>
+                <Text style={styles.heroPillText}>North America’s #1 Desi Community Platform</Text>
               </View>
               <Text style={[styles.mainHeading, isDesktop && styles.mainHeadingDesktop]}>
-                Your Trusted Telugu Community, Everywhere You Go
+                Your Trusted Desi Community, Everywhere You Go
               </Text>
               <Text style={[styles.mainSubheading, isDesktop && styles.mainSubheadingDesktop]}>
-                Connect with 50,000+ verified Telugu students, working professionals, and families.
-                Find verified housing without brokerage, share friendly daily commutes, unlock
-                insider tech referrals, and stay united with our roots.
+                Connect with 50,000+ verified Desi students, working professionals, and families.
+                Find verified housing directly from members, share friendly daily commutes, unlock
+                insider tech referrals, and celebrate our shared roots.
               </Text>
 
               {/* Value Checkpoints */}
@@ -262,7 +256,7 @@ export function StitchWelcomeFlowScreen() {
                     <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
                   </View>
                   <Text style={styles.valuePointText}>
-                    Zero Brokerage Housing & Transparent Costs
+                    Direct Community Housing & Transparent Costs
                   </Text>
                 </View>
                 <View style={styles.valuePointItem}>
@@ -270,7 +264,7 @@ export function StitchWelcomeFlowScreen() {
                     <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
                   </View>
                   <Text style={styles.valuePointText}>
-                    24/7 Peer Assistance & Local Diaspora Chapters
+                    24/7 Peer Assistance & Local Community Chapters
                   </Text>
                 </View>
               </View>
@@ -463,7 +457,7 @@ export function StitchWelcomeFlowScreen() {
             <View style={styles.desktopFeaturesMatrix}>
               <View style={styles.matrixHeader}>
                 <Text style={styles.matrixBadge}>EVERYTHING YOU NEED</Text>
-                <Text style={styles.matrixHeading}>Built Exclusively for the Telugu Diaspora</Text>
+                <Text style={styles.matrixHeading}>Built Exclusively for the Desi Community</Text>
                 <Text style={styles.matrixSub}>
                   No more unverified Facebook groups or fragmented WhatsApp chats. One verified,
                   safe, organized platform.
@@ -524,7 +518,7 @@ export function StitchWelcomeFlowScreen() {
           {/* ========================================================================= */}
           <View style={styles.footerBlock}>
             <Text style={styles.footerCopyright}>
-              © 2026 ManaBandhu Inc. Connecting Telugu diaspora across USA, Canada & worldwide.
+              © 2026 ManaBandhu Inc. Connecting Desi diaspora across USA, Canada & worldwide.
             </Text>
             <View style={styles.footerLinksRow}>
               <Text style={styles.footerLink}>Privacy Policy</Text>

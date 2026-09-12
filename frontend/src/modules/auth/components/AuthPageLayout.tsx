@@ -21,7 +21,7 @@ export function AuthPageLayout({
   children,
   title,
   subtitle,
-  badgeText = 'Verified Telugu Community',
+  badgeText = 'Verified Desi Community',
   showBack = true,
   backHref = '/welcome',
 }: AuthPageLayoutProps) {
@@ -46,11 +46,8 @@ export function AuthPageLayout({
                 <View>
                   <View style={styles.showcaseBrandTitleRow}>
                     <Text style={styles.showcaseBrandTitle}>ManaBandhu</Text>
-                    <View style={styles.showcaseVerifiedBadge}>
-                      <AppIcon name="check" size={10} color="#ffffff" strokeWidth={3} />
-                    </View>
                   </View>
-                  <Text style={styles.showcaseBrandSubtitle}>Telugu Diaspora Platform</Text>
+                  <Text style={styles.showcaseBrandSubtitle}>Desi Community Platform</Text>
                 </View>
               </Pressable>
 
@@ -60,11 +57,12 @@ export function AuthPageLayout({
                   <Text style={styles.showcaseTagText}>#1 Trusted Community</Text>
                 </View>
                 <Text style={styles.showcaseHeadline}>
-                  Connecting Telugu Hearts Across Continents
+                  Connecting Desi Hearts Across Continents
                 </Text>
                 <Text style={styles.showcaseSubheadline}>
-                  Find verified housing without brokerage, commute safely with community carpools,
-                  unlock tech job referrals, and celebrate our culture together.
+                  Find verified housing directly from community members, commute safely with
+                  community carpools, unlock tech job referrals, and celebrate our shared culture
+                  together.
                 </Text>
               </View>
 
@@ -77,7 +75,7 @@ export function AuthPageLayout({
                   <View style={styles.showcaseFeatureTextCol}>
                     <Text style={styles.showcaseFeatureTitle}>Verified Rooms & Roommates</Text>
                     <Text style={styles.showcaseFeatureDesc}>
-                      Zero brokerage, background checks, lease sharing.
+                      Direct community listings, background checks, lease sharing.
                     </Text>
                   </View>
                 </View>
