@@ -152,52 +152,6 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
     return `Up to $${Math.round((max ?? 0) / 1000)}k / yr`;
   };
 
-  const getReferrerForJob = (company?: string) => {
-    const c = (company || '').toLowerCase();
-    if (c.includes('google')) {
-      return {
-        name: 'Sneha Murthy',
-        role: 'Google L6 Lead SWE',
-        sla: '< 12 hrs',
-        avatarBg: '#e8f0fe',
-        badge: 'Top Referrer',
-      };
-    }
-    if (c.includes('apple')) {
-      return {
-        name: 'Vikram Patel',
-        role: 'Apple Staff SWE',
-        sla: '< 24 hrs',
-        avatarBg: '#f5f5f7',
-        badge: 'Riata Alum',
-      };
-    }
-    if (c.includes('stripe')) {
-      return {
-        name: 'Karthik Raman',
-        role: 'Lead Ops & Stripe Alum',
-        sla: '< 6 hrs',
-        avatarBg: '#f0f3ff',
-        badge: '$1,500 Bonus',
-      };
-    }
-    if (c.includes('meta')) {
-      return {
-        name: 'Ananya Rao',
-        role: 'Meta SWE (UT Austin)',
-        sla: '< 12 hrs',
-        avatarBg: '#e7f3ff',
-        badge: 'Verified Referrer',
-      };
-    }
-    return {
-      name: 'Rajesh Verma',
-      role: 'Staff Architect',
-      sla: '< 24 hrs',
-      avatarBg: '#fff3e0',
-      badge: 'Community Host',
-    };
-  };
 
   return (
     <View style={s.container}>
@@ -360,7 +314,6 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
         ) : (
           <View style={s.jobsListGrid}>
             {filteredJobs.map((job) => {
-              const referrer = getReferrerForJob(job.company);
               const isSaved = savedJobs.has(job.id);
               const salaryText = formatSalary(job.salaryMin, job.salaryMax);
 
@@ -369,7 +322,7 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                   {/* Card Header */}
                   <View style={s.cardTopRow}>
                     <View style={s.companyRow}>
-                      <View style={[s.companyAvatar, { backgroundColor: referrer.avatarBg }]}>
+                      <View style={[s.companyAvatar, { backgroundColor: '#f0f3ff' }]}>
                         <Text style={s.companyAvatarText}>
                           {(job.company || 'C').charAt(0).toUpperCase()}
                         </Text>
@@ -430,10 +383,10 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                     <Text style={s.referrerEmoji}>🤝</Text>
                     <View style={s.referrerContent}>
                       <Text style={s.referrerTitle}>
-                        Referred by {referrer.name} ({referrer.role})
+                        Internal Referral Support Available
                       </Text>
                       <Text style={s.referrerSubtitle}>
-                        Direct hiring manager submission & resume screening • Reply in {referrer.sla}
+                        Direct employee referral and introduction via ManaBandhu members
                       </Text>
                     </View>
                   </View>

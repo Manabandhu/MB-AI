@@ -57,77 +57,6 @@ export function JobDetailsScreen() {
     enabled: Boolean(jobId),
   });
 
-  const getCompanyDetails = (companyName?: string) => {
-    const c = (companyName || '').toLowerCase();
-    if (c.includes('google')) {
-      return {
-        logoText: 'G',
-        logoBg: '#e8f0fe',
-        logoColor: '#1a73e8',
-        referrerName: 'Sneha Murthy',
-        referrerRole: 'Google L6 Lead SWE · 6 yrs at Google',
-        referrerOrg: 'Cloud Core Infrastructure',
-        emailTag: 'Verified Google Email (@google.com)',
-        sla: '< 12 hrs response',
-        quote:
-          '“I work directly with this org under Cloud Core Infra. Happy to review your resume and submit an internal referral directly to the hiring manager. Must have 5+ yrs in distributed systems or Kubernetes.”',
-      };
-    }
-    if (c.includes('apple')) {
-      return {
-        logoText: '',
-        logoBg: '#f5f5f7',
-        logoColor: '#1d1d1f',
-        referrerName: 'Vikram Patel',
-        referrerRole: 'Apple Staff SWE · Riata Campus',
-        referrerOrg: 'Platform Engineering & AI',
-        emailTag: 'Verified Apple Email (@apple.com)',
-        sla: '< 24 hrs response',
-        quote:
-          '“We are expanding the foundational AI data pipelines here at Austin Riata campus. Team is very collaborative, H-1B transfer is seamlessly handled by our internal immigration counsel.”',
-      };
-    }
-    if (c.includes('stripe')) {
-      return {
-        logoText: 'S',
-        logoBg: '#f0f3ff',
-        logoColor: '#635bff',
-        referrerName: 'Karthik Raman',
-        referrerRole: 'Lead Product Ops · Stripe Alumni',
-        referrerOrg: 'Global Developer Platforms',
-        emailTag: 'Verified Stripe Email (@stripe.com)',
-        sla: '< 6 hrs response',
-        quote:
-          '“Fast-track interview process with full Day 1 CPT / OPT and H-1B transfer support. Plus Stripe offers a $1,500 community referral match.”',
-      };
-    }
-    if (c.includes('meta')) {
-      return {
-        logoText: 'M',
-        logoBg: '#e7f3ff',
-        logoColor: '#0668e1',
-        referrerName: 'Ananya Rao',
-        referrerRole: 'Meta SWE · UT Austin Alum',
-        referrerOrg: 'Core Production Engineering',
-        emailTag: 'Verified Meta Email (@meta.com)',
-        sla: '< 12 hrs response',
-        quote:
-          '“We have multiple openings across SRE and backend systems in Austin. If you have solid experience with Linux internals, distributed systems, and observability, reach out!”',
-      };
-    }
-    return {
-      logoText: (companyName || 'C').charAt(0).toUpperCase(),
-      logoBg: '#fff3e0',
-      logoColor: '#e65100',
-      referrerName: 'Rajesh Verma',
-      referrerRole: 'Senior Staff Engineer',
-      referrerOrg: 'Systems Engineering',
-      emailTag: 'Verified Corporate Work Email',
-      sla: '< 24 hrs response',
-      quote:
-        '“Direct team member submission. Feel free to connect for a quick 15-minute sync before submitting your referral.”',
-    };
-  };
 
   const formatSalary = (min?: number, max?: number) => {
     if (!min && !max) return '$160,000 - $220,000 / yr + RSUs';
@@ -157,7 +86,7 @@ export function JobDetailsScreen() {
     );
   }
 
-  const meta = getCompanyDetails(job.company);
+  const companyInitial = (job.company || 'C').charAt(0).toUpperCase();
   const salaryDisplay = formatSalary(job.salaryMin, job.salaryMax);
 
   const handleRequestReferral = () => {
@@ -175,7 +104,7 @@ export function JobDetailsScreen() {
       setIsSubmitted(false);
       Alert.alert(
         'Referral Request Sent!',
-        `Your request and resume have been forwarded directly to ${meta.referrerName}. They will review and submit your profile internally.`
+        `Your request and resume have been submitted for ${job.title} at ${job.company || 'the hiring company'}.`
       );
     }, 1200);
   };
@@ -218,8 +147,8 @@ export function JobDetailsScreen() {
         {/* Hero Job Header Card */}
         <View style={s.heroCard}>
           <View style={s.companyTopRow}>
-            <View style={[s.companyBadge, { backgroundColor: meta.logoBg }]}>
-              <Text style={[s.companyBadgeText, { color: meta.logoColor }]}>{meta.logoText}</Text>
+            <View style={[s.companyBadge, { backgroundColor: '#e8f0fe' }]}>
+              <Text style={[s.companyBadgeText, { color: '#1a73e8' }]}>{companyInitial}</Text>
             </View>
             <View style={s.companyMeta}>
               <View style={s.companyNameRow}>
@@ -244,10 +173,10 @@ export function JobDetailsScreen() {
           {/* Meta Info */}
           <View style={s.jobMetaRow}>
             <Text style={s.jobMetaItem}>
-              {job.employmentType || 'Full-time'} · {job.isRemote ? 'Remote OK' : 'Hybrid (Austin Hub)'}
+              {job.employmentType || 'Full-time'} · {job.isRemote ? 'Remote OK' : 'Hybrid'}
             </Text>
             <Text style={s.jobMetaDivider}>•</Text>
-            <Text style={s.jobMetaItem}>14 Verified Applicants</Text>
+            <Text style={s.jobMetaItem}>Active Role</Text>
           </View>
 
           {/* High-impact Visa & Perk Pills */}
@@ -267,28 +196,30 @@ export function JobDetailsScreen() {
           </View>
         </View>
 
-        {/* Internal Referrer Spotlight Card */}
+        {/* Internal Referral Support Card */}
         <View style={s.referrerSpotlightCard}>
           <View style={s.referrerHeader}>
-            <Text style={s.referrerHeaderTag}>✦ VERIFIED INTERNAL REFERRER</Text>
+            <Text style={s.referrerHeaderTag}>✦ COMMUNITY REFERRAL NETWORK</Text>
             <View style={s.slaBadge}>
-              <Text style={s.slaText}>{meta.sla}</Text>
+              <Text style={s.slaText}>Verified Members</Text>
             </View>
           </View>
 
           <View style={s.referrerProfileRow}>
-            <View style={[s.referrerAvatar, { backgroundColor: meta.logoBg }]}>
-              <Text style={s.referrerAvatarEmoji}>👩‍💻</Text>
+            <View style={[s.referrerAvatar, { backgroundColor: '#f0f3ff' }]}>
+              <Text style={s.referrerAvatarEmoji}>🤝</Text>
             </View>
             <View style={s.referrerProfileMeta}>
-              <Text style={s.referrerName}>{meta.referrerName}</Text>
-              <Text style={s.referrerRole}>{meta.referrerRole}</Text>
-              <Text style={s.emailTag}>🛡️ {meta.emailTag}</Text>
+              <Text style={s.referrerName}>{job.company ? `${job.company} Employee Network` : 'Verified Employee Network'}</Text>
+              <Text style={s.referrerRole}>ManaBandhu Referral Community</Text>
+              <Text style={s.emailTag}>🛡️ Verified Corporate Email Match</Text>
             </View>
           </View>
 
           <View style={s.quoteBox}>
-            <Text style={s.quoteText}>{meta.quote}</Text>
+            <Text style={s.quoteText}>
+              “Request an internal employee referral directly through the ManaBandhu network. Verified alumni and team members review profiles and submit candidates directly to internal hiring pipelines.”
+            </Text>
           </View>
 
           <Pressable
@@ -298,7 +229,7 @@ export function JobDetailsScreen() {
             }}
             style={s.chatReferrerBtn}
           >
-            <Text style={s.chatReferrerBtnText}>💬 Chat with {meta.referrerName} (Free)</Text>
+            <Text style={s.chatReferrerBtnText}>💬 Ask a Question in Community Chat</Text>
           </Pressable>
         </View>
 
@@ -436,7 +367,7 @@ export function JobDetailsScreen() {
           <View style={[s.modalCard, isDesktop && s.modalCardDesktop]}>
             {!isDesktop && <View style={s.dragHandle} />}
             <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Request Referral from {meta.referrerName}</Text>
+              <Text style={s.modalTitle}>Request Employee Referral</Text>
               <Pressable onPress={() => setReferralModalVisible(false)} style={s.closeModalBtn}>
                 <Text style={s.closeModalText}>✕</Text>
               </Pressable>
@@ -444,7 +375,7 @@ export function JobDetailsScreen() {
 
             <ScrollView style={s.modalBody} showsVerticalScrollIndicator={false}>
               <Text style={s.modalNote}>
-                {meta.referrerName} will personally review your profile and submit your referral through the internal {job.company} portal.
+                A verified member from {job.company || 'the hiring company'} will review your profile and submit your referral through the internal company portal.
               </Text>
 
               <Text style={s.formLabel}>LinkedIn Profile or Resume Link *</Text>
@@ -456,7 +387,7 @@ export function JobDetailsScreen() {
                 style={s.formInput}
               />
 
-              <Text style={s.formLabel}>Short Note to {meta.referrerName} (Optional)</Text>
+              <Text style={s.formLabel}>Short Note to Referrer (Optional)</Text>
               <TextInput
                 value={personalNote}
                 onChangeText={setPersonalNote}
@@ -470,7 +401,7 @@ export function JobDetailsScreen() {
               <View style={s.modalTrustReminder}>
                 <Text style={s.reminderEmoji}>⚡</Text>
                 <Text style={s.reminderText}>
-                  Average referral review SLA is {meta.sla}. You will be notified in your ManaBandhu inbox once submitted.
+                  Referral requests are shared directly with verified employees at {job.company || 'the organization'}. You will be notified in your ManaBandhu inbox once reviewed.
                 </Text>
               </View>
             </ScrollView>
