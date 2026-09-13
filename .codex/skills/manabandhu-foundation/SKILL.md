@@ -53,7 +53,7 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 
 ## Demo Fixtures
 
-- `frontend/src/modules/foundation/foundationScreenFallbacks.ts` - demo payloads for all catalog-backed screens
+- Demo fixtures removed from catalog and shell screens; screens use live backend endpoints (`/api/v1/foundation/screens/{screenId}`), loading states, and error states.
 - `frontend/src/modules/foundation/fixtures.ts` - onboarding and welcome copy
 
 ## State Patterns
@@ -114,3 +114,4 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 
 - Style flattening on Link asChild: Wrapped Pressable style in StyleSheet.flatten inside HomeShell quick-action tiles to prevent Expo Router Slot invariant errors.
 - HomeShell Discovery Integration: Connected the greeting row location chip (`Austin, TX · 847 Rooms`), search bar placeholder (`Austin, TX · 847 rooms, flatmates, rides...`), and live stats pills to directly route into `/rooms` for seamless zero-brokerage room discovery.
+- Fallback cleanup: deleted `foundationScreenFallbacks.ts` and `homeShellFallbacks.ts`, removed fallback placeholders from `CatalogContentScreen` and `StitchAppShellScreen` in favor of live backend endpoints, responsive loading states, and error states.

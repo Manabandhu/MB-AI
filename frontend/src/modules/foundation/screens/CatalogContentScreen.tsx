@@ -1,20 +1,43 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { getFoundationScreenContent } from '@/modules/foundation/catalogApi';
-import { foundationScreenFallbacks } from '@/modules/foundation/foundationScreenFallbacks';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { FeatureScreen } from '@/modules/shared/components/FeatureScreen';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 
 type CatalogContentScreenProps = {
   screenId: keyof typeof screenRoutes;
 };
 
 export function CatalogContentScreen({ screenId }: CatalogContentScreenProps) {
-  const fallback = foundationScreenFallbacks[screenId];
   const content = useQuery({
     queryKey: ['foundation', 'screen', screenId],
     queryFn: () => getFoundationScreenContent(screenId),
   });
-  const data = content.data ?? fallback;
+
+  if (content.isLoading) {
+    return (
+      <ScreenShell>
+        <LoadingState />
+      </ScreenShell>
+    );
+  }
+
+  if (content.isError || !content.data) {
+    return (
+      <ScreenShell>
+        <ErrorState
+          title="Unable to load screen"
+          body="Please check your connection and try again."
+          retryLabel="Retry"
+          onRetry={() => content.refetch()}
+        />
+      </ScreenShell>
+    );
+  }
+
+  const data = content.data;
 
   return (
     <FeatureScreen

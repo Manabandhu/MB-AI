@@ -22,7 +22,8 @@ import {
   getProfileShell,
   type HomeShellData,
 } from '@/modules/foundation/homeApi';
-import { homeShellFallbacks } from '@/modules/foundation/homeShellFallbacks';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
 
@@ -65,16 +66,13 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  const { data } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['foundation', 'shell', kind],
     queryFn: shellApi[kind],
-    placeholderData: homeShellFallbacks[kind],
-    retry: false,
   });
-  const shellData = data ?? homeShellFallbacks[kind];
 
   const user = useAuthStore((s) => s.user);
-  const displayName = user?.user_metadata?.full_name ?? shellData.greetingName;
+  const displayName = user?.user_metadata?.full_name ?? data?.greetingName ?? 'friend';
   const avatarInitial = (displayName?.[0] ?? 'U').toUpperCase();
 
   return (
@@ -119,16 +117,31 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
       </View>
 
       {/* Scrollable content */}
-      <ScrollView
-        contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
-        showsVerticalScrollIndicator={false}
-      >
-        {kind === 'home' && <HomeShell data={shellData} displayName={displayName} isDesktop={isDesktop} />}
-        {kind === 'explore' && <ExploreShell data={shellData} isDesktop={isDesktop} />}
-        {kind === 'chat' && <ChatShell data={shellData} isDesktop={isDesktop} />}
-        {kind === 'community' && <CommunityShell data={shellData} isDesktop={isDesktop} />}
-        {kind === 'profile' && <ProfileShell data={shellData} displayName={displayName} isDesktop={isDesktop} />}
-      </ScrollView>
+      {isLoading ? (
+        <View style={{ flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
+          <LoadingState />
+        </View>
+      ) : isError || !data ? (
+        <View style={{ flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
+          <ErrorState
+            title="Unable to load content"
+            body="Please check your connection and try again."
+            retryLabel="Retry"
+            onRetry={() => refetch()}
+          />
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+          showsVerticalScrollIndicator={false}
+        >
+          {kind === 'home' && <HomeShell data={data} displayName={displayName} isDesktop={isDesktop} />}
+          {kind === 'explore' && <ExploreShell data={data} isDesktop={isDesktop} />}
+          {kind === 'chat' && <ChatShell data={data} isDesktop={isDesktop} />}
+          {kind === 'community' && <CommunityShell data={data} isDesktop={isDesktop} />}
+          {kind === 'profile' && <ProfileShell data={data} displayName={displayName} isDesktop={isDesktop} />}
+        </ScrollView>
+      )}
 
       {/* Bottom tab bar - mobile only */}
       {!isDesktop ? (

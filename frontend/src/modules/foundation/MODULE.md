@@ -2,7 +2,7 @@
 
 Owns splash, welcome, onboarding, app shell, home, explore, global search, saved aggregation, profile, and settings. Authentication and notifications remain dedicated modules surfaced inside foundation journeys.
 
-Keep foundation routes and welcome step IDs in `foundationConstants.ts`, local welcome imagery in `welcomeAssets.ts`, catalog-backed foundation screen content in `catalogApi.ts`, `screenDataTypes.ts`, `foundationScreenFallbacks.ts`, and `screens/CatalogContentScreen.tsx`, and shared controls in `frontend/src/modules/shared/ui`.
+Keep foundation routes and welcome step IDs in `foundationConstants.ts`, local welcome imagery in `welcomeAssets.ts`, catalog-backed foundation screen content in `catalogApi.ts`, `screenDataTypes.ts`, and `screens/CatalogContentScreen.tsx`, and shared controls in `frontend/src/modules/shared/ui`.
 
 ## Screens
 
