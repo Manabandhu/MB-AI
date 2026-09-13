@@ -37,6 +37,9 @@ type LivePost = {
   title: string;
   body: string;
   createdAt: string;
+  authorName?: string;
+  likeCount?: number;
+  commentCount?: number;
 };
 
 export function CommunityHomeScreen() {
@@ -245,11 +248,13 @@ export function CommunityHomeScreen() {
                   {/* Author & Community Info */}
                   <View style={s.postMetaRow}>
                     <View style={s.authorRing}>
-                      <Text style={s.authorInitial}>K</Text>
+                      <Text style={s.authorInitial}>
+                        {(post.authorName || 'C').charAt(0).toUpperCase()}
+                      </Text>
                     </View>
                     <View style={s.authorMeta}>
                       <View style={s.authorNameWrap}>
-                        <Text style={s.authorName}>Karthik Vemula</Text>
+                        <Text style={s.authorName}>{post.authorName || 'Community Member'}</Text>
                         <AppIcon name="verified-user" size={14} color={C.secondary} />
                       </View>
                       <Text style={s.commBadge}>{commName}</Text>
@@ -268,16 +273,12 @@ export function CommunityHomeScreen() {
                   {/* Reaction / Stat footer */}
                   <View style={s.postFooter}>
                     <View style={s.reactionPill}>
-                      <Text style={s.reactionEmoji}>💡</Text>
-                      <Text style={s.reactionNum}>Helpful</Text>
-                    </View>
-                    <View style={s.reactionPill}>
                       <Text style={s.reactionEmoji}>👍</Text>
-                      <Text style={s.reactionNum}>Like</Text>
+                      <Text style={s.reactionNum}>{post.likeCount ?? 0}</Text>
                     </View>
                     <View style={[s.reactionPill, s.reactionRight]}>
                       <AppIcon name="message" size={14} color={C.inkMuted} />
-                      <Text style={s.reactionNum}>Comments</Text>
+                      <Text style={s.reactionNum}>{post.commentCount ?? 0} Comments</Text>
                     </View>
                   </View>
                 </Pressable>

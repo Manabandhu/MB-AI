@@ -124,7 +124,7 @@ export function PostDetailsScreen() {
 
         <View style={s.commBadgePill}>
           <AppIcon name="community" size={14} color={C.secondary} />
-          <Text style={s.commBadgeText}>Austin Desi Families</Text>
+          <Text style={s.commBadgeText}>Community Hub</Text>
         </View>
 
         <View style={s.navRight}>
@@ -156,17 +156,16 @@ export function PostDetailsScreen() {
         {/* Author Header */}
         <View style={s.authorCard}>
           <View style={s.authorAvatarRing}>
-            <Text style={s.authorInitial}>K</Text>
+            <Text style={s.authorInitial}>{(postData.authorName || 'C')[0].toUpperCase()}</Text>
           </View>
           <View style={s.authorMeta}>
             <View style={s.nameRow}>
-              <Text style={s.authorName}>Karthik Vemula</Text>
+              <Text style={s.authorName}>{postData.authorName || 'Community Member'}</Text>
               <AppIcon name="verified-user" size={15} color={C.secondary} />
-              <View style={s.modTag}>
-                <Text style={s.modTagText}>Moderator</Text>
-              </View>
             </View>
-            <Text style={s.authorSub}>Austin Bandhu since 2021 · 1.4k views · 8 min read</Text>
+            <Text style={s.authorSub}>
+              Posted {new Date(postData.createdAt).toLocaleDateString()}
+            </Text>
           </View>
         </View>
 
@@ -175,15 +174,14 @@ export function PostDetailsScreen() {
           <Text style={s.postTitle}>{postData.title}</Text>
           <Text style={s.postBody}>{postData.body}</Text>
 
-          {/* Pinned Moderator Assurance Note */}
+          {/* Pinned Moderation Note */}
           <View style={s.pinnedNote}>
             <View style={s.pinnedHeader}>
               <AppIcon name="shield" size={18} color={C.secondary} />
-              <Text style={s.pinnedTitle}>ManaBandhu Verified Advice</Text>
+              <Text style={s.pinnedTitle}>Community Guidelines & Moderation</Text>
             </View>
             <Text style={s.pinnedBody}>
-              Sourced and cross-checked by 35+ resident Telugu parents who have navigated K-12 admissions,
-              school transfers, and youth sports in Travis & Williamson counties.
+              ManaBandhu discussions are moderated for trust, mutual respect, and community safety. Direct helpful advice and local insights are encouraged.
             </Text>
           </View>
 
@@ -243,8 +241,8 @@ export function PostDetailsScreen() {
                   </Text>
                 </View>
                 <View style={s.upvotePill}>
-                  <Text style={s.upvoteIcon}>▲</Text>
-                  <Text style={s.upvoteCount}>12</Text>
+                  <Text style={s.upvoteIcon}>💬</Text>
+                  <Text style={s.upvoteCount}>Reply</Text>
                 </View>
               </View>
               <Text style={s.commentBody}>{comm.body}</Text>
