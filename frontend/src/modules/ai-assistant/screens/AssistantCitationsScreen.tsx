@@ -1,9 +1,9 @@
 import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAssistantCitations } from '@/modules/ai-assistant/api';
-import { assistantScreenFallbacks } from '@/modules/ai-assistant/assistantFallbacks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -13,11 +13,12 @@ import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function AssistantCitationsScreen() {
   const layout = useAdaptiveLayout();
+  const router = useRouter();
   const citations = useQuery({
     queryKey: ['assistant', 'citations'],
     queryFn: getAssistantCitations,
   });
-  const data = citations.data ?? assistantScreenFallbacks.citations;
+  const data = citations.data ?? [];
 
   if (citations.isLoading) {
     return (
@@ -60,7 +61,7 @@ export function AssistantCitationsScreen() {
               title="No citations"
               body="Citations will appear here after you ask questions."
               actionLabel="Open assistant"
-              onAction={() => {}}
+              onAction={() => router.push('/assistant')}
             />
           ) : (
             <View style={styles.list}>
@@ -70,8 +71,8 @@ export function AssistantCitationsScreen() {
                     <AppIcon color={colors.primary} name="book" size={20} />
                     <Text style={styles.cardTitle}>{item.title}</Text>
                   </View>
-                  <Text style={styles.cardBody}>{item.body}</Text>
-                  <Text style={styles.cardMeta}>{item.meta}</Text>
+                  <Text style={styles.cardBody}>{item.body ?? item.snippet ?? ''}</Text>
+                  <Text style={styles.cardMeta}>{item.meta ?? item.source ?? item.url ?? ''}</Text>
                 </View>
               ))}
             </View>

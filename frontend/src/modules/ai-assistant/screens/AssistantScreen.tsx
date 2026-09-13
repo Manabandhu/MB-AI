@@ -1,11 +1,13 @@
 import { color as colors, radius, space } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAssistantMessages, sendAssistantMessage } from '@/modules/ai-assistant/api';
-import { assistantScreenFallbacks } from '@/modules/ai-assistant/assistantFallbacks';
 import { Banner } from '@/modules/shared/components/Banner';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { MessageBubble } from '@/modules/shared/components/MessageBubble';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -14,16 +16,26 @@ import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function AssistantScreen() {
   const layout = useAdaptiveLayout();
+  const queryClient = useQueryClient();
   const messages = useQuery({ queryKey: ['assistant', 'messages'], queryFn: getAssistantMessages });
-  const data = messages.data ?? assistantScreenFallbacks.messages;
+  const data = messages.data ?? [];
   const [text, setText] = useState('');
   const [offline, setOffline] = useState(false);
+
+  const sendMutation = useMutation({
+    mutationFn: (content: string) => sendAssistantMessage({ content }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assistant', 'messages'] });
+      setOffline(false);
+    },
+    onError: () => setOffline(true),
+  });
 
   const send = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    sendAssistantMessage({ content: trimmed }).catch(() => setOffline(true));
     setText('');
+    sendMutation.mutate(trimmed);
   };
 
   const sorted = useMemo(() => [...data].reverse(), [data]);
@@ -43,16 +55,42 @@ export function AssistantScreen() {
             variant="warning"
           />
         ) : null}
-        <View style={styles.chat}>
-          {sorted.map((item) => (
-            <MessageBubble
-              key={item.id}
-              body={item.body ?? ''}
-              sent={item.sent ?? false}
-              time={item.time ?? ''}
+        <ScrollView style={styles.chatScroll} contentContainerStyle={styles.chat}>
+          {messages.isLoading ? (
+            <LoadingState variant="skeleton" count={3} />
+          ) : messages.isError ? (
+            <ErrorState
+              title="Unable to load messages"
+              body="Please check your connection and try again."
+              retryLabel="Retry"
+              onRetry={() => messages.refetch()}
             />
-          ))}
-        </View>
+          ) : data.length === 0 ? (
+            <EmptyState
+              title="No messages yet"
+              body="Ask a question below to start chatting with ManaBandhu assistant."
+              actionLabel="Start chatting"
+              onAction={() => {}}
+            />
+          ) : (
+            sorted.map((item) => (
+              <MessageBubble
+                key={item.id}
+                body={item.body ?? item.content ?? ''}
+                sent={item.sent ?? item.role === 'USER'}
+                time={
+                  item.time ??
+                  (item.createdAt
+                    ? new Date(item.createdAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '')
+                }
+              />
+            ))
+          )}
+        </ScrollView>
         <View style={styles.inputRow}>
           <TextInput
             value={text}
@@ -84,7 +122,8 @@ export function AssistantScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   container: { alignSelf: 'center', flex: 1, gap: space.x6, padding: space.x4, width: '100%' },
-  chat: { flex: 1, gap: space.x3 },
+  chat: { flexGrow: 1, gap: space.x3 },
+  chatScroll: { flex: 1 },
   inputRow: { flexDirection: 'row', gap: space.x3 },
   input: {
     flex: 1,

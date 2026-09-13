@@ -1,9 +1,9 @@
 import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAssistantHistory } from '@/modules/ai-assistant/api';
-import { assistantScreenFallbacks } from '@/modules/ai-assistant/assistantFallbacks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -13,8 +13,9 @@ import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function AssistantHistoryScreen() {
   const layout = useAdaptiveLayout();
+  const router = useRouter();
   const history = useQuery({ queryKey: ['assistant', 'history'], queryFn: getAssistantHistory });
-  const data = history.data ?? assistantScreenFallbacks.history;
+  const data = history.data ?? [];
 
   if (history.isLoading) {
     return (
@@ -57,7 +58,7 @@ export function AssistantHistoryScreen() {
               title="No history yet"
               body="Your past conversations will appear here."
               actionLabel="Open assistant"
-              onAction={() => {}}
+              onAction={() => router.push('/assistant')}
             />
           ) : (
             <View style={styles.list}>
@@ -67,8 +68,13 @@ export function AssistantHistoryScreen() {
                     <AppIcon color={colors.primary} name="message" size={20} />
                     <Text style={styles.cardTitle}>{item.title}</Text>
                   </View>
-                  <Text style={styles.cardBody}>{item.body}</Text>
-                  <Text style={styles.cardMeta}>{item.meta}</Text>
+                  {item.body ? <Text style={styles.cardBody}>{item.body}</Text> : null}
+                  <Text style={styles.cardMeta}>
+                    {item.meta ??
+                      (item.updatedAt || item.createdAt
+                        ? new Date(item.updatedAt || item.createdAt).toLocaleDateString()
+                        : '')}
+                  </Text>
                 </View>
               ))}
             </View>

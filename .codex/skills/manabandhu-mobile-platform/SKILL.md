@@ -75,6 +75,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Foundation fallback cleanup: deleted `foundationScreenFallbacks.ts` and `homeShellFallbacks.ts`, removed fallback data from `CatalogContentScreen` and `StitchAppShellScreen` in favor of live backend queries.
 - Admin fallback cleanup: deleted `adminFallbacks.ts` and removed fallback objects from all 9 admin screens in favor of live backend queries.
 - Chat fallback cleanup: deleted `chatFallbacks.ts` and removed inline fallbacks from `ChatListScreen`, `NewChatScreen`, `ConversationScreen`, and `ConversationInfoScreen` in favor of live backend queries.
+- AI Assistant fallback cleanup: deleted `assistantFallbacks.ts` and removed inline fallbacks from `AssistantScreen`, `AssistantHistoryScreen`, and `AssistantCitationsScreen` in favor of live backend queries.
 
 
 

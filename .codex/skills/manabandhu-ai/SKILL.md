@@ -33,7 +33,7 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 
 ## Demo Fixtures
 
-- `frontend/src/modules/ai-assistant/assistantFallbacks.ts` - demo fixtures for assistant messages and history
+- None. Module relies on live API query responses and states.
 
 ## State Patterns
 
@@ -82,3 +82,4 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 
 - Recent typecheck fixes: added optional UI fields (`body`, `time`, `sent`) to `AssistantMessage`, (`body`, `meta`, `route`) to `AssistantConversation`, and (`body`, `meta`, `source`) to `AssistantCitation`; switched `assistantFallbacks.ts` casts from `as` to `satisfies`; fixed `AssistantScreen` send payload from `{ text }` to `{ content }`.
 - Recent fixture/type fix: `assistantFallbacks.ts` added `conversationId`, `role`, `content`, `createdAt` to message fixtures, `createdAt`/`updatedAt` to conversation fixtures, and `messageId`/`url`/`snippet`/`createdAt` to citation fixtures; `AssistantScreen` now null-coalesces `body`/`sent`/`time` when rendering message bubbles.
+- Fallback cleanup: deleted `assistantFallbacks.ts` and removed inline fallbacks from `AssistantScreen`, `AssistantHistoryScreen`, and `AssistantCitationsScreen` in favor of live React Query queries, `LoadingState`, `ErrorState`, and `EmptyState`.
