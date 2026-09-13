@@ -72,6 +72,8 @@ public class SecurityConfig {
                 "/api/v1/utilities/home",
                 "/api/v1/utilities/nearby",
                 "/api/v1/utilities/emergency",
+                "/api/v1/referrals",
+                "/api/v1/referrals/**",
                 "/api/v1/referrals/screens/**",
                 "/api/v1/safety/center",
                 "/actuator/health/**"

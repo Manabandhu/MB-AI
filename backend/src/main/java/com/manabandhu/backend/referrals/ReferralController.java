@@ -38,7 +38,15 @@ public class ReferralController {
 
     @GetMapping
     List<Referral> referrals(Authentication authentication) {
+        if (authentication == null) {
+            return referralService.findAll();
+        }
         return referralService.findByOwner(UUID.fromString(authentication.getName()));
+    }
+
+    @GetMapping("/public")
+    List<Referral> publicReferrals() {
+        return referralService.findAll();
     }
 
     @PostMapping

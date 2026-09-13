@@ -18,7 +18,7 @@ public class ReferralService {
 
     @Transactional(readOnly = true)
     public List<Referral> findAll() {
-        return repository.findByOwnerIdOrderByCreatedAtDesc(null);
+        return repository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
     }
 
     @Transactional(readOnly = true)

@@ -60,6 +60,46 @@ export async function createReferralOffer(input: {
   );
 }
 
+export type ReferralOfferDetails = {
+  id: string;
+  referralId: string;
+  serviceType: string;
+  availability?: string;
+  terms?: string;
+  expiresAt?: string;
+  createdAt: string;
+};
+
+export type ReferralRequestDetails = {
+  id: string;
+  referralId: string;
+  category: string;
+  details?: string;
+  urgency: 'low' | 'medium' | 'high';
+  desiredOutcome?: string;
+  createdAt: string;
+};
+
+export async function listPublicReferrals(): Promise<Referral[]> {
+  return parseJson(await apiFetch('/api/v1/referrals'));
+}
+
+export async function getReferralOffer(referralId: string): Promise<ReferralOfferDetails | null> {
+  try {
+    return await parseJson(await apiFetch(`/api/v1/referrals/${encodeURIComponent(referralId)}/offer`));
+  } catch {
+    return null;
+  }
+}
+
+export async function getReferralRequest(referralId: string): Promise<ReferralRequestDetails | null> {
+  try {
+    return await parseJson(await apiFetch(`/api/v1/referrals/${encodeURIComponent(referralId)}/request`));
+  } catch {
+    return null;
+  }
+}
+
 export async function getMyReferrals(): Promise<Referral[]> {
   return parseJson(await apiFetch('/api/v1/referrals'));
 }
