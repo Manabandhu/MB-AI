@@ -33,22 +33,12 @@ export function MyReferralsScreen() {
     },
   });
 
-  const fallback: MyReferralsContent = {
+  const content: MyReferralsContent = data ?? {
     eyebrow: 'Referrals',
     title: 'My referrals',
     subtitle: 'Your requested and offered referrals.',
-    referrals: [
-      {
-        id: '1',
-        title: 'Need a plumber',
-        body: 'Requested · awaiting responses',
-        route: '/referrals/1',
-      },
-      { id: '2', title: 'Offering tutoring', body: 'Offered · 2 inquiries', route: '/referrals/2' },
-    ],
+    referrals: [],
   };
-
-  const content = data ?? fallback;
 
   if (isLoading) {
     return (

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
@@ -16,7 +17,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { listPublicReferrals, type Referral } from '@/modules/referrals/api';
-import { referralsScreenFallbacks } from '@/modules/referrals/referralsFallbacks';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 type TabType = 'offers' | 'requests';
@@ -44,90 +44,7 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
     queryFn: listPublicReferrals,
   });
 
-  // Fallback demo items if backend query is empty or loading
-  const fallbackOffers: Referral[] = [
-    {
-      id: 'e1111111-1111-1111-1111-111111111111',
-      ownerId: 'demo-user-1',
-      recipientId: 'demo-user-2',
-      type: 'offer',
-      status: 'active',
-      title: 'Staff Software Engineer @ Google (Cloud & Infra)',
-      description: 'Happy to provide internal referrals for SWE L4-L6 roles in Sunnyvale, Austin, NYC, and Kirkland. Free resume review and interview tips included.',
-      category: 'Tech Referral',
-      contactInfo: 'phani.teja@google.com',
-      createdAt: '2026-09-12T10:00:00Z',
-      updatedAt: '2026-09-12T10:00:00Z',
-    },
-    {
-      id: 'e2222222-2222-2222-2222-222222222222',
-      ownerId: 'demo-user-2',
-      recipientId: 'demo-user-1',
-      type: 'offer',
-      status: 'active',
-      title: 'Principal Product Manager @ Microsoft Azure',
-      description: 'Referring senior PMs, Technical PMs, and Group Engineering Managers for Azure Core, AI Copilot, and Cloud Security in Redmond and Austin.',
-      category: 'Product Management',
-      contactInfo: 'sunitha.reddy@microsoft.com',
-      createdAt: '2026-09-11T14:00:00Z',
-      updatedAt: '2026-09-11T14:00:00Z',
-    },
-    {
-      id: 'e3333333-3333-3333-3333-333333333333',
-      ownerId: 'demo-user-3',
-      recipientId: 'demo-user-1',
-      type: 'offer',
-      status: 'active',
-      title: 'Senior Data Scientist @ Amazon Ads / AWS',
-      description: 'Internal referrals for Applied Science, ML Engineering, and Business Intelligence roles in Austin and Seattle.',
-      category: 'AI / ML Data Science',
-      contactInfo: 'kiran.varma@amazon.com',
-      createdAt: '2026-09-10T11:00:00Z',
-      updatedAt: '2026-09-10T11:00:00Z',
-    },
-    {
-      id: 'e4444444-4444-4444-4444-444444444444',
-      ownerId: 'demo-user-1',
-      recipientId: 'demo-user-3',
-      type: 'offer',
-      status: 'active',
-      title: 'Staff iOS Engineer @ Apple (Cupertino / Austin)',
-      description: 'Can submit direct referrals for iOS/macOS applications, Swift foundation, and multimedia frameworks.',
-      category: 'Mobile Development',
-      contactInfo: 'vikram.rao@apple.com',
-      createdAt: '2026-09-09T09:00:00Z',
-      updatedAt: '2026-09-09T09:00:00Z',
-    },
-  ];
-
-  const fallbackRequests: Referral[] = [
-    {
-      id: 'e5555555-5555-5555-5555-555555555555',
-      ownerId: 'demo-user-2',
-      recipientId: 'demo-user-1',
-      type: 'request',
-      status: 'pending',
-      title: 'Seeking Referral for Senior DevOps / Platform Engineer at Meta',
-      description: 'Kubernetes, Terraform, AWS certified engineer with 6 years experience looking for a referral for Meta Infra team in Austin or Remote.',
-      category: 'Cloud Infrastructure',
-      createdAt: '2026-09-12T16:00:00Z',
-      updatedAt: '2026-09-12T16:00:00Z',
-    },
-    {
-      id: 'e6666666-6666-6666-6666-666666666666',
-      ownerId: 'demo-user-3',
-      recipientId: 'demo-user-2',
-      type: 'request',
-      status: 'pending',
-      title: 'Need recommendation for Immigration Attorney for EB-2 NIW',
-      description: 'Looking for personal recommendations for trusted immigration attorneys in Dallas or Austin specializing in EB2 NIW petitions for Telugu professionals.',
-      category: 'Immigration Legal',
-      createdAt: '2026-09-12T18:00:00Z',
-      updatedAt: '2026-09-12T18:00:00Z',
-    },
-  ];
-
-  const allReferrals = (rawReferrals && rawReferrals.length > 0) ? rawReferrals : [...fallbackOffers, ...fallbackRequests];
+  const allReferrals = rawReferrals ?? [];
 
   const offers = useMemo(() => allReferrals.filter((r) => r.type === 'offer'), [allReferrals]);
   const requests = useMemo(() => allReferrals.filter((r) => r.type === 'request'), [allReferrals]);
@@ -424,18 +341,23 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
           </View>
 
           {/* Items Feed */}
-          {displayedItems.length === 0 ? (
+          {isLoading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.emptyTitle}>Loading referrals...</Text>
+            </View>
+          ) : displayedItems.length === 0 ? (
             <View style={styles.emptyContainer}>
               <AppIcon name="briefcase" size={40} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No referrals found</Text>
+              <Text style={styles.emptyTitle}>No referrals yet</Text>
               <Text style={styles.emptyDesc}>
-                Try adjusting your search query or switching to another category.
+                Be the first to offer or request a referral in the community.
               </Text>
               <Pressable
-                onPress={() => { setSearchQuery(''); setSelectedFilter('all'); }}
+                onPress={() => router.push('/referrals/offer')}
                 style={styles.clearBtn}
               >
-                <Text style={styles.clearBtnText}>Clear filters</Text>
+                <Text style={styles.clearBtnText}>Offer a Referral</Text>
               </Pressable>
             </View>
           ) : (

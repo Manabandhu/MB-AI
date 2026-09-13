@@ -59,20 +59,15 @@ export function ReferralDetailsScreen() {
     );
   }
 
-  // Fallback demo data if lookup fails
-  const data: Referral = referral || {
-    id: referralId || 'demo-referral',
-    ownerId: 'demo-owner',
-    recipientId: 'demo-recipient',
-    type: 'offer',
-    status: 'active',
-    title: 'Staff Software Engineer @ Google (Cloud & Infra)',
-    description: 'Happy to provide internal referrals for SWE L4-L6 roles in Sunnyvale, Austin, NYC, and Kirkland. Free resume review and interview tips included.',
-    category: 'Tech Referral',
-    contactInfo: 'phani.teja@google.com',
-    createdAt: '2026-09-12T10:00:00Z',
-    updatedAt: '2026-09-12T10:00:00Z',
-  };
+  if (isError || !referral) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ErrorState title="Referral not found" body="The referral you are looking for does not exist or has been removed." retryLabel="Retry" onRetry={() => refetch()} />
+      </SafeAreaView>
+    );
+  }
+
+  const data: Referral = referral;
 
   function getCompanyInitials(title: string): { letter: string; color: string; bg: string } {
     const lower = title.toLowerCase();

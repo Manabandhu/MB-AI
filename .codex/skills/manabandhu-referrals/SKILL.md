@@ -37,7 +37,7 @@ Owns referral discovery, requests, offers, details, status tracking, user-owned 
 
 ## Demo Fixtures
 
-- `frontend/src/modules/referrals/referralsFallbacks.ts` - demo fixtures for all referral screens
+- Frontend fallbacks removed in favor of backend API endpoints and loading/empty/error states.
 
 ## State Patterns
 
@@ -60,7 +60,7 @@ Owns referral discovery, requests, offers, details, status tracking, user-owned 
 ## Implementation Notes for Expo React Native
 
 - Route files in `frontend/src/app/referrals/` are thin wrappers
-- `ReferralsScreen` uses `useQuery` with fallback data from `referralsFallbacks.ts`
+- `ReferralsScreen` uses `useQuery` with backend API data
 - `FeatureScreen` provides adaptive catalog/list layout
 - Forms use `react-hook-form` + `zod` + `@hookform/resolvers`
 - Consent and privacy boundaries are enforced server-side

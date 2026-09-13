@@ -33,6 +33,12 @@ public class Referral {
     @Column(length = 4000)
     String description;
 
+    @Column(length = 100)
+    String category;
+
+    @Column(name = "contact_info", length = 200)
+    String contactInfo;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     Instant createdAt;
 
@@ -60,6 +66,10 @@ public class Referral {
     public String getStatus() { return status; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+    public String getContactInfo() { return contactInfo; }
+    public void setContactInfo(String contactInfo) { this.contactInfo = contactInfo; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 }
