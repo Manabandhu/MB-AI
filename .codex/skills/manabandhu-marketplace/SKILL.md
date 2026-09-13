@@ -37,7 +37,7 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
 
 ## Demo Fixtures
 
-- `frontend/src/modules/marketplace/marketplaceFallbacks.ts` - demo fixtures for all marketplace screens
+- Demo fixtures removed; screens use live backend queries, loading states, and error/empty states.
 
 ## State Patterns
 
@@ -77,4 +77,5 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
 ## Current Implementation Status
 
 - **Complete Discovery & Details**: Live Supabase data integration for marketplace listings and categories, responsive card grid with live prices, condition badges, seller verification tags, and make offer negotiation modal.
+- **Fallback cleanup**: deleted `marketplaceFallbacks.ts` and removed inline fallbacks from `CategoriesScreen`, `MarketplaceSearchScreen`, and `SavedItemsScreen` in favor of live backend queries and responsive empty/error states.
 

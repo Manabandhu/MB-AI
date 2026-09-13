@@ -36,37 +36,6 @@ export function MarketplaceSearchScreen() {
     },
   });
 
-  const fallback: MarketplaceSearchContent = {
-    eyebrow: 'Marketplace',
-    title: 'Search listings',
-    subtitle: 'Find items to buy or trade.',
-    listings: [
-      {
-        id: '1',
-        title: 'Vintage camera',
-        body: 'Good condition · pickup in Irving',
-        meta: '$120',
-        route: '/marketplace/1',
-      },
-      {
-        id: '2',
-        title: 'Wooden desk',
-        body: 'Solid wood · assembly included',
-        meta: '$80',
-        route: '/marketplace/2',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-  const filtered = query
-    ? content.listings.filter(
-        (l) =>
-          l.title.toLowerCase().includes(query.toLowerCase()) ||
-          l.body.toLowerCase().includes(query.toLowerCase()),
-      )
-    : content.listings;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -76,7 +45,7 @@ export function MarketplaceSearchScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -88,6 +57,15 @@ export function MarketplaceSearchScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
+  const filtered = query
+    ? content.listings.filter(
+        (l) =>
+          l.title.toLowerCase().includes(query.toLowerCase()) ||
+          l.body.toLowerCase().includes(query.toLowerCase()),
+      )
+    : content.listings;
 
   return (
     <ScreenShell>

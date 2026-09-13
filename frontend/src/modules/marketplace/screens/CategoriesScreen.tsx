@@ -32,28 +32,6 @@ export function CategoriesScreen() {
     },
   });
 
-  const fallback: CategoriesContent = {
-    eyebrow: 'Marketplace',
-    title: 'Categories',
-    subtitle: 'Browse items by category.',
-    categories: [
-      {
-        id: '1',
-        title: 'Electronics',
-        body: 'Cameras, phones, laptops, and accessories.',
-        route: '/marketplace/search',
-      },
-      {
-        id: '2',
-        title: 'Furniture',
-        body: 'Tables, chairs, shelves, and decor.',
-        route: '/marketplace/search',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -63,7 +41,7 @@ export function CategoriesScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -75,6 +53,8 @@ export function CategoriesScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>

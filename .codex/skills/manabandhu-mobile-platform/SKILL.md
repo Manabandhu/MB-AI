@@ -67,6 +67,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Rides fallback cleanup: deleted `ridesFallbacks.ts` in favor of live Supabase carpool queries, error handling, and responsive empty states.
 - Jobs fallback cleanup: deleted `jobsFallbacks.ts` and removed inline fallbacks from `JobsSearchScreen` and `SavedJobsScreen` in favor of backend API endpoints and empty/error states.
 - Events fallback cleanup: deleted `eventsFallbacks.ts` and removed inline demo data from `SavedEventsScreen`, `EventsSearchScreen`, `MyEventsScreen`, and `CreateEventScreen` in favor of live backend queries.
+- Marketplace fallback cleanup: deleted `marketplaceFallbacks.ts` and removed inline demo data from `CategoriesScreen`, `MarketplaceSearchScreen`, and `SavedItemsScreen` in favor of live backend queries.
 
 
 

@@ -33,23 +33,6 @@ export function SavedItemsScreen() {
     },
   });
 
-  const fallback: SavedItemsContent = {
-    eyebrow: 'Marketplace',
-    title: 'Saved items',
-    subtitle: 'Your bookmarked marketplace listings.',
-    items: [
-      {
-        id: '1',
-        title: 'Vintage camera',
-        body: 'Good condition · pickup in Irving',
-        meta: '$120',
-        route: '/marketplace/1',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -59,7 +42,7 @@ export function SavedItemsScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -71,6 +54,8 @@ export function SavedItemsScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>
