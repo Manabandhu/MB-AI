@@ -76,12 +76,4 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - Single column on compact, 2 columns on medium, 3 columns on expanded/wide
 - Safe area insets always respected
 
-## Current Implementation Status
-
-- **Partial**: Events home, search, details, and create event screens are implemented. Saved and my events screens are UI-complete but rely on demo fallbacks. Backend moderation, capacity, and attendance rules are enforced server-side.
-
-- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
-
-- Recent changes: added `useRequireAuth('/sign-in')` to all events routes; fixed `EventDetailsScreen` to accept optional `eventId` prop with `useLocalSearchParams` fallback; added `@GetMapping("/search")` to `EventsController`; aligned `createEvent` payload with backend `CreateEventInput` fields (`startAt`, `endAt`, `location`, `latitude`, `longitude`, `categoryId`); added `@NotNull` to `CreateEventInput` lat/lng.
-
-- Recent fixes: corrected `CreateEventScreen` mutation payload — the legacy `date`/`category` fields were replaced with backend-aligned `startAt`, `endAt`, `latitude`, `longitude`, `categoryId` properties.
+- Recent implementation: Generated Stitch MCP mobile designs (`f3ea9ea291424d759cf85d9786cc8bcc` for Events & Meetups Discovery and `203a0524f000487e9b1384e8d484e701` for Event Details & Free RSVP). Replaced fallback screen with live Supabase events feed via Spring Boot (`/api/v1/events`), rich category chips, Austin Diwali Mela featured spotlight, detailed festival timeline, venue amenities, social proof attendee clusters, and digital RSVP ticket modal. Unblocked public unauthenticated event discovery.
