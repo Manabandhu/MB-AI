@@ -10,13 +10,12 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { getNearby } from '@/modules/utilities/api';
-import { nearbyFallback } from '@/modules/utilities/utilitiesFallbacks';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function NearbyScreen() {
   const layout = useAdaptiveLayout();
   const nearby = useQuery({ queryKey: ['utilities', 'nearby'], queryFn: getNearby });
-  const data = nearby.data ?? nearbyFallback;
+  const data = nearby.data ?? [];
   const [permissionGranted, setPermissionGranted] = useState(true);
   const [search, setSearch] = useState('');
 

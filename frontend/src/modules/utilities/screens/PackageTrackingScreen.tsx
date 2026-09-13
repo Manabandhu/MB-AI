@@ -10,13 +10,12 @@ import { SearchBar } from '@/modules/shared/components/SearchBar';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { getPackages } from '@/modules/utilities/api';
-import { packagesFallback } from '@/modules/utilities/utilitiesFallbacks';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function PackageTrackingScreen() {
   const layout = useAdaptiveLayout();
   const packages = useQuery({ queryKey: ['utilities', 'packages'], queryFn: getPackages });
-  const data = packages.data ?? packagesFallback;
+  const data = packages.data ?? [];
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {

@@ -9,7 +9,6 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { getEmergencyResources } from '@/modules/utilities/api';
-import { emergencyFallback } from '@/modules/utilities/utilitiesFallbacks';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function EmergencyResourcesScreen() {
@@ -18,7 +17,7 @@ export function EmergencyResourcesScreen() {
     queryKey: ['utilities', 'emergency'],
     queryFn: getEmergencyResources,
   });
-  const data = resources.data ?? emergencyFallback;
+  const data = resources.data ?? [];
 
   if (resources.isLoading) {
     return (

@@ -35,7 +35,7 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 
 ## Demo Fixtures
 
-- `frontend/src/modules/utilities/utilitiesFallbacks.ts` - demo fixtures for all utilities screens
+- Demo fixtures removed; screens use live backend queries, loading states, and error/empty states.
 
 ## State Patterns
 
@@ -78,3 +78,4 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - **Backend**: REST and GraphQL APIs implemented under `/api/v1/utilities` with packages, nearby places, emergency resources, and Flyway migration V12.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+- Fallback cleanup: deleted `utilitiesFallbacks.ts` and removed inline fallbacks from `UtilitiesHomeScreen`, `NearbyScreen`, `EmergencyResourcesScreen`, and `PackageTrackingScreen` in favor of live backend endpoints, loading states, and error/empty states.
