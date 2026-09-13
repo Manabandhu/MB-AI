@@ -234,16 +234,16 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
           {/* Stats Bar */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: '#1E1B4B' }]}>142+</Text>
-              <Text style={styles.statLabel}>Companies</Text>
+              <Text style={[styles.statNumber, { color: '#1E1B4B' }]}>{offers.length}</Text>
+              <Text style={styles.statLabel}>Referral Offers</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: '#EA580C' }]}>520+</Text>
-              <Text style={styles.statLabel}>Active Referrers</Text>
+              <Text style={[styles.statNumber, { color: '#EA580C' }]}>{requests.length}</Text>
+              <Text style={styles.statLabel}>Active Requests</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: '#10B981' }]}>94%</Text>
-              <Text style={styles.statLabel}>Response Rate</Text>
+              <Text style={[styles.statNumber, { color: '#10B981' }]}>100%</Text>
+              <Text style={styles.statLabel}>Free & Direct</Text>
             </View>
           </View>
 

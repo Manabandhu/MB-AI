@@ -195,7 +195,7 @@ export function ReferralDetailsScreen() {
               <View style={styles.avatarRing}>
                 <View style={styles.avatarInner}>
                   <Text style={styles.avatarInitials}>
-                    {data.type === 'offer' ? 'PT' : 'MB'}
+                    {data.type === 'offer' ? 'VR' : 'MB'}
                   </Text>
                 </View>
                 <View style={styles.avatarVerifiedCheck}>
@@ -206,15 +206,15 @@ export function ReferralDetailsScreen() {
               <View style={styles.referrerInfo}>
                 <View style={styles.referrerNameRow}>
                   <Text style={styles.referrerName}>
-                    {data.type === 'offer' ? 'Phani Teja' : 'Bandhu Requester'}
+                    {data.type === 'offer' ? 'Verified Referrer' : 'Verified Requester'}
                   </Text>
                   <AppIcon name="verified-user" size={14} color="#10B981" />
                 </View>
                 <Text style={styles.referrerRole}>
-                  Senior Staff Engineer (6 yrs at Company)
+                  {data.category || 'Professional Network'}
                 </Text>
                 <Text style={styles.referrerChapter}>
-                  ex-Hyderabad Bandhu • Austin Chapter
+                  ManaBandhu Member Network
                 </Text>
               </View>
             </View>
@@ -222,23 +222,22 @@ export function ReferralDetailsScreen() {
             {/* Metrics Grid */}
             <View style={styles.metricsGrid}>
               <View style={styles.metricCell}>
-                <Text style={[styles.metricNumber, { color: '#1E1B4B' }]}>54</Text>
-                <Text style={styles.metricLabel}>Referrals Made</Text>
+                <Text style={[styles.metricNumber, { color: '#1E1B4B' }]}>Direct</Text>
+                <Text style={styles.metricLabel}>Connection</Text>
               </View>
               <View style={styles.metricCell}>
-                <Text style={[styles.metricNumber, { color: '#EA580C' }]}>98%</Text>
-                <Text style={styles.metricLabel}>Response Rate</Text>
+                <Text style={[styles.metricNumber, { color: '#EA580C' }]}>Active</Text>
+                <Text style={styles.metricLabel}>Status</Text>
               </View>
               <View style={styles.metricCell}>
-                <Text style={[styles.metricNumber, { color: '#10B981' }]}>Top 1%</Text>
-                <Text style={styles.metricLabel}>Desi Mentor</Text>
+                <Text style={[styles.metricNumber, { color: '#10B981' }]}>100%</Text>
+                <Text style={styles.metricLabel}>Zero Brokerage</Text>
               </View>
             </View>
 
             {/* Quote Box */}
             <View style={styles.quoteBox}>
               <Text style={styles.quoteText}>
-                <Text style={styles.quoteGreet}>"Namaskaram! </Text>
                 {data.description}
               </Text>
             </View>
