@@ -76,7 +76,7 @@ const CITIES: CityOption[] = [
 // ─── Enhanced Ride Item Interface ─────────────────────────────────────────────
 export type EnrichedRide = RideOffer & {
   driverName: string;
-  driverAvatar: string;
+  driverAvatar?: string;
   driverEmployer: string;
   driverRating: number;
   ridesGiven: number;
@@ -84,96 +84,14 @@ export type EnrichedRide = RideOffer & {
   vehicleModel: string;
   vehicleTag: string;
   departureTimeDisplay: string;
-  returnTimeDisplay: string;
+  returnTimeDisplay?: string;
   vibes: string[];
   commuteType: 'daily' | 'intercity' | 'weekend';
   mapX: number; // percentage across map
   mapY: number; // percentage down map
 };
 
-// Seed metadata dictionary keyed by ID or driverId
-const DRIVER_METADATA: Record<string, Partial<EnrichedRide>> = {
-  'b1111111-1111-1111-1111-111111111111': {
-    driverName: 'Vikram Patel',
-    driverAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    driverEmployer: 'Apple Staff SWE',
-    driverRating: 4.9,
-    ridesGiven: 42,
-    verifiedDriver: true,
-    vehicleModel: 'White Tesla Model Y (EV ⚡, HOV)',
-    vehicleTag: 'EV · HOV Speed',
-    departureTimeDisplay: '8:15 AM (Mon-Fri)',
-    returnTimeDisplay: 'Return 5:30 PM',
-    vibes: ['Women Preferred', 'Bollywood Beats 🎵', 'Quiet Work Vibe'],
-    commuteType: 'daily',
-    mapX: 38,
-    mapY: 28,
-  },
-  'b2222222-2222-2222-2222-222222222222': {
-    driverName: 'Sneha Murthy',
-    driverAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    driverEmployer: 'Google L6 SWE',
-    driverRating: 5.0,
-    ridesGiven: 68,
-    verifiedDriver: true,
-    vehicleModel: 'Hyundai Ioniq 5 EV',
-    vehicleTag: 'EV · Non-Smoker',
-    departureTimeDisplay: '8:45 AM (Mon-Fri)',
-    returnTimeDisplay: 'Return 6:00 PM',
-    vibes: ['Coffee & Tech Talks ☕', 'Non-Smoker', 'AC ❄️'],
-    commuteType: 'daily',
-    mapX: 42,
-    mapY: 48,
-  },
-  'b3333333-3333-3333-3333-333333333333': {
-    driverName: 'Karthik Raman',
-    driverAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    driverEmployer: 'Amazon Principal Architect',
-    driverRating: 4.95,
-    ridesGiven: 29,
-    verifiedDriver: true,
-    vehicleModel: 'Toyota Highlander Hybrid (Spacious)',
-    vehicleTag: 'Hybrid · Luggage OK',
-    departureTimeDisplay: 'Friday 4:30 PM',
-    returnTimeDisplay: 'Sunday Return 6 PM',
-    vibes: ['Intercity Corridor 🛣️', 'Spacious Trunk 🧳', 'South Indian Podcast 🎧'],
-    commuteType: 'intercity',
-    mapX: 70,
-    mapY: 20,
-  },
-  'b4444444-4444-4444-4444-444444444444': {
-    driverName: 'Ananya Sharma',
-    driverAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    driverEmployer: 'UT Austin / Meta SWE',
-    driverRating: 4.88,
-    ridesGiven: 35,
-    verifiedDriver: true,
-    vehicleModel: 'Honda Civic Sport',
-    vehicleTag: 'Sedan · Student Friendly',
-    departureTimeDisplay: '9:00 AM (Mon-Thu)',
-    returnTimeDisplay: 'Return 4:30 PM',
-    vibes: ['Women Only 👩', 'Indie Music 🎸', 'Capitol Hub'],
-    commuteType: 'daily',
-    mapX: 48,
-    mapY: 65,
-  },
-  'b5555555-5555-5555-5555-555555555555': {
-    driverName: 'Rajesh Verma',
-    driverAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    driverEmployer: 'Energy Corridor Tech',
-    driverRating: 4.92,
-    ridesGiven: 51,
-    verifiedDriver: true,
-    vehicleModel: 'Chevy Bolt EV (Long Range)',
-    vehicleTag: 'EV · Direct Highway',
-    departureTimeDisplay: 'Saturday 8:00 AM',
-    returnTimeDisplay: 'Sunday 7:00 PM',
-    vibes: ['Houston Express 🛣️', 'Pure Veg Snackers 🥟', 'HOV Fast'],
-    commuteType: 'intercity',
-    mapX: 62,
-    mapY: 78,
-  },
-};
+
 
 const filterCategories = [
   { id: 'all', label: '🚗 All Carpools' },
@@ -228,27 +146,28 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
   const enrichedRides: EnrichedRide[] = useMemo(() => {
     if (!rawRides || rawRides.length === 0) return [];
     return rawRides.map((ride, index) => {
-      const meta = DRIVER_METADATA[ride.id] || {
-        driverName: 'Community Driver',
-        driverAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        driverEmployer: 'Tech Professional',
-        driverRating: 4.9,
-        ridesGiven: 20 + index * 5,
-        verifiedDriver: true,
-        vehicleModel: 'Hybrid Sedan',
-        vehicleTag: 'Sedan · AC',
-        departureTimeDisplay: '8:30 AM',
-        returnTimeDisplay: '5:30 PM',
-        vibes: ['Daily Commute 🔁', 'AC ❄️'],
-        commuteType: 'daily',
-        mapX: 30 + (index * 15) % 50,
-        mapY: 25 + (index * 18) % 55,
-      };
+      const depTime = ride.departureAt
+        ? new Date(ride.departureAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '8:30 AM';
+      const costNum = parseFloat(String(ride.contribution || '0').replace(/[^0-9.]/g, '')) || 6;
 
       return {
         ...ride,
-        ...meta,
-      } as EnrichedRide;
+        driverName: ride.driverId ? `Verified Driver (${ride.driverId.slice(0, 6)})` : 'Verified Driver',
+        driverAvatar: undefined,
+        driverEmployer: 'Verified Member',
+        driverRating: 4.9,
+        ridesGiven: 15 + (index * 3) % 20,
+        verifiedDriver: true,
+        vehicleModel: 'Commuter Carpool',
+        vehicleTag: 'Verified Carpool',
+        departureTimeDisplay: depTime,
+        returnTimeDisplay: undefined,
+        vibes: ['Community Carpool 🚗', 'Zero Brokerage'],
+        commuteType: costNum > 25 ? 'intercity' : 'daily',
+        mapX: 30 + (index * 15) % 50,
+        mapY: 25 + (index * 18) % 55,
+      };
     });
   }, [rawRides]);
 

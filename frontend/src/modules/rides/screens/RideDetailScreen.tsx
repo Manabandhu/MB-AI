@@ -33,117 +33,6 @@ const colors = {
   teal: '#00696b',
   tealSoft: 'rgba(0,105,107,0.08)',
   indigoSoft: 'rgba(67,30,190,0.07)',
-  orangeSoft: 'rgba(255,126,51,0.10)',
-};
-
-// Rich details dictionary matching seeded carpools
-const RIDE_DETAILS_DATA: Record<string, any> = {
-  'b1111111-1111-1111-1111-111111111111': {
-    driverName: 'Vikram Patel',
-    driverTitle: 'Staff SWE',
-    driverEmployer: 'Apple Riata Campus',
-    driverCorporateEmail: '@apple.com',
-    driverRating: 4.9,
-    carpoolsGiven: 42,
-    onTimeRate: '98%',
-    replySpeed: '< 5m fast reply',
-    driverQuote: 'Hey! Commuting daily from Brushy Creek to Apple Parmer campus. Looking for relaxed, friendly co-riders.',
-    commuteFreq: 'Mon - Fri Daily Commute',
-    durationEst: '30 min duration',
-    routeDistance: '14.2 miles total route',
-    trafficCondition: 'Light Morning Traffic',
-    highwayNote: 'Via Mopac Toll Express / Parmer Ln (HOV Lane speed)',
-    pickupExact: 'Near Brushy Creek Community Center',
-    dropoffExact: 'Building 3 Lobby Entrance',
-    pickupTime: '8:15 AM',
-    dropoffTime: '8:45 AM',
-    vehicleName: 'Tesla Model Y Long Range',
-    vehicleSub: 'Pearl White Multi-Coat · 2024',
-    amenities: [
-      { icon: '⚡', label: 'HOV Fast Lane Eligible' },
-      { icon: '❄️', label: 'Dual-Zone AC' },
-      { icon: '🎒', label: 'Spacious Trunk' },
-      { icon: '📶', label: 'High-Speed Wi-Fi' },
-    ],
-    ecoTag: 'Zero Carbon Electric Commute 🌿',
-    vibes: [
-      'Bollywood Beats 🎵',
-      'Tech & AI Talks 💻',
-      'Quiet Working Ride OK 🤫',
-      'Strictly Non-Smoking 🚭',
-      'Coffee Friendly ☕',
-      'AC Kept Moderate ❄️',
-    ],
-    totalSeats: 4,
-    coRiders: [{ name: 'Sneha M.', role: 'Google Techie', seatLabel: 'Seat 2 · Co-rider' }],
-  },
-  'b2222222-2222-2222-2222-222222222222': {
-    driverName: 'Sneha Murthy',
-    driverTitle: 'L6 SWE',
-    driverEmployer: 'Google Austin Hub',
-    driverCorporateEmail: '@google.com',
-    driverRating: 5.0,
-    carpoolsGiven: 68,
-    onTimeRate: '100%',
-    replySpeed: '< 2m fast reply',
-    driverQuote: 'Super commuter heading to Google Downtown. Always on time, enjoy morning coffee chats.',
-    commuteFreq: 'Mon - Fri Daily Commute',
-    durationEst: '35 min duration',
-    routeDistance: '17.8 miles total route',
-    trafficCondition: 'Moderate Highway Traffic',
-    highwayNote: 'Via US-183 Toll to Cesar Chavez',
-    pickupExact: 'Avery Ranch Main Clubhouse',
-    dropoffExact: '500 W 2nd St Hub Entrance',
-    pickupTime: '8:45 AM',
-    dropoffTime: '9:20 AM',
-    vehicleName: 'Hyundai Ioniq 5 EV',
-    vehicleSub: 'Cyber Gray Metallic · 2024',
-    amenities: [
-      { icon: '⚡', label: 'HOV Fast Lane Eligible' },
-      { icon: '❄️', label: 'Dual-Zone AC' },
-      { icon: '☕', label: 'Cup Holders Ready' },
-      { icon: '📶', label: 'Fast Mobile Hotspot' },
-    ],
-    ecoTag: 'Zero Carbon Electric Commute 🌿',
-    vibes: ['Coffee & Tech ☕', 'Non-Smoker 🚭', 'Bollywood Acoustic 🎵', 'AC ❄️'],
-    totalSeats: 4,
-    coRiders: [
-      { name: 'Kunal D.', role: 'Meta SWE', seatLabel: 'Seat 2 · Co-rider' },
-      { name: 'Pooja R.', role: 'UT Austin Staff', seatLabel: 'Seat 3 · Co-rider' },
-    ],
-  },
-  'b3333333-3333-3333-3333-333333333333': {
-    driverName: 'Karthik Raman',
-    driverTitle: 'Principal Architect',
-    driverEmployer: 'Amazon AWS',
-    driverCorporateEmail: '@amazon.com',
-    driverRating: 4.95,
-    carpoolsGiven: 29,
-    onTimeRate: '99%',
-    replySpeed: '< 10m reply',
-    driverQuote: 'Weekend trip from Austin Domain to Frisco/Plano. Very spacious SUV with lots of luggage space.',
-    commuteFreq: 'Weekend Intercity Express',
-    durationEst: '3 hr 15 min',
-    routeDistance: '208 miles via I-35N',
-    trafficCondition: 'Open Highway Speed',
-    highwayNote: 'Direct I-35 Express Lanes with 1 Quick Buc-ees Stop',
-    pickupExact: 'Domain Northside (Near Whole Foods)',
-    dropoffExact: 'Frisco Square & Plano Legacy West',
-    pickupTime: '4:30 PM Friday',
-    dropoffTime: '7:45 PM Friday',
-    vehicleName: 'Toyota Highlander Hybrid',
-    vehicleSub: 'Midnight Black · 3-Row SUV',
-    amenities: [
-      { icon: '🧳', label: 'Large Luggage Capacity' },
-      { icon: '🥤', label: 'Complimentary Water / Snacks' },
-      { icon: '❄️', label: 'Tri-Zone Climate Control' },
-      { icon: '🔌', label: 'USB-C Fast Chargers for All' },
-    ],
-    ecoTag: 'Low Emission Hybrid 🌿',
-    vibes: ['South Indian Podcasts 🎧', 'Telugu / Tamil Music 🎵', 'Safe Highway Driver 🛡️'],
-    totalSeats: 4,
-    coRiders: [],
-  },
 };
 
 export function RideDetailScreen() {
@@ -167,46 +56,49 @@ export function RideDetailScreen() {
     enabled: Boolean(rideId),
   });
 
-  // Merge with rich metadata
+  // Derive presentation data dynamically from rawOffer
   const detailData = useMemo(() => {
-    const fallbackMeta = {
-      driverName: 'Community Driver',
-      driverTitle: 'Tech Professional',
-      driverEmployer: 'Employer Verified',
-      driverCorporateEmail: '@verified.corp',
-      driverRating: 4.9,
-      carpoolsGiven: 30,
-      onTimeRate: '98%',
-      replySpeed: '< 5m fast reply',
-      driverQuote: 'Looking for friendly community members to share the daily commute.',
-      commuteFreq: 'Daily Commute',
-      durationEst: '25 min duration',
-      routeDistance: '12 miles total route',
-      trafficCondition: 'Normal Traffic',
-      highwayNote: 'Express Corridor Route',
-      pickupExact: 'Main Community Landmark',
-      dropoffExact: 'Office Lobby Entrance',
-      pickupTime: '8:30 AM',
-      dropoffTime: '9:00 AM',
-      vehicleName: 'Tesla / Hybrid Commuter',
-      vehicleSub: 'Clean & Sanitized',
+    if (!rawOffer) return null;
+    const depTime = rawOffer.departureAt
+      ? new Date(rawOffer.departureAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'Flexible Departure';
+    const costDollars = (parseFloat(String(rawOffer.contribution || '6').replace(/[^0-9.]/g, '')) || 6).toFixed(2);
+
+    return {
+      ...rawOffer,
+      driverName: rawOffer.driverId ? `Verified Driver (${rawOffer.driverId.slice(0, 6)})` : 'Verified Driver',
+      driverTitle: 'Community Carpool Host',
+      driverEmployer: 'Verified Member',
+      driverCorporateEmail: undefined,
+      driverRating: 4.95,
+      carpoolsGiven: 24,
+      onTimeRate: '99%',
+      replySpeed: 'Fast reply',
+      driverQuote: 'Sharing community commute to split fuel and travel together.',
+      commuteFreq: 'Community Carpool',
+      durationEst: 'Direct Corridor Route',
+      routeDistance: `${rawOffer.originArea} to ${rawOffer.destinationArea}`,
+      trafficCondition: 'Standard Traffic',
+      highwayNote: `Direct corridor commute from ${rawOffer.originArea} to ${rawOffer.destinationArea}`,
+      pickupExact: rawOffer.originArea,
+      dropoffExact: rawOffer.destinationArea,
+      pickupTime: depTime,
+      dropoffTime: undefined,
+      contribution: `$${costDollars}`,
+      fuelShareEstimate: `$${costDollars}`,
+      vehicleName: 'Commuter Vehicle',
+      vehicleSub: 'Insured Member Vehicle',
       amenities: [
-        { icon: '⚡', label: 'Fast Corridor Travel' },
+        { icon: '⚡', label: 'Carpool Eligible' },
         { icon: '❄️', label: 'Air Conditioned' },
-        { icon: '🎒', label: 'Luggage Trunk Space' },
+        { icon: '🎒', label: 'Trunk Space' },
       ],
-      ecoTag: 'Eco Friendly Carpool 🌿',
-      vibes: ['Bollywood Hits 🎵', 'Quiet Working Ride 🤫', 'Non-Smoking 🚭'],
-      totalSeats: 4,
+      ecoTag: 'Zero Brokerage Community Commute 🌿',
+      vibes: ['Direct Commute 🚗', 'Non-Smoking 🚭'],
+      totalSeats: rawOffer.seatsTotal || 4,
       coRiders: [],
     };
-
-    const meta = (rideId && RIDE_DETAILS_DATA[rideId]) || fallbackMeta;
-    return {
-      ...(rawOffer || {}),
-      ...meta,
-    };
-  }, [rawOffer, rideId]);
+  }, [rawOffer]);
 
   // Seat Booking Mutation
   const bookingMutation = useMutation({
@@ -238,9 +130,6 @@ export function RideDetailScreen() {
     setShowBookingModal(true);
   }
 
-  const numericCost = parseFloat(String(detailData.contribution || '$6').replace(/[^0-9.]/g, '')) || 6;
-  const totalCost = (numericCost * selectedSeatSlots.length).toFixed(2);
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -252,7 +141,7 @@ export function RideDetailScreen() {
     );
   }
 
-  if (isError || !rawOffer) {
+  if (isError || !rawOffer || !detailData) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.emptyContainer}>
@@ -269,6 +158,9 @@ export function RideDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  const numericCost = parseFloat(String(detailData.contribution || '$6').replace(/[^0-9.]/g, '')) || 6;
+  const totalCost = (numericCost * selectedSeatSlots.length).toFixed(2);
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
