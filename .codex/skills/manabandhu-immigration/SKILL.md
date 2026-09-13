@@ -53,7 +53,7 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 
 ## Demo Fixtures
 
-- `frontend/src/modules/immigration/immigrationFallbacks.ts` - demo fixtures for all immigration screens
+- Frontend fallbacks removed in favor of backend API endpoints and loading/empty/error states.
 
 ## State Patterns
 
@@ -80,7 +80,7 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 ## Implementation Notes for Expo React Native
 
 - Route files in `frontend/src/app/immigration/` are thin wrappers
-- `ImmigrationScreen` uses `useQuery` with fallback data from `immigrationFallbacks.ts`
+- `ImmigrationScreen` uses `useQuery` with backend API data
 - `FeatureScreen` provides adaptive catalog/list layout
 - Content is treated as general information with disclaimers; not legal advice
 - Search uses client-side filtering on demo data; backend search is pending
@@ -103,3 +103,4 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 
 - Recent backend fixes: added missing `import com.manabandhu.backend.foundation.CatalogScreenContent;` to `ImmigrationController` so the `@GetMapping("/screens/{screenId}")` endpoint compiles against the `ImmigrationContentService` switch.
+- Fallback cleanup: removed `immigrationFallbacks.ts` and inline fallbacks across all 10 immigration screens in favor of backend API endpoints, loading states, and error/empty states.

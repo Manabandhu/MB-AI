@@ -1,19 +1,35 @@
 import { useQuery } from '@tanstack/react-query';
 import { getImmigrationScreen } from '@/modules/immigration/api';
-import { immigrationScreenFallbacks } from '@/modules/immigration/immigrationFallbacks';
 import { FeatureScreen } from '@/modules/shared/components/FeatureScreen';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
 
 type ImmigrationScreenProps = {
   screenId: keyof typeof immigrationRoutes;
 };
 
 export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
-  const fallback = immigrationScreenFallbacks[screenId];
   const screen = useQuery({
     queryKey: ['immigration', 'screen', screenId],
     queryFn: () => getImmigrationScreen(screenId),
   });
-  const data = screen.data ?? fallback;
+
+  if (screen.isLoading) {
+    return <LoadingState label="Loading immigration resources..." />;
+  }
+
+  if (screen.isError || !screen.data) {
+    return (
+      <ErrorState
+        title="Unable to load resources"
+        body="Could not retrieve immigration information from the server."
+        retryLabel="Retry"
+        onRetry={() => screen.refetch()}
+      />
+    );
+  }
+
+  const data = screen.data;
 
   return (
     <FeatureScreen

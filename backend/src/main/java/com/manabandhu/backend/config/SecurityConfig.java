@@ -69,13 +69,14 @@ public class SecurityConfig {
                 "/api/v1/communities/**",
                 "/api/v1/posts",
                 "/api/v1/posts/**",
-                "/api/v1/utilities/home",
-                "/api/v1/utilities/nearby",
-                "/api/v1/utilities/emergency",
+                "/api/v1/utilities/**",
                 "/api/v1/referrals",
                 "/api/v1/referrals/**",
                 "/api/v1/referrals/screens/**",
-                "/api/v1/safety/center",
+                "/api/v1/immigration/**",
+                "/api/v1/expenses/screens/**",
+                "/api/v1/safety/**",
+                "/api/v1/notifications/screens/**",
                 "/actuator/health/**"
         };
 

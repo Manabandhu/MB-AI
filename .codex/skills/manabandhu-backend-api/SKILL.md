@@ -35,6 +35,7 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 - Recent community security and endpoint update: added `@GetMapping("/{postId}")` to `CommunityPostController` and `findById` in `CommunityPostService`. Added wildcard public GET permissions in `SecurityConfig.java` for `/api/v1/communities/**` and `/api/v1/posts/**` to enable public browsing of community posts and discussion threads.
 - Recent referrals security and endpoint update: updated `ReferralService.findAll()` to return all referrals ordered by creation date descending; updated `ReferralController` to support guest public queries on `GET /api/v1/referrals` and added `GET /public`; added `/api/v1/referrals` and `/api/v1/referrals/**` to public GET endpoints in `SecurityConfig.java`.
 - Recent referrals schema update: added Flyway migration `V22__add_referral_category_contact.sql` and updated `Referral` entity with `category` and `contactInfo` fields to support categorization and referrer contact persistence.
+- Public endpoint security expansion: updated `SecurityConfig.java` to permit unauthenticated GET on `/api/v1/immigration/**`, `/api/v1/expenses/screens/**`, `/api/v1/utilities/**`, `/api/v1/safety/**`, and `/api/v1/notifications/screens/**` to allow live catalog discovery without authentication.
 
 
 

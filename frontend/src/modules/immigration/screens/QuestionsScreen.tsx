@@ -33,30 +33,6 @@ export function QuestionsScreen() {
     },
   });
 
-  const fallback: QuestionsContent = {
-    eyebrow: 'Immigration',
-    title: 'Questions',
-    subtitle: 'Community Q&A about immigration topics.',
-    items: [
-      {
-        id: '1',
-        title: 'Can I travel while on OPT?',
-        body: 'Answers from community members.',
-        meta: '3 answers',
-        route: '/immigration/resources/1',
-      },
-      {
-        id: '2',
-        title: 'How to update address with USCIS?',
-        body: 'Steps for AR-11 submission.',
-        meta: '5 answers',
-        route: '/immigration/resources/2',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -66,7 +42,7 @@ export function QuestionsScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -78,6 +54,8 @@ export function QuestionsScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>

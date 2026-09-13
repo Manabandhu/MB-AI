@@ -33,30 +33,6 @@ export function UscisScreen() {
     },
   });
 
-  const fallback: UscisContent = {
-    eyebrow: 'Immigration',
-    title: 'USCIS alerts',
-    subtitle: 'Latest updates from USCIS.',
-    alerts: [
-      {
-        id: '1',
-        title: 'Fee increase notice',
-        body: 'New fees effective October 2024.',
-        meta: 'Alert',
-        route: '/immigration/resources/1',
-      },
-      {
-        id: '2',
-        title: 'Policy manual update',
-        body: 'Changes to employment authorization policies.',
-        meta: 'Update',
-        route: '/immigration/resources/2',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -66,7 +42,7 @@ export function UscisScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -78,6 +54,8 @@ export function UscisScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>

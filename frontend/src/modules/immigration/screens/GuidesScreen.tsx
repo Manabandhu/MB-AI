@@ -33,28 +33,6 @@ export function GuidesScreen() {
     },
   });
 
-  const fallback: GuidesContent = {
-    eyebrow: 'Immigration',
-    title: 'Guides',
-    subtitle: 'Step-by-step immigration guides.',
-    guides: [
-      {
-        id: '1',
-        title: 'F1 to OPT',
-        body: 'Timeline and required documents.',
-        route: '/immigration/resources/1',
-      },
-      {
-        id: '2',
-        title: 'Green card renewal',
-        body: 'How to renew your permanent resident card.',
-        route: '/immigration/resources/2',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -64,7 +42,7 @@ export function GuidesScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -76,6 +54,8 @@ export function GuidesScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>

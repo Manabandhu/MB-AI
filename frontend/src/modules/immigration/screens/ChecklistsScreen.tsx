@@ -31,24 +31,6 @@ export function ChecklistsScreen() {
     },
   });
 
-  const fallback: ChecklistsContent = {
-    eyebrow: 'Immigration',
-    title: 'Checklists',
-    subtitle: 'Document checklists for immigration processes.',
-    items: [
-      { id: '1', title: 'Passport copy', body: 'Valid for at least 6 months.', checked: true },
-      { id: '2', title: 'I-20 form', body: 'Signed by DSO.', checked: false },
-      {
-        id: '3',
-        title: 'Financial proof',
-        body: 'Bank statements or sponsor letter.',
-        checked: false,
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -58,7 +40,7 @@ export function ChecklistsScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -70,6 +52,8 @@ export function ChecklistsScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>

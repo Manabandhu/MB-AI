@@ -28,15 +28,6 @@ export function ResourceDetailScreen({ resourceId }: ResourceDetailScreenProps) 
     },
   });
 
-  const fallback: ResourceDetailContent = {
-    eyebrow: 'Immigration',
-    title: 'Resource details',
-    body: 'Detailed immigration guidance and reference material.',
-    meta: 'Last updated today',
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -46,7 +37,7 @@ export function ResourceDetailScreen({ resourceId }: ResourceDetailScreenProps) 
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -58,6 +49,8 @@ export function ResourceDetailScreen({ resourceId }: ResourceDetailScreenProps) 
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>

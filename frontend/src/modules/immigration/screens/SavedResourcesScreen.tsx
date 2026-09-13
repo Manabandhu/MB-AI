@@ -33,30 +33,6 @@ export function SavedResourcesScreen() {
     },
   });
 
-  const fallback: SavedResourcesContent = {
-    eyebrow: 'Immigration',
-    title: 'Saved resources',
-    subtitle: 'Your bookmarked immigration resources.',
-    items: [
-      {
-        id: '1',
-        title: 'OPT timeline',
-        body: 'Step-by-step OPT application timeline.',
-        meta: 'Saved',
-        route: '/immigration/resources/1',
-      },
-      {
-        id: '2',
-        title: 'Visa categories',
-        body: 'Overview of visa categories.',
-        meta: 'Saved',
-        route: '/immigration/resources/2',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -66,7 +42,7 @@ export function SavedResourcesScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -78,6 +54,8 @@ export function SavedResourcesScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>

@@ -35,35 +35,6 @@ export function FaqScreen() {
     },
   });
 
-  const fallback: FaqContent = {
-    eyebrow: 'Immigration',
-    title: 'FAQ',
-    subtitle: 'Answers to common immigration questions.',
-    items: [
-      {
-        id: '1',
-        title: 'How do I apply for OPT?',
-        body: 'Apply through your university DSO 90 days before your program end date.',
-        route: '/immigration/resources/1',
-      },
-      {
-        id: '2',
-        title: 'What is the H1B lottery?',
-        body: 'Annual selection process for H1B visa holders.',
-        route: '/immigration/resources/2',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-  const filtered = query
-    ? content.items.filter(
-        (i) =>
-          i.title.toLowerCase().includes(query.toLowerCase()) ||
-          i.body.toLowerCase().includes(query.toLowerCase()),
-      )
-    : content.items;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -73,7 +44,7 @@ export function FaqScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -85,6 +56,15 @@ export function FaqScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
+  const filtered = query
+    ? content.items.filter(
+        (i) =>
+          i.title.toLowerCase().includes(query.toLowerCase()) ||
+          i.body.toLowerCase().includes(query.toLowerCase()),
+      )
+    : content.items;
 
   return (
     <ScreenShell>

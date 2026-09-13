@@ -38,37 +38,6 @@ export function ResourcesScreen() {
     },
   });
 
-  const fallback: ResourcesContent = {
-    eyebrow: 'Immigration',
-    title: 'Resources',
-    subtitle: 'Curated immigration resources and reference materials.',
-    resources: [
-      {
-        id: '1',
-        title: 'Visa basics',
-        body: 'Overview of common visa categories.',
-        meta: 'Guide',
-        route: '/immigration/resources/1',
-      },
-      {
-        id: '2',
-        title: 'Work authorization',
-        body: 'OPT, CPT, H1B, and green card basics.',
-        meta: 'Guide',
-        route: '/immigration/resources/2',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-  const filtered = query
-    ? content.resources.filter(
-        (r) =>
-          r.title.toLowerCase().includes(query.toLowerCase()) ||
-          r.body.toLowerCase().includes(query.toLowerCase()),
-      )
-    : content.resources;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -78,7 +47,7 @@ export function ResourcesScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -90,6 +59,15 @@ export function ResourcesScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
+  const filtered = query
+    ? content.resources.filter(
+        (r) =>
+          r.title.toLowerCase().includes(query.toLowerCase()) ||
+          r.body.toLowerCase().includes(query.toLowerCase()),
+      )
+    : content.resources;
 
   return (
     <ScreenShell>

@@ -33,30 +33,6 @@ export function ImmigrationNewsScreen() {
     },
   });
 
-  const fallback: NewsContent = {
-    eyebrow: 'Immigration',
-    title: 'News',
-    subtitle: 'Immigration policy news and updates.',
-    items: [
-      {
-        id: '1',
-        title: 'New visa bulletin released',
-        body: 'Priority dates updated for EB categories.',
-        meta: 'This week',
-        route: '/immigration/resources/1',
-      },
-      {
-        id: '2',
-        title: 'OPT cap reached',
-        body: 'Regular cap reached for FY2026.',
-        meta: 'Policy',
-        route: '/immigration/resources/2',
-      },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -66,7 +42,7 @@ export function ImmigrationNewsScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -78,6 +54,8 @@ export function ImmigrationNewsScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>
