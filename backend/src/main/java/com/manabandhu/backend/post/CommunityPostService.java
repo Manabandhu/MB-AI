@@ -30,6 +30,11 @@ public class CommunityPostService {
         return postRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    @Transactional(readOnly = true)
+    public Optional<CommunityPost> findById(UUID id) {
+        return postRepository.findById(id);
+    }
+
     @Transactional
     public CommunityPost create(UUID ownerId, CreatePostInput input) {
         return postRepository.save(new CommunityPost(input.communityId(), ownerId, input.title(), input.body()));

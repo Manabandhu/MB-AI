@@ -29,6 +29,13 @@ public class CommunityPostController {
         return service.findAll();
     }
 
+    @GetMapping("/{postId}")
+    CommunityPost findById(@PathVariable UUID postId) {
+        return service.findById(postId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Post not found"));
+    }
+
     @PostMapping
     ResponseEntity<CommunityPost> create(
             Authentication authentication, @Valid @RequestBody CreatePostInput input) {
