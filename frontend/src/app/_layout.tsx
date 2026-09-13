@@ -9,6 +9,7 @@ import { SafeAreaListener } from 'react-native-safe-area-context';
 import { Uniwind } from 'uniwind';
 
 import { GluestackUIProvider } from '@/modules/shared/ui/gluestack/gluestack-ui-provider';
+import { useAuthStore } from '@/lib/authStore';
 
 export default function RootLayout() {
   const [queryClient] = useState(
@@ -22,6 +23,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     ExpoSplashScreen.hideAsync().catch(() => undefined);
+    useAuthStore.getState().checkSession().catch(() => undefined);
   }, []);
 
   return (
