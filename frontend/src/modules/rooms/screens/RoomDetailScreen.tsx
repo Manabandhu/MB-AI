@@ -176,11 +176,11 @@ export function RoomDetailScreen() {
                 <Text style={s.priceValue}>${room.price}</Text>
                 <Text style={s.pricePeriod}>/ month</Text>
               </View>
-              <Text style={s.utilitiesText}>⚡ Water, Trash & Fiber WiFi Included</Text>
+              <Text style={s.utilitiesText}>⚡ Direct Community Listing • Zero Brokerage</Text>
             </View>
             <View style={s.priceMetaCol}>
-              <Text style={s.depositText}>Deposit: <Text style={s.depositVal}>$350</Text></Text>
-              <Text style={s.leaseText}>Lease: <Text style={s.depositVal}>6-12 Mo</Text></Text>
+              <Text style={s.depositText}>Type: <Text style={s.depositVal}>{room.roomType}</Text></Text>
+              <Text style={s.leaseText}>Status: <Text style={s.depositVal}>{room.status}</Text></Text>
             </View>
           </View>
         </View>
@@ -189,18 +189,18 @@ export function RoomDetailScreen() {
         <View style={s.hostCard}>
           <View style={s.hostCardTop}>
             <View style={s.hostCardAvatar}>
-              <Text style={s.hostCardAvatarText}>KR</Text>
+              <AppIcon color={colors.appPrimary} name="user" size={20} />
             </View>
             <View style={s.hostCardInfo}>
               <View style={s.hostNameRow}>
-                <Text style={s.hostNameText}>Karthik Raman</Text>
+                <Text style={s.hostNameText}>Verified Resident Host</Text>
                 <View style={s.verifiedHostPill}>
                   <AppIcon color={colors.teal} name="check" size={10} strokeWidth={3} />
                   <Text style={s.verifiedHostPillText}>Verified Host</Text>
                 </View>
               </View>
-              <Text style={s.hostWorkText}>Senior SWE @ Google • Member Since 2023</Text>
-              <Text style={s.hostReplyText}>⚡ Replies in ~15 mins • ★ 4.9 (18 reviews)</Text>
+              <Text style={s.hostWorkText}>Direct Community Member • ManaBandhu Network</Text>
+              <Text style={s.hostReplyText}>⚡ Direct contact upon inquiry • Zero Brokerage</Text>
             </View>
           </View>
         </View>
@@ -258,7 +258,7 @@ export function RoomDetailScreen() {
             <Text style={s.bottomPriceVal}>${room.price}</Text>
             <Text style={s.bottomPricePeriod}>/mo</Text>
           </View>
-          <Text style={s.bottomDeposit}>Deposit: $350</Text>
+          <Text style={s.bottomDeposit}>Direct Owner Listing</Text>
         </View>
 
         <View style={s.bottomActions}>

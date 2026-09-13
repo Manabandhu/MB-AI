@@ -103,11 +103,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
       }, 1200);
     },
     onError: (error: Error) => {
-      // Graceful demo handling if backend throws auth or network error
-      setSuccessNotice('Demo Listing Saved! Viewable in your local sessions.');
-      setTimeout(() => {
-        router.replace('/rooms' as Href);
-      }, 1200);
+      setServerError(error.message || 'Failed to create room listing');
     },
   });
 
@@ -126,25 +122,6 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
     );
   };
 
-  const handleAutofillDemo = () => {
-    reset({
-      title: 'Spacious Master Bedroom with Attached Bath in Domain Northside',
-      description:
-        'Peaceful master suite in luxury 2B2B gated community. 5-min walk to Apple Riata shuttles and Whole Foods. Looking for clean, friendly flatmate.',
-      price: '780',
-      roomType: 'Private Room',
-      broadLocation: 'Domain Northside, Austin, TX',
-      exactAddress: '3100 Esperanza Crossing, Austin, TX 78758',
-      latitude: '30.4014',
-      longitude: '-97.7247',
-    });
-    setSelectedPrefs([
-      'Vegetarian Preferred 🥦',
-      'Working Professionals 💼',
-      'Walk to Tech Shuttle 🚌',
-      'In-unit Washer/Dryer 🧺',
-    ]);
-  };
 
   const onSubmit = handleSubmit((values) => {
     setServerError(null);
@@ -169,11 +146,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
 
     if (mode === 'create') {
       if (!isAuthenticated) {
-        // Allow smooth local demo creation for testing
-        setSuccessNotice('Room listing draft created in demo mode! Redirecting to rooms...');
-        setTimeout(() => {
-          router.replace('/rooms' as Href);
-        }, 1200);
+        router.push('/sign-in' as Href);
         return;
       }
       createMutation.mutate(input);
@@ -203,12 +176,6 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
             <Text style={styles.headerSubtitle}>Verified Community Flatmate Match</Text>
           </View>
         </View>
-
-        {mode === 'create' && (
-          <Pressable onPress={handleAutofillDemo} style={styles.autofillBtn}>
-            <Text style={styles.autofillBtnText}>⚡ Autofill</Text>
-          </Pressable>
-        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
@@ -452,17 +419,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#747688',
     marginTop: 1,
-  },
-  autofillBtn: {
-    backgroundColor: 'rgba(67,30,190,0.08)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-  },
-  autofillBtnText: {
-    color: '#431ebe',
-    fontSize: 12,
-    fontWeight: '700',
   },
   page: {
     backgroundColor: '#f6f7fb',

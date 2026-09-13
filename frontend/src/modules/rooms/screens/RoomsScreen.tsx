@@ -53,17 +53,16 @@ type RoomsScreenProps = {
 type CityOption = {
   id: string;
   name: string;
-  count: number;
   landmarks: string[];
 };
 
 const CITIES: CityOption[] = [
-  { id: 'austin', name: 'Austin, TX', count: 847, landmarks: ['Domain Northside', 'Apple Riata', 'UT Austin', 'Round Rock'] },
-  { id: 'dfw', name: 'Dallas-Fort Worth, TX', count: 1240, landmarks: ['Irving', 'Plano', 'Frisco', 'Richardson'] },
-  { id: 'houston', name: 'Houston, TX', count: 980, landmarks: ['Sugar Land', 'Katy', 'Medical Center', 'Galleria'] },
-  { id: 'bayarea', name: 'Bay Area, CA', count: 2410, landmarks: ['Sunnyvale', 'Fremont', 'Santa Clara', 'San Jose'] },
-  { id: 'seattle', name: 'Seattle, WA', count: 1150, landmarks: ['Bellevue', 'Redmond', 'South Lake Union'] },
-  { id: 'jersey', name: 'Jersey City / NYC', count: 3120, landmarks: ['Journal Square', 'Newport', 'Edison, NJ'] },
+  { id: 'austin', name: 'Austin, TX', landmarks: ['Domain Northside', 'Apple Riata', 'UT Austin', 'Round Rock'] },
+  { id: 'dfw', name: 'Dallas-Fort Worth, TX', landmarks: ['Irving', 'Plano', 'Frisco', 'Richardson'] },
+  { id: 'houston', name: 'Houston, TX', landmarks: ['Sugar Land', 'Katy', 'Medical Center', 'Galleria'] },
+  { id: 'bayarea', name: 'Bay Area, CA', landmarks: ['Sunnyvale', 'Fremont', 'Santa Clara', 'San Jose'] },
+  { id: 'seattle', name: 'Seattle, WA', landmarks: ['Bellevue', 'Redmond', 'South Lake Union'] },
+  { id: 'jersey', name: 'Jersey City / NYC', landmarks: ['Journal Square', 'Newport', 'Edison, NJ'] },
 ];
 
 type ExtendedRoom = RoomListing & {
@@ -262,7 +261,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           >
             <AppIcon color={colors.appPrimary} name="map" size={14} />
             <Text style={s.locationTitle}>
-              {selectedCity.name} · {rawListings.length > 0 ? `${rawListings.length} Active` : `${selectedCity.count} Rooms`}
+              {selectedCity.name} · {rawListings.length > 0 ? `${rawListings.length} Active` : 'Active Hub'}
             </Text>
             <AppIcon color={colors.muted} name="chevron-down" size={14} />
           </Pressable>
@@ -620,7 +619,11 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     </View>
                     <View style={[s.cityCountPill, isSelected && s.cityCountPillActive]}>
                       <Text style={[s.cityCountText, isSelected && s.cityCountTextActive]}>
-                        {city.count} rooms
+                        {(() => {
+                          const cityNamePrefix = city.name.split(',')[0].toLowerCase();
+                          const count = rawListings.filter((r) => r.broadLocation?.toLowerCase().includes(cityNamePrefix)).length;
+                          return count > 0 ? `${count} active` : 'Active Hub';
+                        })()}
                       </Text>
                     </View>
                   </Pressable>
