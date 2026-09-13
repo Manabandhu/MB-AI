@@ -40,7 +40,7 @@ Owns Community Home, Discover, Joined Communities, Community Details, Create Pos
 
 ## Demo Fixtures
 
-- `frontend/src/modules/community/communityFallbacks.ts` - realistic demo data for all 6 community screens
+- Demo fixtures removed; screens use live backend queries, loading states, and error/empty states.
 
 ## State Patterns
 
@@ -87,3 +87,4 @@ Owns Community Home, Discover, Joined Communities, Community Details, Create Pos
 - Recent backend changes: added `@GetMapping("/communities/{communityId}")` and `@GetMapping("/communities/{communityId}/posts")` to `CommunityPostController`; added `communityId` field to `CommunityPost` entity with new constructor; added `findCommunity()` and `findPostsByCommunity()` to `CommunityPostService`; added `findByCommunityIdOrderByCreatedAtDesc()` to `CommunityPostRepository`; added `@GetMapping("/{postId}")` to `CommunityPostController` and `findById` in `CommunityPostService`; configured public GET access in `SecurityConfig`.
 
 - Stitch UI implementation: upgraded `CommunityHomeScreen` and `PostDetailsScreen` with Stitch design patterns (Telugu community hub banner, topic chips, circle carousel, rich discussion feed cards, verified author badges, moderator highlights, reaction metrics, comment tree, and quick reply bar); removed blocking guest redirects on public community routes.
+- Fallback cleanup: deleted `communityFallbacks.ts` and removed inline fallbacks from `CommunityDiscoverScreen`, `CommunityJoinedScreen`, `CommunityDetailsScreen`, and `CreatePostScreen` in favor of live queries, loading states, and responsive error/empty states.

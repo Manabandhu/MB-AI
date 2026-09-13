@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCommunity, listPosts } from '@/modules/community/api';
-import { communityScreenFallbacks } from '@/modules/community/communityFallbacks';
 import { DetailScreen } from '@/modules/shared/components/DetailScreen';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -29,18 +28,21 @@ export function CommunityDetailsScreen() {
     queryFn: () => getCommunity(communityId),
     enabled: !!communityId,
   });
-  const { data: posts } = useQuery({
+  const { data: posts, isLoading: postsLoading } = useQuery({
     queryKey: ['communities', communityId, 'posts'],
     queryFn: () => listPosts(communityId),
     enabled: !!communityId,
   });
 
-  const fallback = communityScreenFallbacks.details;
-  const title = community?.name ?? fallback.title;
-  const subtitle = community?.description ?? fallback.subtitle;
-  const postList = posts ?? [];
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <LoadingState />
+      </SafeAreaView>
+    );
+  }
 
-  if (isError) {
+  if (isError || !community) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState
@@ -53,14 +55,16 @@ export function CommunityDetailsScreen() {
     );
   }
 
+  const postList = posts ?? [];
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.container, { maxWidth }]}>
           <DetailScreen
-            eyebrow={fallback.eyebrow}
-            title={title}
-            subtitle={subtitle}
+            eyebrow="Community"
+            title={community.name}
+            subtitle={community.description}
             sections={[]}
             actions={[
               {
@@ -71,7 +75,7 @@ export function CommunityDetailsScreen() {
             ]}
           />
           <SectionHeader title="Posts" subtitle={`${postList.length} posts`} />
-          {isLoading ? (
+          {postsLoading ? (
             <LoadingState />
           ) : postList.length === 0 ? (
             <EmptyState

@@ -26,7 +26,7 @@ Owns Community Home, Discover, Joined Communities, Community Details, Create Pos
 - `createPost(input)` -> `POST /api/v1/communities/posts`
 
 ## Fallbacks
-- `communityScreenFallbacks` - Realistic demo data for all 6 community screens.
+- Fallbacks removed; screens use live API queries, loading states, and error/empty states.
 
 ## Components Used
 - `ScreenShell` / `SafeAreaView` - page container

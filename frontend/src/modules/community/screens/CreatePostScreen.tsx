@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createPost } from '@/modules/community/api';
-import { communityScreenFallbacks } from '@/modules/community/communityFallbacks';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { FormScreen } from '@/modules/shared/components/FormScreen';
 import { TextArea } from '@/modules/shared/components/TextArea';
@@ -34,8 +33,6 @@ export function CreatePostScreen() {
     },
   });
 
-  const fallback = communityScreenFallbacks['create-post'];
-
   const onSubmit = () => {
     if (!title.trim() || !body.trim()) {
       setError('Title and body are required.');
@@ -63,9 +60,9 @@ export function CreatePostScreen() {
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.container, { maxWidth }]}>
           <FormScreen
-            eyebrow={fallback.eyebrow}
-            title={fallback.title}
-            subtitle={fallback.subtitle}
+            eyebrow="Community"
+            title="Create a Post"
+            subtitle="Share updates, questions, or resources with the community."
             submitLabel="Post"
             onSubmit={onSubmit}
             error={

@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listCommunities } from '@/modules/community/api';
-import { communityScreenFallbacks } from '@/modules/community/communityFallbacks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -23,8 +22,7 @@ export function CommunityJoinedScreen() {
     queryFn: listCommunities,
   });
 
-  const fallback = communityScreenFallbacks.joined;
-  const communities = data ?? fallback.communities ?? [];
+  const communities = data ?? [];
 
   const filtered = useMemo(() => {
     if (!query.trim()) return communities;
@@ -48,7 +46,10 @@ export function CommunityJoinedScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.container, { maxWidth }]}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader
+            title="Joined Communities"
+            subtitle="Communities you participate in and follow."
+          />
           <SearchBar
             value={query}
             onChangeText={setQuery}
