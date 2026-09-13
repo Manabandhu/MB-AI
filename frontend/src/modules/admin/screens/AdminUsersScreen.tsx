@@ -4,7 +4,6 @@ import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { adminScreenFallbacks } from '@/modules/admin/adminFallbacks';
 import { listUsers, updateUserStatus } from '@/modules/admin/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -26,8 +25,7 @@ export default function AdminUsersScreen() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
 
-  const fallback = adminScreenFallbacks.users;
-  const users = data ?? fallback.users ?? [];
+  const users = data ?? [];
 
   const filtered = useMemo(() => {
     if (!query.trim()) return users;
@@ -38,7 +36,7 @@ export default function AdminUsersScreen() {
     );
   }, [users, query]);
 
-  if (isError && !users.length) {
+  if (isError) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState
@@ -55,7 +53,7 @@ export default function AdminUsersScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Users" subtitle="Manage user accounts and permissions." />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search users" />
           {isLoading ? (
             <LoadingState />

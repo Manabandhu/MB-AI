@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { adminScreenFallbacks } from '@/modules/admin/adminFallbacks';
 import { listAdminRooms } from '@/modules/admin/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -19,8 +18,7 @@ export default function AdminRoomsScreen() {
     queryKey: ['admin', 'rooms'],
     queryFn: listAdminRooms,
   });
-  const fallback = adminScreenFallbacks.rooms;
-  const rooms = data ?? fallback.rooms ?? [];
+  const rooms = data ?? [];
   const filtered = useMemo(() => {
     if (!query.trim()) return rooms;
     return rooms.filter(
@@ -30,7 +28,7 @@ export default function AdminRoomsScreen() {
     );
   }, [rooms, query]);
 
-  if (isError && !rooms.length) {
+  if (isError) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState
@@ -47,7 +45,7 @@ export default function AdminRoomsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Rooms" subtitle="Moderate room listings." />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search rooms" />
           {isLoading ? (
             <LoadingState />

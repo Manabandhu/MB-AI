@@ -73,6 +73,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Safety fallback cleanup: deleted `safetyFallbacks.ts` and removed inline fallbacks from `SafetyCenterScreen`, `BlockedUsersScreen`, `ReportsScreen`, and `TrustedContactsScreen` in favor of live backend queries.
 - Utilities fallback cleanup: deleted `utilitiesFallbacks.ts` and removed inline fallbacks from `UtilitiesHomeScreen`, `NearbyScreen`, `EmergencyResourcesScreen`, and `PackageTrackingScreen` in favor of live backend queries.
 - Foundation fallback cleanup: deleted `foundationScreenFallbacks.ts` and `homeShellFallbacks.ts`, removed fallback data from `CatalogContentScreen` and `StitchAppShellScreen` in favor of live backend queries.
+- Admin fallback cleanup: deleted `adminFallbacks.ts` and removed fallback objects from all 9 admin screens in favor of live backend queries.
 
 
 

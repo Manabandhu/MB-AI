@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { adminScreenFallbacks } from '@/modules/admin/adminFallbacks';
 import { listAdminRides } from '@/modules/admin/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -19,8 +18,7 @@ export default function AdminRidesScreen() {
     queryKey: ['admin', 'rides'],
     queryFn: listAdminRides,
   });
-  const fallback = adminScreenFallbacks.rides;
-  const rides = data ?? fallback.rides ?? [];
+  const rides = data ?? [];
   const filtered = useMemo(() => {
     if (!query.trim()) return rides;
     return rides.filter(
@@ -30,7 +28,7 @@ export default function AdminRidesScreen() {
     );
   }, [rides, query]);
 
-  if (isError && !rides.length) {
+  if (isError) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState
@@ -47,7 +45,7 @@ export default function AdminRidesScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Rides" subtitle="Moderate ride listings." />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search rides" />
           {isLoading ? (
             <LoadingState />

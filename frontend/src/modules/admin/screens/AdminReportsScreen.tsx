@@ -4,7 +4,6 @@ import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { adminScreenFallbacks } from '@/modules/admin/adminFallbacks';
 import { listReports, resolveReport } from '@/modules/admin/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -26,8 +25,7 @@ export default function AdminReportsScreen() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }),
   });
 
-  const fallback = adminScreenFallbacks.reports;
-  const reports = data ?? fallback.reports ?? [];
+  const reports = data ?? [];
 
   const filtered = useMemo(() => {
     if (!query.trim()) return reports;
@@ -38,7 +36,7 @@ export default function AdminReportsScreen() {
     );
   }, [reports, query]);
 
-  if (isError && !reports.length) {
+  if (isError) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState
@@ -55,7 +53,7 @@ export default function AdminReportsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Reports" subtitle="Review and resolve user reports." />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search reports" />
           {isLoading ? (
             <LoadingState />

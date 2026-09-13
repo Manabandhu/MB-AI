@@ -5,7 +5,6 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 ## Component Inventory
 
 - `frontend/src/modules/admin/api.ts` - Typed API client for admin operations (automations, users, reports, rooms, rides, community, jobs, events, audit log).
-- `frontend/src/modules/admin/adminFallbacks.ts` - Demo fixtures for all admin screens.
 - `frontend/src/modules/admin/screens/AdminDashboardScreen.tsx` - Admin overview and metrics.
 - `frontend/src/modules/admin/screens/AdminUsersScreen.tsx` - Manage users.
 - `frontend/src/modules/admin/screens/AdminReportsScreen.tsx` - View and manage reports.

@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { adminScreenFallbacks } from '@/modules/admin/adminFallbacks';
 import { listAdminJobs } from '@/modules/admin/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -19,8 +18,7 @@ export default function AdminJobsScreen() {
     queryKey: ['admin', 'jobs'],
     queryFn: listAdminJobs,
   });
-  const fallback = adminScreenFallbacks.jobs;
-  const jobs = data ?? fallback.jobs ?? [];
+  const jobs = data ?? [];
   const filtered = useMemo(() => {
     if (!query.trim()) return jobs;
     return jobs.filter(
@@ -30,7 +28,7 @@ export default function AdminJobsScreen() {
     );
   }, [jobs, query]);
 
-  if (isError && !jobs.length) {
+  if (isError) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState
@@ -47,7 +45,7 @@ export default function AdminJobsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Jobs" subtitle="Moderate job listings and referrals." />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search jobs" />
           {isLoading ? (
             <LoadingState />

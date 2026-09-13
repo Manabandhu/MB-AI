@@ -54,7 +54,7 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 
 ## Demo Fixtures
 
-- `frontend/src/modules/admin/adminFallbacks.ts` - demo fixtures for all admin screens
+- Demo fixtures removed; screens use live backend queries, loading states, and error/empty states.
 
 ## State Patterns
 
@@ -97,4 +97,4 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 
 - Recent admin guard changes: added `useRequireAuth('/sign-in')` to all admin routes (`/admin`, `/admin/users`, `/admin/reports`, `/admin/rooms`, `/admin/rides`, `/admin/community`, `/admin/jobs`, `/admin/events`, `/admin/audit-log`).
-- Recent screen resilience: updated admin screens (Users, Rooms, Rides, Community, Jobs, Events, Reports, Audit Log, Dashboard) to display fallback demo data rather than locking users into a full-screen `ErrorState` when backend queries fail or run offline.
+- Fallback cleanup: deleted `adminFallbacks.ts` and removed fallback demo data from `AdminDashboardScreen`, `AdminUsersScreen`, `AdminReportsScreen`, `AdminRoomsScreen`, `AdminRidesScreen`, `AdminCommunityScreen`, `AdminJobsScreen`, `AdminEventsScreen`, and `AdminAuditLogScreen` in favor of live backend endpoints, loading states, and error/empty states.

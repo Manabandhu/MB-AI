@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { adminScreenFallbacks } from '@/modules/admin/adminFallbacks';
 import {
   listAdminCommunityPosts,
   listAdminEvents,
@@ -48,8 +47,12 @@ export default function AdminDashboardScreen() {
   const eventsQuery = useQuery({ queryKey: ['admin', 'events'], queryFn: listAdminEvents });
   const auditQuery = useQuery({ queryKey: ['admin', 'audit-log'], queryFn: listAuditLog });
 
-  const fallback = adminScreenFallbacks.dashboard;
-  const metrics: MetricCardData[] = fallback.metrics ?? [];
+  const metrics: MetricCardData[] = [
+    { label: 'Users', value: `${usersQuery.data?.length ?? 0}` },
+    { label: 'Reports', value: `${reportsQuery.data?.length ?? 0}` },
+    { label: 'Rooms', value: `${roomsQuery.data?.length ?? 0}` },
+    { label: 'Rides', value: `${ridesQuery.data?.length ?? 0}` },
+  ];
 
   const quickCards: CatalogCard[] = [
     {
@@ -134,9 +137,9 @@ export default function AdminDashboardScreen() {
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
           <CatalogScreen
-            eyebrow={fallback.eyebrow}
-            title={fallback.title}
-            subtitle={fallback.subtitle}
+            eyebrow="Admin"
+            title="Dashboard"
+            subtitle="Platform overview and key metrics."
             metrics={metrics}
             cards={quickCards}
           />

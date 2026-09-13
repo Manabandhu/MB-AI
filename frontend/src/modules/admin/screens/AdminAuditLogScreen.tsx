@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { adminScreenFallbacks } from '@/modules/admin/adminFallbacks';
 import { listAuditLog } from '@/modules/admin/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -19,8 +18,7 @@ export default function AdminAuditLogScreen() {
     queryKey: ['admin', 'audit-log'],
     queryFn: listAuditLog,
   });
-  const fallback = adminScreenFallbacks['audit-log'];
-  const logs = data ?? fallback.auditLog ?? [];
+  const logs = data ?? [];
   const filtered = useMemo(() => {
     if (!query.trim()) return logs;
     return logs.filter(
@@ -30,7 +28,7 @@ export default function AdminAuditLogScreen() {
     );
   }, [logs, query]);
 
-  if (isError && !logs.length) {
+  if (isError) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState
@@ -47,7 +45,7 @@ export default function AdminAuditLogScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Audit Log" subtitle="System events and admin action history." />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search audit log" />
           {isLoading ? (
             <LoadingState />

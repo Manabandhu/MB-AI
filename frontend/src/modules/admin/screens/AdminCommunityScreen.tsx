@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { adminScreenFallbacks } from '@/modules/admin/adminFallbacks';
 import { listAdminCommunityPosts } from '@/modules/admin/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -19,8 +18,7 @@ export default function AdminCommunityScreen() {
     queryKey: ['admin', 'community'],
     queryFn: listAdminCommunityPosts,
   });
-  const fallback = adminScreenFallbacks.community;
-  const posts = data ?? fallback.communityPosts ?? [];
+  const posts = data ?? [];
   const filtered = useMemo(() => {
     if (!query.trim()) return posts;
     return posts.filter(
@@ -30,7 +28,7 @@ export default function AdminCommunityScreen() {
     );
   }, [posts, query]);
 
-  if (isError && !posts.length) {
+  if (isError) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState
@@ -47,7 +45,7 @@ export default function AdminCommunityScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Community Posts" subtitle="Moderate community posts and discussions." />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search posts" />
           {isLoading ? (
             <LoadingState />

@@ -14,11 +14,12 @@ description: Maintain ManaBandhu's privileged operations control plane across th
 7. Propagate actor ID and execution ID into workflows and structured logs. Do not log tokens or authorization headers.
 8. Keep the OpenAPI operation, frontend types, backend records, workflow inputs, tests, and this skill synchronized.
 9. Run `pnpm verify`, `pnpm test`, and the web export before handoff.
-10. Current frontend implementation: thin route at `frontend/src/app/admin.tsx` delegates to `frontend/src/modules/admin/screens/AdminDashboardScreen.tsx`. Admin screens use `useQuery` against typed API client in `frontend/src/modules/admin/api.ts` with demo fallbacks in `adminFallbacks.ts`. All moderation endpoints are read-only in the first batch.
+10. Current frontend implementation: thin route at `frontend/src/app/admin.tsx` delegates to `frontend/src/modules/admin/screens/AdminDashboardScreen.tsx`. Admin screens use `useQuery` against typed API client in `frontend/src/modules/admin/api.ts` with live backend queries and error/empty states. All moderation endpoints are read-only in the first batch.
 11. Admin moderation includes rides read access through `GET /api/v1/admin/rides` with projections that exclude private fields not needed for moderation.
 12. Skill remains synchronized with admin route ownership; recent admin UI typing fixes are tracked under the admin module skill.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 
 - Recent admin guard changes: added `useRequireAuth('/sign-in')` to all admin routes (`/admin`, `/admin/users`, `/admin/reports`, `/admin/rooms`, `/admin/rides`, `/admin/community`, `/admin/jobs`, `/admin/events`, `/admin/audit-log`). Fixed `RideOffer` entity to include `reported` field and updated `AdminRidesController` to use `offer.isReported()` instead of hardcoded `false`.
-- Recent authorization & fallback hardening: aligned Spring Security and `AdminAccessPolicy` to accept both `ROLE_ADMIN` and `ROLE_SUPER_ADMIN` from verified Supabase JWTs. Admin screens gracefully render fallback demo data instead of full-screen error blocks when backend is offline.
+- Recent authorization & fallback hardening: aligned Spring Security and `AdminAccessPolicy` to accept both `ROLE_ADMIN` and `ROLE_SUPER_ADMIN` from verified Supabase JWTs.
+- Fallback cleanup: deleted `adminFallbacks.ts` and removed fallback objects from `AdminDashboardScreen`, `AdminUsersScreen`, `AdminReportsScreen`, `AdminRoomsScreen`, `AdminRidesScreen`, `AdminCommunityScreen`, `AdminJobsScreen`, `AdminEventsScreen`, and `AdminAuditLogScreen` in favor of live backend endpoints, loading states, and error/empty states.
