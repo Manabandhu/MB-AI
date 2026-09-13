@@ -52,3 +52,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Root Layout Session Check: added useAuthStore.getState().checkSession() to frontend/src/app/_layout.tsx on mount so deep-linked routes initialize auth status properly.
 - Style flattening on Link asChild: Wrapped Pressable style in StyleSheet.flatten inside HomeShell quick-action tiles to prevent Expo Router Slot invariant errors.
 - Rooms Stitch UI: Overhauled RoomsScreen.tsx and RoomDetailScreen.tsx with rich UI cards, zero brokerage guarantee banners, flatmate compatibility tags, and gallery carousels with responsive web/mobile layouts.
+- RoomForm Quick Chips: Added interactive pill selector chips for Room Type to streamline listing creation.

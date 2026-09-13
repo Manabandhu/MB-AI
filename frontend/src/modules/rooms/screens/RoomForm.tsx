@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { useAuthStore } from '@/lib/authStore';
@@ -52,6 +52,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
   const {
     control,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RoomFormValues>({
     resolver: zodResolver(roomFormSchema),
@@ -190,6 +192,35 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
 
           <View style={styles.field}>
             <Text style={styles.label}>Room type</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+              {['Private Room', 'Shared 2B2B', '1BHK Studio', 'Entire House'].map((type) => {
+                const isSelected = watch('roomType') === type;
+                return (
+                  <Pressable
+                    key={type}
+                    onPress={() => setValue('roomType', type, { shouldValidate: true })}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 999,
+                      backgroundColor: isSelected ? '#431ebe' : 'rgba(67,30,190,0.06)',
+                      borderColor: isSelected ? '#431ebe' : 'rgba(67,30,190,0.2)',
+                      borderWidth: 1,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: isSelected ? '#ffffff' : '#431ebe',
+                        fontSize: 12,
+                        fontWeight: '700',
+                      }}
+                    >
+                      {type}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
             <Controller
               control={control}
               name="roomType"
@@ -198,7 +229,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
-                  placeholder="Private room"
+                  placeholder="e.g. Private room"
                   placeholderTextColor={colors.muted}
                   style={styles.input}
                   accessibilityLabel="Room type"
