@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getBlockedUsers } from '@/modules/safety/api';
-import { blockedUsersFallback } from '@/modules/safety/safetyFallbacks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -23,7 +22,7 @@ const _initials = (name: string) =>
 export function BlockedUsersScreen() {
   const layout = useAdaptiveLayout();
   const users = useQuery({ queryKey: ['safety', 'blocked-users'], queryFn: getBlockedUsers });
-  const data = users.data ?? blockedUsersFallback;
+  const data = users.data ?? [];
 
   if (users.isLoading) {
     return (

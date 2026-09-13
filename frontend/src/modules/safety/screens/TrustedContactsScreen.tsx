@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getTrustedContacts } from '@/modules/safety/api';
-import { trustedContactsFallback } from '@/modules/safety/safetyFallbacks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -17,7 +16,7 @@ export function TrustedContactsScreen() {
     queryKey: ['safety', 'trusted-contacts'],
     queryFn: getTrustedContacts,
   });
-  const data = contacts.data ?? trustedContactsFallback;
+  const data = contacts.data ?? [];
 
   if (contacts.isLoading) {
     return (

@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getReports } from '@/modules/safety/api';
-import { reportsFallback } from '@/modules/safety/safetyFallbacks';
 import { Badge } from '@/modules/shared/components/Badge';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -21,7 +20,7 @@ const statusVariants: Record<string, 'success' | 'warning' | 'info'> = {
 export function ReportsScreen() {
   const layout = useAdaptiveLayout();
   const reports = useQuery({ queryKey: ['safety', 'reports'], queryFn: getReports });
-  const data = reports.data ?? reportsFallback;
+  const data = reports.data ?? [];
   const [filter, setFilter] = useState<'all' | 'open' | 'resolved'>('all');
 
   const filtered = useMemo(() => {

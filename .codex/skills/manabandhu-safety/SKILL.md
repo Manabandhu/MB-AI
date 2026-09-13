@@ -35,7 +35,7 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 
 ## Demo Fixtures
 
-- `frontend/src/modules/safety/safetyFallbacks.ts` - demo fixtures for all safety screens
+- Demo fixtures removed; screens use live backend queries, loading states, and error/empty states.
 
 ## State Patterns
 
@@ -76,3 +76,4 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 - **Backend**: REST and GraphQL APIs implemented under `/api/v1/safety` with reports, blocked users, trusted contacts, and Flyway migration V11.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
+- Fallback cleanup: deleted `safetyFallbacks.ts` and removed inline fallbacks from `SafetyCenterScreen`, `BlockedUsersScreen`, `ReportsScreen`, and `TrustedContactsScreen` in favor of live backend endpoints, loading states, and error/empty states.
