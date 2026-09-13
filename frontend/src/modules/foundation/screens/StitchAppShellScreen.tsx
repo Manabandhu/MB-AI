@@ -209,7 +209,11 @@ export function HomeShell({ displayName, isDesktop }: { data: HomeShellData; dis
       <View style={[s.qaGrid, isDesktop && s.qaGridDesktop]}>
         {quickActions.map((qa) => (
           <Link key={qa.label} href={qa.route as Href} asChild>
-            <Pressable accessibilityRole="button" accessibilityLabel={qa.label} style={[s.qaTile, { backgroundColor: qa.bg }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={qa.label}
+              style={StyleSheet.flatten([s.qaTile, { backgroundColor: qa.bg }])}
+            >
               <AppIcon color={qa.iconColor} name={qa.icon} size={22} />
               <Text style={[s.qaLabel, { color: qa.iconColor }]}>{qa.label}</Text>
             </Pressable>

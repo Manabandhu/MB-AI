@@ -112,3 +112,4 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 
 
 
+- Style flattening on Link asChild: Wrapped Pressable style in StyleSheet.flatten inside HomeShell quick-action tiles to prevent Expo Router Slot invariant errors.
