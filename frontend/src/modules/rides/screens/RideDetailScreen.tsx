@@ -417,22 +417,65 @@ export function RideDetailScreen() {
                 </View>
               </View>
 
-              {/* Slot 2: Co-Rider */}
-              <View style={styles.seatSlotOccupied}>
-                <View style={styles.seatSlotTop}>
-                  <Text style={[styles.seatSlotLabel, { color: colors.teal }]}>Seat 2 · Co-rider</Text>
-                  <AppIcon color={colors.teal} name="user" size={16} />
-                </View>
-                <View style={styles.seatOccupant}>
-                  <View style={[styles.miniOccupantAvatar, { backgroundColor: colors.teal }]}>
-                    <Text style={styles.miniOccupantInitial}>S</Text>
+              {/* Slot 2: Passenger Seat */}
+              {rawOffer.seatsAvailable >= 3 ? (
+                <Pressable
+                  accessibilityLabel="Toggle Seat 2 selection"
+                  accessibilityRole="button"
+                  onPress={() => toggleSeat(2)}
+                  style={[
+                    styles.seatSlotInteractive,
+                    selectedSeatSlots.includes(2) && styles.seatSlotSelected,
+                  ]}
+                >
+                  <View style={styles.seatSlotTop}>
+                    <Text
+                      style={[
+                        styles.seatSlotLabel,
+                        selectedSeatSlots.includes(2) && styles.seatSlotLabelSelected,
+                      ]}
+                    >
+                      Seat 2 · Front Passenger
+                    </Text>
+                    <AppIcon
+                      color={selectedSeatSlots.includes(2) ? colors.appPrimary : '#9ca3af'}
+                      name={selectedSeatSlots.includes(2) ? 'check' : 'plus'}
+                      size={18}
+                    />
                   </View>
                   <View>
-                    <Text style={styles.miniOccupantName}>Sneha M.</Text>
-                    <Text style={styles.miniOccupantRole}>Google Techie</Text>
+                    <Text
+                      style={[
+                        styles.seatStatusText,
+                        selectedSeatSlots.includes(2) && styles.seatStatusTextSelected,
+                      ]}
+                    >
+                      {selectedSeatSlots.includes(2) ? 'Selected for You' : 'Available'}
+                    </Text>
+                    <Text style={styles.seatTapPrompt}>
+                      {selectedSeatSlots.includes(2) ? 'Tap to deselect' : 'Tap to select'}
+                    </Text>
+                  </View>
+                </Pressable>
+              ) : (
+                <View style={styles.seatSlotOccupied}>
+                  <View style={styles.seatSlotTop}>
+                    <Text style={[styles.seatSlotLabel, { color: colors.teal }]}>
+                      Seat 2 · Co-rider
+                    </Text>
+                    <AppIcon color={colors.teal} name="user" size={16} />
+                  </View>
+                  <View style={styles.seatOccupant}>
+                    <View style={[styles.miniOccupantAvatar, { backgroundColor: colors.teal }]}>
+                      <Text style={styles.miniOccupantInitial}>C</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.miniOccupantName}>Reserved Seat</Text>
+                      <Text style={styles.miniOccupantRole}>Verified Passenger</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
+              )}
 
               {/* Slot 3: Interactive Seat */}
               <Pressable
