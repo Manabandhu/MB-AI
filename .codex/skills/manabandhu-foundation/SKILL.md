@@ -53,8 +53,8 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 
 ## Demo Fixtures
 
-- Demo fixtures removed from catalog and shell screens; screens use live backend endpoints (`/api/v1/foundation/screens/{screenId}`), loading states, and error states.
-- `frontend/src/modules/foundation/fixtures.ts` - onboarding and welcome copy
+- Legacy demo fixtures removed from catalog and shell screens; screens use live backend endpoints (`/api/v1/foundation/screens/{screenId}`), live Supabase queries, dynamic metrics, and community trust pillars.
+- `frontend/src/modules/foundation/fixtures.ts` has been removed.
 
 ## State Patterns
 

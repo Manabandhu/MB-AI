@@ -176,33 +176,16 @@ const quickActions: { icon: AppIconName; label: string; route: string; bg: strin
   { icon: 'shield', label: 'Safety', route: '/search', bg: '#ffeaea', iconColor: '#ba1a1a' },
 ];
 
-const liveStats = [
-  { label: '12.4K Verified Members', color: '#00696b', bg: 'rgba(0,105,107,0.08)', route: '/community' },
-  { label: '847 Active Rooms', color: '#431ebe', bg: 'rgba(67,30,190,0.07)', route: '/rooms' },
-  { label: '2.1K Carpools', color: '#ff7e33', bg: 'rgba(255,126,51,0.10)', route: '/rides' },
-  { label: '580 Open Jobs', color: '#1a8a5c', bg: '#e2f9ef', route: '/jobs' },
-];
-
-const sampleRooms = [
-  { id: 'r1', title: 'Private Room in Domain', price: '$750/mo', location: 'North Austin', verified: true },
-  { id: 'r2', title: '2B2B Shared Apt', price: '$920/mo', location: 'Downtown', verified: true },
-  { id: 'r3', title: 'Master Bed w/ Bath', price: '$850/mo', location: 'Round Rock', verified: false },
-];
-
-const sampleJobs = [
-  { id: 'j1', company: 'G', title: 'Sr. Frontend Engineer', location: 'Austin, TX · Hybrid', bonus: '$1,500' },
-  { id: 'j2', company: 'S', title: 'Product Ops Analyst', location: 'Remote · Austin', bonus: '$1,000' },
-];
-
-const samplePosts = [
-  { id: 'p1', initials: 'AS', name: 'Ananya Sharma', time: '20m ago', group: 'Austin Desi Hub', body: 'Organizing a Diwali potluck at Zilker Park this weekend! All new Austinites welcome 🪔✨', likes: 48, comments: 19 },
-  { id: 'p2', initials: 'VP', name: 'Vikram Patel', time: '1h ago', group: 'Carpool & Commute', body: 'Daily carpool from Round Rock to Apple Riata. Leaving 8:15 AM, return 5:30 PM. 2 seats open! 🚗', likes: 24, comments: 8 },
-];
-
 // ─── HOME SHELL ───────────────────────────────────────────────────────────────
-export function HomeShell({ displayName, isDesktop }: { data: HomeShellData; displayName: string; isDesktop: boolean }) {
+export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellData; displayName: string; isDesktop: boolean }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const feed = data?.feed ?? [];
+  const metrics = data?.metrics ?? [];
+
+  const roomItems = feed.filter((item) => item.kind === 'room');
+  const postItems = feed.filter((item) => item.kind === 'post');
+  const jobItems = feed.filter((item) => item.kind === 'job');
 
   return (
     <>
@@ -210,24 +193,24 @@ export function HomeShell({ displayName, isDesktop }: { data: HomeShellData; dis
         <Text style={s.greetText}>{greeting}, {displayName.split(' ')[0]} 👋</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Austin TX Rooms"
+          accessibilityLabel="Explore Rooms"
           onPress={() => router.push('/rooms' as Href)}
           style={s.locationChip}
         >
           <AppIcon color={colors.appPrimary} name="map" size={12} />
-          <Text style={s.locationText}>Austin, TX · 847 Rooms</Text>
+          <Text style={s.locationText}>Austin & Central TX</Text>
           <AppIcon color={colors.appPrimary} name="chevron-right" size={10} />
         </Pressable>
       </View>
 
       <Pressable
         accessibilityRole="search"
-        accessibilityLabel="Search rooms, flatmates, rides"
+        accessibilityLabel="Search rooms, flatmates, rides, jobs"
         onPress={() => router.push('/rooms' as Href)}
         style={s.searchBar}
       >
         <AppIcon color={colors.muted} name="search" size={18} />
-        <Text style={s.searchPlaceholder}>Austin, TX · 847 rooms, flatmates, rides...</Text>
+        <Text style={s.searchPlaceholder}>Search rooms, flatmates, rides, jobs...</Text>
       </Pressable>
 
       <View style={[s.qaGrid, isDesktop && s.qaGridDesktop]}>
@@ -245,86 +228,144 @@ export function HomeShell({ displayName, isDesktop }: { data: HomeShellData; dis
         ))}
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillRow}>
-        {liveStats.map((stat) => (
-          <Pressable
-            key={stat.label}
-            onPress={() => router.push(stat.route as Href)}
-            style={[s.statPill, { backgroundColor: stat.bg }]}
-          >
-            <View style={[s.statDot, { backgroundColor: stat.color }]} />
-            <Text style={[s.statPillText, { color: stat.color }]}>{stat.label}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {metrics.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillRow}>
+          {metrics.map((metric, i) => {
+            const pillColors = [
+              { color: '#00696b', bg: 'rgba(0,105,107,0.08)' },
+              { color: '#431ebe', bg: 'rgba(67,30,190,0.07)' },
+              { color: '#ff7e33', bg: 'rgba(255,126,51,0.10)' },
+              { color: '#1a8a5c', bg: '#e2f9ef' },
+            ];
+            const c = pillColors[i % pillColors.length];
+            return (
+              <View
+                key={metric.label}
+                style={[s.statPill, { backgroundColor: c.bg }]}
+              >
+                <View style={[s.statDot, { backgroundColor: c.color }]} />
+                <Text style={[s.statPillText, { color: c.color }]}>{metric.value} {metric.label}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      ) : null}
 
       <View style={s.sectionHeader}>
         <Text style={s.sectionTitle}>Rooms Near You</Text>
         <Link href="/rooms" asChild><Pressable accessibilityRole="link"><Text style={s.seeAll}>See All →</Text></Pressable></Link>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.hScroll}>
-        {sampleRooms.map((room) => (
-          <Pressable key={room.id} style={s.roomCard}>
-            <View style={s.roomThumb}><Text style={s.roomThumbEmoji}>🏠</Text></View>
-            <View style={s.roomInfo}>
-              <Text style={s.roomPrice}>{room.price}</Text>
-              <Text style={s.roomTitle} numberOfLines={1}>{room.title}</Text>
-              <View style={s.roomMeta}>
-                <AppIcon color={colors.muted} name="map" size={11} />
-                <Text style={s.roomLocation}>{room.location}</Text>
-              </View>
-              {room.verified ? (
-                <View style={s.verifiedBadge}>
-                  <AppIcon color={colors.teal} name="check" size={10} strokeWidth={3} />
-                  <Text style={s.verifiedText}>Verified</Text>
+      {roomItems.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.hScroll}>
+          {roomItems.map((room) => (
+            <Link key={room.id} href={room.route as Href} asChild>
+              <Pressable style={s.roomCard}>
+                <View style={s.roomThumb}><Text style={s.roomThumbEmoji}>🏠</Text></View>
+                <View style={s.roomInfo}>
+                  <Text style={s.roomPrice}>{room.meta}</Text>
+                  <Text style={s.roomTitle} numberOfLines={1}>{room.title}</Text>
+                  <View style={s.roomMeta}>
+                    <AppIcon color={colors.muted} name="map" size={11} />
+                    <Text style={s.roomLocation}>{room.body}</Text>
+                  </View>
                 </View>
-              ) : null}
-            </View>
-          </Pressable>
-        ))}
-      </ScrollView>
+              </Pressable>
+            </Link>
+          ))}
+        </ScrollView>
+      ) : (
+        <Pressable onPress={() => router.push('/rooms')} style={s.roomCard}>
+          <View style={s.roomInfo}>
+            <Text style={s.roomTitle}>Find or post a room</Text>
+            <Text style={s.roomLocation}>Explore verified shared rooms and apartments</Text>
+          </View>
+        </Pressable>
+      )}
 
       <View style={s.sectionHeader}>
         <Text style={s.sectionTitle}>Community Feed</Text>
         <Link href="/community" asChild><Pressable accessibilityRole="link"><Text style={s.seeAll}>See All →</Text></Pressable></Link>
       </View>
-      {samplePosts.map((post) => <PostCard key={post.id} post={post} />)}
+      {postItems.length > 0 ? (
+        postItems.map((post) => (
+          <Link key={post.id} href={post.route as Href} asChild>
+            <Pressable style={s.postCard}>
+              <Text style={s.postName}>{post.title}</Text>
+              <Text style={s.postBody} numberOfLines={2}>{post.body}</Text>
+              <Text style={s.postTime}>{post.meta}</Text>
+            </Pressable>
+          </Link>
+        ))
+      ) : (
+        <Link href="/community" asChild>
+          <Pressable style={s.postCard}>
+            <Text style={s.postName}>Join the conversation</Text>
+            <Text style={s.postBody}>Connect with local community members, ask questions, and share advice.</Text>
+          </Pressable>
+        </Link>
+      )}
 
       <View style={s.sectionHeader}>
-        <Text style={s.sectionTitle}>Hot Job Referrals</Text>
+        <Text style={s.sectionTitle}>Job Referrals</Text>
         <Link href="/jobs" asChild><Pressable accessibilityRole="link"><Text style={s.seeAll}>See All →</Text></Pressable></Link>
       </View>
-      {sampleJobs.map((job) => <JobRow key={job.id} job={job} />)}
+      {jobItems.length > 0 ? (
+        jobItems.map((job) => (
+          <Link key={job.id} href={job.route as Href} asChild>
+            <Pressable style={s.jobRow}>
+              <View style={s.jobLogo}><Text style={s.jobLogoText}>{job.title[0]}</Text></View>
+              <View style={s.jobInfo}>
+                <Text style={s.jobTitle}>{job.title}</Text>
+                <Text style={s.jobLocation}>{job.body}</Text>
+              </View>
+              <View style={s.jobBonus}>
+                <Text style={s.jobBonusText}>{job.meta}</Text>
+              </View>
+            </Pressable>
+          </Link>
+        ))
+      ) : (
+        <Link href="/jobs" asChild>
+          <Pressable style={s.jobRow}>
+            <View style={s.jobLogo}><Text style={s.jobLogoText}>💼</Text></View>
+            <View style={s.jobInfo}>
+              <Text style={s.jobTitle}>Explore Job Referrals</Text>
+              <Text style={s.jobLocation}>Browse tech openings and request employee referrals</Text>
+            </View>
+          </Pressable>
+        </Link>
+      )}
     </>
   );
 }
 
 // ─── EXPLORE SHELL ────────────────────────────────────────────────────────────
-const exploreCategories = ['All', 'Rooms', 'Rides', 'Jobs', 'Events', 'Community', 'Marketplace', 'Immigration'];
+const exploreCategories = ['All', 'Rooms', 'Rides', 'Jobs', 'Events', 'Community'];
 
-const exploreItems = [
-  { id: 'er1', type: 'room', title: '2B2B Shared Apt', sub: '$920/mo · Downtown', badge: 'Verified' },
-  { id: 'er2', type: 'room', title: 'Private Room Domain', sub: '$750/mo · North Austin', badge: 'Furnished' },
-  { id: 'ej1', type: 'job', title: 'Sr. Engineer', sub: 'Google · Hybrid', badge: '$1.5K Referral' },
-  { id: 'ej2', type: 'job', title: 'Data Analyst', sub: 'Tesla · Remote', badge: '$800 Referral' },
-  { id: 'ee1', type: 'event', title: 'Diwali Potluck', sub: 'Oct 19 · Zilker Park', badge: '47 Going' },
-  { id: 'ee2', type: 'event', title: 'Tech Mixer Austin', sub: 'Oct 25 · WeWork', badge: '120 Going' },
-];
-
-export function ExploreShell({ isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
+export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
   const [activeCategory, setActiveCategory] = useState('All');
+  const feed = data?.feed ?? [];
+
+  const filteredItems = feed.filter((item) => {
+    if (activeCategory === 'All') return true;
+    if (activeCategory === 'Rooms') return item.kind === 'room';
+    if (activeCategory === 'Rides') return item.kind === 'ride';
+    if (activeCategory === 'Jobs') return item.kind === 'job';
+    if (activeCategory === 'Events') return item.kind === 'event';
+    if (activeCategory === 'Community') return item.kind === 'post';
+    return true;
+  });
 
   return (
     <>
       <View style={s.exploreHero}>
         <Text style={s.exploreHeroTitle}>Explore</Text>
-        <Text style={s.exploreHeroSub}>Discover Desi communities near you</Text>
+        <Text style={s.exploreHeroSub}>Discover verified communities and services near you</Text>
       </View>
 
       <Pressable onPress={() => router.push('/search')} style={s.searchBar}>
         <AppIcon color={colors.muted} name="search" size={18} />
-        <Text style={s.searchPlaceholder}>Explore rooms, rides, jobs...</Text>
-        <View style={s.filterPill}><AppIcon color={colors.appPrimary} name="wrench" size={14} /></View>
+        <Text style={s.searchPlaceholder}>Explore rooms, rides, jobs, events...</Text>
       </Pressable>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillRow}>
@@ -335,29 +376,22 @@ export function ExploreShell({ isDesktop }: { data: HomeShellData; isDesktop: bo
         ))}
       </ScrollView>
 
-      <View style={s.featuredCard}>
-        <View style={s.featuredOverlay}>
-          <Text style={s.featuredBadge}>🎉 Featured Event</Text>
-          <Text style={s.featuredTitle}>Austin Diwali Mela 2024</Text>
-          <Text style={s.featuredSub}>Zilker Park · Oct 19 · 500+ attending</Text>
-        </View>
-        <Text style={s.featuredEmoji}>🎆</Text>
-      </View>
-
       <View style={[s.exploreGrid, isDesktop && s.exploreGridDesktop]}>
-        {exploreItems.map((item) => (
-          <Pressable key={item.id} style={s.exploreCard}>
-            <View style={[s.exploreCardThumb, { backgroundColor: item.type === 'room' ? colors.indigoSoft : item.type === 'job' ? colors.orangeSoft : colors.tealSoft }]}>
-              <Text style={s.exploreCardEmoji}>{item.type === 'room' ? '🏠' : item.type === 'job' ? '💼' : '🎉'}</Text>
-            </View>
-            <View style={s.exploreCardBody}>
-              <Text style={s.exploreCardTitle} numberOfLines={1}>{item.title}</Text>
-              <Text style={s.exploreCardSub} numberOfLines={1}>{item.sub}</Text>
-              <View style={[s.exploreBadge, { backgroundColor: item.type === 'room' ? colors.indigoSoft : item.type === 'job' ? colors.orangeSoft : colors.tealSoft }]}>
-                <Text style={[s.exploreBadgeText, { color: item.type === 'room' ? colors.appPrimary : item.type === 'job' ? colors.warm : colors.teal }]}>{item.badge}</Text>
+        {filteredItems.map((item) => (
+          <Link key={item.id} href={item.route as Href} asChild>
+            <Pressable style={s.exploreCard}>
+              <View style={[s.exploreCardThumb, { backgroundColor: item.kind === 'room' ? colors.indigoSoft : item.kind === 'job' ? colors.orangeSoft : colors.tealSoft }]}>
+                <Text style={s.exploreCardEmoji}>{item.kind === 'room' ? '🏠' : item.kind === 'job' ? '💼' : item.kind === 'ride' ? '🚗' : '🎉'}</Text>
               </View>
-            </View>
-          </Pressable>
+              <View style={s.exploreCardBody}>
+                <Text style={s.exploreCardTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={s.exploreCardSub} numberOfLines={1}>{item.body}</Text>
+                <View style={[s.exploreBadge, { backgroundColor: colors.surfaceContainer }]}>
+                  <Text style={[s.exploreBadgeText, { color: colors.appPrimary }]}>{item.meta}</Text>
+                </View>
+              </View>
+            </Pressable>
+          </Link>
         ))}
       </View>
     </>
@@ -365,15 +399,15 @@ export function ExploreShell({ isDesktop }: { data: HomeShellData; isDesktop: bo
 }
 
 // ─── CHAT SHELL ───────────────────────────────────────────────────────────────
-const sampleConversations = [
-  { id: 'c1', initials: 'PS', name: 'Priya Sharma', preview: 'See you at the meetup! 👋', time: '2m', unread: 2, online: true, isGroup: false },
-  { id: 'c2', initials: 'AD', name: 'Austin Desi Roommates', preview: 'Kiran: Anyone know a good movers?', time: '15m', unread: 5, online: false, isGroup: true },
-  { id: 'c3', initials: 'VP', name: 'Vikram Patel', preview: 'The carpool is confirmed for Friday', time: '1h', unread: 0, online: true, isGroup: false },
-  { id: 'c4', initials: 'TJ', name: 'Tech Jobs Referrals', preview: 'New opening at Google Austin!', time: '3h', unread: 1, online: false, isGroup: true },
-  { id: 'c5', initials: 'AM', name: 'Ananya M.', preview: 'Thanks for the referral! 🙏', time: 'Yesterday', unread: 0, online: false, isGroup: false },
-];
+export function ChatShell({ isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
+  const { data: conversations = [], isLoading } = useQuery({
+    queryKey: ['chat', 'conversations'],
+    queryFn: async () => {
+      const { listConversations } = await import('@/modules/chat/api');
+      return listConversations();
+    },
+  });
 
-export function ChatShell(_props: { data: HomeShellData; isDesktop: boolean }) {
   return (
     <>
       <View style={s.chatHeader}>
@@ -383,42 +417,42 @@ export function ChatShell(_props: { data: HomeShellData; isDesktop: boolean }) {
         </Pressable>
       </View>
 
-      <Pressable onPress={() => {}} style={s.searchBar}>
+      <Pressable onPress={() => router.push('/chat')} style={s.searchBar}>
         <AppIcon color={colors.muted} name="search" size={18} />
         <Text style={s.searchPlaceholder}>Search conversations...</Text>
       </Pressable>
 
-      <View style={s.pinnedRow}>
-        <View style={s.pinnedIcon}><AppIcon color={colors.teal} name="shield" size={16} /></View>
-        <View style={s.pinnedBody}>
-          <Text style={s.pinnedTitle}>ManaBandhu Community Alerts</Text>
-          <Text style={s.pinnedSub}>Tap to read important updates</Text>
-        </View>
-        <AppIcon color={colors.muted} name="chevron-right" size={16} />
-      </View>
-
       <View style={s.convList}>
         <Text style={s.convListHeader}>RECENT</Text>
-        {sampleConversations.map((conv) => (
-          <Pressable key={conv.id} accessibilityRole="button" onPress={() => router.push('/chat')} style={s.convRow}>
-            <View style={s.convAvatarWrap}>
-              <View style={[s.convAvatar, conv.isGroup && s.convAvatarGroup]}>
-                <Text style={s.convAvatarText}>{conv.initials}</Text>
-              </View>
-              {conv.online ? <View style={s.onlineDot} /> : null}
-            </View>
-            <View style={s.convBody}>
-              <View style={s.convTop}>
-                <Text style={s.convName} numberOfLines={1}>{conv.name}</Text>
-                <Text style={s.convTime}>{conv.time}</Text>
-              </View>
-              <Text style={[s.convPreview, conv.unread > 0 && s.convPreviewUnread]} numberOfLines={1}>{conv.preview}</Text>
-            </View>
-            {conv.unread > 0 ? (
-              <View style={s.unreadBadge}><Text style={s.unreadText}>{conv.unread}</Text></View>
-            ) : null}
-          </Pressable>
-        ))}
+        {isLoading ? (
+          <Text style={s.convPreview}>Loading messages...</Text>
+        ) : conversations.length === 0 ? (
+          <Text style={s.convPreview}>No conversations yet. Start a new chat below.</Text>
+        ) : (
+          conversations.map((conv) => (
+            <Link key={conv.id} href={`/chat/${conv.id}` as Href} asChild>
+              <Pressable accessibilityRole="button" style={s.convRow}>
+                <View style={s.convAvatarWrap}>
+                  <View style={s.convAvatar}>
+                    <Text style={s.convAvatarText}>{(conv.title ?? 'C')[0].toUpperCase()}</Text>
+                  </View>
+                </View>
+                <View style={s.convBody}>
+                  <View style={s.convTop}>
+                    <Text style={s.convName} numberOfLines={1}>{conv.title ?? 'Conversation'}</Text>
+                    {conv.lastMessageAt ? <Text style={s.convTime}>{new Date(conv.lastMessageAt).toLocaleDateString()}</Text> : null}
+                  </View>
+                  <Text style={[s.convPreview, (conv.unreadCount ?? 0) > 0 && s.convPreviewUnread]} numberOfLines={1}>
+                    {conv.lastMessage ?? 'No messages yet'}
+                  </Text>
+                </View>
+                {(conv.unreadCount ?? 0) > 0 ? (
+                  <View style={s.unreadBadge}><Text style={s.unreadText}>{conv.unreadCount}</Text></View>
+                ) : null}
+              </Pressable>
+            </Link>
+          ))
+        )}
       </View>
 
       <Pressable onPress={() => router.push('/chat/new')} style={s.newChatBtn}>
@@ -430,21 +464,11 @@ export function ChatShell(_props: { data: HomeShellData; isDesktop: boolean }) {
 }
 
 // ─── COMMUNITY SHELL ──────────────────────────────────────────────────────────
-const communityTabs = ['Feed', 'Groups', 'Events', 'My Posts'];
-const storyAvatars = [
-  { initials: 'AS', bg: '#e8e4fb' }, { initials: 'VP', bg: '#d9f5f5' },
-  { initials: 'KR', bg: '#fce8f3' }, { initials: 'SM', bg: '#fff0e6' },
-  { initials: 'AK', bg: '#e4ecff' },
-];
-const trendingTopics = ['#AustinDiwali2024', '#TechLayoffsHelp', '#CarpoolRoundRock', '#NewMembersWelcome'];
-const communityFeedPosts = [
-  { id: 'cf1', initials: 'AS', name: 'Ananya Sharma', time: '20m ago', group: 'Austin Desi Hub', body: 'Organizing a Diwali potluck at Zilker Park this weekend! All new Austinites welcome 🪔✨', likes: 48, comments: 19 },
-  { id: 'cf2', initials: 'VP', name: 'Vikram Patel', time: '1h ago', group: 'Carpool & Commute', body: 'Daily carpool from Round Rock to Apple Riata. Leaving 8:15 AM, return 5:30 PM. 2 seats open! 🚗', likes: 24, comments: 8 },
-  { id: 'cf3', initials: 'KR', name: 'Kiran Rao', time: '3h ago', group: 'Tech Referrals', body: 'Senior SDE opening at Google Austin — hybrid, strong team. DM me for referral! 💼', likes: 62, comments: 31 },
-];
+const communityTabs = ['Feed', 'Groups', 'Events'];
 
-export function CommunityShell(_props: { data: HomeShellData; isDesktop: boolean }) {
+export function CommunityShell({ data, isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
   const [activeTab, setActiveTab] = useState('Feed');
+  const feedPosts = (data?.feed ?? []).filter((item) => item.kind === 'post');
 
   return (
     <>
@@ -468,30 +492,24 @@ export function CommunityShell(_props: { data: HomeShellData; isDesktop: boolean
         ))}
       </ScrollView>
 
-      <View>
-        <Text style={s.storiesLabel}>Active now</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={s.storiesRow}>
-            {storyAvatars.map((a) => (
-              <Pressable key={a.initials} style={s.storyWrap}>
-                <View style={s.storyRing}>
-                  <View style={[s.storyAvatar, { backgroundColor: a.bg }]}>
-                    <Text style={s.storyInitials}>{a.initials}</Text>
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        </ScrollView>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillRow}>
-        {trendingTopics.map((tag) => (
-          <View key={tag} style={s.trendChip}><Text style={s.trendChipText}>{tag}</Text></View>
-        ))}
-      </ScrollView>
-
-      {communityFeedPosts.map((post) => <PostCard key={post.id} post={post} />)}
+      {feedPosts.length > 0 ? (
+        feedPosts.map((post) => (
+          <Link key={post.id} href={post.route as Href} asChild>
+            <Pressable style={s.postCard}>
+              <Text style={s.postName}>{post.title}</Text>
+              <Text style={s.postBody}>{post.body}</Text>
+              <Text style={s.postTime}>{post.meta}</Text>
+            </Pressable>
+          </Link>
+        ))
+      ) : (
+        <Link href="/community" asChild>
+          <Pressable style={s.postCard}>
+            <Text style={s.postName}>Welcome to the Community</Text>
+            <Text style={s.postBody}>Join circles, share advice, discuss schools, and participate in local conversations.</Text>
+          </Pressable>
+        </Link>
+      )}
 
       <Pressable accessibilityRole="button" accessibilityLabel="Create post" onPress={() => router.push('/community/create-post')} style={s.fab}>
         <AppIcon color="#fff" name="plus" size={22} />
@@ -503,8 +521,8 @@ export function CommunityShell(_props: { data: HomeShellData; isDesktop: boolean
 // ─── PROFILE SHELL ────────────────────────────────────────────────────────────
 const profileBadges = [
   { label: 'ID Verified', icon: 'shield' as AppIconName, color: '#00696b', bg: 'rgba(0,105,107,0.08)' },
-  { label: 'Trusted Roommate', icon: 'home' as AppIconName, color: '#431ebe', bg: 'rgba(67,30,190,0.07)' },
-  { label: 'Carpool Member', icon: 'car' as AppIconName, color: '#ff7e33', bg: 'rgba(255,126,51,0.10)' },
+  { label: 'Community Member', icon: 'community' as AppIconName, color: '#431ebe', bg: 'rgba(67,30,190,0.07)' },
+  { label: 'Safe Connect', icon: 'heart' as AppIconName, color: '#ff7e33', bg: 'rgba(255,126,51,0.10)' },
 ];
 
 const profileLinks = [
@@ -527,6 +545,7 @@ export function ProfileShell({ data, displayName }: { data: HomeShellData; displ
   const name = user?.user_metadata?.full_name ?? displayName;
   const email = user?.email ?? 'member@manabandhu.com';
   const initial = (name?.[0] ?? 'U').toUpperCase();
+  const metrics = data?.metrics ?? [];
 
   return (
     <>
@@ -536,31 +555,18 @@ export function ProfileShell({ data, displayName }: { data: HomeShellData; displ
         <Text style={s.profileEmail}>{email}</Text>
         <View style={s.profileLocationRow}>
           <AppIcon color="rgba(255,255,255,0.8)" name="map" size={12} />
-          <Text style={s.profileLocationText}>Austin, TX · Member since Sep 2024</Text>
+          <Text style={s.profileLocationText}>ManaBandhu Community Member</Text>
         </View>
-        <View style={s.profileStats}>
-          {[{ v: '47', l: 'Connections' }, { v: '12', l: 'Posts' }, { v: '4', l: 'Referrals' }].map((stat) => (
-            <View key={stat.l} style={s.profileStatItem}>
-              <Text style={s.profileStatValue}>{stat.v}</Text>
-              <Text style={s.profileStatLabel}>{stat.l}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={s.completionCard}>
-        <View style={s.completionHeader}>
-          <AppIcon color={colors.appPrimary} name="sparks" size={16} />
-          <Text style={s.completionTitle}>Profile {data.metrics[0]?.value ?? '78%'} Complete</Text>
-        </View>
-        <View style={s.progressBg}>
-          <View style={[s.progressFill, { width: '78%' }]} />
-        </View>
-        <View style={s.completionChips}>
-          {['Add resume', 'Link LinkedIn'].map((chip) => (
-            <View key={chip} style={s.completionChip}><Text style={s.completionChipText}>{chip}</Text></View>
-          ))}
-        </View>
+        {metrics.length > 0 ? (
+          <View style={s.profileStats}>
+            {metrics.map((stat) => (
+              <View key={stat.label} style={s.profileStatItem}>
+                <Text style={s.profileStatValue}>{stat.value}</Text>
+                <Text style={s.profileStatLabel}>{stat.label}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       <View style={s.badgesSection}>

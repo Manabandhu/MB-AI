@@ -37,7 +37,7 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 
 ## Demo Fixtures
 
-- `frontend/src/modules/auth/fixtures.ts` - `authCredentialsFixture` and `authFlowsFixture`
+- `frontend/src/modules/auth/fixtures.ts` has been removed; authentication flows are completely live with Supabase Auth adapters and verified endpoints.
 
 ## State Patterns
 

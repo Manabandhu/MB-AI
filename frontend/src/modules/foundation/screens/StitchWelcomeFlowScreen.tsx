@@ -286,36 +286,29 @@ export function StitchWelcomeFlowScreen() {
                   >
                     <Text style={styles.desktopHeroSecondaryCtaText}>Sign In</Text>
                   </Pressable>
-                  <Pressable
-                    onPress={() => router.push('/home')}
-                    style={styles.desktopDemoCta}
-                    accessibilityRole="button"
-                  >
-                    <Text style={styles.desktopDemoCtaText}>Explore Demo ⚡</Text>
-                  </Pressable>
                 </View>
               ) : null}
 
-              {/* Live Trust Metrics Ticker */}
+              {/* Community Trust Pillars */}
               <View style={styles.statsTicker}>
                 <View style={styles.statBox}>
-                  <Text style={styles.statNum}>50K+</Text>
-                  <Text style={styles.statLabel}>Active Members</Text>
+                  <Text style={styles.statNum}>Zero</Text>
+                  <Text style={styles.statLabel}>Brokerage</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statBox}>
-                  <Text style={styles.statNum}>12K+</Text>
-                  <Text style={styles.statLabel}>Rooms Shared</Text>
+                  <Text style={styles.statNum}>Direct</Text>
+                  <Text style={styles.statLabel}>Verified Contacts</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statBox}>
-                  <Text style={styles.statNum}>3.5K+</Text>
-                  <Text style={styles.statLabel}>Job Referrals</Text>
+                  <Text style={styles.statNum}>Desi</Text>
+                  <Text style={styles.statLabel}>Community First</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statBox}>
-                  <Text style={styles.statNum}>4.9 ★</Text>
-                  <Text style={styles.statLabel}>Trust Score</Text>
+                  <Text style={styles.statNum}>100%</Text>
+                  <Text style={styles.statLabel}>Free Access</Text>
                 </View>
               </View>
             </View>
@@ -730,17 +723,6 @@ const styles = StyleSheet.create({
     color: color.ink,
     fontSize: 15,
     fontWeight: '700',
-  },
-  desktopDemoCta: {
-    backgroundColor: 'rgba(255, 126, 51, 0.12)',
-    borderRadius: 999,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  desktopDemoCtaText: {
-    color: color.warm,
-    fontSize: 14,
-    fontWeight: '800',
   },
 
   // Stats Ticker
