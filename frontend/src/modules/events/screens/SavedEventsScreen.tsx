@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listSavedEvents } from '@/modules/events/api';
-import { eventsScreenFallbacks } from '@/modules/events/eventsFallbacks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -20,8 +19,7 @@ export default function SavedEventsScreen() {
     queryFn: listSavedEvents,
   });
 
-  const fallback = eventsScreenFallbacks.saved;
-  const events = data ?? fallback.events ?? [];
+  const events = data ?? [];
 
   const filtered = useMemo(() => {
     if (!query.trim()) return events;
@@ -49,7 +47,7 @@ export default function SavedEventsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Saved Events" subtitle="Events you have bookmarked" />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search saved events" />
           {isLoading ? (
             <LoadingState />

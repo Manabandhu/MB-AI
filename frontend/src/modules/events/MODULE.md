@@ -5,7 +5,6 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 ## Component Inventory
 
 - `frontend/src/modules/events/api.ts` - Typed API client for events, search, and attendance.
-- `frontend/src/modules/events/eventsFallbacks.ts` - Demo fixtures for all events screens.
 - `frontend/src/modules/events/screens/EventsHomeScreen.tsx` - Discover events catalog.
 - `frontend/src/modules/events/screens/EventsSearchScreen.tsx` - Search events list.
 - `frontend/src/modules/events/screens/EventDetailsScreen.tsx` - Event detail view.

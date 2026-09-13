@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { searchEvents } from '@/modules/events/api';
-import { eventsScreenFallbacks } from '@/modules/events/eventsFallbacks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -21,8 +20,7 @@ export default function EventsSearchScreen() {
     enabled: query.trim().length > 0,
   });
 
-  const fallback = eventsScreenFallbacks.search;
-  const events = data ?? fallback.events ?? [];
+  const events = data ?? [];
 
   const filtered = useMemo(() => {
     if (!query.trim()) return events;
@@ -50,7 +48,7 @@ export default function EventsSearchScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Search Events" subtitle="Discover upcoming community events and gatherings" />
           <SearchBar
             value={query}
             onChangeText={setQuery}

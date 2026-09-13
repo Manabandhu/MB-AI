@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createEvent } from '@/modules/events/api';
-import { eventsScreenFallbacks } from '@/modules/events/eventsFallbacks';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { FormScreen } from '@/modules/shared/components/FormScreen';
 import { TextArea } from '@/modules/shared/components/TextArea';
@@ -38,8 +37,6 @@ export default function CreateEventScreen() {
     },
   });
 
-  const fallback = eventsScreenFallbacks.create;
-
   const onSubmit = () => {
     if (!title.trim() || !description.trim() || !date.trim() || !location.trim()) {
       setError('Title, description, date, and location are required.');
@@ -66,9 +63,9 @@ export default function CreateEventScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <FormScreen
-          eyebrow={fallback.eyebrow}
-          title={fallback.title}
-          subtitle={fallback.subtitle}
+          eyebrow="Events"
+          title="Host an Event"
+          subtitle="Bring your community together for cultural, social, or networking events"
           submitLabel="Create Event"
           onSubmit={onSubmit}
           error={

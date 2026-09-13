@@ -41,7 +41,7 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 
 ## Demo Fixtures
 
-- `frontend/src/modules/events/eventsFallbacks.ts` - demo fixtures for all events screens
+- Frontend fallbacks removed in favor of backend API endpoints and loading/empty/error states.
 
 ## State Patterns
 
@@ -77,3 +77,4 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - Safe area insets always respected
 
 - Recent implementation: Generated Stitch MCP mobile designs (`f3ea9ea291424d759cf85d9786cc8bcc` for Events & Meetups Discovery and `203a0524f000487e9b1384e8d484e701` for Event Details & Free RSVP). Replaced fallback screen with live Supabase events feed via Spring Boot (`/api/v1/events`), rich category chips, Austin Diwali Mela featured spotlight, detailed festival timeline, venue amenities, social proof attendee clusters, and digital RSVP ticket modal. Unblocked public unauthenticated event discovery.
+- Fallback cleanup: deleted `eventsFallbacks.ts` and removed inline fallbacks from `SavedEventsScreen`, `EventsSearchScreen`, `MyEventsScreen`, and `CreateEventScreen` in favor of live backend data.
