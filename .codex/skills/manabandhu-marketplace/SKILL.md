@@ -78,4 +78,5 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
 
 - **Complete Discovery & Details**: Live Supabase data integration for marketplace listings and categories, responsive card grid with live prices, condition badges, seller verification tags, and make offer negotiation modal.
 - **Fallback cleanup**: deleted `marketplaceFallbacks.ts` and removed inline fallbacks from `CategoriesScreen`, `MarketplaceSearchScreen`, and `SavedItemsScreen` in favor of live backend queries and responsive empty/error states.
+- **Hardcoded data cleanup**: removed hardcoded seller persona ("Suresh Reddy") and static star rating from `ListingDetailsScreen` in favor of dynamic seller initial, member identifier, and verified resident badge.
 

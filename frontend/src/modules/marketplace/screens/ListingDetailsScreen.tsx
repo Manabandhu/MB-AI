@@ -248,15 +248,19 @@ export function ListingDetailsScreen() {
               <Text style={s.sectionSubtitle}>Seller Details</Text>
               <View style={s.sellerHeader}>
                 <View style={s.sellerAvatarRing}>
-                  <Text style={s.sellerInitial}>S</Text>
+                  <Text style={s.sellerInitial}>
+                    {listing.ownerId ? listing.ownerId.slice(0, 1).toUpperCase() : 'M'}
+                  </Text>
                 </View>
                 <View style={s.sellerInfo}>
                   <View style={s.sellerNameRow}>
-                    <Text style={s.sellerName}>Suresh Reddy</Text>
+                    <Text style={s.sellerName}>
+                      {listing.ownerId ? `Resident #${listing.ownerId.slice(0, 6)}` : 'Verified Resident'}
+                    </Text>
                     <AppIcon name="verified-user" size={16} color={C.secondary} />
                   </View>
-                  <Text style={s.sellerMeta}>ManaBandhu Member since 2022 · 4.9 ★</Text>
-                  <Text style={s.sellerLanguage}>⚡ Replies in &lt; 15 mins · Speaks Telugu & English</Text>
+                  <Text style={s.sellerMeta}>Verified Community Resident · Austin Metro</Text>
+                  <Text style={s.sellerLanguage}>⚡ Direct chat available · Zero brokerage community sale</Text>
                 </View>
               </View>
             </View>
