@@ -73,7 +73,7 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 
 ## Demo Fixtures
 
-- `frontend/src/modules/rides/ridesFallbacks.ts` - realistic demo data for all ride `screenId`s
+- Frontend fallbacks removed in favor of backend API endpoints and loading/empty/error states.
 
 ## State Patterns
 
@@ -96,7 +96,7 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 ## Implementation Notes for Expo React Native
 
 - Route files in `frontend/src/app/rides/` are thin wrappers
-- `RidesScreen` uses `useQuery` with fallback data from `ridesFallbacks.ts`
+- `RidesScreen` uses `useQuery` with backend API data
 - `FeatureScreen` provides adaptive catalog/list layout
 - Ride offer, request, manage, and rate screens are placeholders pending backend forms
 - Map view is a placeholder pending real map integration
@@ -123,3 +123,4 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 - Recent fixes: added `destination` and `departureAt` to `CreateRideRequestInput` so `RideRequestScreen` payload typechecks; fixed `RideRateScreen` mutation to pass the rating object directly to `submitRideRating` (was passing `(rideId, input)` which mismatched `MutationFunction`); added `Input`/`InputField` imports to `RideRateScreen`; added `isReported()` getter to `RideOffer` so `AdminRidesController` compiles; updated `CommunityPostServiceTest` to pass `communityId` to the new `CreatePostInput(UUID, String, String)` constructor; added `setReported(boolean)` mutator to `RideOffer` so admin moderation can flip the reported flag; changed `CreateRideRatingInput` import in `RideRateScreen` to `import type` and reordered imports per Biome.
 
 - Stitch rides implementation: Overhauled `RidesScreen` and `RideDetailScreen` using Stitch MCP generated designs (Project ID `9663298292574415459`). Replaced placeholders with responsive Expo React Native carpool UI featuring interactive route search, origin/destination swap, segmented Available Rides list vs Live Route Map view, horizontal quick filter chips, responsive bottom-up mobile modal / centered desktop modal for sorting and filter options, live Supabase queries via `listRideOffers()`, visual route timeline, interactive seat picker, community fuel split breakdown, and direct seat booking with `bookRideSeat()`. Unblocked public discovery routes (`/rides`, `/rides/search`, `/rides/map`, `/rides/filters`, `/rides/[rideId]`).
+- Fallback cleanup: deleted `ridesFallbacks.ts` in favor of live Supabase and Spring REST carpool queries, error states, and responsive empty states.

@@ -35,4 +35,4 @@ Owns ride discovery, offers, requests, seats, participants, history, ratings, lo
 - `submitRideRating(rideId)` -> `POST /api/v1/rides/${rideId}/rate`
 
 ## Fallbacks
-- `rideScreenFallbacks` - Realistic demo data for all ride screenIds.
+- Frontend fallbacks removed in favor of backend API endpoints and loading/empty/error states.
