@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { apiFetch } from '@/lib/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -32,30 +33,15 @@ export function BalancesScreen() {
     },
   });
 
-  const fallback: BalancesContent = {
-    eyebrow: 'Expenses',
-    title: 'Balances',
-    subtitle: 'See who owes what across your expense groups.',
-    balances: [
-      { id: '1', title: 'Alex', body: 'You owe Alex', meta: '$24.50' },
-      { id: '2', title: 'Sam', body: 'Sam owes you', meta: '$12.00' },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
-        <SectionHeader title="Loading..." />
-        <View style={styles.loading}>
-          <Text style={styles.loadingText}>Loading balances...</Text>
-        </View>
+        <LoadingState label="Loading balances..." />
       </ScreenShell>
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -67,6 +53,8 @@ export function BalancesScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>
@@ -99,8 +87,6 @@ export function BalancesScreen() {
 const styles = StyleSheet.create({
   list: { gap: space.x3, marginTop: space.x4 },
   actions: { marginTop: space.x6 },
-  loading: { padding: space.x6 },
-  loadingText: { color: color.muted, fontSize: typography.body.fontSize },
   balanceCard: {
     backgroundColor: color.surface,
     borderColor: color.border,

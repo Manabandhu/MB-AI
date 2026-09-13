@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { apiFetch } from '@/lib/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 
@@ -31,30 +32,15 @@ export function SettlementsScreen() {
     },
   });
 
-  const fallback: SettlementsContent = {
-    eyebrow: 'Expenses',
-    title: 'Settlements',
-    subtitle: 'Review and complete pending settlements.',
-    settlements: [
-      { id: '1', title: 'Pay Alex', body: 'Weekend trip balance', meta: '$24.50' },
-      { id: '2', title: 'Request from Sam', body: 'Groceries balance', meta: '$12.00' },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
-        <SectionHeader title="Loading..." />
-        <View style={styles.loading}>
-          <Text style={styles.loadingText}>Loading settlements...</Text>
-        </View>
+        <LoadingState label="Loading settlements..." />
       </ScreenShell>
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -66,6 +52,8 @@ export function SettlementsScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>
@@ -94,8 +82,6 @@ export function SettlementsScreen() {
 
 const styles = StyleSheet.create({
   list: { gap: space.x3, marginTop: space.x4 },
-  loading: { padding: space.x6 },
-  loadingText: { color: color.muted, fontSize: typography.body.fontSize },
   settlementCard: {
     backgroundColor: color.surface,
     borderColor: color.border,

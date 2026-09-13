@@ -37,7 +37,7 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 
 ## Demo Fixtures
 
-- `frontend/src/modules/expenses/expensesFallbacks.ts` - demo fixtures for all expense screens
+- Demo fixtures removed; screens use live backend queries, loading states, and error/empty states.
 
 ## State Patterns
 
@@ -58,7 +58,7 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 ## Implementation Notes for Expo React Native
 
 - Route files in `frontend/src/app/expenses/` are thin wrappers
-- `ExpensesScreen` uses `useQuery` with fallback data from `expensesFallbacks.ts`
+- `ExpensesScreen` uses `useQuery` with live data from `GET /api/v1/expenses/screens/{screenId}`
 - `FeatureScreen` provides adaptive catalog/list layout
 - `AddExpenseScreen` uses `react-hook-form` + `zod` + `@hookform/resolvers`
 - Money is stored as exact minor units with currency; no floating-point arithmetic
@@ -79,3 +79,4 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 
 - Recent backend fixes: added missing `import com.manabandhu.backend.foundation.CatalogScreenContent;` to `ExpensesController` so the `@GetMapping("/screens/{screenId}")` endpoint compiles against the `ExpensesContentService` switch.
+- Fallback cleanup: deleted `expensesFallbacks.ts` and removed inline fallbacks from `ExpensesHomeScreen`, `ExpenseGroupsScreen`, `BalancesScreen`, `GroupDetailsScreen`, and `SettlementsScreen` in favor of live backend endpoints, loading states, and error/empty states.

@@ -69,6 +69,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Events fallback cleanup: deleted `eventsFallbacks.ts` and removed inline demo data from `SavedEventsScreen`, `EventsSearchScreen`, `MyEventsScreen`, and `CreateEventScreen` in favor of live backend queries.
 - Marketplace fallback cleanup: deleted `marketplaceFallbacks.ts` and removed inline demo data from `CategoriesScreen`, `MarketplaceSearchScreen`, and `SavedItemsScreen` in favor of live backend queries.
 - Community fallback cleanup: deleted `communityFallbacks.ts` and removed inline demo data from `CommunityDiscoverScreen`, `CommunityJoinedScreen`, `CommunityDetailsScreen`, and `CreatePostScreen` in favor of live queries and error/empty states.
+- Expenses fallback cleanup: deleted `expensesFallbacks.ts` and removed inline fallbacks from `ExpensesHomeScreen`, `ExpenseGroupsScreen`, `BalancesScreen`, `GroupDetailsScreen`, and `SettlementsScreen` in favor of live backend queries.
 
 
 

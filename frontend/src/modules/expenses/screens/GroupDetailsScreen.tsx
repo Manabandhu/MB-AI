@@ -4,6 +4,7 @@ import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { apiFetch } from '@/lib/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -37,30 +38,15 @@ export function GroupDetailsScreen({ groupId }: GroupDetailsScreenProps) {
     },
   });
 
-  const fallback: GroupDetailsContent = {
-    eyebrow: 'Expenses',
-    title: 'Group details',
-    subtitle: 'View expenses and balances for this group.',
-    expenses: [
-      { id: '1', title: 'Dinner', body: 'Split between 4 people', meta: '$48.00' },
-      { id: '2', title: 'Uber', body: 'Split between 3 people', meta: '$24.60' },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
-        <SectionHeader title="Loading..." />
-        <View style={styles.loading}>
-          <Text style={styles.loadingText}>Loading details...</Text>
-        </View>
+        <LoadingState label="Loading details..." />
       </ScreenShell>
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -72,6 +58,8 @@ export function GroupDetailsScreen({ groupId }: GroupDetailsScreenProps) {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>
@@ -106,6 +94,4 @@ export function GroupDetailsScreen({ groupId }: GroupDetailsScreenProps) {
 const styles = StyleSheet.create({
   list: { gap: space.x3, marginTop: space.x4 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x6 },
-  loading: { padding: space.x6 },
-  loadingText: { color: color.muted, fontSize: typography.body.fontSize },
 });

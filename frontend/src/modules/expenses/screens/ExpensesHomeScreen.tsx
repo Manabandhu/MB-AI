@@ -1,19 +1,42 @@
 import { useQuery } from '@tanstack/react-query';
 import { getExpensesScreen } from '@/modules/expenses/api';
-import { expenseScreenFallbacks } from '@/modules/expenses/expensesFallbacks';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { FeatureScreen } from '@/modules/shared/components/FeatureScreen';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 
 type ExpensesScreenProps = {
   screenId: keyof typeof expenseRoutes;
 };
 
 export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
-  const fallback = expenseScreenFallbacks[screenId];
   const screen = useQuery({
     queryKey: ['expenses', 'screen', screenId],
     queryFn: () => getExpensesScreen(screenId),
   });
-  const data = screen.data ?? fallback;
+
+  if (screen.isLoading) {
+    return (
+      <ScreenShell>
+        <LoadingState />
+      </ScreenShell>
+    );
+  }
+
+  if (screen.isError || !screen.data) {
+    return (
+      <ScreenShell>
+        <ErrorState
+          title="Unable to load expenses"
+          body="Please check your connection and try again."
+          retryLabel="Retry"
+          onRetry={() => screen.refetch()}
+        />
+      </ScreenShell>
+    );
+  }
+
+  const data = screen.data;
 
   return (
     <FeatureScreen

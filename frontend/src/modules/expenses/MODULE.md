@@ -2,6 +2,6 @@
 
 Owns expense groups, entries, balances, settlements, currency precision, participant permissions, history, and audit-friendly calculations.
 
-The first Stitch batch routes `/expenses`, `/expenses/groups`, `/expenses/groups/[groupId]`, `/expenses/add`, `/expenses/balances`, and `/expenses/settlements` share `screens/ExpensesHomeScreen.tsx`, `expensesFallbacks.ts`, and the read-only demo endpoint `GET /api/v1/expenses/screens/{screenId}`.
+The routes `/expenses`, `/expenses/groups`, `/expenses/groups/[groupId]`, `/expenses/add`, `/expenses/balances`, and `/expenses/settlements` connect to the backend endpoint `GET /api/v1/expenses/screens/{screenId}` and module APIs with live queries and error/empty states.
 
 Additional screens: `ExpenseGroupsScreen`, `GroupDetailsScreen`, `AddExpenseScreen`, `BalancesScreen`, `SettlementsScreen`.
