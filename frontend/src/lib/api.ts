@@ -1,7 +1,49 @@
+import Constants from 'expo-constants';
 import { GraphQLClient } from 'graphql-request';
+import { Platform } from 'react-native';
 
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
+
+export function getResolvedApiUrl(): string {
+  const configured = env.apiUrl;
+  // If in browser (e.g. mobile browser or desktop browser):
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    const currentHost = window.location.hostname;
+    if (currentHost && currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
+      try {
+        const u = new URL(configured);
+        if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+          u.hostname = currentHost;
+          return u.toString().replace(/\/$/, '');
+        }
+      } catch {}
+    }
+  }
+
+  // If in native React Native / Expo Go on a mobile device or emulator:
+  if (Platform.OS !== 'web') {
+    try {
+      const u = new URL(configured);
+      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+        const hostUri = Constants.expoConfig?.hostUri;
+        if (hostUri) {
+          const metroHost = hostUri.split(':')[0];
+          if (metroHost) {
+            u.hostname = metroHost;
+            return u.toString().replace(/\/$/, '');
+          }
+        }
+        if (Platform.OS === 'android') {
+          u.hostname = '10.0.2.2';
+          return u.toString().replace(/\/$/, '');
+        }
+      }
+    } catch {}
+  }
+
+  return configured.replace(/\/$/, '');
+}
 
 export type ApiHealth = {
   service: string;
@@ -34,7 +76,7 @@ export async function authorizationHeaders(): Promise<Record<string, string>> {
 }
 
 export async function getApiHealth(): Promise<ApiHealth> {
-  const response = await fetch(`${env.apiUrl}/api/v1/health`);
+  const response = await fetch(`${getResolvedApiUrl()}/api/v1/health`);
   if (!response.ok) throw new ApiError(`Health check failed: ${response.status}`, response.status);
   return response.json() as Promise<ApiHealth>;
 }
@@ -55,7 +97,7 @@ export interface IdentityResponse {
 }
 
 export async function graphqlClient() {
-  return new GraphQLClient(`${env.apiUrl}/graphql`, {
+  return new GraphQLClient(`${getResolvedApiUrl()}/graphql`, {
     headers: await authorizationHeaders(),
   });
 }
@@ -66,7 +108,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   headers.set('Content-Type', 'application/json');
   for (const [name, value] of Object.entries(auth)) headers.set(name, value);
 
-  const response = await fetch(`${env.apiUrl}${path}`, {
+  const response = await fetch(`${getResolvedApiUrl()}${path}`, {
     ...init,
     headers,
   });

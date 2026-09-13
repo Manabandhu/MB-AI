@@ -151,8 +151,18 @@ public class SecurityConfig {
             @Value("${app.cors.allowed-origins}") List<String> allowedOrigins) {
         var configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:[*]",
+                "http://127.0.0.1:[*]",
+                "http://192.168.*:[*]",
+                "http://10.*:[*]",
+                "http://172.16.*:[*]",
+                "http://*.local:[*]",
+                "exp://*",
+                "https://*.supabase.co"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
         configuration.setAllowCredentials(true);
 
         var source = new UrlBasedCorsConfigurationSource();
