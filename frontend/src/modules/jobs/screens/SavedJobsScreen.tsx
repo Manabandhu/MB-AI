@@ -33,24 +33,6 @@ export function SavedJobsScreen() {
     },
   });
 
-  const fallback: SavedJobsContent = {
-    eyebrow: 'Jobs',
-    title: 'Saved jobs',
-    subtitle: 'Your bookmarked job opportunities.',
-    jobs: [
-      {
-        id: '1',
-        title: 'Software Engineer',
-        body: 'Remote · Full-time',
-        meta: '$120k',
-        route: '/jobs/1',
-      },
-      { id: '2', title: 'Data Analyst', body: 'Hybrid · Contract', meta: '$85k', route: '/jobs/2' },
-    ],
-  };
-
-  const content = data ?? fallback;
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -60,7 +42,7 @@ export function SavedJobsScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -72,6 +54,8 @@ export function SavedJobsScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
 
   return (
     <ScreenShell>

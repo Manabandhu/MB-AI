@@ -65,6 +65,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Immigration fallback cleanup: removed `immigrationFallbacks.ts` and inline demo fixtures across all 10 immigration screens in favor of backend API endpoints, loading states, and responsive empty/error states.
 - Rooms fallback cleanup: deleted `roomsFallbacks.ts`, removed `fallbackDetail` from `RoomDetailScreen` in favor of loading/error states, and removed `defaultSavedRooms` from `RoomFavoritesScreen` in favor of live favorites query.
 - Rides fallback cleanup: deleted `ridesFallbacks.ts` in favor of live Supabase carpool queries, error handling, and responsive empty states.
+- Jobs fallback cleanup: deleted `jobsFallbacks.ts` and removed inline fallbacks from `JobsSearchScreen` and `SavedJobsScreen` in favor of backend API endpoints and empty/error states.
 
 
 

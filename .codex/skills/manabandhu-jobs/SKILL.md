@@ -37,7 +37,7 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 
 ## Demo Fixtures
 
-- `frontend/src/modules/jobs/jobsFallbacks.ts` - demo fixtures for all jobs screens
+- Frontend fallbacks removed in favor of backend API endpoints and loading/empty/error states.
 
 ## State Patterns
 
@@ -60,9 +60,9 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 ## Implementation Notes for Expo React Native
 
 - Route files in `frontend/src/app/jobs/` are thin wrappers
-- `JobsScreen` uses `useQuery` with fallback data from `jobsFallbacks.ts`
+- `JobsScreen` uses `useQuery` with backend API data
 - `FeatureScreen` provides adaptive catalog/list layout
-- Job details screen uses inline API fetch with fallback
+- Job details screen uses live API query with error and loading states
 - Post job form is a placeholder pending full backend schema
 
 ## Accessibility and Responsive Behavior Rules
@@ -75,3 +75,4 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - Safe area insets always respected
 
 - Recent implementation: Created Stitch MCP mobile and responsive designs (`6a09e96bf13b46e08ba1095d8dbb294d` for Discovery and `fb5972ed58e147c6bfe599525567de6f` for Job Details & Referral Application). Replaced placeholder with live PostgreSQL/Supabase tech jobs feed (`/api/v1/jobs`), responsive mobile bottom-sheet and desktop dialog modals for filtering and hub selection, verified corporate internal referrer spotlights, and interactive referral request workflow. Allowed public unauthenticated job discovery.
+- Fallback cleanup: deleted `jobsFallbacks.ts` and removed inline fallbacks from `JobsSearchScreen` and `SavedJobsScreen` in favor of backend API endpoints and empty/error states.

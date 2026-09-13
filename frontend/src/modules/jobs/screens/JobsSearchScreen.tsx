@@ -38,32 +38,6 @@ export function JobsSearchScreen() {
     },
   });
 
-  const fallback: JobsSearchContent = {
-    eyebrow: 'Jobs',
-    title: 'Search jobs',
-    subtitle: 'Find job opportunities matching your skills.',
-    jobs: [
-      {
-        id: '1',
-        title: 'Software Engineer',
-        body: 'Remote · Full-time',
-        meta: '$120k',
-        route: '/jobs/1',
-      },
-      { id: '2', title: 'Data Analyst', body: 'Hybrid · Contract', meta: '$85k', route: '/jobs/2' },
-    ],
-  };
-
-  const content = data ?? fallback;
-  const filtered = useMemo(() => {
-    if (!query.trim()) return content.jobs;
-    return content.jobs.filter(
-      (j) =>
-        j.title.toLowerCase().includes(query.toLowerCase()) ||
-        j.body.toLowerCase().includes(query.toLowerCase()),
-    );
-  }, [content.jobs, query]);
-
   if (isLoading) {
     return (
       <ScreenShell>
@@ -72,7 +46,7 @@ export function JobsSearchScreen() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <ScreenShell>
         <ErrorState
@@ -84,6 +58,16 @@ export function JobsSearchScreen() {
       </ScreenShell>
     );
   }
+
+  const content = data;
+  const filtered = useMemo(() => {
+    if (!query.trim()) return content.jobs;
+    return content.jobs.filter(
+      (j) =>
+        j.title.toLowerCase().includes(query.toLowerCase()) ||
+        j.body.toLowerCase().includes(query.toLowerCase()),
+    );
+  }, [content.jobs, query]);
 
   return (
     <ScreenShell>
