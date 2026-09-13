@@ -172,6 +172,7 @@ export function SearchScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={s.categoryBarScroll}
           contentContainerStyle={s.categoryBar}
         >
           {CATEGORIES.map((cat) => {
@@ -331,10 +332,15 @@ const s = StyleSheet.create({
     color: C.inkMuted,
     fontWeight: '700',
   },
+  categoryBarScroll: {
+    flexGrow: 0,
+    marginBottom: 8,
+  },
   categoryBar: {
     paddingHorizontal: 16,
     gap: 8,
-    paddingBottom: 10,
+    alignItems: 'center',
+    flexDirection: 'row',
   },
   catChip: {
     backgroundColor: C.cardBg,

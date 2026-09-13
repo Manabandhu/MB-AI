@@ -76,6 +76,7 @@ export function SavedScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={s.tabBarScroll}
           contentContainerStyle={s.tabBar}
         >
           {TABS.map((tab) => {
@@ -242,10 +243,15 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: C.inkMuted,
   },
+  tabBarScroll: {
+    flexGrow: 0,
+    marginBottom: 8,
+  },
   tabBar: {
     paddingHorizontal: 16,
     gap: 8,
-    paddingBottom: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
   },
   tabChip: {
     backgroundColor: C.cardBg,

@@ -49,6 +49,7 @@ const EVENT_CATEGORIES = [
 export default function EventsHomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const isCompact = width < 360;
   const isDesktop = width >= 768;
   const { session } = useAuthStore();
 
@@ -131,26 +132,30 @@ export default function EventsHomeScreen() {
   return (
     <View style={s.container}>
       {/* Top Header */}
-      <View style={s.topBar}>
-        <View style={s.topBarLeft}>
-          <View style={s.brandBadge}>
-            <Text style={s.brandBadgeEmoji}>🪔</Text>
+      <View style={[s.topBar, isCompact && s.topBarCompact]}>
+        <View style={[s.topBarLeft, isCompact && s.topBarLeftCompact]}>
+          <View style={[s.brandBadge, isCompact && s.brandBadgeCompact]}>
+            <Text style={[s.brandBadgeEmoji, isCompact && s.brandBadgeEmojiCompact]}>🪔</Text>
           </View>
-          <View>
+          <View style={s.titleTextWrap}>
             <View style={s.titleRow}>
-              <Text style={s.appTitle}>ManaBandhu</Text>
-              <View style={s.categoryPill}>
-                <Text style={s.categoryPillText}>EVENTS & MEETUPS</Text>
-              </View>
+              <Text style={[s.appTitle, isCompact && s.appTitleCompact]}>ManaBandhu</Text>
+              {!isCompact && (
+                <View style={s.categoryPill}>
+                  <Text style={s.categoryPillText}>EVENTS</Text>
+                </View>
+              )}
             </View>
-            <Text style={s.subtitleText}>Austin & Central TX · {rawEvents.length} Upcoming Events</Text>
+            <Text style={s.subtitleText} numberOfLines={1}>
+              {isCompact ? `${rawEvents.length} Events` : `Austin & Central TX · ${rawEvents.length} Events`}
+            </Text>
           </View>
         </View>
 
-        <View style={s.topBarRight}>
+        <View style={[s.topBarRight, isCompact && s.topBarRightCompact]}>
           <Pressable
             onPress={() => router.push('/events/saved' as any)}
-            style={s.iconButton}
+            style={[s.iconButton, isCompact && s.iconButtonCompact]}
             accessibilityLabel="Saved Events"
           >
             <Text style={s.iconButtonEmoji}>🔖</Text>
@@ -168,8 +173,8 @@ export default function EventsHomeScreen() {
             }}
             style={s.hostButton}
           >
-            <AppIcon name="plus" size={16} color={colors.canvas} />
-            <Text style={s.hostButtonText}>Host Event</Text>
+            <AppIcon name="plus" size={14} color={colors.canvas} />
+            <Text style={s.hostButtonText}>Host</Text>
           </Pressable>
         </View>
       </View>
@@ -373,17 +378,20 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: sp.lg,
+    paddingHorizontal: 12,
     paddingTop: sp.md,
     paddingBottom: sp.md,
     backgroundColor: colors.canvas,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
+    gap: 8,
   },
   topBarLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: sp.md,
+    gap: 8,
+    minWidth: 0,
   },
   brandBadge: {
     width: 44,
@@ -430,11 +438,12 @@ const s = StyleSheet.create({
   topBarRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: sp.sm,
+    gap: 6,
+    flexShrink: 0,
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: radius.pill,
     backgroundColor: colors.canvasMuted,
     alignItems: 'center',
@@ -442,7 +451,7 @@ const s = StyleSheet.create({
     position: 'relative',
   },
   iconButtonEmoji: {
-    fontSize: 18,
+    fontSize: 16,
   },
   savedBadge: {
     position: 'absolute',
@@ -464,16 +473,54 @@ const s = StyleSheet.create({
   hostButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     backgroundColor: colors.accentBrand,
-    paddingHorizontal: sp.md,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: radius.pill,
+    flexShrink: 0,
+  },
+  hostButtonCompact: {
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    gap: 4,
   },
   hostButtonText: {
     color: colors.canvas,
     fontSize: 13,
     fontWeight: '700',
+  },
+  hostButtonTextCompact: {
+    fontSize: 11,
+  },
+  topBarCompact: {
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  topBarLeftCompact: {
+    gap: 8,
+  },
+  brandBadgeCompact: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+  },
+  brandBadgeEmojiCompact: {
+    fontSize: 18,
+  },
+  titleTextWrap: {
+    flexShrink: 1,
+  },
+  appTitleCompact: {
+    fontSize: 15,
+  },
+  topBarRightCompact: {
+    gap: 6,
+  },
+  iconButtonCompact: {
+    width: 34,
+    height: 34,
   },
   scrollContent: {
     padding: sp.lg,

@@ -24,5 +24,5 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 - Recent inbox fallback fix: `NotificationsInboxScreen` `useQuery` now uses direct API query and displays standard `EmptyState` when inbox is clear, removing `fallbackNotifications`.
 - Notification Detail & Settings wiring: `NotificationDetailScreen` is wired to `getNotificationDetail` with `LoadingState` and `ErrorState`; `NotificationSettingsScreen` is wired to `getNotificationSettings`.
-- Notifications Inbox Stitch overhaul: modernized `NotificationsInboxScreen.tsx` with premium Stitch notification cards, unread saffron indicator badges, category filter tabs ("All", "Unread"), contextual category vector icons, search input, and direct navigation to notification details and settings.
+- Notifications Inbox Stitch overhaul: modernized `NotificationsInboxScreen.tsx` with premium Stitch notification cards, unread saffron indicator badges, category filter tabs ("All", "Unread"), contextual category vector icons, search input, and direct navigation to notification details and settings; added default notification fallbacks and `isCompact` support for narrow screens.
 

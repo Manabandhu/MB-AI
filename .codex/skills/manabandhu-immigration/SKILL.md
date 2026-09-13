@@ -103,4 +103,4 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 
 - Recent backend fixes: added missing `import com.manabandhu.backend.foundation.CatalogScreenContent;` to `ImmigrationController` so the `@GetMapping("/screens/{screenId}")` endpoint compiles against the `ImmigrationContentService` switch.
-- Fallback cleanup: removed `immigrationFallbacks.ts` and inline fallbacks across all 10 immigration screens in favor of backend API endpoints, loading states, and error/empty states.
+- Fallback cleanup: removed `immigrationFallbacks.ts` and inline fallbacks across all 10 immigration screens in favor of backend API endpoints, loading states, and error/empty states; added resilient `DEFAULT_IMMIGRATION_DATA` fallback to `ImmigrationScreen` to avoid mobile network blockages; updated resource detail route with `useLocalSearchParams`.

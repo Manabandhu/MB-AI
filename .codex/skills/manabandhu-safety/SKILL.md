@@ -77,5 +77,5 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 - Fallback cleanup: deleted `safetyFallbacks.ts` and removed inline fallbacks from `SafetyCenterScreen`, `BlockedUsersScreen`, `ReportsScreen`, and `TrustedContactsScreen` in favor of live backend endpoints, loading states, and error/empty states.
-- Safety Center Stitch overhaul: modernized `SafetyCenterScreen.tsx` with premium community safety shield UI, emergency SOS quick action bar (one-touch 911 and 988 crisis line), safety tools navigation cards (Trusted Contacts, Safety Reports, Blocked Members), community verification standards, and dynamic metrics.
+- Safety Center Stitch overhaul: modernized `SafetyCenterScreen.tsx` with premium community safety shield UI, emergency SOS quick action bar (one-touch 911 and 988 crisis line), safety tools navigation cards (Trusted Contacts, Safety Reports, Blocked Members), community verification standards, and dynamic metrics; added resilient `DEFAULT_SAFETY_DATA` fallback and `isCompact` adaptations for narrow foldable cover screens.
 

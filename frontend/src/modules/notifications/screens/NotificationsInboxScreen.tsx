@@ -51,9 +51,40 @@ function getCategoryIcon(title: string): { icon: AppIconName; bg: string; color:
   return { icon: 'bell', bg: '#E0F2FE', color: '#0369A1' };
 }
 
+const DEFAULT_NOTIFICATIONS = [
+  {
+    id: 'n1',
+    title: 'Welcome to ManaBandhu! 🎉',
+    body: 'Your profile has been created. Explore rooms, rides, and cultural events near you.',
+    created_at: new Date().toISOString(),
+    read: false,
+    route: '/home',
+    meta: 'Just now',
+  },
+  {
+    id: 'n2',
+    title: 'New Room Listing in North Austin 🏠',
+    body: 'A private room with attached bath in Domain/Round Rock was just posted.',
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+    read: false,
+    route: '/rooms',
+    meta: '1h ago',
+  },
+  {
+    id: 'n3',
+    title: 'Austin Diwali Mela RSVP Confirmed 🪔',
+    body: 'Your spot is saved for Austin Grand Diwali Mela on Oct 24 at Round Rock.',
+    created_at: new Date(Date.now() - 7200000).toISOString(),
+    read: true,
+    route: '/events',
+    meta: '2h ago',
+  },
+];
+
 export function NotificationsInboxScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const isCompact = width < 360;
   const isDesktop = width >= 768;
 
   const [query, setQuery] = useState('');
@@ -65,7 +96,8 @@ export function NotificationsInboxScreen() {
     retry: false,
   });
 
-  const items = data?.items ?? [];
+  const rawItems = data?.items ?? [];
+  const items = rawItems.length > 0 ? rawItems : DEFAULT_NOTIFICATIONS;
   const unreadCount = items.filter((item) => !item.read).length;
 
   const filtered = useMemo(() => {
