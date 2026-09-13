@@ -164,10 +164,10 @@ const quickActions: { icon: AppIconName; label: string; route: string; bg: strin
 ];
 
 const liveStats = [
-  { label: '12.4K Verified Members', color: '#00696b', bg: 'rgba(0,105,107,0.08)' },
-  { label: '847 Active Rooms', color: '#431ebe', bg: 'rgba(67,30,190,0.07)' },
-  { label: '2.1K Carpools', color: '#ff7e33', bg: 'rgba(255,126,51,0.10)' },
-  { label: '580 Open Jobs', color: '#1a8a5c', bg: '#e2f9ef' },
+  { label: '12.4K Verified Members', color: '#00696b', bg: 'rgba(0,105,107,0.08)', route: '/community' },
+  { label: '847 Active Rooms', color: '#431ebe', bg: 'rgba(67,30,190,0.07)', route: '/rooms' },
+  { label: '2.1K Carpools', color: '#ff7e33', bg: 'rgba(255,126,51,0.10)', route: '/rides' },
+  { label: '580 Open Jobs', color: '#1a8a5c', bg: '#e2f9ef', route: '/jobs' },
 ];
 
 const sampleRooms = [
@@ -195,15 +195,26 @@ export function HomeShell({ displayName, isDesktop }: { data: HomeShellData; dis
     <>
       <View style={s.greetRow}>
         <Text style={s.greetText}>{greeting}, {displayName.split(' ')[0]} 👋</Text>
-        <View style={s.locationChip}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Austin TX Rooms"
+          onPress={() => router.push('/rooms' as Href)}
+          style={s.locationChip}
+        >
           <AppIcon color={colors.appPrimary} name="map" size={12} />
-          <Text style={s.locationText}>Austin, TX</Text>
-        </View>
+          <Text style={s.locationText}>Austin, TX · 847 Rooms</Text>
+          <AppIcon color={colors.appPrimary} name="chevron-right" size={10} />
+        </Pressable>
       </View>
 
-      <Pressable accessibilityRole="search" onPress={() => router.push('/search')} style={s.searchBar}>
+      <Pressable
+        accessibilityRole="search"
+        accessibilityLabel="Search rooms, flatmates, rides"
+        onPress={() => router.push('/rooms' as Href)}
+        style={s.searchBar}
+      >
         <AppIcon color={colors.muted} name="search" size={18} />
-        <Text style={s.searchPlaceholder}>Search rooms, rides, jobs...</Text>
+        <Text style={s.searchPlaceholder}>Austin, TX · 847 rooms, flatmates, rides...</Text>
       </Pressable>
 
       <View style={[s.qaGrid, isDesktop && s.qaGridDesktop]}>
@@ -223,10 +234,14 @@ export function HomeShell({ displayName, isDesktop }: { data: HomeShellData; dis
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillRow}>
         {liveStats.map((stat) => (
-          <View key={stat.label} style={[s.statPill, { backgroundColor: stat.bg }]}>
+          <Pressable
+            key={stat.label}
+            onPress={() => router.push(stat.route as Href)}
+            style={[s.statPill, { backgroundColor: stat.bg }]}
+          >
             <View style={[s.statDot, { backgroundColor: stat.color }]} />
             <Text style={[s.statPillText, { color: stat.color }]}>{stat.label}</Text>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
 

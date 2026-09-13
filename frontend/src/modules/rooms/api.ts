@@ -24,7 +24,13 @@ export async function listRoomListings(
   if (params.location) query.set('location', params.location);
   if (params.roomType) query.set('roomType', params.roomType);
   const suffix = query.toString() ? `?${query.toString()}` : '';
-  return parseJsonOrThrow(await apiFetch(`/api/v1/rooms/listings${suffix}`), 'List room listings');
+  const data = await parseJsonOrThrow<any>(
+    await apiFetch(`/api/v1/rooms/listings${suffix}`),
+    'List room listings',
+  );
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.content)) return data.content;
+  return [];
 }
 
 export async function getRoomDetail(roomId: string): Promise<RoomListing> {
