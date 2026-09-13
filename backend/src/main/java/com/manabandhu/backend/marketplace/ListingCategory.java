@@ -8,8 +8,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @Table(name = "listing_categories")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ListingCategory {
 
     @Id

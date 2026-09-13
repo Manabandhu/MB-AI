@@ -22,7 +22,7 @@ public class Listing {
     @Column(name = "owner_id", nullable = false, updatable = false)
     UUID ownerId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
     ListingCategory category;
 

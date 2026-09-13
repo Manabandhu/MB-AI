@@ -31,5 +31,7 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 - Recent rides endpoint security update: added `/api/v1/rides/offers/**` to public GET endpoints in `SecurityConfig.java` so ride detail and offers can be publicly browsed by unauthenticated users alongside `/api/v1/rides/{rideId}`.
 - Recent jobs security and entity update: added `/api/v1/jobs/**` and `/api/v1/jobs/categories/**` to public GET endpoints in `SecurityConfig.java` to enable frictionless guest discovery. Updated `JobPosting` category relationship to `FetchType.EAGER` and annotated `JobCategory` with `@JsonIgnoreProperties` to ensure clean Jackson serialization without Hibernate lazy initialization exceptions.
 - Recent events security update: added `/api/v1/events` and `/api/v1/events/**` to public GET endpoints in `SecurityConfig.java` so events discovery and details can be browsed without forced authentication.
+- Recent marketplace security and entity update: added `/api/v1/marketplace` and `/api/v1/marketplace/**` to public GET endpoints in `SecurityConfig.java`. Updated `Listing` category relationship to `FetchType.EAGER` and annotated `ListingCategory` with `@JsonIgnoreProperties` to prevent lazy initialization exceptions during public catalog serialization.
+
 
 

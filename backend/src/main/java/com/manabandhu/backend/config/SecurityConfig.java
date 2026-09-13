@@ -63,6 +63,8 @@ public class SecurityConfig {
                 "/api/v1/jobs/categories/**",
                 "/api/v1/events",
                 "/api/v1/events/**",
+                "/api/v1/marketplace",
+                "/api/v1/marketplace/**",
                 "/api/v1/communities",
                 "/api/v1/communities/{id}",
                 "/api/v1/communities/{id}/posts",

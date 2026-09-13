@@ -59,11 +59,10 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
 
 ## Implementation Notes for Expo React Native
 
-- Route files in `frontend/src/app/marketplace/` are thin wrappers
-- `MarketplaceScreen` uses `useQuery` with fallback data from `marketplaceFallbacks.ts`
-- `FeatureScreen` provides adaptive catalog/list layout
-- `ListingDetailsScreen` uses inline API fetch with fallback
-- Sell item form is a placeholder pending full backend schema
+- Route files in `frontend/src/app/marketplace/` are thin wrappers. Unauthenticated guests can freely browse items and view details without forced sign-in redirects.
+- `MarketplaceHomeScreen` integrates Stitch design `5d95554f3ad04b4c825641f92986fe4c`, rendering 2-column product card feeds with live Supabase `listings` data, search, category chips, condition filters, and responsive sort modal.
+- `ListingDetailsScreen` integrates Stitch design `015eb6620ae544bc863d1ef4c7b044a3` with photo carousel, verified seller badges, specification grid, safe meetup tips, and make offer bottom sheet.
+- Backend security allows public GET access to `/api/v1/marketplace` and `/api/v1/marketplace/**`.
 
 ## Accessibility and Responsive Behavior Rules
 
@@ -71,14 +70,11 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
 - All interactive elements have `accessibilityRole` and `accessibilityLabel`
 - Focus ring: 3pt, color: `color.primary`
 - Reduced motion: disable animations when `accessibility.reducedMotion` is true
-- Single column on compact, 2 columns on medium, 3 columns on expanded/wide
+- Single column on compact, 2 columns on medium, 4 columns on expanded/wide desktop
 - Safe area insets always respected
 - Color is not the only indicator of state
 
 ## Current Implementation Status
 
-- **Partial**: Home via `FeatureScreen`, search, categories, saved, and listing details are UI-complete. Sell item screen is a placeholder. Backend listing availability, seller trust, and moderation are pending.
+- **Complete Discovery & Details**: Live Supabase data integration for marketplace listings and categories, responsive card grid with live prices, condition badges, seller verification tags, and make offer negotiation modal.
 
-- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
-
-- Recent fixes: fixed `SellItemScreen` description field to use `react-hook-form` `control.register('description')` instead of local state (form could never validate); fixed `ListingDetailsScreen` "Message seller" to route to `/chat/new` instead of `/marketplace/saved`; refactored `ListingDetailsScreen` to use `useLocalSearchParams` and `apiClient` consistently.
