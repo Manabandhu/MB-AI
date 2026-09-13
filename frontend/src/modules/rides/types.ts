@@ -99,3 +99,31 @@ export type CreateRideRatingInput = {
   comfortRating: number;
   comment?: string;
 };
+
+export type RideOffer = {
+  id: string;
+  driverId: string;
+  originArea: string;
+  destinationArea: string;
+  departureAt: string;
+  seatsTotal: number;
+  seatsAvailable: number;
+  contribution: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  reported: boolean;
+};
+
+export type CreateRideBookingInput = {
+  seatsBooked: number;
+};
+
+export type RideBooking = {
+  id: string;
+  rideId: string;
+  userId: string;
+  seatsBooked: number;
+  status: string;
+  createdAt: string;
+};

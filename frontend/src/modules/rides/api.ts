@@ -6,12 +6,47 @@ import type {
   CreateRideRequestInput,
   OwnerRideListing,
   RideListing,
+  RideOffer,
   RideParticipant,
   RideRating,
   RideRequest,
   RideSeatRequest,
   UpdateRideOfferInput,
 } from './types';
+
+export async function listRideOffers(params?: {
+  origin?: string;
+  destination?: string;
+}): Promise<RideOffer[]> {
+  const query = new URLSearchParams();
+  if (params?.origin) query.set('origin', params.origin);
+  if (params?.destination) query.set('destination', params.destination);
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  const response = await apiFetch(`/api/v1/rides/offers${qs}`);
+  const data = await parseJsonOrThrow<{ content?: RideOffer[] } | RideOffer[]>(
+    response,
+    'Ride offers',
+  );
+  if (Array.isArray(data)) return data;
+  return data.content ?? [];
+}
+
+export async function getRideOffer(rideId: string): Promise<RideOffer> {
+  return parseJsonOrThrow(await apiFetch(`/api/v1/rides/${rideId}`), 'Ride offer');
+}
+
+export async function bookRideSeat(
+  rideId: string,
+  seatsBooked: number,
+): Promise<{ id: string; rideId: string; userId: string; seatsBooked: number; status: string }> {
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/rides/offers/${rideId}/bookings`, {
+      method: 'POST',
+      body: JSON.stringify({ seatsBooked }),
+    }),
+    'Book ride seat',
+  );
+}
 
 export async function getRidesScreen(screenId: string): Promise<CatalogScreenContent> {
   return parseJsonOrThrow(await apiFetch(`/api/v1/rides/screens/${screenId}`), 'Rides screen');
@@ -26,8 +61,19 @@ export async function getRideForOwner(rideId: string): Promise<OwnerRideListing>
 }
 
 export async function createRideOffer(input: CreateRideOfferInput): Promise<OwnerRideListing> {
+  const payload = {
+    originArea: input.pickupArea || (input as any).originArea,
+    destinationArea: input.destination || (input as any).destinationArea,
+    departureAt: input.departureAt && input.departureAt.includes('T')
+      ? input.departureAt
+      : new Date(Date.now() + 86400000).toISOString(),
+    seatsTotal: input.seatsTotal,
+    contribution: typeof input.contribution === 'number'
+      ? `$${input.contribution} / seat`
+      : (input.contribution || '$6 / seat'),
+  };
   return parseJsonOrThrow(
-    await apiFetch('/api/v1/rides', { method: 'POST', body: JSON.stringify(input) }),
+    await apiFetch('/api/v1/rides/offers', { method: 'POST', body: JSON.stringify(payload) }),
     'Create ride offer',
   );
 }

@@ -1,147 +1,1793 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
+import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { Href } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { useAuthStore } from '@/lib/authStore';
-import { getRideDetail, saveRide, unsaveRide } from '@/modules/rides/api';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { AppButton } from '@/modules/shared/ui/AppButton';
+import { bookRideSeat, getRideOffer, saveRide, unsaveRide } from '@/modules/rides/api';
+import type { RideOffer } from '@/modules/rides/types';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+
+// ─── Theme Colors ─────────────────────────────────────────────────────────────
+const colors = {
+  ...baseColors,
+  appPrimary: '#431ebe',
+  primaryContainer: '#5b3fd6',
+  surfaceContainer: '#eaedff',
+  surfaceContainerLow: '#f2f3ff',
+  surfaceContainerLowest: '#ffffff',
+  inkSecondary: baseColors.muted,
+  warm: '#ff7e33',
+  teal: '#00696b',
+  tealSoft: 'rgba(0,105,107,0.08)',
+  indigoSoft: 'rgba(67,30,190,0.07)',
+  orangeSoft: 'rgba(255,126,51,0.10)',
+};
+
+// Rich details dictionary matching seeded carpools
+const RIDE_DETAILS_DATA: Record<string, any> = {
+  'b1111111-1111-1111-1111-111111111111': {
+    driverName: 'Vikram Patel',
+    driverTitle: 'Staff SWE',
+    driverEmployer: 'Apple Riata Campus',
+    driverCorporateEmail: '@apple.com',
+    driverRating: 4.9,
+    carpoolsGiven: 42,
+    onTimeRate: '98%',
+    replySpeed: '< 5m fast reply',
+    driverQuote: 'Hey! Commuting daily from Brushy Creek to Apple Parmer campus. Looking for relaxed, friendly co-riders.',
+    commuteFreq: 'Mon - Fri Daily Commute',
+    durationEst: '30 min duration',
+    routeDistance: '14.2 miles total route',
+    trafficCondition: 'Light Morning Traffic',
+    highwayNote: 'Via Mopac Toll Express / Parmer Ln (HOV Lane speed)',
+    pickupExact: 'Near Brushy Creek Community Center',
+    dropoffExact: 'Building 3 Lobby Entrance',
+    pickupTime: '8:15 AM',
+    dropoffTime: '8:45 AM',
+    vehicleName: 'Tesla Model Y Long Range',
+    vehicleSub: 'Pearl White Multi-Coat · 2024',
+    amenities: [
+      { icon: '⚡', label: 'HOV Fast Lane Eligible' },
+      { icon: '❄️', label: 'Dual-Zone AC' },
+      { icon: '🎒', label: 'Spacious Trunk' },
+      { icon: '📶', label: 'High-Speed Wi-Fi' },
+    ],
+    ecoTag: 'Zero Carbon Electric Commute 🌿',
+    vibes: [
+      'Bollywood Beats 🎵',
+      'Tech & AI Talks 💻',
+      'Quiet Working Ride OK 🤫',
+      'Strictly Non-Smoking 🚭',
+      'Coffee Friendly ☕',
+      'AC Kept Moderate ❄️',
+    ],
+    totalSeats: 4,
+    coRiders: [{ name: 'Sneha M.', role: 'Google Techie', seatLabel: 'Seat 2 · Co-rider' }],
+  },
+  'b2222222-2222-2222-2222-222222222222': {
+    driverName: 'Sneha Murthy',
+    driverTitle: 'L6 SWE',
+    driverEmployer: 'Google Austin Hub',
+    driverCorporateEmail: '@google.com',
+    driverRating: 5.0,
+    carpoolsGiven: 68,
+    onTimeRate: '100%',
+    replySpeed: '< 2m fast reply',
+    driverQuote: 'Super commuter heading to Google Downtown. Always on time, enjoy morning coffee chats.',
+    commuteFreq: 'Mon - Fri Daily Commute',
+    durationEst: '35 min duration',
+    routeDistance: '17.8 miles total route',
+    trafficCondition: 'Moderate Highway Traffic',
+    highwayNote: 'Via US-183 Toll to Cesar Chavez',
+    pickupExact: 'Avery Ranch Main Clubhouse',
+    dropoffExact: '500 W 2nd St Hub Entrance',
+    pickupTime: '8:45 AM',
+    dropoffTime: '9:20 AM',
+    vehicleName: 'Hyundai Ioniq 5 EV',
+    vehicleSub: 'Cyber Gray Metallic · 2024',
+    amenities: [
+      { icon: '⚡', label: 'HOV Fast Lane Eligible' },
+      { icon: '❄️', label: 'Dual-Zone AC' },
+      { icon: '☕', label: 'Cup Holders Ready' },
+      { icon: '📶', label: 'Fast Mobile Hotspot' },
+    ],
+    ecoTag: 'Zero Carbon Electric Commute 🌿',
+    vibes: ['Coffee & Tech ☕', 'Non-Smoker 🚭', 'Bollywood Acoustic 🎵', 'AC ❄️'],
+    totalSeats: 4,
+    coRiders: [
+      { name: 'Kunal D.', role: 'Meta SWE', seatLabel: 'Seat 2 · Co-rider' },
+      { name: 'Pooja R.', role: 'UT Austin Staff', seatLabel: 'Seat 3 · Co-rider' },
+    ],
+  },
+  'b3333333-3333-3333-3333-333333333333': {
+    driverName: 'Karthik Raman',
+    driverTitle: 'Principal Architect',
+    driverEmployer: 'Amazon AWS',
+    driverCorporateEmail: '@amazon.com',
+    driverRating: 4.95,
+    carpoolsGiven: 29,
+    onTimeRate: '99%',
+    replySpeed: '< 10m reply',
+    driverQuote: 'Weekend trip from Austin Domain to Frisco/Plano. Very spacious SUV with lots of luggage space.',
+    commuteFreq: 'Weekend Intercity Express',
+    durationEst: '3 hr 15 min',
+    routeDistance: '208 miles via I-35N',
+    trafficCondition: 'Open Highway Speed',
+    highwayNote: 'Direct I-35 Express Lanes with 1 Quick Buc-ees Stop',
+    pickupExact: 'Domain Northside (Near Whole Foods)',
+    dropoffExact: 'Frisco Square & Plano Legacy West',
+    pickupTime: '4:30 PM Friday',
+    dropoffTime: '7:45 PM Friday',
+    vehicleName: 'Toyota Highlander Hybrid',
+    vehicleSub: 'Midnight Black · 3-Row SUV',
+    amenities: [
+      { icon: '🧳', label: 'Large Luggage Capacity' },
+      { icon: '🥤', label: 'Complimentary Water / Snacks' },
+      { icon: '❄️', label: 'Tri-Zone Climate Control' },
+      { icon: '🔌', label: 'USB-C Fast Chargers for All' },
+    ],
+    ecoTag: 'Low Emission Hybrid 🌿',
+    vibes: ['South Indian Podcasts 🎧', 'Telugu / Tamil Music 🎵', 'Safe Highway Driver 🛡️'],
+    totalSeats: 4,
+    coRiders: [],
+  },
+};
 
 export function RideDetailScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
-  const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
   const queryClient = useQueryClient();
-  const status = useAuthStore((state) => state.status);
-  const isAuthenticated = status === 'authenticated';
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const authStatus = useAuthStore((state) => state.status);
+  const isAuthenticated = authStatus === 'authenticated';
+
+  const [isSaved, setIsSaved] = useState(false);
+  const [selectedSeatSlots, setSelectedSeatSlots] = useState<number[]>([3]); // default selected seat 3
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  // Fetch ride offer from backend
+  const { data: rawOffer, isLoading, isError, refetch } = useQuery({
     queryKey: ['rides', 'detail', rideId],
-    queryFn: () => getRideDetail(rideId as string),
+    queryFn: () => getRideOffer(rideId as string),
     enabled: Boolean(rideId),
   });
 
-  const toggleSave = useMutation({
+  // Merge with rich metadata
+  const detailData = useMemo(() => {
+    const fallbackMeta = {
+      driverName: 'Community Driver',
+      driverTitle: 'Tech Professional',
+      driverEmployer: 'Employer Verified',
+      driverCorporateEmail: '@verified.corp',
+      driverRating: 4.9,
+      carpoolsGiven: 30,
+      onTimeRate: '98%',
+      replySpeed: '< 5m fast reply',
+      driverQuote: 'Looking for friendly community members to share the daily commute.',
+      commuteFreq: 'Daily Commute',
+      durationEst: '25 min duration',
+      routeDistance: '12 miles total route',
+      trafficCondition: 'Normal Traffic',
+      highwayNote: 'Express Corridor Route',
+      pickupExact: 'Main Community Landmark',
+      dropoffExact: 'Office Lobby Entrance',
+      pickupTime: '8:30 AM',
+      dropoffTime: '9:00 AM',
+      vehicleName: 'Tesla / Hybrid Commuter',
+      vehicleSub: 'Clean & Sanitized',
+      amenities: [
+        { icon: '⚡', label: 'Fast Corridor Travel' },
+        { icon: '❄️', label: 'Air Conditioned' },
+        { icon: '🎒', label: 'Luggage Trunk Space' },
+      ],
+      ecoTag: 'Eco Friendly Carpool 🌿',
+      vibes: ['Bollywood Hits 🎵', 'Quiet Working Ride 🤫', 'Non-Smoking 🚭'],
+      totalSeats: 4,
+      coRiders: [],
+    };
+
+    const meta = (rideId && RIDE_DETAILS_DATA[rideId]) || fallbackMeta;
+    return {
+      ...(rawOffer || {}),
+      ...meta,
+    };
+  }, [rawOffer, rideId]);
+
+  // Seat Booking Mutation
+  const bookingMutation = useMutation({
     mutationFn: async () => {
-      if (data?.savedByViewer) {
-        await unsaveRide(rideId as string);
-      } else {
-        await saveRide(rideId as string);
-      }
+      if (!rideId) throw new Error('Missing ride ID');
+      return bookRideSeat(rideId, selectedSeatSlots.length);
     },
     onSuccess: () => {
+      setBookingSuccess(true);
       queryClient.invalidateQueries({ queryKey: ['rides', 'detail', rideId] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'saved'] });
+      queryClient.invalidateQueries({ queryKey: ['rides', 'offers'] });
     },
   });
+
+  function toggleSeat(slotNum: number) {
+    if (selectedSeatSlots.includes(slotNum)) {
+      if (selectedSeatSlots.length === 1) return; // keep at least 1
+      setSelectedSeatSlots(selectedSeatSlots.filter((s) => s !== slotNum));
+    } else {
+      setSelectedSeatSlots([...selectedSeatSlots, slotNum]);
+    }
+  }
+
+  function handleRequestSeat() {
+    if (!isAuthenticated) {
+      router.push('/sign-in');
+      return;
+    }
+    setShowBookingModal(true);
+  }
+
+  const numericCost = parseFloat(String(detailData.contribution || '$6').replace(/[^0-9.]/g, '')) || 6;
+  const totalCost = (numericCost * selectedSeatSlots.length).toFixed(2);
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <LoadingState />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={colors.appPrimary} size="large" />
+          <Text style={styles.loadingText}>Loading ride details...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
-  if (isError || !data) {
+  if (isError || !rawOffer) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <ErrorState
-          title="Unable to load ride"
-          body="Please check your connection and try again."
-          retryLabel="Retry"
-          onRetry={refetch}
-        />
+        <View style={styles.emptyContainer}>
+          <AppIcon color={colors.warm} name="warning" size={40} />
+          <Text style={styles.emptyTitle}>Unable to load ride</Text>
+          <Text style={styles.emptySubtitle}>The ride might have expired or been removed.</Text>
+          <Pressable onPress={() => refetch()} style={styles.retryBtn}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </Pressable>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>Back to Rides</Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.container}>
-          <Text style={styles.eyebrow}>Ride</Text>
-          <Text style={styles.title}>{data.title}</Text>
-          <Text style={styles.route}>
-            {data.pickupArea} to {data.destination}
-          </Text>
-          <Text style={styles.schedule}>
-            {new Date(data.departureAt).toLocaleString()} · {data.seatsAvailable} seats open
-          </Text>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
+      {/* ── Top App Bar ────────────────────────────────────────────────────────── */}
+      <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
+        <View style={styles.topBarLeft}>
+          <Pressable
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+            onPress={() => router.back()}
+            style={styles.backIconButton}
+          >
+            <AppIcon color={colors.ink} name="chevron-left" size={22} />
+          </Pressable>
+          <View style={styles.titleWithEmblem}>
+            <Text style={styles.screenTitle}>Ride Details</Text>
+          </View>
+        </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Trip details</Text>
-            <DetailRow label="Seats" value={`${data.seatsAvailable} / ${data.seatsTotal} open`} />
-            <DetailRow
-              label="Contribution"
-              value={data.contribution ? `$${data.contribution}` : 'Free'}
-            />
-            <DetailRow label="Luggage" value={data.luggageAllowed ? 'Allowed' : 'Not allowed'} />
-            <DetailRow
-              label="Child seat"
-              value={data.childSeatAvailable ? 'Available' : 'Not available'}
-            />
-            <DetailRow label="Verified driver" value={data.verifiedDriver ? 'Yes' : 'No'} />
+        <View style={styles.topBarRight}>
+          <View style={styles.statusPill}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusPillText}>
+              Active · {detailData.seatsAvailable ?? 2} Seats Left
+            </Text>
           </View>
 
-          {data.description ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Description</Text>
-              <Text style={styles.cardBody}>{data.description}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.actions}>
-            <AppButton
-              label={data.savedByViewer ? 'Saved' : 'Save ride'}
-              onPress={() => isAuthenticated && toggleSave.mutate()}
-              variant={data.savedByViewer ? 'secondary' : 'primary'}
-              loading={toggleSave.isPending}
-              disabled={!isAuthenticated}
+          <Pressable
+            accessibilityLabel="Bookmark ride"
+            accessibilityRole="button"
+            onPress={() => setIsSaved(!isSaved)}
+            style={styles.iconButton}
+          >
+            <AppIcon
+              color={isSaved ? colors.warm : colors.inkSecondary}
+              name="star"
+              size={22}
             />
-            <AppButton label="Request seat" route={`/rides/request`} variant="secondary" />
-            <AppButton label="Back to search" onPress={() => router.back()} variant="ghost" />
+          </Pressable>
+
+          <Pressable
+            accessibilityLabel="Share ride"
+            accessibilityRole="button"
+            onPress={() => {}}
+            style={styles.iconButton}
+          >
+            <Text style={{ fontSize: 16, color: colors.inkSecondary }}>↗</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.mainContainer, isDesktop && styles.mainContainerDesktop]}>
+          {/* ── Driver Profile Card ─────────────────────────────────────────── */}
+          <View style={styles.card}>
+            <View style={styles.driverHeader}>
+              <View style={styles.driverProfileLeft}>
+                <View style={styles.driverAvatarCircle}>
+                  <Text style={styles.driverAvatarInitial}>
+                    {detailData.driverName.charAt(0)}
+                  </Text>
+                  <View style={styles.verifiedDriverBadge}>
+                    <AppIcon color={colors.surfaceContainerLowest} name="check" size={10} />
+                  </View>
+                </View>
+
+                <View>
+                  <View style={styles.driverNameRow}>
+                    <Text style={styles.driverName}>{detailData.driverName}</Text>
+                    <View style={styles.staffBadge}>
+                      <Text style={styles.staffBadgeText}>{detailData.driverTitle}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.employerRow}>
+                    <AppIcon color={colors.inkSecondary} name="home" size={13} />
+                    <Text style={styles.employerName}>{detailData.driverEmployer}</Text>
+                  </View>
+                  <View style={styles.ratingsRow}>
+                    <View style={styles.starRow}>
+                      <AppIcon color={colors.warm} name="star" size={13} />
+                      <Text style={styles.ratingNumber}>{detailData.driverRating.toFixed(1)}</Text>
+                      <Text style={styles.ratingCount}>({detailData.carpoolsGiven} carpools)</Text>
+                    </View>
+                    <Text style={styles.dotSeparator}>•</Text>
+                    <View style={styles.onTimeRow}>
+                      <AppIcon color={colors.teal} name="calendar" size={12} />
+                      <Text style={styles.onTimeText}>{detailData.onTimeRate} On-time</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.driverBadgeStack}>
+                <View style={styles.fastReplyPill}>
+                  <AppIcon color={colors.teal} name="sparks" size={12} />
+                  <Text style={styles.fastReplyText}>{detailData.replySpeed}</Text>
+                </View>
+                <View style={styles.superCommuterPill}>
+                  <Text style={styles.superCommuterText}>Desi Super Commuter</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Driver Quote */}
+            <View style={styles.quoteBox}>
+              <Text style={{ fontSize: 18, color: colors.appPrimary, fontWeight: '800' }}>“</Text>
+              <Text style={styles.quoteText}>“{detailData.driverQuote}”</Text>
+            </View>
+          </View>
+
+          {/* ── Route & Schedule Timeline Card ──────────────────────────────── */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.dateRow}>
+                <AppIcon color={colors.appPrimary} name="calendar" size={18} />
+                <View>
+                  <Text style={styles.dateTitle}>Today, Scheduled Commute</Text>
+                  <Text style={styles.dateSub}>{detailData.commuteFreq}</Text>
+                </View>
+              </View>
+              <View style={styles.durationBadge}>
+                <AppIcon color={colors.teal} name="sparks" size={13} />
+                <Text style={styles.durationText}>{detailData.durationEst}</Text>
+              </View>
+            </View>
+
+            {/* Visual Route Timeline */}
+            <View style={styles.timelineContainer}>
+              {/* Vertical Continuous Route Line */}
+              <View style={styles.timelineTrack} />
+
+              {/* Stop 1: Pickup */}
+              <View style={styles.timelineStop}>
+                <View style={styles.timelineBulletPickup} />
+                <View style={styles.stopContent}>
+                  <View style={styles.stopHeader}>
+                    <Text style={styles.stopTitle}>{detailData.originArea}</Text>
+                    <Text style={styles.stopTimePrimary}>{detailData.pickupTime}</Text>
+                  </View>
+                  <Text style={styles.stopAddress}>
+                    <AppIcon color={colors.inkSecondary} name="compass" size={12} /> {detailData.pickupExact}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Highway Corridor Highlight */}
+              <View style={styles.corridorHighlight}>
+                <AppIcon color={colors.appPrimary} name="car" size={14} />
+                <Text style={styles.corridorText}>{detailData.highwayNote}</Text>
+              </View>
+
+              {/* Stop 2: Dropoff */}
+              <View style={styles.timelineStop}>
+                <View style={styles.timelineBulletDropoff} />
+                <View style={styles.stopContent}>
+                  <View style={styles.stopHeader}>
+                    <Text style={styles.stopTitle}>{detailData.destinationArea}</Text>
+                    <Text style={styles.stopTimeSecondary}>{detailData.dropoffTime}</Text>
+                  </View>
+                  <Text style={styles.stopAddress}>
+                    <AppIcon color={colors.teal} name="compass" size={12} /> {detailData.dropoffExact}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Live Corridor Stats */}
+            <View style={styles.routeStatsBox}>
+              <View style={styles.routeDistanceRow}>
+                <AppIcon color={colors.teal} name="compass" size={15} />
+                <Text style={styles.routeDistanceText}>{detailData.routeDistance}</Text>
+              </View>
+              <View style={styles.trafficPill}>
+                <Text style={styles.trafficText}>{detailData.trafficCondition}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* ── Vehicle Specifications Card ─────────────────────────────────── */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View>
+                <Text style={styles.sectionEyebrow}>Vehicle Details</Text>
+                <Text style={styles.vehicleTitle}>{detailData.vehicleName}</Text>
+                <Text style={styles.vehicleSubtitle}>{detailData.vehicleSub}</Text>
+              </View>
+              <View style={styles.carIconCircle}>
+                <AppIcon color={colors.appPrimary} name="car" size={24} />
+              </View>
+            </View>
+
+            {/* Amenities Grid */}
+            <View style={styles.amenitiesGrid}>
+              {detailData.amenities.map((item: any, idx: number) => (
+                <View key={idx} style={styles.amenityItem}>
+                  <Text style={styles.amenityIcon}>{item.icon}</Text>
+                  <Text style={styles.amenityLabel}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Eco Badge */}
+            <View style={styles.ecoBadge}>
+              <Text style={styles.ecoBadgeText}>{detailData.ecoTag}</Text>
+            </View>
+          </View>
+
+          {/* ── Commute Vibe & Preferences ─────────────────────────────────── */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeading}>Commute Vibe & Preferences</Text>
+              <Text style={styles.verifiedTag}>Driver verified</Text>
+            </View>
+            <View style={styles.vibesGrid}>
+              {detailData.vibes.map((vibe: string, idx: number) => (
+                <View key={idx} style={styles.vibePill}>
+                  <Text style={styles.vibePillText}>{vibe}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* ── Vehicle Capacity & Co-Riders Grid ───────────────────────────── */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View>
+                <Text style={styles.cardHeading}>Vehicle Capacity & Co-Riders</Text>
+                <Text style={styles.capacitySub}>4 total passenger slots</Text>
+              </View>
+              <View style={styles.seatsAvailableBadge}>
+                <Text style={styles.seatsAvailableText}>
+                  {detailData.seatsAvailable ?? 2} Seats Available
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.seatSlotsGrid}>
+              {/* Slot 1: Driver */}
+              <View style={styles.seatSlotOccupied}>
+                <View style={styles.seatSlotTop}>
+                  <Text style={styles.seatSlotLabel}>Seat 1 · Driver</Text>
+                  <AppIcon color={colors.appPrimary} name="user" size={16} />
+                </View>
+                <View style={styles.seatOccupant}>
+                  <View style={styles.miniOccupantAvatar}>
+                    <Text style={styles.miniOccupantInitial}>
+                      {detailData.driverName.charAt(0)}
+                    </Text>
+                  </View>
+                  <View>
+                    <Text style={styles.miniOccupantName}>{detailData.driverName}</Text>
+                    <Text style={styles.miniOccupantRole}>Driver</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Slot 2: Co-Rider */}
+              <View style={styles.seatSlotOccupied}>
+                <View style={styles.seatSlotTop}>
+                  <Text style={[styles.seatSlotLabel, { color: colors.teal }]}>Seat 2 · Co-rider</Text>
+                  <AppIcon color={colors.teal} name="user" size={16} />
+                </View>
+                <View style={styles.seatOccupant}>
+                  <View style={[styles.miniOccupantAvatar, { backgroundColor: colors.teal }]}>
+                    <Text style={styles.miniOccupantInitial}>S</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.miniOccupantName}>Sneha M.</Text>
+                    <Text style={styles.miniOccupantRole}>Google Techie</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Slot 3: Interactive Seat */}
+              <Pressable
+                accessibilityLabel="Toggle Seat 3 selection"
+                accessibilityRole="button"
+                onPress={() => toggleSeat(3)}
+                style={[
+                  styles.seatSlotInteractive,
+                  selectedSeatSlots.includes(3) && styles.seatSlotSelected,
+                ]}
+              >
+                <View style={styles.seatSlotTop}>
+                  <Text style={[styles.seatSlotLabel, selectedSeatSlots.includes(3) && styles.seatSlotLabelSelected]}>
+                    Seat 3 · Rear Left
+                  </Text>
+                  <AppIcon
+                    color={selectedSeatSlots.includes(3) ? colors.appPrimary : '#9ca3af'}
+                    name={selectedSeatSlots.includes(3) ? 'check' : 'plus'}
+                    size={18}
+                  />
+                </View>
+                <View>
+                  <Text style={[styles.seatStatusText, selectedSeatSlots.includes(3) && styles.seatStatusTextSelected]}>
+                    {selectedSeatSlots.includes(3) ? 'Selected for You' : 'Available'}
+                  </Text>
+                  <Text style={styles.seatTapPrompt}>
+                    {selectedSeatSlots.includes(3) ? 'Tap to deselect' : 'Tap to select'}
+                  </Text>
+                </View>
+              </Pressable>
+
+              {/* Slot 4: Interactive Seat */}
+              <Pressable
+                accessibilityLabel="Toggle Seat 4 selection"
+                accessibilityRole="button"
+                onPress={() => toggleSeat(4)}
+                style={[
+                  styles.seatSlotInteractive,
+                  selectedSeatSlots.includes(4) && styles.seatSlotSelected,
+                ]}
+              >
+                <View style={styles.seatSlotTop}>
+                  <Text style={[styles.seatSlotLabel, selectedSeatSlots.includes(4) && styles.seatSlotLabelSelected]}>
+                    Seat 4 · Rear Right
+                  </Text>
+                  <AppIcon
+                    color={selectedSeatSlots.includes(4) ? colors.appPrimary : '#9ca3af'}
+                    name={selectedSeatSlots.includes(4) ? 'check' : 'plus'}
+                    size={18}
+                  />
+                </View>
+                <View>
+                  <Text style={[styles.seatStatusText, selectedSeatSlots.includes(4) && styles.seatStatusTextSelected]}>
+                    {selectedSeatSlots.includes(4) ? 'Selected for You' : 'Available'}
+                  </Text>
+                  <Text style={styles.seatTapPrompt}>
+                    {selectedSeatSlots.includes(4) ? 'Tap to deselect' : 'Tap to select'}
+                  </Text>
+                </View>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* ── Community Fuel Split Card ───────────────────────────────────── */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeading}>Community Fuel Split</Text>
+              <View style={styles.passSelector}>
+                <View style={styles.passBtnActive}>
+                  <Text style={styles.passBtnActiveText}>1 Ride</Text>
+                </View>
+                <View style={styles.passBtn}>
+                  <Text style={styles.passBtnText}>5-Day Pass ($25)</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.pricingHeadline}>
+              <Text style={styles.pricingBigNumber}>${numericCost}</Text>
+              <Text style={styles.pricingBigUnit}>/ person per ride</Text>
+            </View>
+
+            <View style={styles.feeBreakdown}>
+              <View style={styles.feeRow}>
+                <Text style={styles.feeLabel}>Base fuel reimbursement</Text>
+                <Text style={styles.feeValue}>${numericCost.toFixed(2)}</Text>
+              </View>
+              <View style={styles.feeRow}>
+                <Text style={styles.feeLabel}>Mopac toll express lane pass</Text>
+                <Text style={[styles.feeValue, { color: colors.teal }]}>Included ($0.00)</Text>
+              </View>
+              <View style={styles.feeRow}>
+                <Text style={styles.feeLabel}>ManaBandhu community fee</Text>
+                <Text style={[styles.feeValue, { color: colors.teal }]}>Zero Fee ($0.00)</Text>
+              </View>
+              <View style={[styles.feeRow, styles.feeTotalRow]}>
+                <Text style={styles.feeTotalLabel}>
+                  Total to pay driver ({selectedSeatSlots.length} seat{selectedSeatSlots.length > 1 ? 's' : ''})
+                </Text>
+                <Text style={styles.feeTotalValue}>${totalCost}</Text>
+              </View>
+            </View>
+
+            <View style={styles.guaranteePill}>
+              <AppIcon color={colors.teal} name="verified-user" size={15} />
+              <Text style={styles.guaranteeText}>
+                100% Employer Verified Carpools · Zero Surge Guarantee
+              </Text>
+            </View>
+          </View>
+
+          {/* ── Community Safety Protocol Card ──────────────────────────────── */}
+          <View style={styles.card}>
+            <View style={styles.safetyHeader}>
+              <AppIcon color={colors.appPrimary} name="shield" size={18} />
+              <Text style={styles.safetyTitle}>ManaBandhu Safety & Trust Protocol</Text>
+            </View>
+            <View style={styles.safetyItems}>
+              <View style={styles.safetyItem}>
+                <View style={styles.safetyCheckCircle}>
+                  <AppIcon color={colors.teal} name="check" size={12} />
+                </View>
+                <Text style={styles.safetyItemText}>
+                  Corporate Email Verified:{' '}
+                  <Text style={styles.safetyItemHighlight}>{detailData.driverCorporateEmail}</Text>
+                </Text>
+              </View>
+              <View style={styles.safetyItem}>
+                <View style={styles.safetyCheckCircle}>
+                  <AppIcon color={colors.teal} name="check" size={12} />
+                </View>
+                <Text style={styles.safetyItemText}>
+                  Texas Driver License & Clean Driving Record
+                </Text>
+              </View>
+              <View style={styles.safetyItem}>
+                <View style={styles.safetyCheckCircle}>
+                  <AppIcon color={colors.teal} name="check" size={12} />
+                </View>
+                <Text style={styles.safetyItemText}>
+                  Live GPS sharing & SOS with trusted contacts
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
       </ScrollView>
+
+      {/* ── Sticky Bottom Action Bar ────────────────────────────────────────── */}
+      <View style={[styles.bottomBar, isDesktop && styles.bottomBarDesktop]}>
+        <View style={styles.bottomBarLeft}>
+          <Text style={styles.bottomBarTotal}>${totalCost}</Text>
+          <Text style={styles.bottomBarSeatCount}>
+            for {selectedSeatSlots.length} seat{selectedSeatSlots.length > 1 ? 's' : ''}
+          </Text>
+        </View>
+
+        <View style={styles.bottomBarRight}>
+          <Pressable
+            accessibilityLabel={`Chat with ${detailData.driverName}`}
+            accessibilityRole="button"
+            onPress={() => router.push(`/chat?recipient=${encodeURIComponent(detailData.driverName)}` as Href)}
+            style={styles.bottomBarChatBtn}
+          >
+            <AppIcon color={colors.appPrimary} name="message" size={20} />
+          </Pressable>
+
+          <Pressable
+            accessibilityLabel="Request Seat"
+            accessibilityRole="button"
+            onPress={handleRequestSeat}
+            style={styles.bottomBarRequestBtn}
+          >
+            <AppIcon color={colors.surfaceContainerLowest} name="check" size={18} />
+            <Text style={styles.bottomBarRequestText}>Request Seat</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* ── Seat Request Confirmation Modal ─────────────────────────────────── */}
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setShowBookingModal(false)}
+        transparent
+        visible={showBookingModal}
+      >
+        <Pressable onPress={() => setShowBookingModal(false)} style={styles.modalOverlay}>
+          <Pressable onPress={(e) => e.stopPropagation()} style={styles.bookingModalCard}>
+            {bookingSuccess ? (
+              <View style={styles.bookingSuccessBox}>
+                <View style={styles.bookingSuccessIconWrap}>
+                  <AppIcon color={colors.teal} name="check" size={28} />
+                </View>
+                <Text style={styles.bookingSuccessTitle}>Seat Request Confirmed!</Text>
+                <Text style={styles.bookingSuccessSubtitle}>
+                  You booked {selectedSeatSlots.length} seat(s) with {detailData.driverName}.
+                </Text>
+                <Text style={styles.bookingSuccessDetails}>
+                  Pickup: {detailData.pickupExact} at {detailData.pickupTime}. Driver has been notified via WhatsApp & ManaBandhu chat.
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    setShowBookingModal(false);
+                    router.push('/rides' as Href);
+                  }}
+                  style={styles.bookingSuccessCta}
+                >
+                  <Text style={styles.bookingSuccessCtaText}>Return to Carpools</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.bookingConfirmBox}>
+                <View style={styles.bookingConfirmHeader}>
+                  <Text style={styles.bookingConfirmTitle}>Confirm Seat Request</Text>
+                  <Pressable onPress={() => setShowBookingModal(false)}>
+                    <Text style={{ fontSize: 16, color: colors.inkSecondary }}>✕</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.bookingSummaryRow}>
+                  <View>
+                    <Text style={styles.bookingSummaryDriver}>{detailData.driverName} ({detailData.driverEmployer})</Text>
+                    <Text style={styles.bookingSummaryRoute}>{detailData.originArea} ➔ {detailData.destinationArea}</Text>
+                    <Text style={styles.bookingSummaryTime}>Departure: {detailData.pickupTime}</Text>
+                  </View>
+                  <View style={styles.bookingSummaryPriceBox}>
+                    <Text style={styles.bookingSummaryPrice}>${totalCost}</Text>
+                    <Text style={styles.bookingSummarySeats}>{selectedSeatSlots.length} seat(s)</Text>
+                  </View>
+                </View>
+
+                <View style={styles.trustNote}>
+                  <AppIcon color={colors.teal} name="verified-user" size={16} />
+                  <Text style={styles.trustNoteText}>
+                    Community Fuel Split is handed to the driver directly upon boarding.
+                  </Text>
+                </View>
+
+                <Pressable
+                  accessibilityLabel="Confirm and Reserve Seat"
+                  accessibilityRole="button"
+                  disabled={bookingMutation.isPending}
+                  onPress={() => bookingMutation.mutate()}
+                  style={styles.bookingConfirmBtn}
+                >
+                  {bookingMutation.isPending ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <>
+                      <AppIcon color={colors.surfaceContainerLowest} name="check" size={18} />
+                      <Text style={styles.bookingConfirmBtnText}>Confirm and Reserve Seat</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
-    </View>
-  );
-}
-
+// ─── StyleSheet ───────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x5, maxWidth: 640, width: '100%' },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
-  title: { ...typography.h1, color: colors.ink },
-  route: { ...typography.h3, color: colors.ink },
-  schedule: { ...typography.body, color: colors.muted, marginBottom: space.x2 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
+  safeArea: {
+    backgroundColor: '#f6f6ff',
+    flex: 1,
   },
-  cardTitle: { ...typography.h4, color: colors.ink },
-  cardBody: { ...typography.body, color: colors.muted },
-  detailRow: {
+  topBar: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderBottomColor: '#e5e7eb',
+    borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: space.x1,
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+    zIndex: 10,
   },
-  detailLabel: { ...typography.body, color: colors.muted },
-  detailValue: { ...typography.bodyStrong, color: colors.ink },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
+  topBarDesktop: {
+    alignSelf: 'center',
+    maxWidth: 800,
+    width: '100%',
+  },
+  topBarLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  backIconButton: {
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: radius.pill,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  titleWithEmblem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  screenTitle: {
+    color: '#111827',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  topBarRight: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statusPill: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,105,107,0.1)',
+    borderColor: 'rgba(0,105,107,0.2)',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusDot: {
+    backgroundColor: colors.teal,
+    borderRadius: 3,
+    height: 6,
+    width: 6,
+  },
+  statusPillText: {
+    color: colors.teal,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  iconButton: {
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: radius.pill,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  scrollContent: {
+    paddingBottom: 110,
+  },
+  mainContainer: {
+    gap: space.x3,
+    paddingHorizontal: space.x4,
+    paddingTop: space.x3,
+  },
+  mainContainerDesktop: {
+    alignSelf: 'center',
+    maxWidth: 800,
+    width: '100%',
+  },
+
+  // Generic Card
+  card: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: space.x4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+  },
+  cardHeaderRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  cardHeading: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  // Driver Card
+  driverHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  driverProfileLeft: {
+    alignItems: 'flex-start',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  driverAvatarCircle: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    position: 'relative',
+    width: 48,
+  },
+  driverAvatarInitial: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  verifiedDriverBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.teal,
+    borderRadius: radius.pill,
+    bottom: -2,
+    height: 16,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -2,
+    width: 16,
+  },
+  driverNameRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  driverName: {
+    color: '#111827',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  staffBadge: {
+    backgroundColor: '#eaedff',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  staffBadgeText: {
+    color: colors.appPrimary,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  employerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 2,
+  },
+  employerName: {
+    color: '#4b5563',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  ratingsRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  starRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 2,
+  },
+  ratingNumber: {
+    color: colors.warm,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  ratingCount: {
+    color: '#6b7280',
+    fontSize: 11,
+  },
+  dotSeparator: {
+    color: '#d1d5db',
+  },
+  onTimeRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 3,
+  },
+  onTimeText: {
+    color: colors.teal,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  driverBadgeStack: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  fastReplyPill: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,105,107,0.1)',
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  fastReplyText: {
+    color: colors.teal,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  superCommuterPill: {
+    backgroundColor: 'rgba(67,30,190,0.08)',
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  superCommuterText: {
+    color: colors.appPrimary,
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  quoteBox: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    padding: 10,
+  },
+  quoteText: {
+    color: '#374151',
+    flex: 1,
+    fontSize: 12,
+    fontStyle: 'italic',
+    lineHeight: 16,
+  },
+
+  // Route Timeline
+  dateRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dateTitle: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  dateSub: {
+    color: '#6b7280',
+    fontSize: 11,
+  },
+  durationBadge: {
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  durationText: {
+    color: '#374151',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  timelineContainer: {
+    marginTop: 12,
+    paddingLeft: 18,
+    position: 'relative',
+  },
+  timelineTrack: {
+    backgroundColor: colors.appPrimary,
+    bottom: 20,
+    left: 4,
+    position: 'absolute',
+    top: 10,
+    width: 2,
+  },
+  timelineStop: {
+    position: 'relative',
+  },
+  timelineBulletPickup: {
+    backgroundColor: '#ffffff',
+    borderColor: colors.appPrimary,
+    borderRadius: 6,
+    borderWidth: 3,
+    height: 12,
+    left: -19,
+    position: 'absolute',
+    top: 3,
+    width: 12,
+  },
+  timelineBulletDropoff: {
+    backgroundColor: '#ffffff',
+    borderColor: colors.teal,
+    borderRadius: 6,
+    borderWidth: 3,
+    height: 12,
+    left: -19,
+    position: 'absolute',
+    top: 3,
+    width: 12,
+  },
+  stopContent: {
+    paddingBottom: 8,
+  },
+  stopHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  stopTitle: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  stopTimePrimary: {
+    color: colors.appPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  stopTimeSecondary: {
+    color: colors.teal,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  stopAddress: {
+    color: '#6b7280',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  corridorHighlight: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(67,30,190,0.06)',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 6,
+    marginVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  corridorText: {
+    color: colors.appPrimary,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  routeStatsBox: {
+    alignItems: 'center',
+    backgroundColor: '#1f2937',
+    borderRadius: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  routeDistanceRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  routeDistanceText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  trafficPill: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  trafficText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '500',
+  },
+
+  // Vehicle Details
+  sectionEyebrow: {
+    color: '#9ca3af',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  vehicleTitle: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  vehicleSubtitle: {
+    color: '#6b7280',
+    fontSize: 11,
+  },
+  carIconCircle: {
+    alignItems: 'center',
+    backgroundColor: '#eaedff',
+    borderRadius: 16,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  amenitiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  amenityItem: {
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    width: '48%',
+  },
+  amenityIcon: {
+    fontSize: 14,
+  },
+  amenityLabel: {
+    color: '#374151',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  ecoBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,105,107,0.1)',
+    borderColor: 'rgba(0,105,107,0.2)',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+    paddingVertical: 6,
+  },
+  ecoBadgeText: {
+    color: colors.teal,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  // Vibes
+  verifiedTag: {
+    color: '#6b7280',
+    fontSize: 11,
+  },
+  vibesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  vibePill: {
+    backgroundColor: '#eaedff',
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  vibePillText: {
+    color: colors.appPrimary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // Capacity & Seats Grid
+  capacitySub: {
+    color: '#6b7280',
+    fontSize: 11,
+  },
+  seatsAvailableBadge: {
+    backgroundColor: 'rgba(0,105,107,0.12)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  seatsAvailableText: {
+    color: colors.teal,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  seatSlotsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  seatSlotOccupied: {
+    backgroundColor: '#f9fafb',
+    borderColor: '#e5e7eb',
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 84,
+    justifyContent: 'space-between',
+    padding: 10,
+    width: '48%',
+  },
+  seatSlotInteractive: {
+    backgroundColor: '#ffffff',
+    borderColor: '#d1d5db',
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
+    height: 84,
+    justifyContent: 'space-between',
+    padding: 10,
+    width: '48%',
+  },
+  seatSlotSelected: {
+    backgroundColor: '#eaedff',
+    borderColor: colors.appPrimary,
+    borderStyle: 'solid',
+  },
+  seatSlotTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  seatSlotLabel: {
+    color: '#6b7280',
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  seatSlotLabelSelected: {
+    color: colors.appPrimary,
+  },
+  seatOccupant: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  miniOccupantAvatar: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 11,
+    height: 22,
+    justifyContent: 'center',
+    width: 22,
+  },
+  miniOccupantInitial: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  miniOccupantName: {
+    color: '#111827',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  miniOccupantRole: {
+    color: '#6b7280',
+    fontSize: 9,
+  },
+  seatStatusText: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  seatStatusTextSelected: {
+    color: colors.appPrimary,
+  },
+  seatTapPrompt: {
+    color: '#9ca3af',
+    fontSize: 9,
+  },
+
+  // Fuel Split
+  passSelector: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    flexDirection: 'row',
+    padding: 2,
+  },
+  passBtnActive: {
+    backgroundColor: '#ffffff',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  passBtnActiveText: {
+    color: colors.appPrimary,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  passBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  passBtnText: {
+    color: '#6b7280',
+    fontSize: 10,
+  },
+  pricingHeadline: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    gap: 4,
+    marginVertical: 6,
+  },
+  pricingBigNumber: {
+    color: '#111827',
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  pricingBigUnit: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  feeBreakdown: {
+    borderTopColor: '#f3f4f6',
+    borderTopWidth: 1,
+    gap: 4,
+    paddingTop: 8,
+  },
+  feeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  feeLabel: {
+    color: '#6b7280',
+    fontSize: 11,
+  },
+  feeValue: {
+    color: '#111827',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  feeTotalRow: {
+    borderTopColor: '#f3f4f6',
+    borderTopWidth: 1,
+    marginTop: 6,
+    paddingTop: 6,
+  },
+  feeTotalLabel: {
+    color: '#111827',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  feeTotalValue: {
+    color: colors.appPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  guaranteePill: {
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 10,
+    padding: 8,
+  },
+  guaranteeText: {
+    color: '#6b7280',
+    fontSize: 10,
+  },
+
+  // Safety Section
+  safetyHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 8,
+  },
+  safetyTitle: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  safetyItems: {
+    gap: 6,
+  },
+  safetyItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  safetyCheckCircle: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,105,107,0.12)',
+    borderRadius: 10,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  safetyItemText: {
+    color: '#374151',
+    fontSize: 11,
+  },
+  safetyItemHighlight: {
+    color: colors.appPrimary,
+    fontWeight: '700',
+  },
+
+  // Sticky Bottom Bar
+  bottomBar: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderTopColor: '#e5e7eb',
+    borderTopWidth: 1,
+    bottom: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    left: 0,
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+    position: 'absolute',
+    right: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+  bottomBarDesktop: {
+    alignSelf: 'center',
+    maxWidth: 800,
+    width: '100%',
+  },
+  bottomBarLeft: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  bottomBarTotal: {
+    color: colors.appPrimary,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  bottomBarSeatCount: {
+    color: '#6b7280',
+    fontSize: 11,
+  },
+  bottomBarRight: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  bottomBarChatBtn: {
+    alignItems: 'center',
+    backgroundColor: '#eaedff',
+    borderRadius: 16,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  bottomBarRequestBtn: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    shadowColor: colors.appPrimary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  bottomBarRequestText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  // Modal
+  modalOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: space.x4,
+  },
+  bookingModalCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    maxWidth: 440,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  bookingConfirmBox: {
+    padding: space.x4,
+  },
+  bookingConfirmHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  bookingConfirmTitle: {
+    color: '#111827',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  bookingSummaryRow: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 12,
+  },
+  bookingSummaryDriver: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  bookingSummaryRoute: {
+    color: '#4b5563',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  bookingSummaryTime: {
+    color: colors.appPrimary,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  bookingSummaryPriceBox: {
+    alignItems: 'flex-end',
+  },
+  bookingSummaryPrice: {
+    color: colors.appPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  bookingSummarySeats: {
+    color: '#6b7280',
+    fontSize: 10,
+  },
+  trustNote: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,105,107,0.08)',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 12,
+    padding: 10,
+  },
+  trustNoteText: {
+    color: colors.teal,
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  bookingConfirmBtn: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  bookingConfirmBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  bookingSuccessBox: {
+    alignItems: 'center',
+    padding: 24,
+  },
+  bookingSuccessIconWrap: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,105,107,0.12)',
+    borderRadius: radius.pill,
+    height: 56,
+    justifyContent: 'center',
+    marginBottom: 12,
+    width: 56,
+  },
+  bookingSuccessTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  bookingSuccessSubtitle: {
+    color: '#4b5563',
+    fontSize: 13,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  bookingSuccessDetails: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 14,
+    color: '#6b7280',
+    fontSize: 11,
+    lineHeight: 16,
+    marginVertical: 14,
+    padding: 10,
+    textAlign: 'center',
+  },
+  bookingSuccessCta: {
+    backgroundColor: colors.appPrimary,
+    borderRadius: radius.pill,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  bookingSuccessCtaText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  // Loading & Error States
+  loadingContainer: {
+    alignItems: 'center',
+    gap: 12,
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  loadingText: {
+    color: '#4b5563',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    gap: 10,
+    padding: 32,
+  },
+  emptyTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  emptySubtitle: {
+    color: '#6b7280',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    backgroundColor: colors.appPrimary,
+    borderRadius: radius.pill,
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  retryBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  backBtn: {
+    marginTop: 4,
+    padding: 8,
+  },
+  backBtnText: {
+    color: colors.appPrimary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });

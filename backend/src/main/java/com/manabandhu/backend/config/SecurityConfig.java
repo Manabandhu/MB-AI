@@ -54,6 +54,7 @@ public class SecurityConfig {
                 "/api/v1/rooms/listings/{listingId}",
                 "/api/v1/rides/screens/**",
                 "/api/v1/rides/offers",
+                "/api/v1/rides/offers/**",
                 "/api/v1/rides/{rideId}",
                 "/api/v1/communities",
                 "/api/v1/communities/{id}",
