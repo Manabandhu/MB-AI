@@ -1,7 +1,10 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useRequireAuth } from '@/lib/authStore';
 import { GroupDetailsScreen } from '@/modules/expenses/screens/GroupDetailsScreen';
 
-export default function GroupDetailsRoute({ params }: { params: { groupId: string } }) {
+export default function GroupDetailsRoute() {
   useRequireAuth('/sign-in');
-  return <GroupDetailsScreen groupId={params.groupId} />;
+  const { groupId } = useLocalSearchParams<{ groupId: string }>();
+  return <GroupDetailsScreen groupId={groupId!} />;
 }
+

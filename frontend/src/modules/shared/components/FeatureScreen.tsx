@@ -1,10 +1,11 @@
 import { color as colors, contentWidth, radius, space } from '@manabandhu/design-system';
 import type { Href } from 'expo-router';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export type FeatureAction = {
@@ -37,92 +38,102 @@ type FeatureScreenProps = {
   children?: React.ReactNode;
 };
 
-const primaryNav = [
-  { label: 'Home', route: '/home' },
-  { label: 'Explore', route: '/explore' },
-  { label: 'Search', route: '/search' },
-  { label: 'Saved', route: '/saved' },
-  { label: 'Profile', route: '/profile' },
-] as const;
+const C = {
+  primary: '#E05638', // Warm Saffron
+  secondary: '#0D5C75', // Deep Gulf Teal
+  bg: '#FFFDF9', // Soft warm ivory
+  cardBg: '#FFFFFF',
+  border: '#E8DEC8',
+  ink: '#151D21',
+  inkMuted: '#6B7280',
+  tealBg: '#E0F2FE',
+  saffronBg: '#FEE2E2',
+};
 
 export function FeatureScreen({
   title,
   subtitle,
   eyebrow = 'ManaBandhu',
-  currentRoute,
   metrics = [],
   cards = [],
   actions = [],
   children,
 }: FeatureScreenProps) {
+  const router = useRouter();
   const layout = useAdaptiveLayout();
-  const maxWidth = layout.windowClass === 'compact' ? contentWidth.compact : layout.maxContentWidth;
+  const isDesktop = layout.windowClass !== 'compact';
+  const maxWidth = isDesktop ? layout.maxContentWidth : contentWidth.compact;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
+      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <View style={[styles.container, { maxWidth }]}>
-          <View style={styles.navBar}>
-            {primaryNav.map((item) => {
-              const isActive = item.route === currentRoute;
-              return (
-                <Link key={item.route} href={item.route as Href} asChild>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isActive }}
-                    style={StyleSheet.flatten([styles.navItem, isActive && styles.navItemActive])}
-                  >
-                    <Text style={[styles.navText, isActive && styles.navTextActive]}>
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                </Link>
-              );
-            })}
-          </View>
-
+          {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.eyebrow}>{eyebrow}</Text>
+            <View style={styles.eyebrowBadge}>
+              <Text style={styles.eyebrow}>{eyebrow}</Text>
+            </View>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
 
-          {metrics.length ? (
-            <View style={[styles.metricsGrid, layout.columns > 1 && styles.metricsGridWide]}>
-              {metrics.map((metric) => (
-                <View key={metric.label} style={styles.metric}>
-                  <Text style={styles.metricValue}>{metric.value}</Text>
+          {/* Metrics */}
+          {metrics.length > 0 ? (
+            <View style={[styles.metricsGrid, isDesktop && styles.metricsGridWide]}>
+              {metrics.map((metric, idx) => (
+                <View
+                  key={metric.label}
+                  style={[
+                    styles.metric,
+                    idx === 0 && styles.metricPrimary,
+                  ]}
+                >
+                  <Text style={[styles.metricValue, idx === 0 && styles.metricValuePrimary]}>
+                    {metric.value}
+                  </Text>
                   <Text style={styles.metricLabel}>{metric.label}</Text>
                 </View>
               ))}
             </View>
           ) : null}
 
-          {actions.length ? (
+          {/* Quick Actions */}
+          {actions.length > 0 ? (
             <View style={styles.actions}>
               {actions.map((action) => (
-                <AppButton key={action.route} label={action.label} route={action.route} />
+                <AppButton
+                  key={action.route}
+                  label={action.label}
+                  route={action.route}
+                  variant="primary"
+                />
               ))}
             </View>
           ) : null}
 
           {children}
 
-          {cards.length ? (
-            <View style={[styles.cardGrid, layout.columns > 1 && styles.cardGridWide]}>
-              {cards.map((card) =>
-                card.route ? (
-                  <Link key={card.id} href={card.route as Href} asChild>
-                    <Pressable accessibilityRole="button" style={styles.card}>
-                      <FeatureCardContent card={card} />
-                    </Pressable>
-                  </Link>
+          {/* Cards Grid */}
+          {cards.length > 0 ? (
+            <View style={[styles.cardGrid, isDesktop && styles.cardGridWide]}>
+              {cards.map((card) => {
+                const content = <FeatureCardContent card={card} />;
+                return card.route ? (
+                  <Pressable
+                    key={card.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={card.title}
+                    onPress={() => router.push(card.route as Href)}
+                    style={styles.card}
+                  >
+                    {content}
+                  </Pressable>
                 ) : (
                   <View key={card.id} style={styles.card}>
-                    <FeatureCardContent card={card} />
+                    {content}
                   </View>
-                ),
-              )}
+                );
+              })}
             </View>
           ) : null}
         </View>
@@ -134,69 +145,177 @@ export function FeatureScreen({
 function FeatureCardContent({ card }: { card: FeatureCard }) {
   return (
     <>
-      {card.eyebrow ? <Text style={styles.cardEyebrow}>{card.eyebrow}</Text> : null}
+      <View style={styles.cardTop}>
+        {card.eyebrow ? (
+          <View style={styles.cardEyebrowBadge}>
+            <Text style={styles.cardEyebrow}>{card.eyebrow}</Text>
+          </View>
+        ) : null}
+        {card.route ? (
+          <AppIcon color={C.secondary} name="chevron-right" size={16} />
+        ) : null}
+      </View>
       <Text style={styles.cardTitle}>{card.title}</Text>
-      <Text style={styles.cardBody}>{card.body}</Text>
-      {card.meta ? <Text style={styles.cardMeta}>{card.meta}</Text> : null}
+      <Text style={styles.cardBody} numberOfLines={3}>{card.body}</Text>
+      {card.meta ? (
+        <View style={styles.metaRow}>
+          <Text style={styles.cardMeta}>{card.meta}</Text>
+        </View>
+      ) : null}
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  navBar: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    borderWidth: 1,
+  safeArea: {
+    flex: 1,
+    backgroundColor: C.bg,
+  },
+  page: {
+    backgroundColor: C.bg,
+    flexGrow: 1,
+    paddingHorizontal: space.x4,
+    paddingTop: space.x4,
+    paddingBottom: space.x12,
+  },
+  container: {
+    alignSelf: 'center',
+    gap: space.x5,
+    width: '100%',
+  },
+  header: {
+    gap: space.x2,
+    paddingTop: space.x2,
+  },
+  eyebrowBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: C.tealBg,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  eyebrow: {
+    color: C.secondary,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: C.ink,
+    fontSize: 26,
+    fontWeight: '800',
+    lineHeight: 32,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    color: C.inkMuted,
+    fontSize: 15,
+    lineHeight: 22,
+    maxWidth: 640,
+  },
+  metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: space.x1,
-    padding: space.x1,
+    gap: space.x3,
   },
-  navItem: {
-    borderRadius: radius.pill,
-    minHeight: 36,
-    justifyContent: 'center',
-    paddingHorizontal: space.x3,
+  metricsGridWide: {
+    flexDirection: 'row',
   },
-  navItemActive: { backgroundColor: colors.primarySoft },
-  navText: { color: colors.muted, fontSize: 13, fontWeight: '800' },
-  navTextActive: { color: colors.primary },
-  header: { gap: space.x3, paddingTop: space.x6 },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
-  title: { color: colors.ink, fontSize: 32, fontWeight: '800', lineHeight: 38 },
-  subtitle: { color: colors.muted, fontSize: 16, lineHeight: 25, maxWidth: 640 },
-  metricsGrid: { gap: space.x3 },
-  metricsGridWide: { flexDirection: 'row' },
   metric: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
+    backgroundColor: C.cardBg,
+    borderColor: C.border,
+    borderRadius: 16,
     borderWidth: 1,
     flex: 1,
+    minWidth: 130,
     padding: space.x4,
+    shadowColor: '#2B3338',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  metricValue: { color: colors.primary, fontSize: 24, fontWeight: '800' },
-  metricLabel: { color: colors.muted, fontSize: 13, fontWeight: '700', marginTop: space.x1 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3 },
-  cardGrid: { gap: space.x3 },
-  cardGridWide: { flexDirection: 'row', flexWrap: 'wrap' },
+  metricPrimary: {
+    borderColor: 'rgba(224, 86, 56, 0.2)',
+    backgroundColor: '#FFF8F6',
+  },
+  metricValue: {
+    color: C.secondary,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  metricValuePrimary: {
+    color: C.primary,
+  },
+  metricLabel: {
+    color: C.inkMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: space.x1,
+  },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.x3,
+  },
+  cardGrid: {
+    gap: space.x3,
+  },
+  cardGridWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
+    backgroundColor: C.cardBg,
+    borderColor: C.border,
+    borderRadius: 16,
     borderWidth: 1,
-    flexBasis: 320,
+    flexBasis: 300,
     flexGrow: 1,
     gap: space.x2,
-    minHeight: 132,
+    minHeight: 120,
     padding: space.x4,
+    shadowColor: '#2B3338',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  cardEyebrow: { color: colors.teal, fontSize: 12, fontWeight: '800' },
-  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', lineHeight: 24 },
-  cardBody: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  cardMeta: { color: colors.primary, fontSize: 12, fontWeight: '800', marginTop: 'auto' },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardEyebrowBadge: {
+    backgroundColor: C.tealBg,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  cardEyebrow: {
+    color: C.secondary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  cardTitle: {
+    color: C.ink,
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
+  },
+  cardBody: {
+    color: C.inkMuted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  metaRow: {
+    marginTop: 'auto',
+    paddingTop: space.x2,
+  },
+  cardMeta: {
+    color: C.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });
