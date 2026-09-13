@@ -171,9 +171,9 @@ const quickActions: { icon: AppIconName; label: string; route: string; bg: strin
   { icon: 'briefcase', label: 'Jobs', route: '/jobs', bg: '#fff0e6', iconColor: '#ff7e33' },
   { icon: 'community', label: 'Community', route: '/community', bg: '#fce8f3', iconColor: '#b5198d' },
   { icon: 'message', label: 'Chat', route: '/chat', bg: '#e4ecff', iconColor: '#2a5be0' },
-  { icon: 'calendar', label: 'Events', route: '/search', bg: '#fff4e0', iconColor: '#c97a00' },
-  { icon: 'marketplace', label: 'Market', route: '/search', bg: '#e2f9ef', iconColor: '#1a8a5c' },
-  { icon: 'shield', label: 'Safety', route: '/search', bg: '#ffeaea', iconColor: '#ba1a1a' },
+  { icon: 'calendar', label: 'Events', route: '/events', bg: '#fff4e0', iconColor: '#c97a00' },
+  { icon: 'marketplace', label: 'Market', route: '/marketplace', bg: '#e2f9ef', iconColor: '#1a8a5c' },
+  { icon: 'shield', label: 'Safety', route: '/safety', bg: '#ffeaea', iconColor: '#ba1a1a' },
 ];
 
 // ─── HOME SHELL ───────────────────────────────────────────────────────────────
@@ -528,14 +528,14 @@ const profileBadges = [
 const profileLinks = [
   { label: 'My Listings', icon: 'home' as AppIconName, route: '/rooms' },
   { label: 'Saved Items', icon: 'heart' as AppIconName, route: '/saved' },
-  { label: 'My Referrals', icon: 'community' as AppIconName, route: '/jobs' },
-  { label: 'My Events', icon: 'calendar' as AppIconName, route: '/search' },
-  { label: 'Immigration Resources', icon: 'book' as AppIconName, route: '/search' },
+  { label: 'My Referrals', icon: 'community' as AppIconName, route: '/referrals/mine' },
+  { label: 'My Events', icon: 'calendar' as AppIconName, route: '/events/mine' },
+  { label: 'Immigration Resources', icon: 'book' as AppIconName, route: '/immigration' },
 ];
 
 const profileSettings = [
   { label: 'Edit Profile', icon: 'user' as AppIconName, route: '/settings' },
-  { label: 'Notification Settings', icon: 'bell' as AppIconName, route: '/settings' },
+  { label: 'Notification Settings', icon: 'bell' as AppIconName, route: '/notifications/settings' },
   { label: 'Privacy Settings', icon: 'shield' as AppIconName, route: '/settings' },
   { label: 'Help & Support', icon: 'help' as AppIconName, route: '/settings' },
 ];

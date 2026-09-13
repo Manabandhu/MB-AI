@@ -116,4 +116,6 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 - HomeShell Discovery Integration: Connected the greeting row location chip (`Austin, TX · 847 Rooms`), search bar placeholder (`Austin, TX · 847 rooms, flatmates, rides...`), and live stats pills to directly route into `/rooms` for seamless zero-brokerage room discovery.
 - Fallback cleanup: deleted `foundationScreenFallbacks.ts` and `homeShellFallbacks.ts`, removed fallback placeholders from `CatalogContentScreen` and `StitchAppShellScreen` in favor of live backend endpoints, responsive loading states, and error states.
 - Hardcoded data cleanup: deleted `fixtures.ts`, removed hardcoded mock feeds/stats from `StitchAppShellScreen`, and removed fake personas/testimonials ("Sravan K.", "Madhu V.", "Ananya R.", "Karthik N.") and static metrics from `StitchWelcomeFlowScreen` carousel slides in favor of authentic community value propositions and trust badges.
+- Route link fixes: updated `quickActions` and `profileLinks` in `StitchAppShellScreen.tsx` to route directly to dedicated feature screens (`/events`, `/marketplace`, `/safety`, `/events/mine`, `/immigration`, `/notifications/settings`) instead of legacy `/search` placeholders.
+
 
