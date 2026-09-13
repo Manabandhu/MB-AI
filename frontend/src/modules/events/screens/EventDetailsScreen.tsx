@@ -161,7 +161,7 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
                 </Text>
               </View>
               <View style={s.capacityPill}>
-                <Text style={s.capacityPillText}>🔥 95% Capacity</Text>
+                <Text style={s.capacityPillText}>Community Event</Text>
               </View>
             </View>
 
@@ -174,11 +174,11 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
               <View style={s.orgMeta}>
                 <View style={s.orgNameRow}>
                   <Text style={s.orgName}>
-                    {isTech ? 'Austin Desi Tech Circle' : 'Central Texas Indian Cultural Association'}
+                    {isTech ? 'Austin Desi Tech Circle' : 'Community Event Organizers'}
                   </Text>
                   <Text style={s.verifiedIcon}>✓</Text>
                 </View>
-                <Text style={s.orgSubtitle}>Verified Community Organizers · Austin Metro</Text>
+                <Text style={s.orgSubtitle}>Verified Community Organizers</Text>
               </View>
             </View>
 
@@ -239,7 +239,7 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
               onPress={() => router.push('/rides' as any)}
               style={s.carpoolPromoBtn}
             >
-              <Text style={s.carpoolPromoText}>🚗 Carpool (18 Rides Going Here)</Text>
+              <Text style={s.carpoolPromoText}>🚗 Carpool Rides Available</Text>
             </Pressable>
           </View>
         </View>
@@ -247,8 +247,8 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
         {/* Live RSVP & Social Proof */}
         <View style={s.socialProofCard}>
           <View style={s.socialHeaderRow}>
-            <Text style={s.socialStatText}>🔥 1,420 Confirmed Desis Attending</Text>
-            <Text style={s.mutualText}>280 from Austin Tech</Text>
+            <Text style={s.socialStatText}>👥 Community RSVPs Open</Text>
+            <Text style={s.mutualText}>ManaBandhu Members</Text>
           </View>
           <View style={s.avatarClusterRow}>
             {['👩‍💼', '👨‍💻', '👩‍🔬', '👨‍🏫', '👩‍🎨', '👨‍🔧'].map((emoji, idx) => (
@@ -256,7 +256,7 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
                 <Text style={s.avatarClusterEmoji}>{emoji}</Text>
               </View>
             ))}
-            <Text style={s.clusterCountText}>+1,414 others registered</Text>
+            <Text style={s.clusterCountText}>Desi community gathering</Text>
           </View>
         </View>
 
@@ -270,28 +270,42 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
         <View style={s.sectionCard}>
           <Text style={s.sectionTitle}>Event Schedule & Highlights</Text>
           <View style={s.timeline}>
-            {[
-              {
-                time: '5:00 PM',
-                title: 'Gates Open & Desi Street Food Bazaar',
-                desc: 'Live chaat counters, dosas, Hyderabadi dum biryani, fresh hot jalebis, kulfi, and festive clothing bazaar.',
-              },
-              {
-                time: '6:30 PM',
-                title: 'Traditional Cultural Dance & Music Showcase',
-                desc: 'Classical Kuchipudi and Bharatanatyam performances followed by high-energy Bhangra and Telugu folk dances.',
-              },
-              {
-                time: '8:30 PM',
-                title: 'Grand Musical Diwali Fireworks Spectacular',
-                desc: 'Central Texas’s largest synchronized community fireworks show lighting up the night sky.',
-              },
-              {
-                time: '9:15 PM',
-                title: 'Open Dance Floor & Bollywood DJ Night',
-                desc: 'Live Dhol players, Gujarati Garba & Bollywood mega mix on the lawn till 10:00 PM.',
-              },
-            ].map((item, idx) => (
+            {(isDiwali
+              ? [
+                  {
+                    time: '5:00 PM',
+                    title: 'Gates Open & Desi Street Food Bazaar',
+                    desc: 'Live chaat counters, dosas, Hyderabadi dum biryani, fresh hot jalebis, kulfi, and festive clothing bazaar.',
+                  },
+                  {
+                    time: '6:30 PM',
+                    title: 'Traditional Cultural Dance & Music Showcase',
+                    desc: 'Classical Kuchipudi and Bharatanatyam performances followed by high-energy Bhangra and Telugu folk dances.',
+                  },
+                  {
+                    time: '8:30 PM',
+                    title: 'Grand Musical Diwali Fireworks Spectacular',
+                    desc: 'Central Texas’s largest synchronized community fireworks show lighting up the night sky.',
+                  },
+                  {
+                    time: '9:15 PM',
+                    title: 'Open Dance Floor & Bollywood DJ Night',
+                    desc: 'Live Dhol players, Gujarati Garba & Bollywood mega mix on the lawn till 10:00 PM.',
+                  },
+                ]
+              : [
+                  {
+                    time: 'Doors Open',
+                    title: 'Attendee Check-in & Mingling',
+                    desc: 'Connect with community members and get seated.',
+                  },
+                  {
+                    time: 'Main Event',
+                    title: event.title,
+                    desc: event.description || 'Community program and interactive activities.',
+                  },
+                ]
+            ).map((item, idx) => (
               <View key={idx} style={s.timelineRow}>
                 <View style={s.timeBadge}>
                   <Text style={s.timeBadgeText}>{item.time}</Text>

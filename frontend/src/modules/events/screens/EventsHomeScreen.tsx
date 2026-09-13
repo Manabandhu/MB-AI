@@ -238,7 +238,7 @@ export default function EventsHomeScreen() {
 
             <View style={s.featuredFooter}>
               <View style={s.socialProofRow}>
-                <Text style={s.attendeeHighlight}>👥 1,420 Desis Attending</Text>
+                <Text style={s.attendeeHighlight}>👥 Open Community RSVP</Text>
                 <Text style={s.freeEntryPill}>Free Community Entry</Text>
               </View>
 
