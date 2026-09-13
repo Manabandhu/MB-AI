@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getConversation, getParticipants } from '@/modules/chat/api';
-import { chatScreenFallbacks } from '@/modules/chat/chatFallbacks';
 import { Banner } from '@/modules/shared/components/Banner';
 import { DetailScreen } from '@/modules/shared/components/DetailScreen';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
@@ -41,9 +40,8 @@ export default function ConversationInfoScreen() {
     enabled: !!conversationId,
   });
 
-  const fallback = chatScreenFallbacks.info;
-  const title = conversation?.title ?? fallback.title;
-  const participantList = participants ?? fallback.participants ?? [];
+  const title = conversation?.title ?? 'Conversation';
+  const participantList = participants ?? [];
 
   if (errorConversation || errorParticipants) {
     return (
@@ -69,9 +67,9 @@ export default function ConversationInfoScreen() {
             <Banner title="Offline" body="Some details may be out of date." variant="warning" />
           ) : null}
           <DetailScreen
-            eyebrow={fallback.eyebrow}
+            eyebrow="Chat"
             title={title}
-            subtitle={fallback.subtitle}
+            subtitle="Members and conversation details"
             sections={[]}
             actions={[
               { label: 'Back to Chat', onPress: () => router.back(), variant: 'secondary' },

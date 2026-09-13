@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listConversations } from '@/modules/chat/api';
-import { chatScreenFallbacks } from '@/modules/chat/chatFallbacks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -22,8 +21,7 @@ export default function NewChatScreen() {
     queryFn: listConversations,
   });
 
-  const fallback = chatScreenFallbacks.new;
-  const conversations = data ?? fallback.conversations ?? [];
+  const conversations = data ?? [];
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations;
@@ -47,7 +45,7 @@ export default function NewChatScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="New Chat" subtitle="Start a conversation with community members." />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search people" />
           {isLoading ? (
             <LoadingState />

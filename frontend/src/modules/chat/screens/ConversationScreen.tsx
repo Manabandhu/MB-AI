@@ -4,8 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getConversation, listMessages, sendMessage } from '@/modules/chat/api';
-import { chatScreenFallbacks } from '@/modules/chat/chatFallbacks';
+import { getConversation, listMessages, sendMessage, Message } from '@/modules/chat/api';
 import { Banner } from '@/modules/shared/components/Banner';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -17,7 +16,6 @@ import { AppButton } from '@/modules/shared/ui/AppButton';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export default function ConversationScreen() {
-  const _router = useRouter();
   const layout = useAdaptiveLayout();
   const queryClient = useQueryClient();
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
@@ -53,9 +51,8 @@ export default function ConversationScreen() {
     onError: () => setOffline(true),
   });
 
-  const fallback = chatScreenFallbacks.conversation;
-  const title = conversation?.title ?? fallback.title;
-  const messageList = messages ?? fallback.messages ?? [];
+  const title = conversation?.title ?? 'Conversation';
+  const messageList = messages ?? [];
   const participantNames = conversation?.participants
     ? conversation.participants.map((p) => p.userId).join(', ')
     : undefined;
@@ -80,7 +77,7 @@ export default function ConversationScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader title={title} subtitle={participantNames ?? fallback.subtitle} />
+          <SectionHeader title={title} subtitle={participantNames ?? 'Active conversation'} />
           {offline ? (
             <Banner
               title="Offline"

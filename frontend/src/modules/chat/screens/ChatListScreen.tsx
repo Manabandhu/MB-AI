@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listConversations } from '@/modules/chat/api';
-import { chatScreenFallbacks } from '@/modules/chat/chatFallbacks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -23,8 +22,7 @@ export default function ChatListScreen() {
     queryFn: listConversations,
   });
 
-  const fallback = chatScreenFallbacks.home;
-  const conversations = data ?? fallback.conversations ?? [];
+  const conversations = data ?? [];
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations;
@@ -48,7 +46,7 @@ export default function ChatListScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader title={fallback.title} subtitle={fallback.subtitle} />
+          <SectionHeader title="Messages" subtitle="Direct messages and group chats." />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search conversations" />
           {isLoading ? (
             <LoadingState />

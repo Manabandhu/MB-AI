@@ -5,7 +5,6 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 ## Component Inventory
 
 - `frontend/src/modules/chat/api.ts` - Typed API client for conversations, messages, and participants.
-- `frontend/src/modules/chat/chatFallbacks.ts` - Demo fixtures for all chat screens.
 - `frontend/src/modules/chat/screens/ChatListScreen.tsx` - List of conversations with search and navigation.
 - `frontend/src/modules/chat/screens/NewChatScreen.tsx` - Start new conversation from contacts list.
 - `frontend/src/modules/chat/screens/ConversationScreen.tsx` - Chat messages view with composer and send.

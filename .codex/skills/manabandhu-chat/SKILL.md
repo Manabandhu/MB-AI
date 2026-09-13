@@ -35,8 +35,8 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 - `getParticipants(conversationId)` -> `GET /api/v1/chat/conversations/{id}/participants`
 
 ## Demo Fixtures
-
-- `frontend/src/modules/chat/chatFallbacks.ts` - demo fixtures for all chat screens
+ 
+- None. Module relies on live API query responses and states.
 
 ## State Patterns
 
@@ -83,3 +83,4 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 
 - Recent typecheck fixes: corrected `chatFallbacks.ts` participant `role` values from `"Member"`/`"Admin"` to the enum-aligned `"MEMBER"`/`"OWNER"`; removed the non-existent `senderName` field from `Message` fallbacks.
 - Recent optional-field fix: `chatFallbacks.ts` participant/message fixtures now include `type: 'DIRECT'`, `conversationId`, `userId`, `joinedAt`, and `messageType: 'TEXT'`; `ChatListScreen`, `NewChatScreen`, and `ConversationScreen` null-coalesce optional fields (`title`, `lastMessage`, `lastMessageAt`, `unreadCount`, `sent`) for safe rendering.
+- Fallback cleanup: removed `chatFallbacks.ts` and inlined fallback arrays across `ChatListScreen`, `NewChatScreen`, `ConversationScreen`, and `ConversationInfoScreen` in favor of live React Query queries, `LoadingState`, and `ErrorState`.
