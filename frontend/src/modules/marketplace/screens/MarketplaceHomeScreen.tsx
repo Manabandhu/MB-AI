@@ -37,6 +37,7 @@ const C = {
 export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const isCompact = width < 360;
   const isDesktop = width >= 768;
 
   // Filter & Search states
@@ -146,15 +147,17 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
               </Text>
             </View>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sell an Item"
-            style={s.sellBannerBtn}
-            onPress={() => router.push('/marketplace/sell')}
-          >
-            <AppIcon name="plus" size={16} color="#FFF" />
-            <Text style={s.sellBannerBtnText}>Sell Item</Text>
-          </Pressable>
+          {!isCompact && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Sell an Item"
+              style={s.sellBannerBtn}
+              onPress={() => router.push('/marketplace/sell')}
+            >
+              <AppIcon name="plus" size={16} color="#FFF" />
+              <Text style={s.sellBannerBtnText}>Sell Item</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Search & Location Row */}
@@ -329,7 +332,7 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
                 key={item.id}
                 accessibilityRole="button"
                 accessibilityLabel={`View details for ${item.title}`}
-                style={[s.itemCard, isDesktop && s.itemCardDesktop]}
+                style={[s.itemCard, isCompact && s.itemCardCompact, isDesktop && s.itemCardDesktop]}
                 onPress={() => router.push(`/marketplace/${item.id}` as any)}
               >
                 {/* Image Container */}
@@ -778,6 +781,9 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
+  },
+  itemCardCompact: {
+    width: '100%',
   },
   itemCardDesktop: {
     width: '23.5%',

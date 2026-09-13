@@ -219,10 +219,12 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={qa.label}
-              style={StyleSheet.flatten([s.qaTile, { backgroundColor: qa.bg }])}
+              style={StyleSheet.flatten([s.qaTile, isDesktop && s.qaTileDesktop, { backgroundColor: qa.bg }])}
             >
               <AppIcon color={qa.iconColor} name={qa.icon} size={22} />
-              <Text style={[s.qaLabel, { color: qa.iconColor }]}>{qa.label}</Text>
+              <Text style={[s.qaLabel, { color: qa.iconColor }]} numberOfLines={1} adjustsFontSizeToFit>
+                {qa.label}
+              </Text>
             </Pressable>
           </Link>
         ))}
@@ -744,9 +746,10 @@ const s = StyleSheet.create({
   greetText: { color: colors.ink, fontSize: 22, fontWeight: '800' },
   locationChip: { alignItems: 'center', flexDirection: 'row', gap: 4 },
   locationText: { color: colors.muted, fontSize: 13, fontWeight: '600' },
-  qaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3 },
-  qaGridDesktop: { gap: space.x4 },
-  qaTile: { alignItems: 'center', borderRadius: 16, gap: 6, justifyContent: 'center', minHeight: 80, padding: space.x2, width: '22%' },
+  qaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
+  qaGridDesktop: { gap: 14, justifyContent: 'flex-start' },
+  qaTile: { alignItems: 'center', borderRadius: 16, gap: 4, justifyContent: 'center', minHeight: 74, paddingVertical: 8, paddingHorizontal: 4, width: '23%' },
+  qaTileDesktop: { width: '11%', minHeight: 86 },
   qaLabel: { fontSize: 11, fontWeight: '800', textAlign: 'center' },
   pillRow: { marginVertical: space.x1 },
   statPill: { alignItems: 'center', borderRadius: radius.pill, flexDirection: 'row', gap: 6, marginRight: space.x2, paddingHorizontal: space.x3, paddingVertical: 8 },
