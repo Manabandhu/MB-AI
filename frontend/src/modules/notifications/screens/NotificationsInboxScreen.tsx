@@ -17,23 +17,12 @@ const styles = StyleSheet.create({
   container: { alignSelf: 'center', gap: space.x6, width: '100%' },
 });
 
-const fallbackNotifications = [
-  {
-    id: 'fallback-1',
-    title: 'Welcome to ManaBandhu',
-    body: 'Discover rooms, rides, jobs, and community.',
-    meta: 'Just now',
-    read: false,
-  },
-];
-
 export function NotificationsInboxScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const { data } = useQuery({
     queryKey: ['notifications', 'inbox'],
     queryFn: getNotificationsInbox,
-    placeholderData: { items: fallbackNotifications },
     retry: false,
   });
 

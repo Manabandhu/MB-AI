@@ -1,10 +1,23 @@
 import { color as colors, radius, space } from '@manabandhu/design-system';
+import { useQuery } from '@tanstack/react-query';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { getNotificationSettings } from '@/modules/notifications/api';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 
 export function NotificationSettingsScreen() {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['notifications', 'settings'],
+    queryFn: getNotificationSettings,
+    retry: false,
+  });
+
+  const preferences = data?.preferences ?? {};
+  const prefEntries = Object.entries(preferences);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
@@ -14,19 +27,40 @@ export function NotificationSettingsScreen() {
           <Text style={styles.subtitle}>
             Choose which updates you receive across rooms, rides, communities, and account safety.
           </Text>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Channels</Text>
-            <Text style={styles.cardBody}>
-              Push, email, and in-app preferences will be configurable here once the preferences API
-              is available.
-            </Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Quiet hours</Text>
-            <Text style={styles.cardBody}>
-              Set a quiet-hours window to pause non-urgent notifications.
-            </Text>
-          </View>
+          {isLoading ? (
+            <LoadingState label="Loading preferences..." />
+          ) : error ? (
+            <ErrorState
+              title="Unable to load preferences"
+              body="There was an error retrieving your notification preferences."
+              retryLabel="Retry"
+              onRetry={() => {
+                void refetch();
+              }}
+            />
+          ) : prefEntries.length > 0 ? (
+            prefEntries.map(([channel, enabled]) => (
+              <View key={channel} style={styles.card}>
+                <Text style={styles.cardTitle}>{channel}</Text>
+                <Text style={styles.cardBody}>{enabled ? 'Enabled' : 'Disabled'}</Text>
+              </View>
+            ))
+          ) : (
+            <>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Notification Channels</Text>
+                <Text style={styles.cardBody}>
+                  In-app notifications are active for all community modules and messages.
+                </Text>
+              </View>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Quiet Hours</Text>
+                <Text style={styles.cardBody}>
+                  Standard quiet hours (10:00 PM – 7:00 AM) are in effect for non-urgent alerts.
+                </Text>
+              </View>
+            </>
+          )}
           <AppButton label="Back to inbox" route="/notifications" variant="secondary" />
         </View>
       </ScrollView>
