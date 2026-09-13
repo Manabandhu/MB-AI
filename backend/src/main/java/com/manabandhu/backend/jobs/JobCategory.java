@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "job_categories")
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class JobCategory {
 
     @Id
