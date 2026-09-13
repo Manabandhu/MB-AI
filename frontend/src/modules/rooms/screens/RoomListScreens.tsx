@@ -17,40 +17,6 @@ import type { RoomListing } from '@/modules/rooms/types';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
-// Demo saved listings shown when unauthenticated or offline
-const defaultSavedRooms: RoomListing[] = [
-  {
-    id: 'a1111111-1111-1111-1111-111111111111',
-    ownerId: 'b2e63b49-91df-49e0-bf8f-f32822f883a5',
-    title: 'Spacious Private Room in 2B2B Luxury Apartment',
-    description: 'Master bedroom with private attached bath, walk-in closet, and balcony view in Domain Northside. High-speed fiber WiFi and all utilities included.',
-    price: 780,
-    roomType: 'Private Room',
-    status: 'ACTIVE',
-    broadLocation: 'Domain Northside, Austin, TX · Walk to Apple Riata',
-    amenities: ['Private Bath', 'In-unit W/D', 'Covered Parking', 'High-Speed WiFi'],
-    preferences: ['Vegetarian Kitchen Preferred', 'Working Professional'],
-    savedByViewer: true,
-    createdAt: '2026-09-01T00:00:00Z',
-    updatedAt: '2026-09-01T00:00:00Z',
-  },
-  {
-    id: 'a2222222-2222-2222-2222-222222222222',
-    ownerId: '09738cc8-7e22-49e4-9c2b-be1040fe6438',
-    title: 'Sunlit 1BHK Studio Apartment near UT Austin',
-    description: 'Fully furnished 1BHK studio with modern modular kitchen, hardwood floors, and study desk.',
-    price: 920,
-    roomType: '1BHK Studio',
-    status: 'ACTIVE',
-    broadLocation: 'West Campus, Austin, TX · 5 mins to UT Austin',
-    amenities: ['Furnished', 'Private Kitchen', 'Central AC'],
-    preferences: ['Student / Grad Friendly', 'Vegetarian Friendly'],
-    savedByViewer: true,
-    createdAt: '2026-09-02T00:00:00Z',
-    updatedAt: '2026-09-02T00:00:00Z',
-  },
-];
-
 export function RoomFavoritesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -67,10 +33,7 @@ export function RoomFavoritesScreen() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms', 'favorites'] }),
   });
 
-  // Fallback to default saved rooms if unauthenticated or empty initial demo
-  const allSaved = (data && data.length > 0 ? data : defaultSavedRooms).filter(
-    (room) => !removedIds[room.id],
-  );
+  const allSaved = (data ?? []).filter((room) => !removedIds[room.id]);
 
   const handleUnsave = (id: string) => {
     setRemovedIds((prev) => ({ ...prev, [id]: true }));

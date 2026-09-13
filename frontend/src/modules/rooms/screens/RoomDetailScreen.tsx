@@ -17,6 +17,8 @@ import { useAuthStore } from '@/lib/authStore';
 import { getRoomDetail, saveRoom, unsaveRoom } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
 
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
 const colors = {
@@ -30,40 +32,6 @@ const colors = {
   tealSoft: 'rgba(0,105,107,0.08)',
   indigoSoft: 'rgba(67,30,190,0.07)',
   orangeSoft: 'rgba(255,126,51,0.10)',
-};
-
-// ─── Fallback Sample Room for Preview ──────────────────────────────────────────
-const fallbackDetail: RoomListing = {
-  id: 'room-1',
-  ownerId: 'owner-1',
-  title: 'Spacious Private Bedroom in Luxury 2B2B Apartment',
-  description:
-    'Spacious private bedroom with personal attached bath and large walk-in closet in a luxury 2B2B gated community in Domain Northside. Living with one friendly tech professional (Google SWE). Looking for a neat, clean flatmate.\n\nEnjoy full access to a fully equipped modern kitchen (vegetarian preferred), furnished living room, high-speed fiber internet, and in-unit washer/dryer. Community has a resort-style pool, 24/7 fitness center, and direct trail access.',
-  price: 780,
-  roomType: 'Private Room with Bath',
-  status: 'ACTIVE',
-  broadLocation: 'Domain Northside, Austin, TX · Walk to Apple Riata',
-  amenities: [
-    'Private Attached Bath',
-    'Walk-in Closet',
-    'In-unit Washer & Dryer',
-    'Central AC & Heating',
-    'Covered Garage Parking',
-    'High-Speed Fiber WiFi',
-    'Swimming Pool & Gym',
-    'Dishwasher & Microwave',
-  ],
-  preferences: [
-    'Vegetarian Kitchen Preferred 🥦',
-    'Non-Smoker 🚭',
-    'Working Professional / Grad Student 💼',
-    'Quiet Hours: 10 PM - 7 AM 🌙',
-    'Telugu / Hindi / English Friendly 🗣️',
-    'No Pets 🐾',
-  ],
-  savedByViewer: false,
-  createdAt: '2026-09-01T00:00:00Z',
-  updatedAt: '2026-09-01T00:00:00Z',
 };
 
 export function RoomDetailScreen() {
@@ -84,7 +52,34 @@ export function RoomDetailScreen() {
     retry: false,
   });
 
-  const room = apiRoom ?? fallbackDetail;
+  if (isLoading) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <LoadingState label="Loading room details..." />
+      </SafeAreaView>
+    );
+  }
+
+  if (!apiRoom) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <View style={[s.navBar, isDesktop && s.navBarDesktop]}>
+          <Pressable onPress={() => router.back()} style={s.navBtn} accessibilityLabel="Back">
+            <AppIcon color={colors.ink} name="chevron-left" size={20} />
+          </Pressable>
+          <Text style={s.navTitle} numberOfLines={1}>Room Details</Text>
+        </View>
+        <ErrorState
+          title="Room not found"
+          body="The room listing you are looking for does not exist or has been removed."
+          retryLabel="Browse Rooms"
+          onRetry={() => router.push('/rooms' as Href)}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const room: RoomListing = apiRoom;
   const isSaved = isSavedLocal || room.savedByViewer;
 
   const toggleSaveMutation = useMutation({
@@ -215,7 +210,7 @@ export function RoomDetailScreen() {
           <Text style={s.sectionHeading}>Flatmate Compatibility & Lifestyle</Text>
           <Text style={s.sectionSubtitle}>Preferences requested by the current flatmates</Text>
           <View style={s.preferencesGrid}>
-            {(room.preferences ?? fallbackDetail.preferences).map((pref) => (
+            {(room.preferences ?? []).map((pref) => (
               <View key={pref} style={s.preferencePill}>
                 <Text style={s.preferencePillText}>{pref}</Text>
               </View>
@@ -227,7 +222,7 @@ export function RoomDetailScreen() {
         <View style={s.sectionBlock}>
           <Text style={s.sectionHeading}>Included Amenities</Text>
           <View style={s.amenitiesGrid}>
-            {(room.amenities ?? fallbackDetail.amenities).map((amenity) => (
+            {(room.amenities ?? []).map((amenity) => (
               <View key={amenity} style={s.amenityItem}>
                 <View style={s.amenityCheckCircle}>
                   <AppIcon color={colors.teal} name="check" size={12} strokeWidth={3} />

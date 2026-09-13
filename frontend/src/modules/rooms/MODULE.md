@@ -26,4 +26,4 @@ Owns room discovery, map/search/filter state, saved rooms, listings, listing cre
 - `createRoomListing()` -> `POST /api/v1/rooms/create-listing`
 
 ## Fallbacks
-- `roomScreenFallbacks` - Realistic demo data for all room screenIds.
+- Frontend fallbacks removed in favor of backend API endpoints and loading/empty/error states.

@@ -63,6 +63,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Referrals Stitch Screen Overhaul: Generated mobile referrals discovery and details screens in Stitch MCP (`84e1cfd6b5774d599713132163437272` and `3fd0de404d5f443da6b4c4cdb7e4ce76`). Implemented rich Desi referral network UI in `ReferralsHomeScreen.tsx` and `ReferralDetailsScreen.tsx` with live Supabase referral offers/requests feed, search bar, category chips, stats ticker, company logos, verified referrer profiles, eligibility requirements, what-to-prepare guidance, zero-brokerage guarantee, and interactive introduction request modal. Unblocked referral details from forced sign-in.
 - Referrals fallback cleanup: removed `referralsFallbacks.ts` and inline demo fixtures across `ReferralsHomeScreen`, `ReferralDetailsScreen`, and `MyReferralsScreen` in favor of backend API queries, error states, and responsive empty states.
 - Immigration fallback cleanup: removed `immigrationFallbacks.ts` and inline demo fixtures across all 10 immigration screens in favor of backend API endpoints, loading states, and responsive empty/error states.
+- Rooms fallback cleanup: deleted `roomsFallbacks.ts`, removed `fallbackDetail` from `RoomDetailScreen` in favor of loading/error states, and removed `defaultSavedRooms` from `RoomFavoritesScreen` in favor of live favorites query.
 
 
 
