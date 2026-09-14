@@ -15,7 +15,14 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 |---|---|---|---|
 | `/` | `StitchSplashScreen` | shell | loading |
 | `/welcome` | `StitchWelcomeFlowScreen` | onboarding | normal |
-| `/onboarding/*` | `StitchOnboardingScreen` | form | normal, success, permission |
+| `/onboarding/what-brings-you-here` | `StitchOnboardingScreen` (kind=`goals`) | onboarding | normal, loading, error |
+| `/onboarding/location` | `StitchOnboardingScreen` (kind=`location`) | onboarding | normal, loading, error |
+| `/onboarding/languages` | `StitchOnboardingScreen` (kind=`languages`) | onboarding | normal, loading, error |
+| `/onboarding/interests` | `StitchOnboardingScreen` (kind=`interests`) | onboarding | normal, loading, error |
+| `/onboarding/profile-photo` | `StitchOnboardingScreen` (kind=`profile-photo`) | onboarding | normal, loading, error |
+| `/onboarding/notifications` | `StitchOnboardingScreen` (kind=`notifications`) | onboarding | normal, loading, error |
+| `/onboarding/trust-and-safety` | `StitchOnboardingScreen` (kind=`trust-and-safety`) | onboarding | normal, loading, error |
+| `/onboarding/complete` | `StitchOnboardingScreen` (kind=`complete`) | onboarding | normal, success |
 | `/home` | `StitchAppShellScreen` (kind=`home`) | shell | loading, empty, error |
 | `/explore` | `StitchAppShellScreen` (kind=`explore`) | catalog | loading, empty, error |
 | `/search` | `SearchScreen` | form | loading, empty, error |
@@ -49,6 +56,10 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 ## API Surface
 
 - `getFoundationScreenContent(screenId)` -> `GET /api/v1/foundation/screens/{screenId}`
+- `getOnboardingConfig()` -> `GET /api/v1/onboarding/config`
+- `getOnboardingProgress()` -> `GET /api/v1/onboarding/progress`
+- `saveOnboardingStep(payload)` -> `POST /api/v1/onboarding/step`
+- `completeOnboarding()` -> `POST /api/v1/onboarding/complete`
 - Read-only demo endpoints for catalog-backed screens.
 
 ## Demo Fixtures
@@ -121,6 +132,7 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 - Unified design system & Settings standardization: Aligned `SettingsScreen.tsx` to the unified ManaBandhu Modern Vibrant design tokens (`#431ebe` Royal Indigo, `#00696b` Teal, `#ff7e33` Sunset Orange, `#faf8ff` background), updated screen catalog and foundation references.
 - Dynamic Splash Screen Animation: overhauled `StitchSplashScreen.tsx` with high-polish entrance fading, scale-up entrance, breathing outer glow pulse loop (`Animated.loop`), continuous breathing pulse dot loop, and dynamic progress bar fill animation (0% to 100% over 1700ms) with seamless auto-advance on complete. Matching Stitch screen: `6d3ab1cb367740c8a71cb6a58e7f6f65`.
 - Bottom Navigation Bar Order & Dynamic Shell Architecture: reordered main navigation tabs to `Home` -> `Community` -> `Explore` -> `Chat` -> `Profile`. Overhauled `ExploreShell` into the master capabilities directory housing all application modules grouped by domain (Living, Careers, Community, Desi Essentials, Safety) with live module search and domain filters. Overhauled `HomeShell` with dynamic user-behavior tracking via `useUserActivityStore` and memoized `useDynamicModules` hook that automatically ranks and presents the user's most frequently and recently accessed modules with starter defaults for new members, eliminating render loop depth errors.
+- Dynamic DB-Driven First-Time User Onboarding Flow: implemented full 8-step onboarding flow across Stitch MCP design generation, PostgreSQL dynamic configuration (`onboarding_steps`, `onboarding_options`, `user_onboarding_progress`), Spring Boot API (`/api/v1/onboarding/*`), and Expo React Native (`StitchOnboardingScreen`). Step options (goals, diaspora metro hubs, languages, community interests, notification categories, trust pledge items) are strictly zero-hardcoded and fetched dynamically from the database. Progress across all 8 steps is persisted to `user_onboarding_progress`, supporting session resumption and multiplatform adaptive layout (Mobile <600px, Desktop Web >=1024px) with ManaBandhu Modern Vibrant tokens (`#431ebe` primary, `#e5deff` primarySoft, `#131b2e` ink, `#00696b` teal).
 
 
 
