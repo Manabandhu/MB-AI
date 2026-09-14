@@ -2,7 +2,7 @@ import { radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BackHandler,
   FlatList,
@@ -18,9 +18,9 @@ import {
   deleteRoomListing,
   getFavorites,
   getMyListings,
-  unsaveRoom,
   updateRoomListing,
 } from '@/modules/rooms/api';
+import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
 import type { OwnerRoomListing, RoomListing } from '@/modules/rooms/types';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
@@ -28,6 +28,10 @@ export function RoomFavoritesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [removedIds, setRemovedIds] = useState<Record<string, boolean>>({});
+
+  const savedRoomsMap = useSavedRoomsStore((s) => s.savedRooms);
+  const removeSaved = useSavedRoomsStore((s) => s.removeSaved);
+  const setFavoritesFromBackend = useSavedRoomsStore((s) => s.setFavoritesFromBackend);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -38,22 +42,33 @@ export function RoomFavoritesScreen() {
     return () => sub.remove();
   }, [router]);
 
-  const { data } = useQuery({
+  const { data: backendFavorites } = useQuery({
     queryKey: ['rooms', 'favorites'],
     queryFn: getFavorites,
     retry: false,
   });
 
-  const unsave = useMutation({
-    mutationFn: (roomId: string) => unsaveRoom(roomId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms', 'favorites'] }),
-  });
+  useEffect(() => {
+    if (backendFavorites && backendFavorites.length > 0) {
+      setFavoritesFromBackend(backendFavorites);
+    }
+  }, [backendFavorites, setFavoritesFromBackend]);
 
-  const allSaved = (data ?? []).filter((room) => !removedIds[room.id]);
+  const allSaved = useMemo(() => {
+    const map = new Map<string, RoomListing>();
+    for (const r of Object.values(savedRoomsMap)) {
+      map.set(r.id, r);
+    }
+    for (const r of backendFavorites ?? []) {
+      map.set(r.id, r);
+    }
+    return Array.from(map.values()).filter((room) => !removedIds[room.id]);
+  }, [savedRoomsMap, backendFavorites, removedIds]);
 
   const handleUnsave = (id: string) => {
     setRemovedIds((prev) => ({ ...prev, [id]: true }));
-    unsave.mutate(id);
+    removeSaved(id);
+    queryClient.invalidateQueries({ queryKey: ['rooms', 'favorites'] });
   };
 
   return (

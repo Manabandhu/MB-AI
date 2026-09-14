@@ -1,5 +1,5 @@
 import { color as baseColors, radius, space } from '@manabandhu/design-system';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -18,8 +18,10 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { listRoomListings, saveRoom, unsaveRoom } from '@/modules/rooms/api';
+import { listRoomListings } from '@/modules/rooms/api';
+import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
 import type { RoomListing } from '@/modules/rooms/types';
+import { searchAllUSCities } from '@/modules/rooms/utils/locationService';
 import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import type { Coordinate } from '@/modules/shared/utils/geoPolygon';
@@ -59,6 +61,8 @@ type CityOption = {
   id: string;
   name: string;
   landmarks: string[];
+  latitude?: number;
+  longitude?: number;
 };
 
 const CITIES: CityOption[] = [
@@ -66,27 +70,71 @@ const CITIES: CityOption[] = [
     id: 'austin',
     name: 'Austin, TX',
     landmarks: ['Domain Northside', 'Apple Riata', 'UT Austin', 'Round Rock'],
+    latitude: 30.2672,
+    longitude: -97.7431,
   },
   {
     id: 'dfw',
     name: 'Dallas-Fort Worth, TX',
     landmarks: ['Irving', 'Plano', 'Frisco', 'Richardson'],
+    latitude: 32.7767,
+    longitude: -96.797,
   },
   {
     id: 'houston',
     name: 'Houston, TX',
     landmarks: ['Sugar Land', 'Katy', 'Medical Center', 'Galleria'],
+    latitude: 29.7604,
+    longitude: -95.3698,
   },
   {
     id: 'bayarea',
     name: 'Bay Area, CA',
     landmarks: ['Sunnyvale', 'Fremont', 'Santa Clara', 'San Jose'],
+    latitude: 37.3382,
+    longitude: -121.8863,
   },
-  { id: 'seattle', name: 'Seattle, WA', landmarks: ['Bellevue', 'Redmond', 'South Lake Union'] },
+  {
+    id: 'seattle',
+    name: 'Seattle, WA',
+    landmarks: ['Bellevue', 'Redmond', 'South Lake Union'],
+    latitude: 47.6062,
+    longitude: -122.3321,
+  },
   {
     id: 'jersey',
     name: 'Jersey City / NYC',
     landmarks: ['Journal Square', 'Newport', 'Edison, NJ'],
+    latitude: 40.7178,
+    longitude: -74.0431,
+  },
+  {
+    id: 'chicago',
+    name: 'Chicago, IL',
+    landmarks: ['Loop', 'Naperville', 'Schaumburg'],
+    latitude: 41.8781,
+    longitude: -87.6298,
+  },
+  {
+    id: 'atlanta',
+    name: 'Atlanta, GA',
+    landmarks: ['Midtown', 'Alpharetta', 'Buckhead', 'Duluth'],
+    latitude: 33.749,
+    longitude: -84.388,
+  },
+  {
+    id: 'boston',
+    name: 'Boston, MA',
+    landmarks: ['Cambridge', 'Quincy', 'Waltham'],
+    latitude: 42.3601,
+    longitude: -71.0589,
+  },
+  {
+    id: 'charlotte',
+    name: 'Charlotte, NC',
+    landmarks: ['Uptown', 'Ballantyne', 'University City'],
+    latitude: 35.2271,
+    longitude: -80.8431,
   },
 ];
 
@@ -148,25 +196,18 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     return () => sub.remove();
   }, [isFilterModalVisible, isCityModalVisible, viewMode, screenId]);
 
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [citySearchInput, setCitySearchInput] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
-  const [savedIds, setSavedIds] = useState<Record<string, boolean>>({});
 
-  const saveMutation = useMutation({
-    mutationFn: async ({ roomId, isSaved }: { roomId: string; isSaved: boolean }) => {
-      if (isSaved) {
-        await unsaveRoom(roomId);
-      } else {
-        await saveRoom(roomId);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms', 'favorites'] });
-    },
-  });
+  const savedRoomsMap = useSavedRoomsStore((s) => s.savedRooms);
+  const toggleSaveInStore = useSavedRoomsStore((s) => s.toggleSave);
+
+  const searchedCities = useMemo(() => {
+    if (!citySearchInput.trim()) return [];
+    return searchAllUSCities(citySearchInput, 35);
+  }, [citySearchInput]);
 
   // Filter state for modal
   const [filterPriceMax, setFilterPriceMax] = useState<number | null>(null);
@@ -312,9 +353,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     return 0; // recommended
   });
 
-  const toggleSave = (id: string, currentlySaved: boolean) => {
-    setSavedIds((prev) => ({ ...prev, [id]: !currentlySaved }));
-    saveMutation.mutate({ roomId: id, isSaved: currentlySaved });
+  const toggleSave = (room: ExtendedRoom) => {
+    toggleSaveInStore(room);
   };
 
   const toggleAmenityFilter = (amenity: string) => {
@@ -499,18 +539,21 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
       {/* ─── BODY CONTENT: MAP VIEW vs LIST VIEW vs DUAL PANE ───────────────── */}
       {(() => {
         const renderMapView = () => {
+          const cityLat = selectedCity.latitude || 30.2672;
+          const cityLng = selectedCity.longitude || -97.7431;
+
           const mapMarkers = filteredRooms.map((room, idx) => ({
             id: room.id,
-            latitude: Number(room.latitude) || 30.2672 + (((idx * 17) % 30) - 15) * 0.005,
-            longitude: Number(room.longitude) || -97.7431 + (((idx * 23) % 30) - 15) * 0.005,
+            latitude: Number(room.latitude) || cityLat + (((idx * 17) % 30) - 15) * 0.005,
+            longitude: Number(room.longitude) || cityLng + (((idx * 23) % 30) - 15) * 0.005,
             title: room.title,
             price: room.price,
             subtitle: `${room.roomType} • ${room.broadLocation}`,
             isSelected: activePinRoom?.id === room.id,
           }));
 
-          const initialLat = mapMarkers[0]?.latitude || 30.2672;
-          const initialLng = mapMarkers[0]?.longitude || -97.7431;
+          const initialLat = selectedCity.latitude || mapMarkers[0]?.latitude || 30.2672;
+          const initialLng = selectedCity.longitude || mapMarkers[0]?.longitude || -97.7431;
 
           return (
             <View style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}>
@@ -641,8 +684,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             ) : (
               <View style={isDualPane ? s.dualPaneCardGrid : undefined}>
                 {filteredRooms.map((room) => {
-                  const isSaved =
-                    savedIds[room.id] !== undefined ? savedIds[room.id] : room.savedByViewer;
+                  const isSaved = Boolean(savedRoomsMap[room.id] || room.savedByViewer);
                   return (
                     <Pressable
                       key={room.id}
@@ -670,7 +712,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                             <Pressable
                               onPress={(e) => {
                                 e.stopPropagation();
-                                toggleSave(room.id, Boolean(isSaved));
+                                toggleSave(room);
                               }}
                               style={s.saveBtn}
                               accessibilityLabel={isSaved ? 'Unsave room' : 'Save room'}
@@ -798,45 +840,123 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             </View>
             <Text style={s.modalSubtitle}>Discover verified flatmates & housing in your metro</Text>
 
-            <ScrollView style={{ maxHeight: 360 }}>
-              {CITIES.map((city) => {
-                const isSelected = selectedCity.id === city.id;
-                return (
-                  <Pressable
-                    key={city.id}
-                    onPress={() => {
-                      setSelectedCity(city);
-                      setIsCityModalVisible(false);
-                    }}
-                    style={[s.cityOptionRow, isSelected && s.cityOptionRowActive]}
-                  >
-                    <View style={s.cityOptionLeft}>
-                      <AppIcon
-                        color={isSelected ? colors.appPrimary : colors.muted}
-                        name="map"
-                        size={16}
-                      />
-                      <View>
-                        <Text style={[s.cityOptionName, isSelected && s.cityOptionNameActive]}>
-                          {city.name}
-                        </Text>
-                        <Text style={s.cityOptionLandmarks}>{city.landmarks.join(' • ')}</Text>
-                      </View>
-                    </View>
-                    <View style={[s.cityCountPill, isSelected && s.cityCountPillActive]}>
-                      <Text style={[s.cityCountText, isSelected && s.cityCountTextActive]}>
-                        {(() => {
-                          const cityNamePrefix = city.name.split(',')[0].toLowerCase();
-                          const count = rawListings.filter((r) =>
-                            r.broadLocation?.toLowerCase().includes(cityNamePrefix),
-                          ).length;
-                          return count > 0 ? `${count} active` : 'Active Hub';
-                        })()}
+            <View style={s.citySearchBox}>
+              <AppIcon color={colors.muted} name="search" size={16} />
+              <TextInput
+                value={citySearchInput}
+                onChangeText={setCitySearchInput}
+                placeholder="Search all US cities (e.g. Frisco, Edison, Sunnyvale)..."
+                placeholderTextColor={colors.muted}
+                style={s.citySearchInput}
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+              />
+              {citySearchInput.length > 0 && (
+                <Pressable onPress={() => setCitySearchInput('')} hitSlop={8}>
+                  <Text style={s.citySearchClearText}>✕</Text>
+                </Pressable>
+              )}
+            </View>
+
+            <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
+              {citySearchInput.trim().length > 0 ? (
+                <>
+                  <Text style={s.citySectionLabel}>SEARCH RESULTS ({searchedCities.length})</Text>
+                  {searchedCities.length === 0 ? (
+                    <View style={s.cityEmptyResults}>
+                      <Text style={s.cityEmptyText}>
+                        No cities found matching "{citySearchInput}". Try another city name.
                       </Text>
                     </View>
-                  </Pressable>
-                );
-              })}
+                  ) : (
+                    searchedCities.map((city) => {
+                      const isSelected = selectedCity.name === city.name;
+                      return (
+                        <Pressable
+                          key={city.id}
+                          onPress={() => {
+                            setSelectedCity({
+                              id: city.id,
+                              name: city.name,
+                              landmarks: [city.stateCode],
+                              latitude: city.latitude,
+                              longitude: city.longitude,
+                            });
+                            setCitySearchInput('');
+                            setIsCityModalVisible(false);
+                          }}
+                          style={[s.cityOptionRow, isSelected && s.cityOptionRowActive]}
+                        >
+                          <View style={s.cityOptionLeft}>
+                            <AppIcon
+                              color={isSelected ? colors.appPrimary : colors.muted}
+                              name="map"
+                              size={16}
+                            />
+                            <View>
+                              <Text
+                                style={[s.cityOptionName, isSelected && s.cityOptionNameActive]}
+                              >
+                                {city.name}
+                              </Text>
+                              <Text style={s.cityOptionLandmarks}>
+                                United States • {city.stateCode}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={s.citySelectPill}>
+                            <Text style={s.citySelectPillText}>
+                              {isSelected ? 'Selected' : 'Select'}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })
+                  )}
+                </>
+              ) : (
+                <>
+                  <Text style={s.citySectionLabel}>🌟 POPULAR TECH METROS</Text>
+                  {CITIES.map((city) => {
+                    const isSelected = selectedCity.id === city.id;
+                    return (
+                      <Pressable
+                        key={city.id}
+                        onPress={() => {
+                          setSelectedCity(city);
+                          setIsCityModalVisible(false);
+                        }}
+                        style={[s.cityOptionRow, isSelected && s.cityOptionRowActive]}
+                      >
+                        <View style={s.cityOptionLeft}>
+                          <AppIcon
+                            color={isSelected ? colors.appPrimary : colors.muted}
+                            name="map"
+                            size={16}
+                          />
+                          <View>
+                            <Text style={[s.cityOptionName, isSelected && s.cityOptionNameActive]}>
+                              {city.name}
+                            </Text>
+                            <Text style={s.cityOptionLandmarks}>{city.landmarks.join(' • ')}</Text>
+                          </View>
+                        </View>
+                        <View style={[s.cityCountPill, isSelected && s.cityCountPillActive]}>
+                          <Text style={[s.cityCountText, isSelected && s.cityCountTextActive]}>
+                            {(() => {
+                              const cityNamePrefix = city.name.split(',')[0].toLowerCase();
+                              const count = rawListings.filter((r) =>
+                                r.broadLocation?.toLowerCase().includes(cityNamePrefix),
+                              ).length;
+                              return count > 0 ? `${count} active` : 'Active Hub';
+                            })()}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </>
+              )}
             </ScrollView>
           </Pressable>
         </Pressable>
@@ -1791,6 +1911,58 @@ const s = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     gap: space.x3,
+  },
+  citySearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 6,
+    gap: 8,
+    marginVertical: 4,
+  },
+  citySearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0f172a',
+    padding: 0,
+  },
+  citySearchClearText: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '700',
+    paddingHorizontal: 4,
+  },
+  citySectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: '#64748b',
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  citySelectPill: {
+    backgroundColor: '#e0e7ff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  citySelectPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#431ebe',
+  },
+  cityEmptyResults: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cityEmptyText: {
+    fontSize: 13,
+    color: '#64748b',
+    textAlign: 'center',
   },
   cityModalCardMobile: {
     borderTopLeftRadius: 28,

@@ -374,7 +374,7 @@ public class RoomsController {
         return favoriteService.findListingResponses(userId, listingService);
     }
 
-    @PostMapping("/listings/{listingId}/favorite")
+    @PostMapping({"/listings/{listingId}/favorite", "/{listingId}/favorite"})
     ResponseEntity<RoomListingResponse> favorite(Authentication authentication, @PathVariable UUID listingId) {
         var userId = actorId(authentication);
         favoriteService.favorite(userId, listingId);
@@ -384,7 +384,7 @@ public class RoomsController {
                 .body(toResponse(listing, userId));
     }
 
-    @DeleteMapping("/listings/{listingId}/favorite")
+    @DeleteMapping({"/listings/{listingId}/favorite", "/{listingId}/favorite"})
     ResponseEntity<Void> unfavorite(Authentication authentication, @PathVariable UUID listingId) {
         favoriteService.unfavorite(actorId(authentication), listingId);
         return ResponseEntity.noContent().build();

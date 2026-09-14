@@ -121,19 +121,28 @@ export async function getMyListings(): Promise<OwnerRoomListing[]> {
 }
 
 export async function getFavorites(): Promise<RoomListing[]> {
-  return parseJsonOrThrow(await apiFetch('/api/v1/rooms/favorites'), 'Room favorites');
+  const response = await apiFetch('/api/v1/rooms/favorites');
+  if (response.status === 401 || response.status === 403) {
+    return [];
+  }
+  return parseJsonOrThrow(response, 'Room favorites');
 }
 
-export async function saveRoom(roomId: string): Promise<RoomListing> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/${roomId}/favorite`, { method: 'POST' }),
-    'Save room',
-  );
+export async function saveRoom(roomId: string): Promise<RoomListing | null> {
+  const response = await apiFetch(`/api/v1/rooms/listings/${roomId}/favorite`, { method: 'POST' });
+  if (response.status === 401 || response.status === 403) {
+    return null;
+  }
+  return parseJsonOrThrow(response, 'Save room');
 }
 
 export async function unsaveRoom(roomId: string): Promise<void> {
-  const response = await apiFetch(`/api/v1/rooms/${roomId}/favorite`, { method: 'DELETE' });
-  if (!response.ok) throw new Error(`Unsave room failed: ${response.status}`);
+  const response = await apiFetch(`/api/v1/rooms/listings/${roomId}/favorite`, {
+    method: 'DELETE',
+  });
+  if (!response.ok && response.status !== 401 && response.status !== 403) {
+    throw new Error(`Unsave room failed: ${response.status}`);
+  }
 }
 
 export async function getRoomImages(listingId: string): Promise<RoomImage[]> {

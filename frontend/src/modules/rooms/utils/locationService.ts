@@ -105,3 +105,47 @@ export async function lookupZipCodeFree(zip: string): Promise<ZipLookupResult | 
     return null;
   }
 }
+
+export type SearchCityResult = {
+  id: string;
+  name: string;
+  cityName: string;
+  stateCode: string;
+  latitude: number;
+  longitude: number;
+};
+
+let cachedUSCities: SearchCityResult[] | null = null;
+
+export function searchAllUSCities(query: string, maxResults = 30): SearchCityResult[] {
+  if (!cachedUSCities) {
+    const raw = City.getCitiesOfCountry('US') || [];
+    cachedUSCities = raw.map((c) => ({
+      id: `${c.name.toLowerCase()}-${c.stateCode.toLowerCase()}`,
+      name: `${c.name}, ${c.stateCode}`,
+      cityName: c.name,
+      stateCode: c.stateCode,
+      latitude: Number(c.latitude) || 0,
+      longitude: Number(c.longitude) || 0,
+    }));
+  }
+
+  const clean = query.trim().toLowerCase();
+  if (!clean) return [];
+
+  const starts: SearchCityResult[] = [];
+  const contains: SearchCityResult[] = [];
+
+  for (const c of cachedUSCities) {
+    const lowerName = c.cityName.toLowerCase();
+    const lowerFull = c.name.toLowerCase();
+    if (lowerName.startsWith(clean)) {
+      starts.push(c);
+    } else if (lowerFull.includes(clean)) {
+      contains.push(c);
+    }
+    if (starts.length >= maxResults) break;
+  }
+
+  return [...starts, ...contains].slice(0, maxResults);
+}

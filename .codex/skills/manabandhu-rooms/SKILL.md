@@ -26,14 +26,14 @@ Owns room discovery, search, map, filters, saved rooms, listings, listing creati
 
 ## Component Inventory
 
-- `RoomsScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` (react-native-maps Apple Maps on iOS, MapKit JS on web) for real interactive map view with freehand draw-to-filter boundary search (Zillow/Apartments style) and point-in-polygon filtering
+- `RoomsScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` (react-native-maps Apple Maps on iOS, MapKit JS on web) for real interactive map view with freehand draw-to-filter boundary search (Zillow/Apartments style) and point-in-polygon filtering; includes all-US metro & city search via `searchAllUSCities`
 - `RoomDetailScreen` - real listing detail with save/unsave and contact handoff
 - `RoomEditScreen` / `RoomCreateScreen` - real forms backed by `RoomForm` (react-hook-form + zod)
 - `RoomForm` - shared create/edit form with validation
-- `RoomFavoritesScreen` - real saved/favorite listings list
+- `RoomFavoritesScreen` - real saved/favorite listings list backed by `savedRoomsStore` and backend favorites
 - `RoomMyListingsScreen` - real owner listings list
 - `RoomInquiryScreen` - inquiry form that creates a booking for the listing
-- Shared: `UniversalMapView`, `geoPolygon` (`isPointInPolygon`), `FeatureScreen`, `SearchBar`, `AppButton`, `TextArea`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`
+- Shared: `UniversalMapView`, `geoPolygon` (`isPointInPolygon`), `savedRoomsStore`, `locationService` (`searchAllUSCities`), `FeatureScreen`, `SearchBar`, `AppButton`, `TextArea`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`
 
 ## API Surface
 
@@ -58,7 +58,7 @@ Images, availability, bookings, favorites:
 - `GET /api/v1/rooms/{listingId}/bookings` - owner views listing inquiries
 - `PATCH /api/v1/rooms/bookings/{bookingId}/status` - accept/reject/cancel (owner or requester)
 - `GET /api/v1/rooms/my-bookings` - requester's inquiries
-- `GET /api/v1/rooms/favorites` · `POST/DELETE /api/v1/rooms/{listingId}/favorite`
+- `GET /api/v1/rooms/favorites` · `POST/DELETE /api/v1/rooms/listings/{listingId}/favorite` (also aliased at `/{listingId}/favorite`)
 
 Saved searches, reports, moderation (all authenticated):
 - `GET/POST /api/v1/rooms/saved-searches` · `PATCH/DELETE /api/v1/rooms/saved-searches/{searchId}`
@@ -86,7 +86,7 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`.
 
 ## Free Zero-Cost Location & Geocoding Services
 
-- `country-state-city`: Offline US states (`getUSStates()`) and cities by state (`getCitiesByState(stateCode)`) with zero network latency or API keys.
+- `country-state-city`: Offline US states (`getUSStates()`), cities by state (`getCitiesByState(stateCode)`), and instant search across all ~20,000 US cities (`searchAllUSCities(query)`) with zero network latency or API keys.
 - OpenStreetMap Photon API (`https://photon.komoot.io/api/?q={query}&limit=5&bbox=-125,24,-66,49`): Instant address autocomplete and lat/lng coordinates for US bounds with zero billing/keys.
 - Zippopotam.us (`https://api.zippopotam.us/us/{zip}`): 1-step ZIP code lookup returning city, state abbreviation, and coordinates.
 

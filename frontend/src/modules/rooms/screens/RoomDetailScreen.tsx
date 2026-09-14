@@ -18,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useAuthStore } from '@/lib/authStore';
 import { getRoomDetail, saveRoom, unsaveRoom } from '@/modules/rooms/api';
+import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
 import type { RoomListing } from '@/modules/rooms/types';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -65,16 +66,25 @@ export function RoomDetailScreen() {
     retry: false,
   });
 
-  const isSaved = isSavedLocal !== null ? isSavedLocal : Boolean(apiRoom?.savedByViewer);
+  const isRoomSavedInStore = useSavedRoomsStore((s) => Boolean(s.savedRooms[roomId]));
+  const toggleSaveInStore = useSavedRoomsStore((s) => s.toggleSave);
+
+  const isSaved =
+    isSavedLocal !== null ? isSavedLocal : isRoomSavedInStore || Boolean(apiRoom?.savedByViewer);
 
   const toggleSaveMutation = useMutation({
     mutationFn: async () => {
-      if (isSaved) {
-        await unsaveRoom(roomId);
-        setIsSavedLocal(false);
+      if (apiRoom) {
+        const next = await toggleSaveInStore(apiRoom);
+        setIsSavedLocal(next);
       } else {
-        await saveRoom(roomId);
-        setIsSavedLocal(true);
+        if (isSaved) {
+          await unsaveRoom(roomId);
+          setIsSavedLocal(false);
+        } else {
+          await saveRoom(roomId);
+          setIsSavedLocal(true);
+        }
       }
     },
     onSuccess: () => {
