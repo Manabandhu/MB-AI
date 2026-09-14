@@ -32,7 +32,7 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 
 ## Component Inventory
 
-- `StitchSplashScreen` - brand splash with auto-advance
+- `StitchSplashScreen` - brand splash with auto-advance, 2.2s guaranteed safety fallback timer, tap-to-advance, and active ActivityIndicator in status row
 - `StitchWelcomeFlowScreen` - welcome carousel and entry points
 - `StitchOnboardingScreen` - multi-step onboarding with progress
 - `StitchAppShellScreen({ kind })` - unified tabbed shell for home/explore/chat/community/profile

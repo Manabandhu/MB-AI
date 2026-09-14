@@ -1,5 +1,14 @@
 import { color as colors, radius, space, typography } from '@manabandhu/design-system';
-import { StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Platform,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from 'react-native';
 
 export type LoadingStateVariant = 'spinner' | 'skeleton';
 
@@ -15,12 +24,36 @@ export function LoadingState({
   label = 'Loading...',
 }: LoadingStateProps) {
   const colorScheme = useColorScheme();
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    if (variant === 'skeleton') {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 750,
+            useNativeDriver: Platform.OS !== 'web',
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0.4,
+            duration: 750,
+            useNativeDriver: Platform.OS !== 'web',
+          }),
+        ]),
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [variant, pulseAnim]);
 
   if (variant === 'spinner') {
     return (
       <View style={styles.root}>
-        <View style={[styles.spinner, colorScheme === 'dark' && styles.spinnerDark]} />
-        <Text style={[styles.label, colorScheme === 'dark' && styles.labelDark]}>{label}</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        {label ? (
+          <Text style={[styles.label, colorScheme === 'dark' && styles.labelDark]}>{label}</Text>
+        ) : null}
       </View>
     );
   }
@@ -28,14 +61,21 @@ export function LoadingState({
   return (
     <View style={[styles.root, { gap: space.x4 }]}>
       {Array.from({ length: count }).map((_, index) => (
-        <View key={index} style={[styles.skeleton, colorScheme === 'dark' && styles.skeletonDark]}>
+        <Animated.View
+          key={index}
+          style={[
+            styles.skeleton,
+            colorScheme === 'dark' && styles.skeletonDark,
+            { opacity: pulseAnim },
+          ]}
+        >
           <View
             style={[
               styles.skeletonLine,
               { width: index === 0 ? '60%' : index === 1 ? '80%' : '40%' },
             ]}
           />
-        </View>
+        </Animated.View>
       ))}
     </View>
   );
@@ -49,15 +89,6 @@ const styles = StyleSheet.create({
     gap: space.x4,
     padding: space.x6,
   },
-  spinner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 3,
-    borderColor: colors.primarySoft,
-    borderTopColor: colors.primary,
-  },
-  spinnerDark: { borderColor: colors.primarySoft, borderTopColor: colors.primary },
   label: {
     color: colors.muted,
     fontSize: typography.body.fontSize,

@@ -1,7 +1,16 @@
 import { color, space } from '@manabandhu/design-system';
 import { router, useRootNavigationState } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
@@ -89,26 +98,34 @@ export function StitchSplashScreen() {
   }, [dotPulse, fadeAnim, glowPulse, progressAnim, scaleAnim]);
 
   useEffect(() => {
-    if (!rootNavigationState?.key || isLoading) return;
-
-    const redirectTimer = setTimeout(() => {
+    let redirected = false;
+    const doRedirect = () => {
+      if (redirected) return;
+      redirected = true;
       if (status === 'authenticated') {
         router.replace('/home');
       } else {
         router.replace('/welcome');
       }
-    }, 1900);
+    };
 
-    return () => clearTimeout(redirectTimer);
+    // If session check already settled, transition smoothly
+    if (rootNavigationState?.key && !isLoading) {
+      const redirectTimer = setTimeout(doRedirect, 1400);
+      return () => clearTimeout(redirectTimer);
+    }
+
+    // Safety fallback: Never trap the user on the splash screen for more than 2.2 seconds
+    const fallbackTimer = setTimeout(doRedirect, 2200);
+    return () => clearTimeout(fallbackTimer);
   }, [isLoading, rootNavigationState?.key, status]);
 
   const navigateToWelcome = () => {
-    if (rootNavigationState?.key) {
-      if (status === 'authenticated') {
-        router.replace('/home');
-      } else {
-        router.replace('/welcome');
-      }
+    const currentStatus = useAuthStore.getState().status;
+    if (currentStatus === 'authenticated') {
+      router.replace('/home');
+    } else {
+      router.replace('/welcome');
     }
   };
 
@@ -162,7 +179,7 @@ export function StitchSplashScreen() {
             <Animated.View style={[styles.progressBarFill, { width: progressWidth }]} />
           </View>
           <View style={styles.statusRow}>
-            <Animated.View style={[styles.pulseDot, { opacity: dotPulse }]} />
+            <ActivityIndicator size="small" color={color.primary} />
             <Text style={styles.statusText}>Loading community network...</Text>
           </View>
         </Animated.View>
