@@ -8,13 +8,30 @@ export type RideListing = {
   departureAt: string;
   seatsAvailable: number;
   seatsTotal: number;
-  contribution?: number;
-  status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED';
+  contribution?: number | string;
+  status: 'DRAFT' | 'ACTIVE' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED';
   luggageAllowed: boolean;
   childSeatAvailable: boolean;
   verifiedDriver: boolean;
   tripSharingEnabled: boolean;
   savedByViewer: boolean;
+  originLat?: number;
+  originLng?: number;
+  destinationLat?: number;
+  destinationLng?: number;
+  routePolyline?: string;
+  distanceMiles?: number;
+  estimatedDurationMins?: number;
+  tollPreference?: 'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT' | string;
+  estimatedTollAmount?: number;
+  isRecurring?: boolean;
+  recurrencePattern?: 'ONE_TIME' | 'WEEKDAYS' | 'DAILY' | 'WEEKLY' | string;
+  recurringDays?: string[];
+  luggageCapacity?: 'NONE' | 'BACKPACK_ONLY' | 'MEDIUM' | 'LARGE_SUITCASE' | string;
+  genderPreference?: 'ANY' | 'FEMALE_ONLY' | 'MALE_ONLY' | string;
+  completedAt?: string;
+  conversationId?: string;
+  chatExpiresAt?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -68,15 +85,31 @@ export type RideRating = {
 };
 
 export type CreateRideOfferInput = {
-  title: string;
+  title?: string;
   description?: string;
-  pickupArea: string;
-  destination: string;
+  pickupArea?: string;
+  destination?: string;
+  originArea?: string;
+  destinationArea?: string;
   departureAt: string;
   seatsTotal: number;
-  contribution?: number;
+  contribution?: number | string;
   luggageAllowed?: boolean;
   childSeatAvailable?: boolean;
+  originLat?: number;
+  originLng?: number;
+  destinationLat?: number;
+  destinationLng?: number;
+  routePolyline?: string;
+  distanceMiles?: number;
+  estimatedDurationMins?: number;
+  tollPreference?: 'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT' | string;
+  estimatedTollAmount?: number;
+  isRecurring?: boolean;
+  recurrencePattern?: 'ONE_TIME' | 'WEEKDAYS' | 'DAILY' | 'WEEKLY' | string;
+  recurringDays?: string[];
+  luggageCapacity?: 'NONE' | 'BACKPACK_ONLY' | 'MEDIUM' | 'LARGE_SUITCASE' | string;
+  genderPreference?: 'ANY' | 'FEMALE_ONLY' | 'MALE_ONLY' | string;
 };
 
 export type CreateRideRequestInput = {
@@ -91,6 +124,9 @@ export type CreateRideRequestInput = {
 export type UpdateRideOfferInput = Partial<CreateRideOfferInput> & {
   status?: string;
   seatsAvailable?: number;
+  completedAt?: string;
+  conversationId?: string;
+  chatExpiresAt?: string;
 };
 
 export type CreateRideRatingInput = {
@@ -110,6 +146,23 @@ export type RideOffer = {
   seatsAvailable: number;
   contribution: string;
   status: string;
+  originLat?: number;
+  originLng?: number;
+  destinationLat?: number;
+  destinationLng?: number;
+  routePolyline?: string;
+  distanceMiles?: number;
+  estimatedDurationMins?: number;
+  tollPreference?: 'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT' | string;
+  estimatedTollAmount?: number;
+  isRecurring?: boolean;
+  recurrencePattern?: 'ONE_TIME' | 'WEEKDAYS' | 'DAILY' | 'WEEKLY' | string;
+  recurringDays?: string[];
+  luggageCapacity?: 'NONE' | 'BACKPACK_ONLY' | 'MEDIUM' | 'LARGE_SUITCASE' | string;
+  genderPreference?: 'ANY' | 'FEMALE_ONLY' | 'MALE_ONLY' | string;
+  completedAt?: string;
+  conversationId?: string;
+  chatExpiresAt?: string;
   createdAt: string;
   updatedAt: string;
   reported: boolean;
@@ -126,4 +179,11 @@ export type RideBooking = {
   seatsBooked: number;
   status: string;
   createdAt: string;
+};
+
+export type RideChatResponse = {
+  conversationId: string;
+  rideId?: string;
+  chatExpiresAt?: string;
+  message?: string;
 };

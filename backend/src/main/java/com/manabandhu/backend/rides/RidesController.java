@@ -22,6 +22,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.chat.Conversation;
+import com.manabandhu.backend.chat.ConversationParticipant;
+import com.manabandhu.backend.chat.ConversationParticipantService;
+import com.manabandhu.backend.chat.ConversationService;
+import com.manabandhu.backend.chat.Message;
+import com.manabandhu.backend.chat.MessageService;
+
 @RestController
 @RequestMapping("/api/v1/rides")
 public class RidesController {
@@ -32,16 +39,24 @@ public class RidesController {
     private final RideParticipantService participantService;
     private final RideBookingService bookingService;
     private final RideRatingService ratingService;
+    private final ConversationService conversationService;
+    private final ConversationParticipantService chatParticipantService;
+    private final MessageService messageService;
 
     RidesController(RidesContentService contentService, RideOfferService offerService,
                     RideRequestService requestService, RideParticipantService participantService,
-                    RideBookingService bookingService, RideRatingService ratingService) {
+                    RideBookingService bookingService, RideRatingService ratingService,
+                    ConversationService conversationService, ConversationParticipantService chatParticipantService,
+                    MessageService messageService) {
         this.contentService = contentService;
         this.offerService = offerService;
         this.requestService = requestService;
         this.participantService = participantService;
         this.bookingService = bookingService;
         this.ratingService = ratingService;
+        this.conversationService = conversationService;
+        this.chatParticipantService = chatParticipantService;
+        this.messageService = messageService;
     }
 
     @GetMapping("/screens/{screenId}")
@@ -53,8 +68,11 @@ public class RidesController {
     Page<RideOffer> offers(
             @RequestParam(required = false) String origin,
             @RequestParam(required = false) String destination,
+            @RequestParam(required = false) Boolean avoidTolls,
+            @RequestParam(required = false) String genderPreference,
+            @RequestParam(required = false) Boolean isRecurring,
             Pageable pageable) {
-        return offerService.search(origin, destination, pageable);
+        return offerService.searchActive(origin, destination, avoidTolls, genderPreference, isRecurring, pageable);
     }
 
     @PostMapping("/offers")
@@ -132,6 +150,78 @@ public class RidesController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your ride");
         }
         return offerService.update(rideId, input);
+    }
+
+    @PostMapping({"/offers/{offerId}/re-activate", "/{offerId}/re-activate"})
+    ResponseEntity<RideOffer> reactivateOffer(
+            Authentication authentication,
+            @PathVariable UUID offerId,
+            @RequestBody(required = false) ReactivateRideInput input) {
+        var driverId = actorId(authentication);
+        var newDeparture = (input != null) ? input.newDepartureAt() : null;
+        var reactivated = offerService.reactivate(offerId, driverId, newDeparture);
+        return ResponseEntity.created(URI.create("/api/v1/rides/offers/" + reactivated.getId())).body(reactivated);
+    }
+
+    @PatchMapping({"/offers/{offerId}/status", "/{offerId}/status"})
+    RideOffer updateOfferStatus(
+            Authentication authentication,
+            @PathVariable UUID offerId,
+            @Valid @RequestBody UpdateRideStatusInput input) {
+        var actorId = actorId(authentication);
+        return offerService.updateStatus(offerId, actorId, isAdmin(authentication), input.status());
+    }
+
+    @PostMapping({"/offers/{offerId}/chat", "/{offerId}/chat"})
+    ResponseEntity<RideChatResponse> provisionRideChat(
+            Authentication authentication,
+            @PathVariable UUID offerId) {
+        var actorId = actorId(authentication);
+        var offer = offerService.findById(offerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+
+        var bookings = bookingService.findByRideId(offerId);
+        boolean isPassenger = bookings.stream().anyMatch(b -> b.getUserId().equals(actorId));
+        boolean isDriver = offer.getDriverId().equals(actorId);
+        if (!isDriver && !isPassenger && !isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only ride driver or confirmed passengers can access ride chat");
+        }
+
+        if (offer.getConversationId() != null) {
+            return ResponseEntity.ok(new RideChatResponse(
+                    offer.getConversationId(),
+                    offerId,
+                    offer.getChatExpiresAt(),
+                    "🔒 Ephemeral Chat: This conversation will automatically self-delete 2 hours after ride completion."
+            ));
+        }
+
+        var title = "Ride: " + offer.getOriginArea() + " → " + offer.getDestinationArea();
+        var conversation = conversationService.create(offer.getDriverId(), Conversation.ConversationType.RIDE_TEMP, title);
+
+        for (var booking : bookings) {
+            if ("CONFIRMED".equalsIgnoreCase(booking.getStatus()) || "ACCEPTED".equalsIgnoreCase(booking.getStatus())) {
+                if (!booking.getUserId().equals(offer.getDriverId())) {
+                    chatParticipantService.add(conversation.getId(), booking.getUserId(), ConversationParticipant.ParticipantRole.MEMBER);
+                }
+            }
+        }
+
+        String initialNotice = String.format(
+                "🚗 Ride Coordination Chat created for %s → %s.\n\n" +
+                "🔒 Ephemeral Notice: This chat is temporary and will permanently self-delete 2 hours after the ride is marked completed.",
+                offer.getOriginArea(), offer.getDestinationArea()
+        );
+        messageService.send(conversation.getId(), offer.getDriverId(), initialNotice, Message.MessageType.SYSTEM);
+
+        offerService.attachConversation(offerId, conversation.getId(), offer.getChatExpiresAt());
+
+        return ResponseEntity.ok(new RideChatResponse(
+                conversation.getId(),
+                offerId,
+                offer.getChatExpiresAt(),
+                "🔒 Ephemeral Chat: This conversation will automatically self-delete 2 hours after ride completion."
+        ));
     }
 
     @DeleteMapping("/offers/{offerId}")

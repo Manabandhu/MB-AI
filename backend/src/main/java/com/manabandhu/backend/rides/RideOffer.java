@@ -1,5 +1,6 @@
 package com.manabandhu.backend.rides;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -24,6 +25,57 @@ public class RideOffer {
     @Column(name = "destination_area", nullable = false, length = 200)
     String destinationArea;
 
+    @Column(name = "origin_lat")
+    Double originLat;
+
+    @Column(name = "origin_lng")
+    Double originLng;
+
+    @Column(name = "destination_lat")
+    Double destinationLat;
+
+    @Column(name = "destination_lng")
+    Double destinationLng;
+
+    @Column(name = "route_polyline", columnDefinition = "TEXT")
+    String routePolyline;
+
+    @Column(name = "distance_miles", precision = 6, scale = 2)
+    BigDecimal distanceMiles;
+
+    @Column(name = "estimated_duration_mins")
+    Integer estimatedDurationMins;
+
+    @Column(name = "toll_preference", length = 30)
+    String tollPreference;
+
+    @Column(name = "estimated_toll_amount", precision = 6, scale = 2)
+    BigDecimal estimatedTollAmount;
+
+    @Column(name = "is_recurring")
+    Boolean isRecurring;
+
+    @Column(name = "recurrence_pattern", length = 30)
+    String recurrencePattern;
+
+    @Column(name = "recurring_days")
+    String[] recurringDays;
+
+    @Column(name = "luggage_capacity", length = 30)
+    String luggageCapacity;
+
+    @Column(name = "gender_preference", length = 30)
+    String genderPreference;
+
+    @Column(name = "completed_at")
+    Instant completedAt;
+
+    @Column(name = "conversation_id")
+    UUID conversationId;
+
+    @Column(name = "chat_expires_at")
+    Instant chatExpiresAt;
+
     @Column(name = "departure_at", nullable = false)
     Instant departureAt;
 
@@ -36,7 +88,7 @@ public class RideOffer {
     @Column(nullable = false, length = 200)
     String contribution;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     String status;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -62,6 +114,13 @@ public class RideOffer {
         this.contribution = contribution;
         this.status = status;
         this.reported = false;
+        this.tollPreference = "AVOID_TOLLS";
+        this.estimatedTollAmount = BigDecimal.ZERO;
+        this.isRecurring = false;
+        this.recurrencePattern = "ONE_TIME";
+        this.recurringDays = new String[]{};
+        this.luggageCapacity = "MEDIUM";
+        this.genderPreference = "ANY";
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
@@ -70,6 +129,23 @@ public class RideOffer {
     public UUID getDriverId() { return driverId; }
     public String getOriginArea() { return originArea; }
     public String getDestinationArea() { return destinationArea; }
+    public Double getOriginLat() { return originLat; }
+    public Double getOriginLng() { return originLng; }
+    public Double getDestinationLat() { return destinationLat; }
+    public Double getDestinationLng() { return destinationLng; }
+    public String getRoutePolyline() { return routePolyline; }
+    public BigDecimal getDistanceMiles() { return distanceMiles; }
+    public Integer getEstimatedDurationMins() { return estimatedDurationMins; }
+    public String getTollPreference() { return tollPreference; }
+    public BigDecimal getEstimatedTollAmount() { return estimatedTollAmount; }
+    public Boolean getIsRecurring() { return isRecurring; }
+    public String getRecurrencePattern() { return recurrencePattern; }
+    public String[] getRecurringDays() { return recurringDays; }
+    public String getLuggageCapacity() { return luggageCapacity; }
+    public String getGenderPreference() { return genderPreference; }
+    public Instant getCompletedAt() { return completedAt; }
+    public UUID getConversationId() { return conversationId; }
+    public Instant getChatExpiresAt() { return chatExpiresAt; }
     public Instant getDepartureAt() { return departureAt; }
     public int getSeatsTotal() { return seatsTotal; }
     public int getSeatsAvailable() { return seatsAvailable; }
@@ -82,6 +158,23 @@ public class RideOffer {
 
     void setOriginArea(String originArea) { this.originArea = originArea; }
     void setDestinationArea(String destinationArea) { this.destinationArea = destinationArea; }
+    void setOriginLat(Double originLat) { this.originLat = originLat; }
+    void setOriginLng(Double originLng) { this.originLng = originLng; }
+    void setDestinationLat(Double destinationLat) { this.destinationLat = destinationLat; }
+    void setDestinationLng(Double destinationLng) { this.destinationLng = destinationLng; }
+    void setRoutePolyline(String routePolyline) { this.routePolyline = routePolyline; }
+    void setDistanceMiles(BigDecimal distanceMiles) { this.distanceMiles = distanceMiles; }
+    void setEstimatedDurationMins(Integer estimatedDurationMins) { this.estimatedDurationMins = estimatedDurationMins; }
+    void setTollPreference(String tollPreference) { this.tollPreference = tollPreference; }
+    void setEstimatedTollAmount(BigDecimal estimatedTollAmount) { this.estimatedTollAmount = estimatedTollAmount; }
+    void setIsRecurring(Boolean isRecurring) { this.isRecurring = isRecurring; }
+    void setRecurrencePattern(String recurrencePattern) { this.recurrencePattern = recurrencePattern; }
+    void setRecurringDays(String[] recurringDays) { this.recurringDays = recurringDays; }
+    void setLuggageCapacity(String luggageCapacity) { this.luggageCapacity = luggageCapacity; }
+    void setGenderPreference(String genderPreference) { this.genderPreference = genderPreference; }
+    void setCompletedAt(Instant completedAt) { this.completedAt = completedAt; }
+    void setConversationId(UUID conversationId) { this.conversationId = conversationId; }
+    void setChatExpiresAt(Instant chatExpiresAt) { this.chatExpiresAt = chatExpiresAt; }
     void setDepartureAt(Instant departureAt) { this.departureAt = departureAt; }
     void setSeatsTotal(int seatsTotal) { this.seatsTotal = seatsTotal; }
     void setSeatsAvailable(int seatsAvailable) { this.seatsAvailable = seatsAvailable; }

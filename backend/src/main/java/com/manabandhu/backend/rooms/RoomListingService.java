@@ -22,6 +22,7 @@ public class RoomListingService {
     private final RoomPreferenceRepository preferenceRepository;
     private final RoomAmenityCatalogRepository amenityCatalogRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public RoomListingService(RoomListingRepository repository, RoomAmenityRepository amenityRepository,
                               RoomPreferenceRepository preferenceRepository,
                               RoomAmenityCatalogRepository amenityCatalogRepository) {

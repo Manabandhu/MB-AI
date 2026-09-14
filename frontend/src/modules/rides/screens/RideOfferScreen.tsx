@@ -1,7 +1,7 @@
 import { color as colors, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,7 +10,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -19,53 +18,225 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
 import { createRideOffer } from '@/modules/rides/api';
+import {
+  type AutocompletePrediction,
+  autocompletePlacesGoogle,
+  fetchGoogleRoute,
+  geocodeAddress,
+  type RouteInfo,
+} from '@/modules/rides/services/googleMapsService';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
-const TRIP_TYPES = ['One-time Trip', 'Recurring Daily Commute', 'Weekend Return'] as const;
+const TRIP_MODES = [
+  { id: 'ONE_TIME', label: 'One-Time Trip' },
+  { id: 'RECURRING', label: 'Daily Commute' },
+];
 
-const COMMUTE_VIBES = [
-  { id: 'nosmoking', label: 'Strictly Non-Smoking', icon: 'shield' },
-  { id: 'music', label: 'Telugu & Hindi Music 🎵', icon: 'music' },
-  { id: 'ac', label: 'AC Kept Moderate / Cool ❄️', icon: 'wind' },
-  { id: 'bags', label: '2 Medium Bags Allowed 🧳', icon: 'briefcase' },
-  { id: 'tech', label: 'Work & Tech Chats Welcome 💻', icon: 'laptop' },
-  { id: 'pets', label: 'Pet Friendly 🐾', icon: 'heart' },
+const _RECURRENCE_PATTERNS = [
+  { id: 'WEEKDAYS', label: 'Weekdays (Mon–Fri)' },
+  { id: 'DAILY', label: 'Every Day (7 Days)' },
+  { id: 'WEEKLY', label: 'Weekly Roundtrip' },
+];
+
+const ALL_DAYS = [
+  { id: 'MON', label: 'M' },
+  { id: 'TUE', label: 'T' },
+  { id: 'WED', label: 'W' },
+  { id: 'THU', label: 'Th' },
+  { id: 'FRI', label: 'F' },
+  { id: 'SAT', label: 'Sa' },
+  { id: 'SUN', label: 'Su' },
+];
+
+const TOLL_OPTIONS = [
+  { id: 'AVOID_TOLLS', label: 'Avoid Tolls', desc: 'Free Routes Only' },
+  { id: 'TOLLS_INCLUDED', label: 'Tolls Included', desc: 'No extra cost' },
+  { id: 'TOLLS_SPLIT', label: 'Split Tolls', desc: 'Split with riders' },
+];
+
+const LUGGAGE_OPTIONS = [
+  { id: 'BACKPACK_ONLY', label: 'Backpack' },
+  { id: 'MEDIUM', label: 'Medium Bag' },
+  { id: 'LARGE_SUITCASE', label: 'Large Luggage' },
+];
+
+const GENDER_OPTIONS = [
+  { id: 'ANY', label: 'Open to All' },
+  { id: 'FEMALE_ONLY', label: 'Women Only' },
+];
+
+const RECENT_TEMPLATES = [
+  {
+    id: 'coppell-dallas',
+    origin: 'Coppell, TX',
+    destination: 'Downtown Dallas, TX',
+    seats: 3,
+    price: '12',
+    isRecurring: true,
+    pattern: 'WEEKDAYS',
+    days: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
+    tollPref: 'AVOID_TOLLS',
+  },
+  {
+    id: 'plano-austin',
+    origin: 'Plano - Legacy West, TX',
+    destination: 'Austin - Domain Central, TX',
+    seats: 3,
+    price: '30',
+    isRecurring: false,
+    pattern: 'ONE_TIME',
+    days: [],
+    tollPref: 'TOLLS_INCLUDED',
+  },
 ];
 
 export function RideOfferScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const user = useAuthStore((s) => s.user);
+  const _user = useAuthStore((s) => s.user);
 
   // Form states
   const [origin, setOrigin] = useState('Dallas - Frisco / Plano, TX');
-  const [originLandmark, setOriginLandmark] = useState('Patel Brothers Plano or Stonebriar Mall');
+  const [originCoords, setOriginCoords] = useState<{ lat: number; lng: number } | null>({
+    lat: 33.1507,
+    lng: -96.8236,
+  });
+  const [originSuggestions, setOriginSuggestions] = useState<AutocompletePrediction[]>([]);
+  const [loadingOriginSuggestions, setLoadingOriginSuggestions] = useState(false);
+
   const [destination, setDestination] = useState('Austin - Downtown / Domain, TX');
-  const [destinationLandmark, setDestinationLandmark] = useState('Domain Central or UT Austin Campus');
-  const [intermediateStop, setIntermediateStop] = useState("Waco Buc-ee's / Temple");
-  const [expressLanes, setExpressLanes] = useState(true);
+  const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | null>({
+    lat: 30.4015,
+    lng: -97.7247,
+  });
+  const [destinationSuggestions, setDestinationSuggestions] = useState<AutocompletePrediction[]>(
+    [],
+  );
+  const [loadingDestSuggestions, setLoadingDestSuggestions] = useState(false);
 
-  const [tripType, setTripType] = useState<string>(TRIP_TYPES[0]);
-  const [departureDate, setDepartureDate] = useState('Friday, Oct 25, 2024');
+  // Toll Preference & Route Info
+  const [tollPref, setTollPref] = useState<'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT'>(
+    'AVOID_TOLLS',
+  );
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [calculatingRoute, setCalculatingRoute] = useState(false);
+
+  // Schedule & Recurrence
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState<string>('WEEKDAYS');
+  const [selectedDays, setSelectedDays] = useState<string[]>(['MON', 'TUE', 'WED', 'THU', 'FRI']);
+  const [departureDate, setDepartureDate] = useState('Today / Tomorrow');
   const [departureTime, setDepartureTime] = useState('5:30 PM');
-  const [flexibleTime, setFlexibleTime] = useState(true);
-  const [returnRide, setReturnRide] = useState(false);
 
+  // Seats & Price
   const [seats, setSeats] = useState(3);
   const [pricePerSeat, setPricePerSeat] = useState('28');
 
-  const [vehicle, setVehicle] = useState('2023 Tesla Model Y (Pearl White)');
-  const [selectedVibes, setSelectedVibes] = useState<string[]>([
-    'nosmoking',
-    'music',
-    'ac',
-    'bags',
-    'tech',
-  ]);
-  const [womenOnly, setWomenOnly] = useState(false);
+  // Preferences
+  const [luggageCapacity, setLuggageCapacity] = useState('MEDIUM');
+  const [genderPref, setGenderPref] = useState('ANY');
+  const [_vehicle, _setVehicle] = useState('2023 Tesla Model Y (Pearl White)');
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
+
+  // Fetch route geometry whenever coords or toll preference changes
+  useEffect(() => {
+    async function updateRoute() {
+      if (!originCoords || !destinationCoords) return;
+      setCalculatingRoute(true);
+      try {
+        const route = await fetchGoogleRoute(
+          originCoords,
+          destinationCoords,
+          tollPref === 'AVOID_TOLLS',
+        );
+        if (route) {
+          setRouteInfo(route);
+        }
+      } catch (err) {
+        console.warn('Failed to calculate route:', err);
+      } finally {
+        setCalculatingRoute(false);
+      }
+    }
+    updateRoute();
+  }, [originCoords, destinationCoords, tollPref]);
+
+  // Places autocomplete handler for Origin
+  const handleOriginChange = async (text: string) => {
+    setOrigin(text);
+    if (text.length >= 3) {
+      setLoadingOriginSuggestions(true);
+      const results = await autocompletePlacesGoogle(text);
+      setOriginSuggestions(results);
+      setLoadingOriginSuggestions(false);
+    } else {
+      setOriginSuggestions([]);
+    }
+  };
+
+  const handleSelectOrigin = async (p: AutocompletePrediction) => {
+    setOrigin(p.description);
+    setOriginSuggestions([]);
+    const coords = await geocodeAddress(p.placeId || p.description);
+    if (coords) setOriginCoords(coords);
+  };
+
+  // Places autocomplete handler for Destination
+  const handleDestinationChange = async (text: string) => {
+    setDestination(text);
+    if (text.length >= 3) {
+      setLoadingDestSuggestions(true);
+      const results = await autocompletePlacesGoogle(text);
+      setDestinationSuggestions(results);
+      setLoadingDestSuggestions(false);
+    } else {
+      setDestinationSuggestions([]);
+    }
+  };
+
+  const handleSelectDestination = async (p: AutocompletePrediction) => {
+    setDestination(p.description);
+    setDestinationSuggestions([]);
+    const coords = await geocodeAddress(p.placeId || p.description);
+    if (coords) setDestinationCoords(coords);
+  };
+
+  // Apply quick re-post template
+  const applyTemplate = async (template: (typeof RECENT_TEMPLATES)[0]) => {
+    setOrigin(template.origin);
+    setDestination(template.destination);
+    setSeats(template.seats);
+    setPricePerSeat(template.price);
+    setIsRecurring(template.isRecurring);
+    setRecurrencePattern(template.pattern);
+    setSelectedDays(template.days);
+    setTollPref(template.tollPref as any);
+
+    // Geocode both
+    const [c1, c2] = await Promise.all([
+      geocodeAddress(template.origin),
+      geocodeAddress(template.destination),
+    ]);
+    if (c1) setOriginCoords(c1);
+    if (c2) setDestinationCoords(c2);
+  };
+
+  const toggleDay = (dayId: string) => {
+    setSelectedDays((prev) =>
+      prev.includes(dayId) ? prev.filter((d) => d !== dayId) : [...prev, dayId],
+    );
+  };
+
+  const handleSwap = () => {
+    const tempO = origin;
+    const tempC = originCoords;
+    setOrigin(destination);
+    setOriginCoords(destinationCoords);
+    setDestination(tempO);
+    setDestinationCoords(tempC);
+  };
 
   const mutation = useMutation({
     mutationFn: createRideOffer,
@@ -80,42 +251,38 @@ export function RideOfferScreen() {
     },
   });
 
-  const handleSwap = () => {
-    const tempO = origin;
-    const tempL = originLandmark;
-    setOrigin(destination);
-    setOriginLandmark(destinationLandmark);
-    setDestination(tempO);
-    setDestinationLandmark(tempL);
-  };
-
-  const handleVibeToggle = (id: string) => {
-    setSelectedVibes((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
-    );
-  };
-
   const handlePublish = () => {
     setErrorMsg(null);
     if (!origin.trim() || !destination.trim()) {
-      setErrorMsg('Please enter valid origin and destination');
+      setErrorMsg('Please enter a valid pickup and dropoff point.');
       return;
     }
 
-    const title = `${origin.split('-')[0].trim()} to ${destination.split('-')[0].trim()} Carpool`;
-    const numPrice = parseFloat(pricePerSeat) || 28;
+    const title = `${origin.split(',')[0].trim()} to ${destination.split(',')[0].trim()} Carpool`;
+    const numPrice = parseFloat(pricePerSeat) || 15;
 
     mutation.mutate({
       title,
-      pickupArea: `${origin} (${originLandmark})`,
-      destination: `${destination} (${destinationLandmark})`,
-      departureAt: `${departureDate} at ${departureTime}`,
+      pickupArea: origin.trim(),
+      destination: destination.trim(),
+      departureAt: new Date(Date.now() + 86400000).toISOString(),
       seatsTotal: seats,
       contribution: numPrice,
+      originLat: originCoords?.lat,
+      originLng: originCoords?.lng,
+      destinationLat: destinationCoords?.lat,
+      destinationLng: destinationCoords?.lng,
+      routePolyline: routeInfo?.polyline || undefined,
+      distanceMiles: routeInfo?.distanceMiles || undefined,
+      estimatedDurationMins: routeInfo?.durationMinutes || undefined,
+      tollPreference: tollPref,
+      isRecurring,
+      recurrencePattern: isRecurring ? recurrencePattern : 'ONE_TIME',
+      recurringDays: isRecurring ? selectedDays : [],
+      luggageCapacity,
+      genderPreference: genderPref,
     });
   };
-
-  const totalContribution = seats * (parseFloat(pricePerSeat) || 0);
 
   if (published) {
     return (
@@ -126,18 +293,19 @@ export function RideOfferScreen() {
           </View>
           <Text style={s.successTitle}>Ride Offer Published! 🚗</Text>
           <Text style={s.successSubtitle}>
-            Your carpool from {origin.split('-')[0].trim()} to {destination.split('-')[0].trim()} is
-            now active. Verified travelers can request seats.
+            Your carpool from {origin.split(',')[0].trim()} to {destination.split(',')[0].trim()} is
+            active in discovery feeds. Verified travelers can request seats.
           </Text>
           <View style={s.successCard}>
             <Text style={s.successRouteText}>
               {origin} → {destination}
             </Text>
             <Text style={s.successMetaText}>
-              📅 {departureDate} • {departureTime}
+              📅 {isRecurring ? `Recurring (${selectedDays.join(', ')})` : departureDate} •{' '}
+              {departureTime}
             </Text>
             <Text style={s.successSeatsText}>
-              💺 {seats} Seats Available • ${pricePerSeat}/seat
+              💺 {seats} Seats Available • ${pricePerSeat}/seat • {tollPref.replace('_', ' ')}
             </Text>
           </View>
           <View style={s.successActions}>
@@ -148,9 +316,10 @@ export function RideOfferScreen() {
               style={s.outlineBtn}
               onPress={() => {
                 setPublished(false);
+                router.replace('/rides');
               }}
             >
-              <Text style={s.outlineBtnText}>Offer Another Ride</Text>
+              <Text style={s.outlineBtnText}>Explore Feed</Text>
             </Pressable>
           </View>
         </View>
@@ -162,290 +331,365 @@ export function RideOfferScreen() {
     <SafeAreaView style={s.safe}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={s.flex}
+        style={{ flex: 1 }}
       >
-        {/* Top Header */}
-        <View style={s.topBar}>
-          <Pressable style={s.iconBtn} onPress={() => router.back()}>
-            <AppIcon name="chevron-left" size={24} color={colors.ink} />
-          </Pressable>
-          <View style={s.topBarCenter}>
-            <Text style={s.topBarTitle}>Offer a Ride</Text>
-            <Text style={s.topBarSubtitle}>Zero Commission • Community Carpool</Text>
+        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+          {/* Header */}
+          <View style={s.header}>
+            <Pressable onPress={() => router.back()} style={s.backBtn}>
+              <Text style={s.backText}>← Back</Text>
+            </Pressable>
+            <Text style={s.headerTitle}>Offer a Carpool</Text>
+            <View style={{ width: 44 }} />
           </View>
-          <Pressable style={s.myRidesBtn} onPress={() => router.push('/rides/mine')}>
-            <Text style={s.myRidesBtnText}>My Rides</Text>
-          </Pressable>
-        </View>
 
-        <ScrollView style={s.flex} contentContainerStyle={s.content}>
-          {/* Route & Journey Planner Card */}
+          {/* 1. Top Template Ribbon: Re-post Recent Trip */}
+          <View style={s.templateSection}>
+            <View style={s.sectionHeaderRow}>
+              <AppIcon name="sparks" size={16} color={colors.primary} />
+              <Text style={s.sectionEyebrow}>FAST RE-POST RECENT TRIPS</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.templateScroll}
+            >
+              {RECENT_TEMPLATES.map((item) => (
+                <Pressable key={item.id} style={s.templateCard} onPress={() => applyTemplate(item)}>
+                  <View style={s.templateTop}>
+                    <Text style={s.templateBadge}>
+                      {item.isRecurring ? '🔄 Commute' : '⚡ One-Time'}
+                    </Text>
+                    <Text style={s.templatePrice}>${item.price}/seat</Text>
+                  </View>
+                  <Text numberOfLines={1} style={s.templateRoute}>
+                    {item.origin.split(',')[0]} → {item.destination.split(',')[0]}
+                  </Text>
+                  <Text style={s.templateMeta}>
+                    {item.seats} seats •{' '}
+                    {item.tollPref === 'AVOID_TOLLS' ? 'No Tolls' : 'Tolls Inc.'}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* 2. Route & Address Inputs with Autocomplete */}
           <View style={s.card}>
-            <View style={s.routeHeaderRow}>
-              <Text style={s.cardTitle}>Route & Departure Point</Text>
+            <View style={s.cardTitleRow}>
+              <Text style={s.cardTitle}>Route & Coordinates</Text>
               <Pressable style={s.swapBtn} onPress={handleSwap}>
-                <AppIcon name="compass" size={16} color={colors.primary} />
+                <AppIcon name="compass" size={14} color={colors.primary} />
                 <Text style={s.swapText}>Swap</Text>
               </Pressable>
             </View>
 
-            {/* Origin */}
-            <View style={s.locationInputGroup}>
-              <View style={s.locationMarkerOrigin}>
-                <View style={s.originDot} />
+            {/* Origin Input */}
+            <View style={s.inputContainer}>
+              <View style={s.inputHeaderRow}>
+                <Text style={s.fieldLabel}>PICKUP LOCATION</Text>
+                {origin.length > 0 && (
+                  <Pressable onPress={() => setOrigin('')}>
+                    <Text style={s.clearText}>Clear</Text>
+                  </Pressable>
+                )}
               </View>
-              <View style={s.locationTextCol}>
-                <Text style={s.fieldLabel}>DEPARTURE ORIGIN</Text>
+              <View style={s.inputWithMarker}>
+                <View style={s.greenPin} />
                 <TextInput
                   style={s.locationInput}
                   value={origin}
-                  onChangeText={setOrigin}
-                  placeholder="City or metro area"
+                  onChangeText={handleOriginChange}
+                  placeholder="Enter city, suburb, or address"
+                  placeholderTextColor={colors.muted}
                 />
-                <Text style={s.landmarkHint}>📍 Landmark: {originLandmark}</Text>
+                {loadingOriginSuggestions && (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                )}
               </View>
+
+              {/* Origin Autocomplete Suggestions */}
+              {originSuggestions.length > 0 && (
+                <View style={s.suggestionBox}>
+                  {originSuggestions.map((item, idx) => (
+                    <Pressable
+                      key={idx}
+                      style={s.suggestionRow}
+                      onPress={() => handleSelectOrigin(item)}
+                    >
+                      <AppIcon name="compass" size={14} color={colors.teal} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.suggestionMainText}>
+                          {item.mainText || item.description}
+                        </Text>
+                        {item.secondaryText && (
+                          <Text style={s.suggestionSubText}>{item.secondaryText}</Text>
+                        )}
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
             </View>
 
-            {/* Connector */}
-            <View style={s.routeConnectorRow}>
-              <View style={s.dashedLine} />
-              <View style={s.transitPill}>
-                <Text style={s.transitText}>~195 miles • 3 hrs 10 mins (I-35)</Text>
+            {/* Destination Input */}
+            <View style={[s.inputContainer, { marginTop: space.x3 }]}>
+              <View style={s.inputHeaderRow}>
+                <Text style={s.fieldLabel}>DROPOFF DESTINATION</Text>
+                {destination.length > 0 && (
+                  <Pressable onPress={() => setDestination('')}>
+                    <Text style={s.clearText}>Clear</Text>
+                  </Pressable>
+                )}
               </View>
-            </View>
-
-            {/* Destination */}
-            <View style={s.locationInputGroup}>
-              <View style={s.locationMarkerDest}>
-                <AppIcon name="map" size={14} color="#dc2626" />
-              </View>
-              <View style={s.locationTextCol}>
-                <Text style={s.fieldLabel}>DESTINATION</Text>
+              <View style={s.inputWithMarker}>
+                <View style={s.redPin} />
                 <TextInput
                   style={s.locationInput}
                   value={destination}
-                  onChangeText={setDestination}
-                  placeholder="Drop-off city or metro"
+                  onChangeText={handleDestinationChange}
+                  placeholder="Enter work hub, college, or city"
+                  placeholderTextColor={colors.muted}
                 />
-                <Text style={s.landmarkHint}>📍 Drop: {destinationLandmark}</Text>
+                {loadingDestSuggestions && (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                )}
               </View>
+
+              {/* Destination Autocomplete Suggestions */}
+              {destinationSuggestions.length > 0 && (
+                <View style={s.suggestionBox}>
+                  {destinationSuggestions.map((item, idx) => (
+                    <Pressable
+                      key={idx}
+                      style={s.suggestionRow}
+                      onPress={() => handleSelectDestination(item)}
+                    >
+                      <AppIcon name="compass" size={14} color={colors.teal} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.suggestionMainText}>
+                          {item.mainText || item.description}
+                        </Text>
+                        {item.secondaryText && (
+                          <Text style={s.suggestionSubText}>{item.secondaryText}</Text>
+                        )}
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
             </View>
 
-            {/* Intermediate stop & Tolls */}
-            <View style={s.stopCard}>
-              <View style={s.stopHeader}>
-                <AppIcon name="map" size={16} color={colors.warm} />
-                <Text style={s.stopTitle}>Rest Stop / Pickup: {intermediateStop}</Text>
-              </View>
-              <Pressable
-                style={s.expressRow}
-                onPress={() => setExpressLanes(!expressLanes)}
-              >
-                <View style={[s.checkbox, expressLanes && s.checkboxChecked]}>
-                  {expressLanes ? <AppIcon name="check" size={12} color="#ffffff" /> : null}
+            {/* Route Stats & Polyline Summary */}
+            <View style={s.routeStatsCard}>
+              <View style={s.routeStatsLeft}>
+                <AppIcon name="car" size={18} color={colors.teal} />
+                <View>
+                  <Text style={s.routeStatsHeadline}>
+                    {calculatingRoute
+                      ? 'Calculating Google route...'
+                      : routeInfo
+                        ? `~${routeInfo.distanceMiles} mi • ${Math.floor(routeInfo.durationMinutes / 60) > 0 ? `${Math.floor(routeInfo.durationMinutes / 60)}h ` : ''}${routeInfo.durationMinutes % 60}m`
+                        : 'Direct Corridor Route'}
+                  </Text>
+                  <Text style={s.routeStatsSub}>
+                    {routeInfo?.hasTolls
+                      ? '⚠️ Toll roads present on highway route'
+                      : '✅ Zero Tolls / Free Route Selected'}
+                  </Text>
                 </View>
-                <Text style={s.expressText}>
-                  Take I-35 Express Toll Lanes (Faster travel • Gas/toll split)
-                </Text>
-              </Pressable>
+              </View>
             </View>
           </View>
 
-          {/* Date & Schedule Selector Card */}
+          {/* 3. Toll Preference (Segmented Control) */}
           <View style={s.card}>
-            <Text style={s.cardTitle}>Schedule & Frequency</Text>
-
-            {/* Trip Type Pills */}
-            <View style={s.tripTypeRow}>
-              {TRIP_TYPES.map((type) => {
-                const isSelected = tripType === type;
+            <Text style={s.cardTitle}>Tollway Preference</Text>
+            <Text style={s.cardSubtitle}>Specify how toll costs are handled for this carpool.</Text>
+            <View style={s.tollSelectorRow}>
+              {TOLL_OPTIONS.map((opt) => {
+                const isSelected = tollPref === opt.id;
                 return (
                   <Pressable
-                    key={type}
-                    style={[s.tripPill, isSelected && s.tripPillActive]}
-                    onPress={() => setTripType(type)}
+                    key={opt.id}
+                    style={[s.tollOptionCard, isSelected && s.tollOptionCardSelected]}
+                    onPress={() => setTollPref(opt.id as any)}
                   >
-                    <Text style={[s.tripPillText, isSelected && s.tripPillTextActive]}>
-                      {type}
+                    <Text style={[s.tollOptionTitle, isSelected && s.tollOptionTitleSelected]}>
+                      {opt.label}
+                    </Text>
+                    <Text style={[s.tollOptionDesc, isSelected && s.tollOptionDescSelected]}>
+                      {opt.desc}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
+          </View>
 
-            {/* Date & Time */}
-            <View style={s.dateTimeRow}>
-              <View style={s.dateTimeBox}>
-                <Text style={s.fieldLabel}>DEPARTURE DATE</Text>
-                <View style={s.inputWithIcon}>
-                  <AppIcon name="calendar" size={16} color={colors.primary} />
+          {/* 4. Schedule Mode (One-Time vs Daily Commute) */}
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Schedule Mode</Text>
+            <View style={s.modeSelectorRow}>
+              {TRIP_MODES.map((m) => {
+                const active = (m.id === 'RECURRING') === isRecurring;
+                return (
+                  <Pressable
+                    key={m.id}
+                    style={[s.modePill, active && s.modePillActive]}
+                    onPress={() => setIsRecurring(m.id === 'RECURRING')}
+                  >
+                    <Text style={[s.modePillText, active && s.modePillTextActive]}>{m.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {isRecurring ? (
+              <View style={s.recurringSection}>
+                <View style={s.recurringShortcutsRow}>
+                  <Text style={s.fieldLabel}>ACTIVE COMMUTE DAYS</Text>
+                  <Pressable
+                    onPress={() => setSelectedDays(['MON', 'TUE', 'WED', 'THU', 'FRI'])}
+                    style={s.shortcutBtn}
+                  >
+                    <Text style={s.shortcutBtnText}>Weekdays (Mon–Fri)</Text>
+                  </Pressable>
+                </View>
+                <View style={s.daysRow}>
+                  {ALL_DAYS.map((day) => {
+                    const isDaySelected = selectedDays.includes(day.id);
+                    return (
+                      <Pressable
+                        key={day.id}
+                        style={[s.dayPill, isDaySelected && s.dayPillSelected]}
+                        onPress={() => toggleDay(day.id)}
+                      >
+                        <Text style={[s.dayPillText, isDaySelected && s.dayPillTextSelected]}>
+                          {day.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : (
+              <View style={s.dateTimeRow}>
+                <View style={s.dateTimeBox}>
+                  <Text style={s.fieldLabel}>DEPARTURE DATE</Text>
                   <TextInput
-                    style={s.textInputInner}
+                    style={s.textInput}
                     value={departureDate}
                     onChangeText={setDepartureDate}
                   />
                 </View>
-              </View>
-              <View style={s.dateTimeBox}>
-                <Text style={s.fieldLabel}>DEPARTURE TIME</Text>
-                <View style={s.inputWithIcon}>
-                  <AppIcon name="calendar" size={16} color={colors.primary} />
+                <View style={s.dateTimeBox}>
+                  <Text style={s.fieldLabel}>DEPARTURE TIME</Text>
                   <TextInput
-                    style={s.textInputInner}
+                    style={s.textInput}
                     value={departureTime}
                     onChangeText={setDepartureTime}
                   />
                 </View>
               </View>
-            </View>
-
-            <View style={s.toggleRow}>
-              <Text style={s.toggleLabel}>Flexible Departure (±30 mins)</Text>
-              <Switch
-                value={flexibleTime}
-                onValueChange={setFlexibleTime}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            </View>
-            <View style={s.toggleRow}>
-              <Text style={s.toggleLabel}>Offer return ride on Sunday evening</Text>
-              <Switch
-                value={returnRide}
-                onValueChange={setReturnRide}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            </View>
+            )}
           </View>
 
-          {/* Available Seats & Fair Contribution Card */}
+          {/* 5. Seats & Fuel Share Contribution */}
           <View style={s.card}>
-            <Text style={s.cardTitle}>Available Seats & Fair Gas Split</Text>
-
-            <View style={s.seatsStepperRow}>
-              <View>
-                <Text style={s.seatsCount}>{seats} Seats Available</Text>
-                <Text style={s.seatsSubtext}>Comfortable middle/window passenger seating</Text>
+            <Text style={s.cardTitle}>Seats & Fuel Contribution</Text>
+            <View style={s.seatsRow}>
+              <View style={s.seatCounterBox}>
+                <Text style={s.fieldLabel}>AVAILABLE SEATS</Text>
+                <View style={s.counterControls}>
+                  <Pressable
+                    style={s.counterBtn}
+                    onPress={() => setSeats((c) => Math.max(1, c - 1))}
+                  >
+                    <Text style={s.counterBtnText}>−</Text>
+                  </Pressable>
+                  <Text style={s.counterValue}>{seats}</Text>
+                  <Pressable
+                    style={s.counterBtn}
+                    onPress={() => setSeats((c) => Math.min(6, c + 1))}
+                  >
+                    <Text style={s.counterBtnText}>+</Text>
+                  </Pressable>
+                </View>
               </View>
-              <View style={s.stepper}>
-                <Pressable
-                  style={s.stepperBtn}
-                  onPress={() => setSeats((c) => Math.max(1, c - 1))}
-                >
-                  <Text style={s.stepperBtnText}>-</Text>
-                </Pressable>
-                <Text style={s.stepperValue}>{seats}</Text>
-                <Pressable
-                  style={s.stepperBtn}
-                  onPress={() => setSeats((c) => Math.min(6, c + 1))}
-                >
-                  <Text style={s.stepperBtnText}>+</Text>
-                </Pressable>
-              </View>
-            </View>
 
-            {/* Price Per Seat */}
-            <View style={s.priceBox}>
-              <View style={s.priceInputGroup}>
-                <Text style={s.currencyPrefix}>$</Text>
+              <View style={s.priceBox}>
+                <Text style={s.fieldLabel}>PRICE / SEAT ($)</Text>
                 <TextInput
                   style={s.priceInput}
                   keyboardType="numeric"
                   value={pricePerSeat}
                   onChangeText={setPricePerSeat}
                 />
-                <Text style={s.perSeatLabel}>/ passenger</Text>
-              </View>
-              <View style={s.trustHintBox}>
-                <Text style={s.trustHintText}>
-                  💡 Recommended fair split: $25 - $32 to cover I-35 gas & toll fees. ManaBandhu
-                  charges 0% platform fee.
-                </Text>
               </View>
             </View>
-          </View>
 
-          {/* Vehicle & Commute Vibe Card */}
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Vehicle & Commute Preferences</Text>
-
-            <Text style={s.fieldLabel}>VEHICLE MODEL</Text>
-            <View style={s.inputWithIcon}>
-              <AppIcon name="car" size={18} color={colors.primary} />
-              <TextInput style={s.textInputInner} value={vehicle} onChangeText={setVehicle} />
-            </View>
-
-            <Text style={s.fieldLabel}>COMMUTE VIBE & RULES</Text>
-            <View style={s.vibesWrap}>
-              {COMMUTE_VIBES.map((vibe) => {
-                const isSelected = selectedVibes.includes(vibe.id);
-                return (
+            {/* Luggage Capacity */}
+            <View style={{ marginTop: space.x4 }}>
+              <Text style={s.fieldLabel}>LUGGAGE CAPACITY</Text>
+              <View style={s.pillsRow}>
+                {LUGGAGE_OPTIONS.map((lug) => (
                   <Pressable
-                    key={vibe.id}
-                    style={[s.vibeChip, isSelected && s.vibeChipActive]}
-                    onPress={() => handleVibeToggle(vibe.id)}
+                    key={lug.id}
+                    style={[s.filterPill, luggageCapacity === lug.id && s.filterPillActive]}
+                    onPress={() => setLuggageCapacity(lug.id)}
                   >
-                    <Text style={[s.vibeChipText, isSelected && s.vibeChipTextActive]}>
-                      {isSelected ? '✓ ' : '+ '}
-                      {vibe.label}
+                    <Text
+                      style={[
+                        s.filterPillText,
+                        luggageCapacity === lug.id && s.filterPillTextActive,
+                      ]}
+                    >
+                      {lug.label}
                     </Text>
                   </Pressable>
-                );
-              })}
-            </View>
-
-            {/* Women-Only Privacy Toggle */}
-            <View style={s.womenOnlyCard}>
-              <View style={s.womenOnlyInfo}>
-                <View style={s.womenOnlyHeader}>
-                  <AppIcon name="shield" size={16} color={colors.teal} />
-                  <Text style={s.womenOnlyTitle}>Women-Only Carpool Option</Text>
-                </View>
-                <Text style={s.womenOnlySubtext}>
-                  Only verified female travelers can book seats on this ride.
-                </Text>
+                ))}
               </View>
-              <Switch
-                value={womenOnly}
-                onValueChange={setWomenOnly}
-                trackColor={{ false: colors.border, true: colors.teal }}
-              />
+            </View>
+
+            {/* Gender Preference */}
+            <View style={{ marginTop: space.x4 }}>
+              <Text style={s.fieldLabel}>TRAVELER PREFERENCE</Text>
+              <View style={s.pillsRow}>
+                {GENDER_OPTIONS.map((g) => (
+                  <Pressable
+                    key={g.id}
+                    style={[s.filterPill, genderPref === g.id && s.filterPillActive]}
+                    onPress={() => setGenderPref(g.id)}
+                  >
+                    <Text style={[s.filterPillText, genderPref === g.id && s.filterPillTextActive]}>
+                      {g.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
           </View>
 
-          {/* Driver Trust Card */}
-          <View style={s.driverCard}>
-            <View style={s.driverAvatar}>
-              <Text style={s.driverAvatarText}>{user?.user_metadata?.full_name?.[0] ?? 'S'}</Text>
-            </View>
-            <View style={s.driverInfo}>
-              <Text style={s.driverName}>
-                Driver: {user?.user_metadata?.full_name ?? 'Suresh Reddy'}
-              </Text>
-              <Text style={s.driverStats}>
-                ★ 4.9 (34 rides) • Texas DL Verified • Apple Corporate
-              </Text>
-            </View>
-          </View>
-
-          {errorMsg ? <Text style={s.errorText}>{errorMsg}</Text> : null}
-          <View style={s.bottomSpacer} />
+          {errorMsg && <Text style={s.errorText}>{errorMsg}</Text>}
+          <View style={{ height: 100 }} />
         </ScrollView>
 
-        {/* Fixed Sticky Action Bar */}
+        {/* Sticky Bottom Bar */}
         <View style={s.bottomBar}>
           <View style={s.bottomSummaryCol}>
-            <Text style={s.totalContributionText}>${totalContribution} Total Split</Text>
-            <Text style={s.totalSeatsText}>for {seats} passengers</Text>
+            <Text style={s.totalContributionText}>${pricePerSeat} / seat</Text>
+            <Text style={s.totalSeatsText}>{seats} seats offered</Text>
           </View>
           <Pressable
             style={[s.publishBtn, mutation.isPending && s.publishBtnDisabled]}
-            onPress={handlePublish}
             disabled={mutation.isPending}
+            onPress={handlePublish}
           >
             {mutation.isPending ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color="#ffffff" size="small" />
             ) : (
-              <Text style={s.publishBtnText}>Publish Ride Offer →</Text>
+              <Text style={s.publishBtnText}>Publish Ride Offer</Text>
             )}
           </Pressable>
         </View>
@@ -455,273 +699,219 @@ export function RideOfferScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1 },
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: space.x4, gap: space.x4 },
-  bottomSpacer: { height: 80 },
-
-  topBar: {
+  safe: { flex: 1, backgroundColor: '#f8f9ff' },
+  scroll: { padding: space.x4, gap: space.x4 },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingVertical: space.x2,
   },
-  iconBtn: { padding: space.x1 },
-  topBarCenter: { alignItems: 'center' },
-  topBarTitle: { ...typography.h3, color: colors.ink, fontWeight: '800' },
-  topBarSubtitle: { ...typography.caption, color: colors.teal, fontWeight: '700' },
-  myRidesBtn: {
-    backgroundColor: colors.primarySoft,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x1,
-    borderRadius: radius.pill,
+  backBtn: { padding: space.x2 },
+  backText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
+  headerTitle: { ...typography.h3, color: colors.ink, fontWeight: '800' },
+
+  templateSection: { gap: space.x2 },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
+  sectionEyebrow: { color: colors.teal, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  templateScroll: { gap: space.x3, paddingVertical: space.x1 },
+  templateCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: radius.card,
+    padding: space.x3,
+    borderWidth: 1,
+    borderColor: 'rgba(67,30,190,0.12)',
+    width: 200,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  myRidesBtnText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+  templateTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  templateBadge: { fontSize: 11, fontWeight: '700', color: colors.teal },
+  templatePrice: { fontSize: 13, fontWeight: '800', color: colors.primary },
+  templateRoute: { fontSize: 13, fontWeight: '700', color: colors.ink },
+  templateMeta: { fontSize: 11, color: colors.muted },
 
   card: {
-    backgroundColor: colors.surface,
-    padding: space.x4,
+    backgroundColor: '#ffffff',
     borderRadius: radius.card,
+    padding: space.x4,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(0,0,0,0.06)',
     gap: space.x3,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
   },
+  cardTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { ...typography.h4, color: colors.ink, fontWeight: '800' },
-  routeHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  swapBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: space.x2,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primarySoft,
-  },
-  swapText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+  cardSubtitle: { ...typography.caption, color: colors.muted },
+  swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 4 },
+  swapText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
 
-  locationInputGroup: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: space.x3,
-  },
-  locationMarkerOrigin: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#dcfce7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  originDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#16a34a',
-  },
-  locationMarkerDest: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#fee2e2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  locationTextCol: { flex: 1, gap: 2 },
-  fieldLabel: { ...typography.overline, color: colors.muted, fontSize: 10 },
-  locationInput: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.ink,
-    paddingVertical: 2,
-  },
-  landmarkHint: { ...typography.caption, color: colors.muted, fontSize: 11 },
-
-  routeConnectorRow: {
+  inputContainer: { gap: 4 },
+  inputHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  fieldLabel: { fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 0.5 },
+  clearText: { fontSize: 12, color: colors.primary, fontWeight: '700' },
+  inputWithMarker: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 11,
-    gap: space.x3,
-    marginVertical: -2,
-  },
-  dashedLine: {
-    width: 2,
-    height: 28,
-    backgroundColor: colors.border,
-  },
-  transitPill: {
-    backgroundColor: colors.background,
-    paddingHorizontal: space.x2,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  transitText: { ...typography.caption, color: colors.muted, fontSize: 10 },
-
-  stopCard: {
-    backgroundColor: '#fbfcfe',
-    padding: space.x3,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: space.x2,
-  },
-  stopHeader: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  stopTitle: { ...typography.caption, color: colors.ink, fontWeight: '700' },
-  expressRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  checkbox: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
-  expressText: { ...typography.caption, color: colors.muted, fontSize: 11 },
-
-  tripTypeRow: { flexDirection: 'row', gap: space.x2 },
-  tripPill: {
-    flex: 1,
-    paddingVertical: space.x2,
-    alignItems: 'center',
-    borderRadius: radius.pill,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tripPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  tripPillText: { ...typography.caption, color: colors.ink, fontWeight: '600', fontSize: 11 },
-  tripPillTextActive: { color: '#ffffff', fontWeight: '800' },
-
-  dateTimeRow: { flexDirection: 'row', gap: space.x3 },
-  dateTimeBox: { flex: 1, gap: 4 },
-  inputWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#f5f6ff',
     borderRadius: radius.control,
     paddingHorizontal: space.x3,
-    backgroundColor: colors.surface,
+    height: 48,
+    gap: space.x2,
   },
-  textInputInner: { flex: 1, paddingVertical: space.x2, fontSize: 13, color: colors.ink },
+  greenPin: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#10b981' },
+  redPin: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#ef4444' },
+  locationInput: { flex: 1, fontSize: 14, color: colors.ink, fontWeight: '600' },
 
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  toggleLabel: { ...typography.caption, color: colors.ink, fontWeight: '600' },
-
-  seatsStepperRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  seatsCount: { ...typography.bodyStrong, color: colors.ink, fontSize: 16 },
-  seatsSubtext: { ...typography.caption, color: colors.muted, fontSize: 11 },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  suggestionBox: {
+    backgroundColor: '#ffffff',
+    borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
+    borderColor: 'rgba(67,30,190,0.15)',
+    marginTop: 4,
     overflow: 'hidden',
   },
-  stepperBtn: {
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-    backgroundColor: colors.background,
-  },
-  stepperBtnText: { fontSize: 18, fontWeight: '800', color: colors.ink },
-  stepperValue: { paddingHorizontal: space.x3, fontSize: 16, fontWeight: '800', color: colors.primary },
-
-  priceBox: { gap: space.x2 },
-  priceInputGroup: {
+  suggestionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.control,
-    paddingHorizontal: space.x3,
+    padding: space.x3,
+    gap: space.x2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f8',
   },
-  currencyPrefix: { fontSize: 20, fontWeight: '800', color: colors.ink },
-  priceInput: { fontSize: 20, fontWeight: '800', color: colors.ink, paddingVertical: space.x2, flex: 1 },
-  perSeatLabel: { ...typography.caption, color: colors.muted },
-  trustHintBox: {
-    backgroundColor: '#f7f5ff',
-    padding: space.x2,
-    borderRadius: radius.control,
-  },
-  trustHintText: { ...typography.caption, color: colors.primary, fontSize: 11 },
+  suggestionMainText: { fontSize: 13, fontWeight: '700', color: colors.ink },
+  suggestionSubText: { fontSize: 11, color: colors.muted },
 
-  vibesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
-  vibeChip: {
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x1,
-    borderRadius: radius.pill,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  vibeChipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
-  vibeChipText: { ...typography.caption, color: colors.ink, fontSize: 11, fontWeight: '600' },
-  vibeChipTextActive: { color: colors.primary, fontWeight: '800' },
-
-  womenOnlyCard: {
+  routeStatsCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f0fdf4',
+    backgroundColor: '#f0faf8',
+    borderRadius: radius.card,
     padding: space.x3,
-    borderRadius: radius.control,
     borderWidth: 1,
-    borderColor: '#bbf7d0',
-    marginTop: 4,
+    borderColor: 'rgba(0,105,107,0.15)',
   },
-  womenOnlyInfo: { flex: 1, paddingRight: space.x2 },
-  womenOnlyHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  womenOnlyTitle: { ...typography.caption, color: colors.teal, fontWeight: '800' },
-  womenOnlySubtext: { ...typography.caption, color: colors.ink, fontSize: 10, marginTop: 2 },
+  routeStatsLeft: { flexDirection: 'row', alignItems: 'center', gap: space.x3 },
+  routeStatsHeadline: { fontSize: 13, fontWeight: '800', color: colors.ink },
+  routeStatsSub: { fontSize: 11, color: colors.teal, fontWeight: '600' },
 
-  driverCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    backgroundColor: colors.surface,
+  tollSelectorRow: { flexDirection: 'row', gap: space.x2 },
+  tollOptionCard: {
+    flex: 1,
     padding: space.x3,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#f6f7fb',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    gap: 2,
   },
-  driverAvatar: {
+  tollOptionCardSelected: {
+    backgroundColor: 'rgba(67,30,190,0.06)',
+    borderColor: colors.primary,
+  },
+  tollOptionTitle: { fontSize: 12, fontWeight: '700', color: colors.ink, textAlign: 'center' },
+  tollOptionTitleSelected: { color: colors.primary, fontWeight: '800' },
+  tollOptionDesc: { fontSize: 10, color: colors.muted, textAlign: 'center' },
+  tollOptionDescSelected: { color: colors.teal, fontWeight: '600' },
+
+  modeSelectorRow: { flexDirection: 'row', gap: space.x2 },
+  modePill: {
+    flex: 1,
+    paddingVertical: space.x2,
+    borderRadius: radius.pill,
+    backgroundColor: '#f0f1f7',
+    alignItems: 'center',
+  },
+  modePillActive: { backgroundColor: colors.primary },
+  modePillText: { fontSize: 13, fontWeight: '700', color: colors.ink },
+  modePillTextActive: { color: '#ffffff' },
+
+  recurringSection: { gap: space.x2, marginTop: space.x2 },
+  recurringShortcutsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  shortcutBtn: { padding: 4 },
+  shortcutBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+  daysRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  dayPill: {
     width: 40,
     height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
+    borderRadius: 20,
+    backgroundColor: '#f0f1f7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  driverAvatarText: { color: '#ffffff', fontWeight: '800', fontSize: 16 },
-  driverInfo: { flex: 1 },
-  driverName: { ...typography.bodyStrong, color: colors.ink, fontSize: 13 },
-  driverStats: { ...typography.caption, color: colors.teal, fontSize: 11 },
+  dayPillSelected: { backgroundColor: colors.teal },
+  dayPillText: { fontSize: 13, fontWeight: '700', color: colors.ink },
+  dayPillTextSelected: { color: '#ffffff' },
 
-  errorText: { color: colors.error, ...typography.caption, textAlign: 'center' },
+  dateTimeRow: { flexDirection: 'row', gap: space.x3, marginTop: space.x2 },
+  dateTimeBox: { flex: 1, gap: 4 },
+  textInput: {
+    backgroundColor: '#f5f6ff',
+    borderRadius: radius.control,
+    paddingHorizontal: space.x3,
+    height: 44,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.ink,
+  },
+
+  seatsRow: { flexDirection: 'row', gap: space.x4 },
+  seatCounterBox: { flex: 1, gap: 4 },
+  counterControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.x3,
+    backgroundColor: '#f5f6ff',
+    borderRadius: radius.control,
+    height: 44,
+    paddingHorizontal: space.x2,
+    justifyContent: 'space-between',
+  },
+  counterBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  counterBtnText: { fontSize: 18, fontWeight: '700', color: colors.primary },
+  counterValue: { fontSize: 16, fontWeight: '800', color: colors.ink },
+  priceBox: { flex: 1, gap: 4 },
+  priceInput: {
+    backgroundColor: '#f5f6ff',
+    borderRadius: radius.control,
+    height: 44,
+    paddingHorizontal: space.x3,
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.ink,
+  },
+
+  pillsRow: { flexDirection: 'row', gap: space.x2, marginTop: 4 },
+  filterPill: {
+    paddingHorizontal: space.x3,
+    paddingVertical: space.x2,
+    borderRadius: radius.pill,
+    backgroundColor: '#f0f1f7',
+  },
+  filterPillActive: { backgroundColor: colors.teal },
+  filterPillText: { fontSize: 12, fontWeight: '700', color: colors.ink },
+  filterPillTextActive: { color: '#ffffff' },
+
+  errorText: { color: colors.error, fontSize: 13, fontWeight: '700', textAlign: 'center' },
 
   bottomBar: {
     position: 'absolute',
@@ -732,9 +922,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: space.x4,
-    backgroundColor: colors.surface,
+    backgroundColor: '#ffffff',
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#eef0f8',
   },
   bottomSummaryCol: { gap: 2 },
   totalContributionText: { ...typography.h4, color: colors.ink, fontWeight: '800' },
@@ -769,7 +959,7 @@ const s = StyleSheet.create({
   successSubtitle: { ...typography.body, color: colors.muted, textAlign: 'center' },
   successCard: {
     width: '100%',
-    backgroundColor: colors.surface,
+    backgroundColor: '#ffffff',
     padding: space.x4,
     borderRadius: radius.card,
     borderWidth: 1,

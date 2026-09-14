@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -16,7 +17,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
-import { bookRideSeat, getRideOffer, saveRide, unsaveRide } from '@/modules/rides/api';
+import {
+  bookRideSeat,
+  getRideOffer,
+  provisionRideChat,
+  saveRide,
+  unsaveRide,
+} from '@/modules/rides/api';
 import type { RideOffer } from '@/modules/rides/types';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
@@ -48,9 +55,38 @@ export function RideDetailScreen() {
   const [selectedSeatSlots, setSelectedSeatSlots] = useState<number[]>([3]); // default selected seat 3
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [joiningChat, setJoiningChat] = useState(false);
+
+  async function handleJoinChat() {
+    if (!isAuthenticated) {
+      router.push('/sign-in');
+      return;
+    }
+    if (!rideId) return;
+    setJoiningChat(true);
+    try {
+      const res = await provisionRideChat(rideId as string);
+      if (res.conversationId) {
+        router.push(`/chat/${res.conversationId}` as Href);
+      } else {
+        router.push(
+          `/chat?recipient=${encodeURIComponent(detailData?.driverName || 'Driver')}` as Href,
+        );
+      }
+    } catch (e: any) {
+      Alert.alert('Ride Chat', e?.message || 'Unable to access ephemeral chat right now.');
+    } finally {
+      setJoiningChat(false);
+    }
+  }
 
   // Fetch ride offer from backend
-  const { data: rawOffer, isLoading, isError, refetch } = useQuery({
+  const {
+    data: rawOffer,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['rides', 'detail', rideId],
     queryFn: () => getRideOffer(rideId as string),
     enabled: Boolean(rideId),
@@ -60,13 +96,20 @@ export function RideDetailScreen() {
   const detailData = useMemo(() => {
     if (!rawOffer) return null;
     const depTime = rawOffer.departureAt
-      ? new Date(rawOffer.departureAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      ? new Date(rawOffer.departureAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
       : 'Flexible Departure';
-    const costDollars = (parseFloat(String(rawOffer.contribution || '6').replace(/[^0-9.]/g, '')) || 6).toFixed(2);
+    const costDollars = (
+      parseFloat(String(rawOffer.contribution || '6').replace(/[^0-9.]/g, '')) || 6
+    ).toFixed(2);
 
     return {
       ...rawOffer,
-      driverName: rawOffer.driverId ? `Verified Driver (${rawOffer.driverId.slice(0, 6)})` : 'Verified Driver',
+      driverName: rawOffer.driverId
+        ? `Verified Driver (${rawOffer.driverId.slice(0, 6)})`
+        : 'Verified Driver',
       driverTitle: 'Community Carpool Host',
       driverEmployer: 'Verified Member',
       driverCorporateEmail: undefined,
@@ -159,7 +202,8 @@ export function RideDetailScreen() {
     );
   }
 
-  const numericCost = parseFloat(String(detailData.contribution || '$6').replace(/[^0-9.]/g, '')) || 6;
+  const numericCost =
+    parseFloat(String(detailData.contribution || '$6').replace(/[^0-9.]/g, '')) || 6;
   const totalCost = (numericCost * selectedSeatSlots.length).toFixed(2);
 
   return (
@@ -194,11 +238,7 @@ export function RideDetailScreen() {
             onPress={() => setIsSaved(!isSaved)}
             style={styles.iconButton}
           >
-            <AppIcon
-              color={isSaved ? colors.warm : colors.inkSecondary}
-              name="star"
-              size={22}
-            />
+            <AppIcon color={isSaved ? colors.warm : colors.inkSecondary} name="star" size={22} />
           </Pressable>
 
           <Pressable
@@ -219,9 +259,7 @@ export function RideDetailScreen() {
             <View style={styles.driverHeader}>
               <View style={styles.driverProfileLeft}>
                 <View style={styles.driverAvatarCircle}>
-                  <Text style={styles.driverAvatarInitial}>
-                    {detailData.driverName.charAt(0)}
-                  </Text>
+                  <Text style={styles.driverAvatarInitial}>{detailData.driverName.charAt(0)}</Text>
                   <View style={styles.verifiedDriverBadge}>
                     <AppIcon color={colors.surfaceContainerLowest} name="check" size={10} />
                   </View>
@@ -301,7 +339,8 @@ export function RideDetailScreen() {
                     <Text style={styles.stopTimePrimary}>{detailData.pickupTime}</Text>
                   </View>
                   <Text style={styles.stopAddress}>
-                    <AppIcon color={colors.inkSecondary} name="compass" size={12} /> {detailData.pickupExact}
+                    <AppIcon color={colors.inkSecondary} name="compass" size={12} />{' '}
+                    {detailData.pickupExact}
                   </Text>
                 </View>
               </View>
@@ -321,7 +360,8 @@ export function RideDetailScreen() {
                     <Text style={styles.stopTimeSecondary}>{detailData.dropoffTime}</Text>
                   </View>
                   <Text style={styles.stopAddress}>
-                    <AppIcon color={colors.teal} name="compass" size={12} /> {detailData.dropoffExact}
+                    <AppIcon color={colors.teal} name="compass" size={12} />{' '}
+                    {detailData.dropoffExact}
                   </Text>
                 </View>
               </View>
@@ -336,6 +376,70 @@ export function RideDetailScreen() {
               <View style={styles.trafficPill}>
                 <Text style={styles.trafficText}>{detailData.trafficCondition}</Text>
               </View>
+            </View>
+          </View>
+
+          {/* ── 🔒 Ephemeral Chat & Toll Transparency Card ─────────────────── */}
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: '#f0faf8', borderColor: 'rgba(0,105,107,0.18)' },
+            ]}
+          >
+            <View style={styles.cardHeaderRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <AppIcon color={colors.teal} name="shield" size={18} />
+                <Text style={[styles.cardHeading, { color: colors.teal }]}>
+                  Toll & Route Transparency
+                </Text>
+              </View>
+              <View
+                style={{
+                  backgroundColor:
+                    rawOffer.tollPreference === 'AVOID_TOLLS'
+                      ? 'rgba(16,185,129,0.15)'
+                      : 'rgba(255,126,51,0.15)',
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                }}
+              >
+                <Text
+                  style={{
+                    color: rawOffer.tollPreference === 'AVOID_TOLLS' ? '#059669' : colors.warm,
+                    fontSize: 11,
+                    fontWeight: '800',
+                  }}
+                >
+                  {rawOffer.tollPreference === 'AVOID_TOLLS'
+                    ? 'Tolls Avoided (Free Route)'
+                    : rawOffer.tollPreference === 'TOLLS_INCLUDED'
+                      ? 'Tolls Included'
+                      : 'Split Tolls'}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 13, color: colors.ink, lineHeight: 18, marginTop: 4 }}>
+              {rawOffer.tollPreference === 'AVOID_TOLLS'
+                ? '✅ This driver navigates exclusively on free freeways and surface routes. Passengers pay zero toll fees.'
+                : rawOffer.tollPreference === 'TOLLS_INCLUDED'
+                  ? '🛣️ Express lane tollway charges are prepaid by the driver and fully covered by the advertised contribution.'
+                  : '⚖️ Express lane tolls along the route are split evenly among all passengers.'}
+            </Text>
+            <View
+              style={{
+                marginTop: 8,
+                padding: 10,
+                backgroundColor: '#ffffff',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: 'rgba(0,105,107,0.12)',
+              }}
+            >
+              <Text style={{ fontSize: 11, color: colors.teal, fontWeight: '700' }}>
+                🔒 Privacy Guarantee: Temporary group coordination chat is enabled for this ride.
+                The conversation and all messages permanently self-delete 2 hours after arrival.
+              </Text>
             </View>
           </View>
 
@@ -488,7 +592,12 @@ export function RideDetailScreen() {
                 ]}
               >
                 <View style={styles.seatSlotTop}>
-                  <Text style={[styles.seatSlotLabel, selectedSeatSlots.includes(3) && styles.seatSlotLabelSelected]}>
+                  <Text
+                    style={[
+                      styles.seatSlotLabel,
+                      selectedSeatSlots.includes(3) && styles.seatSlotLabelSelected,
+                    ]}
+                  >
                     Seat 3 · Rear Left
                   </Text>
                   <AppIcon
@@ -498,7 +607,12 @@ export function RideDetailScreen() {
                   />
                 </View>
                 <View>
-                  <Text style={[styles.seatStatusText, selectedSeatSlots.includes(3) && styles.seatStatusTextSelected]}>
+                  <Text
+                    style={[
+                      styles.seatStatusText,
+                      selectedSeatSlots.includes(3) && styles.seatStatusTextSelected,
+                    ]}
+                  >
                     {selectedSeatSlots.includes(3) ? 'Selected for You' : 'Available'}
                   </Text>
                   <Text style={styles.seatTapPrompt}>
@@ -518,7 +632,12 @@ export function RideDetailScreen() {
                 ]}
               >
                 <View style={styles.seatSlotTop}>
-                  <Text style={[styles.seatSlotLabel, selectedSeatSlots.includes(4) && styles.seatSlotLabelSelected]}>
+                  <Text
+                    style={[
+                      styles.seatSlotLabel,
+                      selectedSeatSlots.includes(4) && styles.seatSlotLabelSelected,
+                    ]}
+                  >
                     Seat 4 · Rear Right
                   </Text>
                   <AppIcon
@@ -528,7 +647,12 @@ export function RideDetailScreen() {
                   />
                 </View>
                 <View>
-                  <Text style={[styles.seatStatusText, selectedSeatSlots.includes(4) && styles.seatStatusTextSelected]}>
+                  <Text
+                    style={[
+                      styles.seatStatusText,
+                      selectedSeatSlots.includes(4) && styles.seatStatusTextSelected,
+                    ]}
+                  >
                     {selectedSeatSlots.includes(4) ? 'Selected for You' : 'Available'}
                   </Text>
                   <Text style={styles.seatTapPrompt}>
@@ -573,7 +697,8 @@ export function RideDetailScreen() {
               </View>
               <View style={[styles.feeRow, styles.feeTotalRow]}>
                 <Text style={styles.feeTotalLabel}>
-                  Total to pay driver ({selectedSeatSlots.length} seat{selectedSeatSlots.length > 1 ? 's' : ''})
+                  Total to pay driver ({selectedSeatSlots.length} seat
+                  {selectedSeatSlots.length > 1 ? 's' : ''})
                 </Text>
                 <Text style={styles.feeTotalValue}>${totalCost}</Text>
               </View>
@@ -635,12 +760,17 @@ export function RideDetailScreen() {
 
         <View style={styles.bottomBarRight}>
           <Pressable
-            accessibilityLabel={`Chat with ${detailData.driverName}`}
+            accessibilityLabel={`Join ephemeral chat with ${detailData.driverName}`}
             accessibilityRole="button"
-            onPress={() => router.push(`/chat?recipient=${encodeURIComponent(detailData.driverName)}` as Href)}
+            disabled={joiningChat}
+            onPress={handleJoinChat}
             style={styles.bottomBarChatBtn}
           >
-            <AppIcon color={colors.appPrimary} name="message" size={20} />
+            {joiningChat ? (
+              <ActivityIndicator color={colors.appPrimary} size="small" />
+            ) : (
+              <AppIcon color={colors.appPrimary} name="message" size={20} />
+            )}
           </Pressable>
 
           <Pressable
@@ -674,7 +804,8 @@ export function RideDetailScreen() {
                   You booked {selectedSeatSlots.length} seat(s) with {detailData.driverName}.
                 </Text>
                 <Text style={styles.bookingSuccessDetails}>
-                  Pickup: {detailData.pickupExact} at {detailData.pickupTime}. Driver has been notified via WhatsApp & ManaBandhu chat.
+                  Pickup: {detailData.pickupExact} at {detailData.pickupTime}. Driver has been
+                  notified via WhatsApp & ManaBandhu chat.
                 </Text>
                 <Pressable
                   onPress={() => {
@@ -697,13 +828,21 @@ export function RideDetailScreen() {
 
                 <View style={styles.bookingSummaryRow}>
                   <View>
-                    <Text style={styles.bookingSummaryDriver}>{detailData.driverName} ({detailData.driverEmployer})</Text>
-                    <Text style={styles.bookingSummaryRoute}>{detailData.originArea} ➔ {detailData.destinationArea}</Text>
-                    <Text style={styles.bookingSummaryTime}>Departure: {detailData.pickupTime}</Text>
+                    <Text style={styles.bookingSummaryDriver}>
+                      {detailData.driverName} ({detailData.driverEmployer})
+                    </Text>
+                    <Text style={styles.bookingSummaryRoute}>
+                      {detailData.originArea} ➔ {detailData.destinationArea}
+                    </Text>
+                    <Text style={styles.bookingSummaryTime}>
+                      Departure: {detailData.pickupTime}
+                    </Text>
                   </View>
                   <View style={styles.bookingSummaryPriceBox}>
                     <Text style={styles.bookingSummaryPrice}>${totalCost}</Text>
-                    <Text style={styles.bookingSummarySeats}>{selectedSeatSlots.length} seat(s)</Text>
+                    <Text style={styles.bookingSummarySeats}>
+                      {selectedSeatSlots.length} seat(s)
+                    </Text>
                   </View>
                 </View>
 
