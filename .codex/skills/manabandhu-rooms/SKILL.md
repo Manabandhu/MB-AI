@@ -26,14 +26,14 @@ Owns room discovery, search, map, filters, saved rooms, listings, listing creati
 
 ## Component Inventory
 
-- `RoomsScreen` - multi-mode catalog/list screen driven by `screenId` prop; home/search now return real listing data
+- `RoomsScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` (react-native-maps Apple Maps on iOS, MapKit JS on web) for real interactive map view
 - `RoomDetailScreen` - real listing detail with save/unsave and contact handoff
 - `RoomEditScreen` / `RoomCreateScreen` - real forms backed by `RoomForm` (react-hook-form + zod)
 - `RoomForm` - shared create/edit form with validation
 - `RoomFavoritesScreen` - real saved/favorite listings list
 - `RoomMyListingsScreen` - real owner listings list
 - `RoomInquiryScreen` - inquiry form that creates a booking for the listing
-- Shared: `FeatureScreen`, `SearchBar`, `AppButton`, `TextArea`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`
+- Shared: `UniversalMapView`, `FeatureScreen`, `SearchBar`, `AppButton`, `TextArea`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`
 
 ## API Surface
 

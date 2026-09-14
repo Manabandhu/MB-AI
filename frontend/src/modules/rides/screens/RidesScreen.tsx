@@ -20,6 +20,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { listRideOffers } from '@/modules/rides/api';
 import type { RideOffer } from '@/modules/rides/types';
+import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
@@ -591,43 +592,36 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
             </View>
           ) : viewMode === 'map' ? (
             /* ── Interactive Live Route Map View ─────────────────────────────── */
-            <View style={styles.mapCanvas}>
-              <View style={styles.mapGridLines}>
-                {/* Visual Highway Corridors */}
-                <View style={styles.highwayCorridor1} />
-                <View style={styles.highwayCorridor2} />
-              </View>
+            <View style={[styles.mapCanvas, { padding: 0, overflow: 'hidden' }]}>
+              {(() => {
+                const rideMarkers = filteredRides.map((ride, idx) => ({
+                  id: ride.id,
+                  latitude: Number(ride.originLat) || 30.2672 + (((idx * 19) % 30) - 15) * 0.006,
+                  longitude: Number(ride.originLng) || -97.7431 + (((idx * 29) % 30) - 15) * 0.006,
+                  title: `${ride.driverName} (${ride.originArea} ➔ ${ride.destinationArea})`,
+                  price: ride.contribution.split('/')[0].trim().replace('$', ''),
+                  subtitle: `${ride.originArea} ➔ ${ride.destinationArea}`,
+                  isSelected: selectedMapRideId === ride.id,
+                }));
 
-              {/* Pins on the Map */}
-              {filteredRides.map((ride) => {
-                const isSelected = selectedMapRideId === ride.id;
+                const initialLat = rideMarkers[0]?.latitude || 30.2672;
+                const initialLng = rideMarkers[0]?.longitude || -97.7431;
+
                 return (
-                  <Pressable
-                    key={ride.id}
-                    accessibilityLabel={`View ride from ${ride.originArea} to ${ride.destinationArea}`}
-                    onPress={() => setSelectedMapRideId(ride.id)}
-                    style={[
-                      styles.mapPinContainer,
-                      { left: `${ride.mapX}%`, top: `${ride.mapY}%` },
-                      isSelected && styles.mapPinContainerSelected,
-                    ]}
-                  >
-                    <View style={[styles.mapPinBubble, isSelected && styles.mapPinBubbleSelected]}>
-                      <Text style={[styles.mapPinPrice, isSelected && styles.mapPinPriceSelected]}>
-                        {ride.contribution.split('/')[0].trim()}
-                      </Text>
-                    </View>
-                    <View style={styles.mapPinPointer} />
-                  </Pressable>
+                  <UniversalMapView
+                    initialRegion={{
+                      latitude: initialLat,
+                      longitude: initialLng,
+                      latitudeDelta: 0.18,
+                      longitudeDelta: 0.18,
+                    }}
+                    markers={rideMarkers}
+                    selectedMarkerId={selectedMapRideId}
+                    onSelectMarker={(id) => setSelectedMapRideId(id)}
+                    style={StyleSheet.absoluteFill}
+                  />
                 );
-              })}
-
-              {/* Map Footer Helper */}
-              <View style={styles.mapLegend}>
-                <Text style={styles.mapLegendText}>
-                  📍 Tap corridor pins to view carpool route details
-                </Text>
-              </View>
+              })()}
 
               {/* Selected Ride Quick Preview Sheet in Map */}
               {selectedMapRideId ? (

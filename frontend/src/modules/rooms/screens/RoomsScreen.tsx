@@ -20,6 +20,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { listRoomListings, saveRoom, unsaveRoom } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
+import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
@@ -485,100 +486,90 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
 
       {/* ─── BODY CONTENT: MAP VIEW vs LIST VIEW vs DUAL PANE ───────────────── */}
       {(() => {
-        const renderMapView = () => (
-          <View style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}>
-            <View style={s.mapCanvas}>
-              {/* Tech corridor area labels */}
-              <View style={[s.mapCorridorLabel, { top: '15%', right: '12%' }]}>
-                <Text style={s.mapCorridorText}>Round Rock Tech</Text>
-              </View>
-              <View style={[s.mapCorridorLabel, { top: '26%', left: '18%' }]}>
-                <Text style={s.mapCorridorText}>Domain Northside / Apple</Text>
-              </View>
-              <View style={[s.mapCorridorLabel, { top: '56%', left: '35%' }]}>
-                <Text style={s.mapCorridorText}>UT Austin / Downtown</Text>
-              </View>
+        const renderMapView = () => {
+          const mapMarkers = filteredRooms.map((room, idx) => ({
+            id: room.id,
+            latitude: Number(room.latitude) || 30.2672 + (((idx * 17) % 30) - 15) * 0.005,
+            longitude: Number(room.longitude) || -97.7431 + (((idx * 23) % 30) - 15) * 0.005,
+            title: room.title,
+            price: room.price,
+            subtitle: `${room.roomType} • ${room.broadLocation}`,
+            isSelected: activePinRoom?.id === room.id,
+          }));
 
-              {/* Stylized highway / roadway guides */}
-              <View style={s.mapRoadwayMopac} />
-              <View style={s.mapRoadwayIH35} />
+          const initialLat = mapMarkers[0]?.latitude || 30.2672;
+          const initialLng = mapMarkers[0]?.longitude || -97.7431;
 
-              {/* Dynamic Map Price Pins from Backend Listings */}
-              {filteredRooms.map((room) => {
-                const isSelected = activePinRoom?.id === room.id;
-                return (
-                  <Pressable
-                    key={room.id}
-                    onPress={() => setSelectedPinRoomId(room.id)}
-                    style={[
-                      s.mapPin,
-                      { left: `${room.mapX}%`, top: `${room.mapY}%` },
-                      isSelected && s.mapPinSelected,
-                    ]}
-                  >
-                    <Text style={[s.mapPinText, isSelected && s.mapPinTextSelected]}>
-                      ${room.price}
-                    </Text>
-                    {isSelected ? <View style={s.mapPinPulse} /> : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* Floating List View button to switch back to /rooms/search (only on single-pane) */}
-            {!isDualPane && (
-              <Pressable
-                onPress={() => {
-                  setViewMode('list');
-                  router.push('/rooms/search' as Href);
+          return (
+            <View style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}>
+              <UniversalMapView
+                initialRegion={{
+                  latitude: initialLat,
+                  longitude: initialLng,
+                  latitudeDelta: 0.14,
+                  longitudeDelta: 0.14,
                 }}
-                style={s.floatingToggleBtn}
-                accessibilityLabel="Switch to List View"
-              >
-                <AppIcon color="#fff" name="compass" size={16} />
-                <Text style={s.floatingToggleBtnText}>List View</Text>
-              </Pressable>
-            )}
+                markers={mapMarkers}
+                selectedMarkerId={activePinRoom?.id}
+                onSelectMarker={(id) => setSelectedPinRoomId(id)}
+                style={StyleSheet.absoluteFill}
+              />
 
-            {/* Floating Selected Room Card at bottom of map */}
-            {activePinRoom ? (
-              <View style={s.floatingMapCardContainer}>
+              {/* Floating List View button to switch back to /rooms/search (only on single-pane) */}
+              {!isDualPane && (
                 <Pressable
-                  onPress={() => router.push(`/rooms/${activePinRoom.id}` as Href)}
-                  style={s.floatingMapCard}
+                  onPress={() => {
+                    setViewMode('list');
+                    router.push('/rooms/search' as Href);
+                  }}
+                  style={s.floatingToggleBtn}
+                  accessibilityLabel="Switch to List View"
                 >
-                  <View style={s.floatingThumb}>
-                    <Text style={s.floatingEmoji}>🏢</Text>
-                    <View style={s.floatingPriceTag}>
-                      <Text style={s.floatingPriceVal}>${activePinRoom.price}/mo</Text>
-                    </View>
-                  </View>
-                  <View style={s.floatingInfo}>
-                    <View style={s.floatingTypeRow}>
-                      <Text style={s.floatingType}>🚪 {activePinRoom.roomType}</Text>
-                      <Text style={s.floatingBath}>
-                        {activePinRoom.bathroomType === 'PRIVATE_ATTACHED'
-                          ? '• 🚿 Private Bath'
-                          : '• 🚪 Shared Bath'}
-                      </Text>
-                    </View>
-                    <Text style={s.floatingTitle} numberOfLines={1}>
-                      {activePinRoom.title}
-                    </Text>
-                    <Text style={s.floatingLocation} numberOfLines={1}>
-                      📍 {activePinRoom.broadLocation}
-                    </Text>
-                    <View style={s.floatingCtaRow}>
-                      <View style={s.floatingDetailsBtn}>
-                        <Text style={s.floatingDetailsLink}>View Details →</Text>
+                  <AppIcon color="#fff" name="compass" size={16} />
+                  <Text style={s.floatingToggleBtnText}>List View</Text>
+                </Pressable>
+              )}
+
+              {/* Floating Selected Room Card at bottom of map */}
+              {activePinRoom ? (
+                <View style={s.floatingMapCardContainer}>
+                  <Pressable
+                    onPress={() => router.push(`/rooms/${activePinRoom.id}` as Href)}
+                    style={s.floatingMapCard}
+                  >
+                    <View style={s.floatingThumb}>
+                      <Text style={s.floatingEmoji}>🏢</Text>
+                      <View style={s.floatingPriceTag}>
+                        <Text style={s.floatingPriceVal}>${activePinRoom.price}/mo</Text>
                       </View>
                     </View>
-                  </View>
-                </Pressable>
-              </View>
-            ) : null}
-          </View>
-        );
+                    <View style={s.floatingInfo}>
+                      <View style={s.floatingTypeRow}>
+                        <Text style={s.floatingType}>🚪 {activePinRoom.roomType}</Text>
+                        <Text style={s.floatingBath}>
+                          {activePinRoom.bathroomType === 'PRIVATE_ATTACHED'
+                            ? '• 🚿 Private Bath'
+                            : '• 🚪 Shared Bath'}
+                        </Text>
+                      </View>
+                      <Text style={s.floatingTitle} numberOfLines={1}>
+                        {activePinRoom.title}
+                      </Text>
+                      <Text style={s.floatingLocation} numberOfLines={1}>
+                        📍 {activePinRoom.broadLocation}
+                      </Text>
+                      <View style={s.floatingCtaRow}>
+                        <View style={s.floatingDetailsBtn}>
+                          <Text style={s.floatingDetailsLink}>View Details →</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
+          );
+        };
 
         const renderListView = () => (
           <ScrollView
