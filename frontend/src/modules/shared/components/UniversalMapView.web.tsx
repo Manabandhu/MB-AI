@@ -1,8 +1,10 @@
 import { color as colors } from '@manabandhu/design-system';
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
+import type { Coordinate } from '../utils/geoPolygon';
+import { downsamplePoints } from '../utils/geoPolygon';
 
 export interface MapMarkerItem {
   id: string;
@@ -28,6 +30,11 @@ export interface UniversalMapViewProps {
   showsUserLocation?: boolean;
   mapType?: 'standard' | 'satellite' | 'hybrid';
   children?: React.ReactNode;
+  // Draw-to-filter props
+  enableDrawing?: boolean;
+  drawnPolygon?: Coordinate[] | null;
+  onPolygonComplete?: (polygon: Coordinate[]) => void;
+  onClearPolygon?: () => void;
 }
 
 const DEFAULT_REGION = {
@@ -46,11 +53,22 @@ interface MapKitCoordinate {
   longitude: number;
 }
 
+interface MapKitOverlay {
+  destroy?: () => void;
+}
+
 interface MapKitMap {
   destroy: () => void;
+  region?: {
+    center: MapKitCoordinate;
+    span: { latitudeDelta: number; longitudeDelta: number };
+  };
   annotations?: MapKitAnnotation[];
+  overlays?: MapKitOverlay[];
   removeAnnotations: (annotations: MapKitAnnotation[]) => void;
   addAnnotations: (annotations: MapKitAnnotation[]) => void;
+  removeOverlays?: (overlays: MapKitOverlay[]) => void;
+  addOverlay?: (overlay: MapKitOverlay) => void;
   setCenterAnimated: (coord: MapKitCoordinate, animated: boolean) => void;
 }
 
@@ -65,6 +83,11 @@ interface MapKitNamespace {
     coord: MapKitCoordinate,
     options: Record<string, unknown>,
   ) => MapKitAnnotation;
+  PolygonOverlay?: new (
+    points: MapKitCoordinate[],
+    options?: Record<string, unknown>,
+  ) => MapKitOverlay;
+  Style?: new (options: Record<string, unknown>) => unknown;
   FeatureVisibility: {
     Adaptive: unknown;
   };
@@ -84,11 +107,22 @@ export function UniversalMapView({
   onSelectMarker,
   style,
   children,
+  enableDrawing = true,
+  drawnPolygon = null,
+  onPolygonComplete,
+  onClearPolygon,
 }: UniversalMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<MapKitMap | null>(null);
   const [mapkitReady, setMapkitReady] = useState(false);
   const [mapkitError, setMapkitError] = useState<string | null>(null);
+
+  // Drawing state
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [isPointerDown, setIsPointerDown] = useState(false);
+  const [currentScreenPoints, setCurrentScreenPoints] = useState<Array<{ x: number; y: number }>>(
+    [],
+  );
 
   // Read the Apple Maps token from Expo public env
   const appleMapsToken = process.env.EXPO_PUBLIC_APPLE_MAPS_TOKEN?.trim() || '';
@@ -105,7 +139,6 @@ export function UniversalMapView({
         return;
       }
 
-      // Check if script tag already exists
       const existingScript = document.getElementById('apple-mapkit-script');
       if (!existingScript) {
         const script = document.createElement('script');
@@ -193,7 +226,6 @@ export function UniversalMapView({
 
     const map = mapInstanceRef.current;
 
-    // Clear existing annotations
     if (map.annotations) {
       map.removeAnnotations(map.annotations);
     }
@@ -231,6 +263,95 @@ export function UniversalMapView({
       mapInstanceRef.current.setCenterAnimated(coord, true);
     }
   }, [selectedMarkerId, markers]);
+
+  // 4. Sync drawnPolygon with Apple MapKit Overlays
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.mapkit || !mapkitReady) return;
+    const map = mapInstanceRef.current;
+
+    if (map.overlays && map.removeOverlays) {
+      map.removeOverlays(map.overlays);
+    }
+
+    if (
+      drawnPolygon &&
+      drawnPolygon.length >= 3 &&
+      window.mapkit.PolygonOverlay &&
+      map.addOverlay
+    ) {
+      const points = drawnPolygon.map(
+        (pt) => new window.mapkit.Coordinate(pt.latitude, pt.longitude),
+      );
+      const style = window.mapkit.Style
+        ? new window.mapkit.Style({
+            fillColor: 'rgba(13, 92, 117, 0.22)',
+            strokeColor: colors.primary,
+            lineWidth: 2.5,
+          })
+        : undefined;
+
+      const overlay = new window.mapkit.PolygonOverlay(points, {
+        style,
+      });
+      map.addOverlay(overlay);
+    }
+  }, [drawnPolygon, mapkitReady]);
+
+  // Web Drawing Handlers
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDrawingMode) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setIsPointerDown(true);
+    setCurrentScreenPoints([{ x, y }]);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDrawingMode || !isPointerDown) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setCurrentScreenPoints((prev) => [...prev, { x, y }]);
+  };
+
+  const handlePointerUp = useCallback(() => {
+    if (!isDrawingMode || !isPointerDown) return;
+    setIsPointerDown(false);
+
+    if (currentScreenPoints.length < 5 || !containerRef.current) {
+      setCurrentScreenPoints([]);
+      return;
+    }
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const map = mapInstanceRef.current;
+
+    // Use current active map region or fallback to initial region
+    const centerLat = map?.region?.center.latitude ?? initialRegion.latitude;
+    const centerLng = map?.region?.center.longitude ?? initialRegion.longitude;
+    const spanLat = map?.region?.span.latitudeDelta ?? initialRegion.latitudeDelta;
+    const spanLng = map?.region?.span.longitudeDelta ?? initialRegion.longitudeDelta;
+
+    const sampled = downsamplePoints(currentScreenPoints, 30);
+    const coords: Coordinate[] = sampled.map((p) => ({
+      latitude: centerLat + (0.5 - p.y / rect.height) * spanLat,
+      longitude: centerLng + (p.x / rect.width - 0.5) * spanLng,
+    }));
+
+    if (coords.length >= 3) {
+      coords.push({ ...coords[0] });
+      onPolygonComplete?.(coords);
+    }
+
+    setCurrentScreenPoints([]);
+    setIsDrawingMode(false);
+  }, [isDrawingMode, isPointerDown, currentScreenPoints, initialRegion, onPolygonComplete]);
+
+  const polylineSvgString = useMemo(() => {
+    if (currentScreenPoints.length === 0) return '';
+    return currentScreenPoints.map((p) => `${p.x},${p.y}`).join(' ');
+  }, [currentScreenPoints]);
 
   return (
     <View style={[styles.container, style]}>
@@ -279,21 +400,183 @@ export function UniversalMapView({
                       borderRadius: '20px',
                       border: `1.5px solid ${isSelected ? colors.primary : '#cbd5e1'}`,
                       backgroundColor: isSelected ? colors.primary : '#ffffff',
-                      color: isSelected ? '#ffffff' : '#1e293b',
+                      color: isSelected ? '#ffffff' : '#0f172a',
+                      fontWeight: 700,
                       fontSize: '12px',
-                      fontWeight: '700',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
-                      transition: 'all 0.15s ease',
                     }}
                   >
-                    📍 {m.title.slice(0, 16)}... {m.price ? `($${m.price})` : ''}
+                    {m.price ? `$${m.price}` : '📍'} {m.title.slice(0, 16)}...
                   </button>
                 );
               })}
             </View>
           </View>
         </View>
+      )}
+
+      {/* Real-time Drawing Overlay Layer for Web */}
+      {isDrawingMode && (
+        <div
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 30,
+            cursor: 'crosshair',
+            userSelect: 'none',
+            touchAction: 'none',
+          }}
+        >
+          <svg style={{ width: '100%', height: '100%', pointerEvents: 'none' }} aria-hidden="true">
+            {polylineSvgString ? (
+              <polyline
+                points={polylineSvgString}
+                fill="rgba(13, 92, 117, 0.15)"
+                stroke={colors.primary}
+                strokeWidth={3}
+                strokeDasharray="6, 4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ) : null}
+          </svg>
+        </div>
+      )}
+
+      {/* Floating Drawing Instruction Banner */}
+      {isDrawingMode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '14px',
+            left: '16px',
+            right: '16px',
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            borderRadius: '14px',
+            padding: '10px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            zIndex: 40,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+          }}
+        >
+          <span
+            style={{
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: 600,
+            }}
+          >
+            ✏️ Click & drag to sketch a boundary around your search area
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setIsDrawingMode(false);
+              setCurrentScreenPoints([]);
+            }}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            ✕ Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Floating Action Controls (Draw / Redraw / Clear) */}
+      {enableDrawing && !isDrawingMode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '14px',
+            right: '14px',
+            zIndex: 20,
+            display: 'flex',
+            gap: '8px',
+          }}
+        >
+          {drawnPolygon && drawnPolygon.length >= 3 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentScreenPoints([]);
+                  setIsDrawingMode(true);
+                }}
+                style={{
+                  backgroundColor: '#ffffff',
+                  padding: '8px 14px',
+                  borderRadius: '20px',
+                  border: '1.5px solid #e2e8f0',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  color: '#0f172a',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                }}
+              >
+                ✏️ Redraw
+              </button>
+              <button
+                type="button"
+                onClick={() => onClearPolygon?.()}
+                style={{
+                  backgroundColor: '#ef4444',
+                  padding: '8px 14px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                }}
+              >
+                🗑️ Clear Area
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentScreenPoints([]);
+                setIsDrawingMode(true);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#ffffff',
+                padding: '9px 16px',
+                borderRadius: '22px',
+                border: '1.5px solid #e2e8f0',
+                fontWeight: 700,
+                fontSize: '13px',
+                color: '#0f172a',
+                cursor: 'pointer',
+                boxShadow: '0 3px 8px rgba(0,0,0,0.14)',
+              }}
+            >
+              <span>✏️</span>
+              <span>Draw Area</span>
+            </button>
+          )}
+        </div>
       )}
 
       {children}
@@ -308,22 +591,22 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tokenPromptContainer: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+    backgroundColor: '#F8FAFC',
   },
   tokenPromptCard: {
+    maxWidth: 440,
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 28,
-    maxWidth: 520,
-    width: '100%',
-    alignItems: 'center',
+    padding: 24,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
@@ -338,43 +621,41 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
     marginBottom: 8,
-    textAlign: 'center',
   },
   tokenPromptSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 13,
+    color: '#475569',
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 16,
+    marginBottom: 12,
+    lineHeight: 18,
   },
   tokenPromptDetail: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#334155',
+    color: '#64748B',
+    textAlign: 'center',
     marginBottom: 8,
   },
   codePill: {
     backgroundColor: '#F1F5F9',
-    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderRadius: 8,
     marginBottom: 20,
-    width: '100%',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   codeText: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    color: colors.primary,
-    textAlign: 'center',
+    fontFamily: 'Courier',
+    fontSize: 11,
+    color: '#0D5C75',
     fontWeight: '600',
   },
   pinsPreviewRow: {
-    display: 'flex',
+    flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     justifyContent: 'center',
-    width: '100%',
+    marginTop: 8,
   },
 });

@@ -30,13 +30,13 @@ Owns ride discovery, offers, requests, seats, participants, history, ratings, lo
 
 ## Component Inventory
 
-- `RidesScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` for real route and corridor map view
+- `RidesScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` for real route and corridor map view with freehand draw-to-filter corridor search and point-in-polygon filtering
 - `RideDetailScreen` - placeholder for ride detail with route, timeline, seat state, and safety controls
 - `RideManageScreen` - placeholder for ride management form
 - `RideOfferScreen` - placeholder for ride offer creation form
 - `RideRequestScreen` - placeholder for ride request creation form
 - `RideRateScreen` - placeholder for ride rating form
-- Shared: `UniversalMapView`, `FeatureScreen`, `SearchBar`, `FilterBar`, `Card`, `MapPreview`, `AppButton`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`, `Timeline`, `StarRating`, `DateTimePicker`, `MapPicker`, `Select`, `SwipeAction`
+- Shared: `UniversalMapView`, `geoPolygon` (`isPointInPolygon`), `FeatureScreen`, `SearchBar`, `FilterBar`, `Card`, `MapPreview`, `AppButton`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`, `Timeline`, `StarRating`, `DateTimePicker`, `MapPicker`, `Select`, `SwipeAction`
 
 ## API Surface
 

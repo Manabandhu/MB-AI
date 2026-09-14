@@ -22,6 +22,8 @@ import { listRoomListings, saveRoom, unsaveRoom } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
 import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import type { Coordinate } from '@/modules/shared/utils/geoPolygon';
+import { isPointInPolygon } from '@/modules/shared/utils/geoPolygon';
 
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
 const colors = {
@@ -173,6 +175,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const [filterGender, setFilterGender] = useState<string>('All');
   const [filterVerifiedOnly, setFilterVerifiedOnly] = useState(false);
   const [filterSelectedAmenities, setFilterSelectedAmenities] = useState<string[]>([]);
+  const [drawnBoundary, setDrawnBoundary] = useState<Coordinate[] | null>(null);
 
   // Query real API listings directly from backend / Supabase
   const { data: listings, isLoading } = useQuery({
@@ -220,7 +223,16 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   }, [selectedPinRoomId, rawListings]);
 
   // Filter and sort listings
-  let filteredRooms = rawListings.filter((room) => {
+  let filteredRooms = rawListings.filter((room, idx) => {
+    // Hand-drawn boundary filter (Zillow / Apartments.com style)
+    if (drawnBoundary && drawnBoundary.length >= 3) {
+      const lat = Number(room.latitude) || 30.2672 + (((idx * 17) % 30) - 15) * 0.005;
+      const lng = Number(room.longitude) || -97.7431 + (((idx * 23) % 30) - 15) * 0.005;
+      if (!isPointInPolygon({ latitude: lat, longitude: lng }, drawnBoundary)) {
+        return false;
+      }
+    }
+
     if (searchQuery.trim().length > 0) {
       const q = searchQuery.toLowerCase();
       const matchTitle = room.title.toLowerCase().includes(q);
@@ -513,6 +525,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 selectedMarkerId={activePinRoom?.id}
                 onSelectMarker={(id) => setSelectedPinRoomId(id)}
                 style={StyleSheet.absoluteFill}
+                enableDrawing={true}
+                drawnPolygon={drawnBoundary}
+                onPolygonComplete={(poly) => setDrawnBoundary(poly)}
+                onClearPolygon={() => setDrawnBoundary(null)}
               />
 
               {/* Floating List View button to switch back to /rooms/search (only on single-pane) */}
@@ -591,6 +607,19 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 <Text style={s.filterLinkText}>All Filters</Text>
               </Pressable>
             </View>
+
+            {/* Hand-drawn area active banner */}
+            {drawnBoundary && drawnBoundary.length >= 3 && (
+              <View style={s.drawnBoundaryFilterChip}>
+                <Text style={s.drawnBoundaryFilterText}>
+                  ✏️ Filtered to hand-drawn area ({filteredRooms.length}{' '}
+                  {filteredRooms.length === 1 ? 'room' : 'rooms'})
+                </Text>
+                <Pressable onPress={() => setDrawnBoundary(null)} style={s.drawnBoundaryClearBtn}>
+                  <Text style={s.drawnBoundaryClearText}>✕ Clear Area</Text>
+                </Pressable>
+              </View>
+            )}
 
             {/* Room Listings Feed */}
             {isLoading ? (
@@ -1235,6 +1264,37 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 2,
+  },
+  drawnBoundaryFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  drawnBoundaryFilterText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1d4ed8',
+    flex: 1,
+  },
+  drawnBoundaryClearBtn: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#93c5fd',
+  },
+  drawnBoundaryClearText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1e40af',
   },
   sectionTitle: {
     fontSize: 17,

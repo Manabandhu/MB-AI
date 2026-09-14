@@ -22,6 +22,8 @@ import { listRideOffers } from '@/modules/rides/api';
 import type { RideOffer } from '@/modules/rides/types';
 import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import type { Coordinate } from '@/modules/shared/utils/geoPolygon';
+import { isPointInPolygon } from '@/modules/shared/utils/geoPolygon';
 
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
 const colors = {
@@ -191,6 +193,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
 
   // Active highlighted ride on map
   const [selectedMapRideId, setSelectedMapRideId] = useState<string | null>(null);
+  const [drawnBoundary, setDrawnBoundary] = useState<Coordinate[] | null>(null);
 
   // Query Backend Rides API
   const {
@@ -242,7 +245,16 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
   // Apply Client Filters & Sorting
   const filteredRides = useMemo(() => {
     return enrichedRides
-      .filter((ride) => {
+      .filter((ride, index) => {
+        // Hand-drawn boundary filter
+        if (drawnBoundary && drawnBoundary.length >= 3) {
+          const lat = Number(ride.originLat) || 30.2672 + (((index * 19) % 30) - 15) * 0.006;
+          const lng = Number(ride.originLng) || -97.7431 + (((index * 29) % 30) - 15) * 0.006;
+          if (!isPointInPolygon({ latitude: lat, longitude: lng }, drawnBoundary)) {
+            return false;
+          }
+        }
+
         // Category filter
         if (activeCategory === 'apple' && !ride.destinationArea.toLowerCase().includes('apple'))
           return false;
@@ -307,6 +319,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
     filterDailyOnly,
     filterNoTolls,
     sortBy,
+    drawnBoundary,
   ]);
 
   function handleSwapRoute() {
@@ -619,6 +632,10 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                     selectedMarkerId={selectedMapRideId}
                     onSelectMarker={(id) => setSelectedMapRideId(id)}
                     style={StyleSheet.absoluteFill}
+                    enableDrawing={true}
+                    drawnPolygon={drawnBoundary}
+                    onPolygonComplete={(poly) => setDrawnBoundary(poly)}
+                    onClearPolygon={() => setDrawnBoundary(null)}
                   />
                 );
               })()}
