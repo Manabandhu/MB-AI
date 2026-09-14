@@ -77,5 +77,6 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - **Partial**: Home via `FeatureScreen`, package tracking, nearby, and emergency resources screens are UI-complete. Real provider integration, location consent flow, and offline fallbacks are pending backend wiring.
 - **Backend**: REST and GraphQL APIs implemented under `/api/v1/utilities` with packages, nearby places, emergency resources, and Flyway migration V12.
 
-- Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 - Fallback cleanup: deleted `utilitiesFallbacks.ts` and removed inline fallbacks from `UtilitiesHomeScreen`, `NearbyScreen`, `EmergencyResourcesScreen`, and `PackageTrackingScreen` in favor of live backend endpoints, loading states, and error/empty states; added resilient `DEFAULT_UTILITIES_DATA` fallback to `UtilitiesHomeScreen` to eliminate mobile network-blocking errors.
+- Diaspora & Utilities Hub overhaul: replaced generic `FeatureScreen` placeholder in `UtilitiesHomeScreen.tsx` with dedicated Diaspora Community Services & Utilities screen featuring live Metro Texas search, quick shortcut buttons (Packages, Nearby Map, Emergency), community spotlight move-in bundle card, category filter pills (Tiffin & Dabba, Groceries, Electricity & Wifi, Puja & Temples, Luggage & Courier), rich service cards with reviews and ratings, and interactive provider contact modal. Matching Stitch screen: `933f721ea1604a1fb5f1ca039bbf8703`.
+

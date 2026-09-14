@@ -80,3 +80,5 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 
 - Recent backend fixes: added missing `import com.manabandhu.backend.foundation.CatalogScreenContent;` to `ExpensesController` so the `@GetMapping("/screens/{screenId}")` endpoint compiles against the `ExpensesContentService` switch.
 - Fallback cleanup: deleted `expensesFallbacks.ts` and removed inline fallbacks from `ExpensesHomeScreen`, `ExpenseGroupsScreen`, `BalancesScreen`, `GroupDetailsScreen`, and `SettlementsScreen` in favor of live backend endpoints, loading states, and error/empty states; added resilient `DEFAULT_EXPENSES_DATA` fallback to `ExpensesScreen` to avoid mobile network blockages; updated group details route with `useLocalSearchParams`.
+- Shared Expenses Hub overhaul: replaced generic `FeatureScreen` placeholder in `ExpensesHomeScreen.tsx` with dedicated Flatmate Splitwise & Shared Expenses screen featuring net balance hero card ("+$75.00 You are owed"), quick split action cards, multi-tab view (Active Groups, Who Owes Whom, Recent Splits), and interactive Zelle/Venmo settlement modal. Matching Stitch screen: `b542ab6def1c4837882b82929c0744db`.
+

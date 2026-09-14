@@ -1,7 +1,7 @@
 import { color, space } from '@manabandhu/design-system';
 import { router, useRootNavigationState } from 'expo-router';
-import { useEffect } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
@@ -12,9 +12,81 @@ export function StitchSplashScreen() {
   const status = useAuthStore((s) => s.status);
   const isLoading = useAuthStore((s) => s.isLoading);
 
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const glowPulse = useRef(new Animated.Value(1)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const dotPulse = useRef(new Animated.Value(0.3)).current;
+
   useEffect(() => {
     useAuthStore.getState().checkSession();
-  }, []);
+
+    // 1. Entrance animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: false,
+      }),
+      Animated.timing(progressAnim, {
+        toValue: 1,
+        duration: 1700,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: false,
+      }),
+    ]).start();
+
+    // 2. Continuous breathing glow loop
+    const glowLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowPulse, {
+          toValue: 1.14,
+          duration: 1100,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowPulse, {
+          toValue: 1.0,
+          duration: 1100,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    glowLoop.start();
+
+    // 3. Continuous pulse dot loop
+    const dotLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(dotPulse, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+        Animated.timing(dotPulse, {
+          toValue: 0.3,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    dotLoop.start();
+
+    return () => {
+      glowLoop.stop();
+      dotLoop.stop();
+    };
+  }, [dotPulse, fadeAnim, glowPulse, progressAnim, scaleAnim]);
 
   useEffect(() => {
     if (!rootNavigationState?.key || isLoading) return;
@@ -25,7 +97,7 @@ export function StitchSplashScreen() {
       } else {
         router.replace('/welcome');
       }
-    }, 1800);
+    }, 1900);
 
     return () => clearTimeout(redirectTimer);
   }, [isLoading, rootNavigationState?.key, status]);
@@ -40,6 +112,11 @@ export function StitchSplashScreen() {
     }
   };
 
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
   return (
     <SafeAreaView style={styles.splash}>
       <Pressable
@@ -48,8 +125,23 @@ export function StitchSplashScreen() {
         onPress={navigateToWelcome}
         style={styles.splashInner}
       >
-        <View style={styles.badgeContainer}>
-          <View style={styles.glowRingOuter}>
+        <Animated.View
+          style={[
+            styles.badgeContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.glowRingOuter,
+              {
+                transform: [{ scale: glowPulse }],
+              },
+            ]}
+          >
             <View style={styles.glowRingInner}>
               <Image
                 accessibilityIgnoresInvertColors
@@ -57,30 +149,30 @@ export function StitchSplashScreen() {
                 style={styles.splashLogo}
               />
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
 
-        <View style={styles.brandBlock}>
+        <Animated.View style={[styles.brandBlock, { opacity: fadeAnim }]}>
           <Text style={styles.splashBrand}>ManaBandhu</Text>
           <Text style={styles.splashTagline}>Your Community, Your Bandhu</Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.progressBlock}>
+        <Animated.View style={[styles.progressBlock, { opacity: fadeAnim }]}>
           <View style={styles.progressBar}>
-            <View style={styles.progressBarFill} />
+            <Animated.View style={[styles.progressBarFill, { width: progressWidth }]} />
           </View>
           <View style={styles.statusRow}>
-            <View style={styles.pulseDot} />
+            <Animated.View style={[styles.pulseDot, { opacity: dotPulse }]} />
             <Text style={styles.statusText}>Loading community network...</Text>
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.footerBlock}>
+        <Animated.View style={[styles.footerBlock, { opacity: fadeAnim }]}>
           <View style={styles.trustBadge}>
             <Text style={styles.trustBadgeText}>🛡️ ManaBandhu Ecosystem • Safe & Verified</Text>
           </View>
           <Text style={styles.footerText}>Connecting people, empowering lives</Text>
-        </View>
+        </Animated.View>
       </Pressable>
     </SafeAreaView>
   );
@@ -109,15 +201,20 @@ const styles = StyleSheet.create({
   },
   glowRingOuter: {
     alignItems: 'center',
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    borderRadius: 120,
+    backgroundColor: 'rgba(67, 30, 190, 0.10)',
+    borderRadius: 130,
     justifyContent: 'center',
     padding: space.x4,
+    shadowColor: '#431ebe',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 28,
+    elevation: 8,
   },
   glowRingInner: {
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    borderColor: 'rgba(67, 30, 190, 0.16)',
+    borderColor: 'rgba(67, 30, 190, 0.18)',
     borderRadius: 90,
     borderWidth: 2,
     justifyContent: 'center',
@@ -162,7 +259,7 @@ const styles = StyleSheet.create({
   progressBar: {
     backgroundColor: color.primarySoft,
     borderRadius: 999,
-    height: 4,
+    height: 6,
     overflow: 'hidden',
     width: '100%',
   },
@@ -170,7 +267,6 @@ const styles = StyleSheet.create({
     backgroundColor: color.primary,
     borderRadius: 999,
     height: '100%',
-    width: '65%',
   },
   statusRow: {
     alignItems: 'center',
@@ -179,9 +275,9 @@ const styles = StyleSheet.create({
   },
   pulseDot: {
     backgroundColor: color.warm,
-    borderRadius: 4,
-    height: 8,
-    width: 8,
+    borderRadius: 5,
+    height: 10,
+    width: 10,
   },
   statusText: {
     color: color.muted,
@@ -200,6 +296,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: space.x4,
     paddingVertical: space.x2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   trustBadgeText: {
     color: color.teal,

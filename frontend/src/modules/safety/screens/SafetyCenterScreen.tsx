@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import {
+  Animated,
   Linking,
   Pressable,
   ScrollView,
@@ -17,19 +19,20 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
 const C = {
-  primary: '#E05638',
-  secondary: '#0D5C75',
-  bg: '#FFFDF9',
+  primary: '#431ebe',
+  secondary: '#00696b',
+  accent: '#ff7e33',
+  bg: '#faf8ff',
   cardBg: '#FFFFFF',
-  border: '#E8DEC8',
-  ink: '#151D21',
-  inkMuted: '#6B7280',
+  border: '#E8E5F2',
+  ink: '#1B1829',
+  inkMuted: '#6B6882',
   emerald: '#16A34A',
   emeraldBg: '#DCFCE7',
   crimson: '#DC2626',
   crimsonBg: '#FEE2E2',
-  tealBg: '#E0F2FE',
-  saffronBg: '#FEE2E2',
+  tealBg: '#E0F5F5',
+  saffronBg: '#FFF0E8',
 };
 
 const DEFAULT_SAFETY_DATA = {
@@ -52,6 +55,27 @@ export function SafetyCenterScreen() {
   const { width } = useWindowDimensions();
   const isCompact = width < 360;
   const isDesktop = width >= 768;
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.25,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
 
   const center = useQuery({ queryKey: ['safety', 'center'], queryFn: getSafetyCenter, retry: false });
 
@@ -128,8 +152,11 @@ export function SafetyCenterScreen() {
         {/* Emergency Assistance Banner */}
         <View style={s.sosBanner}>
           <View style={s.sosHeaderRow}>
-            <View style={s.sosIconWrap}>
-              <AppIcon name="warning" size={20} color="#FFFFFF" />
+            <View style={s.sosIconOuter}>
+              <Animated.View style={[s.sosHalo, { transform: [{ scale: pulseAnim }], opacity: pulseAnim.interpolate({ inputRange: [1, 1.25], outputRange: [0.6, 0] }) }]} />
+              <View style={s.sosIconWrap}>
+                <AppIcon name="warning" size={20} color="#FFFFFF" />
+              </View>
             </View>
             <View style={s.sosTextWrap}>
               <Text style={s.sosTitle}>In an Immediate Emergency?</Text>
@@ -292,6 +319,20 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
     marginBottom: 14,
+  },
+  sosIconOuter: {
+    position: 'relative',
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sosHalo: {
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   sosIconWrap: {
     width: 36,
