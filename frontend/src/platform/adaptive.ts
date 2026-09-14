@@ -24,10 +24,13 @@ export function useAdaptiveLayout() {
         ? contentWidth.medium
         : contentWidth.expanded;
 
+  const isDualPane = width >= breakpoint.expanded;
+
   return {
     columns,
     fontScale,
     height,
+    isDualPane,
     isFoldableLike,
     isLandscape,
     maxContentWidth,

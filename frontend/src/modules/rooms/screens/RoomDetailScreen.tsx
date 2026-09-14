@@ -2,8 +2,10 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  BackHandler,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -12,7 +14,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
 import { getRoomDetail, saveRoom, unsaveRoom } from '@/modules/rooms/api';
@@ -42,6 +44,16 @@ export function RoomDetailScreen() {
   const isAuthenticated = status === 'authenticated';
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, []);
 
   const [isSavedLocal, setIsSavedLocal] = useState<boolean | null>(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
@@ -155,18 +167,39 @@ export function RoomDetailScreen() {
   return (
     <SafeAreaView style={s.safeArea}>
       {/* ─── Top Bar ───────────────────────────────────────────────────────────── */}
-      <View style={[s.navBar, isDesktop && s.navBarDesktop]}>
-        <Pressable onPress={() => router.back()} style={s.navBtn} accessibilityLabel="Back">
+      <View
+        style={[
+          s.navBar,
+          isDesktop && s.navBarDesktop,
+          { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) },
+        ]}
+      >
+        <Pressable
+          onPress={() => router.back()}
+          style={s.navBtn}
+          accessibilityLabel="Back"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <AppIcon color={colors.ink} name="chevron-left" size={20} />
         </Pressable>
         <Text style={s.navTitle} numberOfLines={1}>
           Room Details
         </Text>
         <View style={s.navActions}>
-          <Pressable onPress={handleSaveToggle} style={s.navBtn} accessibilityLabel="Save Room">
+          <Pressable
+            onPress={handleSaveToggle}
+            style={s.navBtn}
+            accessibilityLabel="Save Room"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <AppIcon color={isSaved ? '#ba1a1a' : colors.muted} name="star" size={18} />
           </Pressable>
-          <Pressable onPress={handleShare} style={s.navBtn} accessibilityLabel="Share">
+          <Pressable
+            onPress={handleShare}
+            style={s.navBtn}
+            accessibilityLabel="Share"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <AppIcon color={colors.ink} name="globe" size={18} />
           </Pressable>
         </View>
@@ -174,7 +207,11 @@ export function RoomDetailScreen() {
 
       {/* ─── Main Content ──────────────────────────────────────────────────────── */}
       <ScrollView
-        contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+        contentContainerStyle={[
+          s.content,
+          isDesktop && s.contentDesktop,
+          { paddingBottom: Math.max(insets.bottom, 16) + 80 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Photo Gallery Carousel */}
@@ -367,7 +404,13 @@ export function RoomDetailScreen() {
       </ScrollView>
 
       {/* ─── Sticky Bottom Bar (1-Click Real-Time Chat Handshake) ─────────────── */}
-      <View style={[s.bottomBar, isDesktop && s.bottomBarDesktop]}>
+      <View
+        style={[
+          s.bottomBar,
+          isDesktop && s.bottomBarDesktop,
+          { paddingBottom: Math.max(insets.bottom, 16) },
+        ]}
+      >
         <View style={s.bottomPriceCol}>
           <View style={s.priceRow}>
             <Text style={s.bottomPriceVal}>${room.price}</Text>

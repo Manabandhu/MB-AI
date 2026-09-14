@@ -2,10 +2,12 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,7 +16,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { listRideOffers } from '@/modules/rides/api';
 import type { RideOffer } from '@/modules/rides/types';
@@ -146,6 +148,8 @@ const SORT_OPTIONS: { id: SortOption; label: string; icon: string }[] = [
 export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const isLargeDesktop = width >= 1024;
+  const insets = useSafeAreaInsets();
 
   // Search & Filter State
   const [selectedCity, setSelectedCity] = useState<CityOption>(CITIES[0]);
@@ -156,6 +160,27 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [viewMode, setViewMode] = useState<'list' | 'map'>(screenId === 'map' ? 'map' : 'list');
   const [showFilterModal, setShowFilterModal] = useState(screenId === 'filters');
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showFilterModal) {
+        setShowFilterModal(false);
+        return true;
+      }
+      if (showCityModal) {
+        setShowCityModal(false);
+        return true;
+      }
+      if (viewMode === 'map' && screenId !== 'map') {
+        setViewMode('list');
+        return true;
+      }
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [showFilterModal, showCityModal, viewMode, screenId]);
 
   // Filter selections
   const [filterWomenOnly, setFilterWomenOnly] = useState(false);
@@ -290,7 +315,10 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
   }
 
   return (
-    <SafeAreaView edges={['top']} style={styles.safeArea}>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.safeArea, { paddingBottom: Math.max(insets.bottom, 0) }]}
+    >
       {/* ── Top App Bar ────────────────────────────────────────────────────────── */}
       <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
         <View style={styles.topBarLeft}>
@@ -659,6 +687,115 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                   >
                     <Text style={styles.retryBtnText}>Reset All Filters</Text>
                   </Pressable>
+                </View>
+              ) : isLargeDesktop ? (
+                <View style={styles.comparisonTable}>
+                  <View style={styles.tableHeaderRow}>
+                    <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Driver</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Route</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 1.6 }]}>Schedule</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Tolls</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Seats</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Price</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 1.3, textAlign: 'right' }]}>
+                      Action
+                    </Text>
+                  </View>
+                  {filteredRides.map((ride, idx) => (
+                    <View
+                      key={ride.id}
+                      style={[styles.tableRow, idx % 2 === 1 && styles.tableRowEven]}
+                    >
+                      <View
+                        style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                      >
+                        <View style={styles.avatarCircleSmall}>
+                          <Text style={styles.avatarInitialSmall}>{ride.driverName.charAt(0)}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            numberOfLines={1}
+                            style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}
+                          >
+                            {ride.driverName}
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                            <AppIcon color={colors.warm} name="star" size={10} />
+                            <Text style={{ fontSize: 11, color: colors.muted }}>
+                              {ride.driverRating.toFixed(1)}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={{ flex: 2, paddingRight: 8 }}>
+                        <Text
+                          numberOfLines={1}
+                          style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}
+                        >
+                          {ride.originArea}
+                        </Text>
+                        <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>
+                          → {ride.destinationArea}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1.6 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.ink }}>
+                          {ride.departureTimeDisplay}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: colors.muted }}>
+                          {ride.isRecurring ? 'Daily Commute' : 'One-Time Trip'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1.2 }}>
+                        <View
+                          style={[
+                            styles.tollBadgeSmall,
+                            ride.tollPreference === 'AVOID_TOLLS'
+                              ? styles.tollBadgeAvoid
+                              : styles.tollBadgeIncluded,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.tollBadgeTextSmall,
+                              ride.tollPreference === 'AVOID_TOLLS'
+                                ? styles.tollAvoidText
+                                : styles.tollIncludedText,
+                            ]}
+                          >
+                            {ride.tollPreference === 'AVOID_TOLLS'
+                              ? 'No Tolls'
+                              : ride.tollPreference === 'TOLLS_INCLUDED'
+                                ? 'Tolls Inc.'
+                                : 'Split Tolls'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>
+                          {ride.seatsAvailable} left
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: colors.appPrimary }}>
+                          {ride.contribution.split('/')[0].trim()}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1.3, alignItems: 'flex-end' }}>
+                        <Link asChild href={`/rides/${ride.id}` as Href}>
+                          <Pressable style={styles.tableActionBtn}>
+                            <Text style={styles.tableActionBtnText}>View & Book</Text>
+                          </Pressable>
+                        </Link>
+                      </View>
+                    </View>
+                  ))}
                 </View>
               ) : (
                 filteredRides.map((ride) => (
@@ -2045,6 +2182,87 @@ const styles = StyleSheet.create({
   filterApplyBtnText: {
     color: '#ffffff',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  comparisonTable: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+    marginTop: space.x3,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+    paddingVertical: space.x3,
+    paddingHorizontal: space.x4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  tableHeaderCell: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.ink,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: space.x3,
+    paddingHorizontal: space.x4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  tableRowEven: {
+    backgroundColor: '#fafbff',
+  },
+  avatarCircleSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitialSmall: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.appPrimary,
+  },
+  tollBadgeSmall: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    alignSelf: 'flex-start',
+  },
+  tollBadgeAvoid: {
+    backgroundColor: 'rgba(16,185,129,0.12)',
+  },
+  tollBadgeIncluded: {
+    backgroundColor: 'rgba(255,126,51,0.12)',
+  },
+  tollBadgeTextSmall: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  tollAvoidText: {
+    color: '#059669',
+  },
+  tollIncludedText: {
+    color: colors.warm,
+  },
+  tableActionBtn: {
+    backgroundColor: colors.appPrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  tableActionBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
     fontWeight: '700',
   },
 });

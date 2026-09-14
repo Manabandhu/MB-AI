@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,7 +15,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
 import { createRideOffer } from '@/modules/rides/api';
@@ -48,7 +49,9 @@ const ALL_DAYS = [
   { id: 'SUN', label: 'Su' },
 ];
 
-const TOLL_OPTIONS = [
+type TollPreference = 'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT';
+
+const TOLL_OPTIONS: { id: TollPreference; label: string; desc: string }[] = [
   { id: 'AVOID_TOLLS', label: 'Avoid Tolls', desc: 'Free Routes Only' },
   { id: 'TOLLS_INCLUDED', label: 'Tolls Included', desc: 'No extra cost' },
   { id: 'TOLLS_SPLIT', label: 'Split Tolls', desc: 'Split with riders' },
@@ -94,6 +97,16 @@ export function RideOfferScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const _user = useAuthStore((s) => s.user);
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
 
   // Form states
   const [origin, setOrigin] = useState('Dallas - Frisco / Plano, TX');
@@ -212,7 +225,7 @@ export function RideOfferScreen() {
     setIsRecurring(template.isRecurring);
     setRecurrencePattern(template.pattern);
     setSelectedDays(template.days);
-    setTollPref(template.tollPref as any);
+    setTollPref(template.tollPref as TollPreference);
 
     // Geocode both
     const [c1, c2] = await Promise.all([
@@ -330,13 +343,22 @@ export function RideOfferScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[s.scroll, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header */}
-          <View style={s.header}>
-            <Pressable onPress={() => router.back()} style={s.backBtn}>
+          <View
+            style={[s.header, { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) }]}
+          >
+            <Pressable
+              onPress={() => router.back()}
+              style={s.backBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Text style={s.backText}>← Back</Text>
             </Pressable>
             <Text style={s.headerTitle}>Offer a Carpool</Text>
@@ -513,7 +535,7 @@ export function RideOfferScreen() {
                   <Pressable
                     key={opt.id}
                     style={[s.tollOptionCard, isSelected && s.tollOptionCardSelected]}
-                    onPress={() => setTollPref(opt.id as any)}
+                    onPress={() => setTollPref(opt.id)}
                   >
                     <Text style={[s.tollOptionTitle, isSelected && s.tollOptionTitleSelected]}>
                       {opt.label}

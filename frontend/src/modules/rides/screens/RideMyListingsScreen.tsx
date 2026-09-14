@@ -7,17 +7,19 @@ import {
 } from '@manabandhu/design-system';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getMyRides, reactivateRideOffer } from '@/modules/rides/api';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -29,9 +31,19 @@ import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function RideMyListingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const layout = useAdaptiveLayout();
   const maxWidth = layout.windowClass === 'compact' ? contentWidth.compact : layout.maxContentWidth;
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
 
   const [activeTab, setActiveTab] = useState<'all' | 'recurring'>('all');
   const [cloningId, setCloningId] = useState<string | null>(null);
@@ -56,8 +68,8 @@ export function RideMyListingsScreen() {
           { text: 'OK', style: 'cancel' },
         ],
       );
-    } catch (e: any) {
-      Alert.alert('Re-activation Failed', e?.message || 'Unable to re-activate ride.');
+    } catch (e: unknown) {
+      Alert.alert('Re-activation Failed', (e as Error)?.message || 'Unable to re-activate ride.');
     } finally {
       setCloningId(null);
     }
@@ -87,8 +99,21 @@ export function RideMyListingsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
+      <ScrollView
+        contentContainerStyle={[styles.page, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
+      >
         <View style={[styles.container, { maxWidth }]}>
+          <View style={styles.headerBar}>
+            <Pressable
+              accessibilityLabel="Back to Rides"
+              onPress={() => router.back()}
+              style={styles.backBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <AppIcon color={colors.ink} name="chevron-left" size={20} />
+            </Pressable>
+            <Text style={styles.headerBarTitle}>My Rides & Commutes</Text>
+          </View>
           <SectionHeader
             title="My Rides & Commutes"
             subtitle="Manage your offered carpools, active commute routes, and seat bookings."
@@ -328,4 +353,24 @@ const styles = StyleSheet.create({
   emptyTitle: { ...typography.h3, color: colors.ink, textAlign: 'center' },
   emptyBody: { ...typography.body, color: colors.muted, textAlign: 'center' },
   bottomActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.x3,
+    marginBottom: space.x2,
+  },
+  headerBarTitle: {
+    ...typography.h3,
+    color: colors.ink,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(67,30,190,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

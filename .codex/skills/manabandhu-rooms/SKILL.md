@@ -128,10 +128,15 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`.
 
 ## Accessibility and Responsive Behavior Rules
 
-- Minimum touch target: 44x44pt
+- Minimum touch target: 44x44pt with hitSlop for navigation icons
+- Dual-pane reflow: Viewports width >= 1024px render dual-pane layout with 2-column scrollable cards on the left and sticky interactive map on the right
+- Safe Area Insets: Top navigation and bottom action bars use `useSafeAreaInsets()` (`Math.max(insets.bottom, 16)`)
+- Keyboard Avoidance: Forms wrap content with `KeyboardAvoidingView` (`behavior: Platform.OS === 'ios' ? 'padding' : 'height'`) and `keyboardShouldPersistTaps="handled"`
+- Android Hardware Back: Modal sheets, city switchers, and filter overlays implement `BackHandler` listeners
+- Virtualization: FlatLists in list screens configure `initialNumToRender={6}`, `maxToRenderPerBatch={10}`, `windowSize={5}`, `removeClippedSubviews={Platform.OS === 'android'}`
 - Map screen requests location permission with education banner
 - Single column on compact, 2 columns on medium, 3 columns on expanded/wide
-- Bottom sheets and modals respect safe area insets
+- Color contrast meets WCAG 2.1 AA (at least 4.5:1 ratio)
 - Color is not the only indicator of state
 
 ## Current Implementation Status

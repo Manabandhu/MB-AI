@@ -8,7 +8,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
+  BackHandler,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,7 +19,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { useAuthStore } from '@/lib/authStore';
 import { createRoomListing, getRoomAmenities, updateRoomListing } from '@/modules/rooms/api';
@@ -131,6 +134,16 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
   const queryClient = useQueryClient();
   const status = useAuthStore((s) => s.status);
   const isAuthenticated = status === 'authenticated';
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
@@ -325,455 +338,479 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
 
   return (
     <SafeAreaView style={s.safeArea}>
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityLabel="Back">
-          <AppIcon color={colors.ink} name="chevron-left" size={20} />
-        </Pressable>
-        <Text style={s.headerTitle}>
-          {mode === 'create' ? 'Post a Room Listing' : 'Edit Room Listing'}
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        {serverError && (
-          <View style={s.errorBanner}>
-            <AppIcon color={colors.danger} name="warning" size={18} />
-            <Text style={s.errorBannerText}>{serverError}</Text>
-          </View>
-        )}
-
-        {successNotice && (
-          <View style={s.successBanner}>
-            <AppIcon color={colors.teal} name="check" size={18} />
-            <Text style={s.successBannerText}>{successNotice}</Text>
-          </View>
-        )}
-
-        {/* ─── 1. Basic Information ─────────────────────────────────────────── */}
-        <View style={s.card}>
-          <View style={s.cardHeader}>
-            <AppIcon color={colors.appPrimary} name="home" size={20} />
-            <Text style={s.cardTitle}>Basic Room Info</Text>
-          </View>
-
-          <Text style={s.inputLabel}>Listing Title *</Text>
-          <Controller
-            control={control}
-            name="title"
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                placeholder="e.g. Furnished Master Bedroom near Domain / Tech Corridor"
-                placeholderTextColor={colors.muted}
-                style={[s.input, errors.title && s.inputError]}
-                value={value}
-                onChangeText={onChange}
-              />
-            )}
-          />
-          {errors.title && <Text style={s.fieldError}>{errors.title.message}</Text>}
-
-          <Text style={s.inputLabel}>Room Configuration *</Text>
-          <View style={s.chipsRow}>
-            {ROOM_TYPES.map((type) => {
-              const selected = watchedRoomType === type;
-              return (
-                <Pressable
-                  key={type}
-                  onPress={() => setValue('roomType', type)}
-                  style={[s.chip, selected && s.chipSelected]}
-                >
-                  <Text style={[s.chipText, selected && s.chipTextSelected]}>{type}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={s.inputLabel}>Description & House Rules</Text>
-          <Controller
-            control={control}
-            name="description"
-            render={({ field: { onChange, value } }) => (
-              <TextArea
-                placeholder="Describe the house environment, quiet hours, Indian store proximity, roommates..."
-                value={value || ''}
-                onChangeText={onChange}
-                maxLength={4000}
-              />
-            )}
-          />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        {/* Header */}
+        <View style={[s.header, { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) }]}>
+          <Pressable
+            onPress={() => router.back()}
+            style={s.backBtn}
+            accessibilityLabel="Back"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <AppIcon color={colors.ink} name="chevron-left" size={20} />
+          </Pressable>
+          <Text style={s.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+            {mode === 'create' ? 'Post a Room Listing' : 'Edit Room Listing'}
+          </Text>
+          <View style={{ width: 36 }} />
         </View>
 
-        {/* ─── 2. Free Address & Geocoding (Photon + Zippopotam + offline) ───── */}
-        <View style={s.card}>
-          <View style={s.cardHeader}>
-            <AppIcon color={colors.teal} name="map" size={20} />
-            <Text style={s.cardTitle}>Location & Address</Text>
-          </View>
-          <Text style={s.hintText}>
-            Exact address is kept private until you approve an inquiry.
-          </Text>
-
-          <Text style={s.inputLabel}>Street Address Search (Free Photon Autocomplete)</Text>
-          <View style={s.searchBox}>
-            <TextInput
-              placeholder="Search street or neighborhood (e.g. 11000 Domain Dr)"
-              placeholderTextColor={colors.muted}
-              style={s.searchInput}
-              value={addressQuery}
-              onChangeText={setAddressQuery}
-            />
-            {isSearchingAddress && <ActivityIndicator size="small" color={colors.appPrimary} />}
-          </View>
-
-          {/* Suggestions Dropdown */}
-          {addressSuggestions.length > 0 && (
-            <View style={s.suggestionsBox}>
-              {addressSuggestions.map((item, idx) => (
-                <Pressable
-                  key={idx}
-                  style={s.suggestionItem}
-                  onPress={() => handleSelectAddressSuggestion(item)}
-                >
-                  <AppIcon color={colors.teal} name="map" size={16} />
-                  <Text style={s.suggestionText} numberOfLines={2}>
-                    {item.formattedAddress}
-                  </Text>
-                </Pressable>
-              ))}
+        <ScrollView
+          contentContainerStyle={[s.content, { paddingBottom: Math.max(insets.bottom, 24) + 60 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {serverError && (
+            <View style={s.errorBanner}>
+              <AppIcon color={colors.danger} name="warning" size={18} />
+              <Text style={s.errorBannerText}>{serverError}</Text>
             </View>
           )}
 
-          <View style={s.rowTwoCol}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.inputLabel}>ZIP Code (Auto-Fill)</Text>
-              <Controller
-                control={control}
-                name="zipCode"
-                render={({ field: { onChange, value } }) => (
-                  <TextInput
-                    placeholder="78758"
-                    placeholderTextColor={colors.muted}
-                    style={s.input}
-                    keyboardType="numeric"
-                    maxLength={5}
-                    value={value}
-                    onChangeText={(v) => {
-                      onChange(v);
-                      handleZipChange(v);
-                    }}
-                  />
-                )}
-              />
+          {successNotice && (
+            <View style={s.successBanner}>
+              <AppIcon color={colors.teal} name="check" size={18} />
+              <Text style={s.successBannerText}>{successNotice}</Text>
+            </View>
+          )}
+
+          {/* ─── 1. Basic Information ─────────────────────────────────────────── */}
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <AppIcon color={colors.appPrimary} name="home" size={20} />
+              <Text style={s.cardTitle}>Basic Room Info</Text>
             </View>
 
-            <View style={{ flex: 1.5 }}>
-              <Text style={s.inputLabel}>State</Text>
-              <Controller
-                control={control}
-                name="stateCode"
-                render={({ field: { onChange, value } }) => (
-                  <TextInput
-                    placeholder="TX"
-                    placeholderTextColor={colors.muted}
-                    style={s.input}
-                    autoCapitalize="characters"
-                    maxLength={2}
-                    value={value}
-                    onChangeText={onChange}
-                  />
-                )}
-              />
+            <Text style={s.inputLabel}>Listing Title *</Text>
+            <Controller
+              control={control}
+              name="title"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  placeholder="e.g. Furnished Master Bedroom near Domain / Tech Corridor"
+                  placeholderTextColor={colors.muted}
+                  style={[s.input, errors.title && s.inputError]}
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
+            />
+            {errors.title && <Text style={s.fieldError}>{errors.title.message}</Text>}
+
+            <Text style={s.inputLabel}>Room Configuration *</Text>
+            <View style={s.chipsRow}>
+              {ROOM_TYPES.map((type) => {
+                const selected = watchedRoomType === type;
+                return (
+                  <Pressable
+                    key={type}
+                    onPress={() => setValue('roomType', type)}
+                    style={[s.chip, selected && s.chipSelected]}
+                  >
+                    <Text style={[s.chipText, selected && s.chipTextSelected]}>{type}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
+
+            <Text style={s.inputLabel}>Description & House Rules</Text>
+            <Controller
+              control={control}
+              name="description"
+              render={({ field: { onChange, value } }) => (
+                <TextArea
+                  placeholder="Describe the house environment, quiet hours, Indian store proximity, roommates..."
+                  value={value || ''}
+                  onChangeText={onChange}
+                  maxLength={4000}
+                />
+              )}
+            />
           </View>
 
-          <Text style={s.inputLabel}>City & Area *</Text>
-          <Controller
-            control={control}
-            name="broadLocation"
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                placeholder="e.g. North Austin, Domain Corridor, TX"
-                placeholderTextColor={colors.muted}
-                style={[s.input, errors.broadLocation && s.inputError]}
-                value={value}
-                onChangeText={onChange}
-              />
-            )}
-          />
-          {errors.broadLocation && <Text style={s.fieldError}>{errors.broadLocation.message}</Text>}
+          {/* ─── 2. Free Address & Geocoding (Photon + Zippopotam + offline) ───── */}
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <AppIcon color={colors.teal} name="map" size={20} />
+              <Text style={s.cardTitle}>Location & Address</Text>
+            </View>
+            <Text style={s.hintText}>
+              Exact address is kept private until you approve an inquiry.
+            </Text>
 
-          {/* Quick city suggestions from country-state-city */}
-          {availableCities.length > 0 && (
-            <View style={{ marginTop: 8 }}>
-              <Text style={s.subLabel}>Quick Select City:</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={s.quickChipScroll}
-              >
-                {availableCities.map((city) => (
+            <Text style={s.inputLabel}>Street Address Search (Free Photon Autocomplete)</Text>
+            <View style={s.searchBox}>
+              <TextInput
+                placeholder="Search street or neighborhood (e.g. 11000 Domain Dr)"
+                placeholderTextColor={colors.muted}
+                style={s.searchInput}
+                value={addressQuery}
+                onChangeText={setAddressQuery}
+              />
+              {isSearchingAddress && <ActivityIndicator size="small" color={colors.appPrimary} />}
+            </View>
+
+            {/* Suggestions Dropdown */}
+            {addressSuggestions.length > 0 && (
+              <View style={s.suggestionsBox}>
+                {addressSuggestions.map((item, idx) => (
                   <Pressable
-                    key={city.name}
-                    onPress={() =>
-                      setValue('broadLocation', `${city.name}, ${watchedStateCode || 'TX'}`)
-                    }
-                    style={s.quickChip}
+                    key={idx}
+                    style={s.suggestionItem}
+                    onPress={() => handleSelectAddressSuggestion(item)}
                   >
-                    <Text style={s.quickChipText}>{city.name}</Text>
+                    <AppIcon color={colors.teal} name="map" size={16} />
+                    <Text style={s.suggestionText} numberOfLines={2}>
+                      {item.formattedAddress}
+                    </Text>
                   </Pressable>
                 ))}
-              </ScrollView>
-            </View>
-          )}
-        </View>
+              </View>
+            )}
 
-        {/* ─── 3. Pricing & Transparency ───────────────────────────────────── */}
-        <View style={s.card}>
-          <View style={s.cardHeader}>
-            <AppIcon color={colors.appPrimary} name="wallet" size={20} />
-            <Text style={s.cardTitle}>Pricing & Utilities</Text>
-          </View>
+            <View style={s.rowTwoCol}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.inputLabel}>ZIP Code (Auto-Fill)</Text>
+                <Controller
+                  control={control}
+                  name="zipCode"
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      placeholder="78758"
+                      placeholderTextColor={colors.muted}
+                      style={s.input}
+                      keyboardType="numeric"
+                      maxLength={5}
+                      value={value}
+                      onChangeText={(v) => {
+                        onChange(v);
+                        handleZipChange(v);
+                      }}
+                    />
+                  )}
+                />
+              </View>
 
-          <View style={s.rowTwoCol}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.inputLabel}>Monthly Rent ($) *</Text>
-              <Controller
-                control={control}
-                name="price"
-                render={({ field: { onChange, value } }) => (
-                  <TextInput
-                    placeholder="850"
-                    placeholderTextColor={colors.muted}
-                    style={[s.input, errors.price && s.inputError]}
-                    keyboardType="numeric"
-                    value={value}
-                    onChangeText={onChange}
-                  />
-                )}
-              />
-              {errors.price && <Text style={s.fieldError}>{errors.price.message}</Text>}
+              <View style={{ flex: 1.5 }}>
+                <Text style={s.inputLabel}>State</Text>
+                <Controller
+                  control={control}
+                  name="stateCode"
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      placeholder="TX"
+                      placeholderTextColor={colors.muted}
+                      style={s.input}
+                      autoCapitalize="characters"
+                      maxLength={2}
+                      value={value}
+                      onChangeText={onChange}
+                    />
+                  )}
+                />
+              </View>
             </View>
 
-            <View style={{ flex: 1 }}>
-              <Text style={s.inputLabel}>Security Deposit ($)</Text>
-              <Controller
-                control={control}
-                name="securityDeposit"
-                render={({ field: { onChange, value } }) => (
-                  <TextInput
-                    placeholder="500"
-                    placeholderTextColor={colors.muted}
-                    style={s.input}
-                    keyboardType="numeric"
-                    value={value}
-                    onChangeText={onChange}
-                  />
-                )}
-              />
-            </View>
-          </View>
+            <Text style={s.inputLabel}>City & Area *</Text>
+            <Controller
+              control={control}
+              name="broadLocation"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  placeholder="e.g. North Austin, Domain Corridor, TX"
+                  placeholderTextColor={colors.muted}
+                  style={[s.input, errors.broadLocation && s.inputError]}
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
+            />
+            {errors.broadLocation && (
+              <Text style={s.fieldError}>{errors.broadLocation.message}</Text>
+            )}
 
-          {/* Utilities toggle */}
-          <Pressable
-            onPress={() => setValue('utilitiesIncluded', !watchedUtilitiesIncluded)}
-            style={s.toggleRow}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={s.toggleLabel}>All Utilities Included in Rent?</Text>
-              <Text style={s.toggleDesc}>
-                Includes high-speed WiFi, electricity, water, gas, and trash.
-              </Text>
-            </View>
-            <View style={[s.toggleIndicator, watchedUtilitiesIncluded && s.toggleIndicatorActive]}>
-              <Text style={s.toggleIndicatorText}>{watchedUtilitiesIncluded ? 'YES' : 'NO'}</Text>
-            </View>
-          </Pressable>
-
-          {!watchedUtilitiesIncluded && (
-            <View style={{ marginTop: 12 }}>
-              <Text style={s.inputLabel}>Estimated Monthly Utility Share ($/month)</Text>
-              <Controller
-                control={control}
-                name="estUtilityMonthly"
-                render={({ field: { onChange, value } }) => (
-                  <TextInput
-                    placeholder="e.g. 60 - 80"
-                    placeholderTextColor={colors.muted}
-                    style={s.input}
-                    keyboardType="numeric"
-                    value={value}
-                    onChangeText={onChange}
-                  />
-                )}
-              />
-            </View>
-          )}
-
-          <Text style={s.inputLabel}>Lease Commitment</Text>
-          <View style={s.chipsRow}>
-            {LEASE_TERMS.map((term) => {
-              const selected = watchedLeaseTerm === term.id;
-              return (
-                <Pressable
-                  key={term.id}
-                  onPress={() => setValue('leaseTerm', term.id)}
-                  style={[s.chip, selected && s.chipSelected]}
+            {/* Quick city suggestions from country-state-city */}
+            {availableCities.length > 0 && (
+              <View style={{ marginTop: 8 }}>
+                <Text style={s.subLabel}>Quick Select City:</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={s.quickChipScroll}
                 >
-                  <Text style={[s.chipText, selected && s.chipTextSelected]}>{term.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* ─── 4. Cultural & Flatmate Preferences ──────────────────────────── */}
-        <View style={s.card}>
-          <View style={s.cardHeader}>
-            <AppIcon color={colors.warm} name="verified-user" size={20} />
-            <Text style={s.cardTitle}>Diaspora & Flatmate Match</Text>
-          </View>
-
-          <Text style={s.inputLabel}>Dietary Kitchen Preference</Text>
-          <View style={s.chipsRow}>
-            {DIETARY_OPTIONS.map((opt) => {
-              const selected = watchedDietary === opt.id;
-              return (
-                <Pressable
-                  key={opt.id}
-                  onPress={() => setValue('dietaryPreference', opt.id)}
-                  style={[s.chip, selected && s.chipSelected]}
-                >
-                  <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt.label}</Text>
-                </Pressable>
-              );
-            })}
+                  {availableCities.map((city) => (
+                    <Pressable
+                      key={city.name}
+                      onPress={() =>
+                        setValue('broadLocation', `${city.name}, ${watchedStateCode || 'TX'}`)
+                      }
+                      style={s.quickChip}
+                    >
+                      <Text style={s.quickChipText}>{city.name}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
 
-          <Text style={s.inputLabel}>Gender Preference</Text>
-          <View style={s.chipsRow}>
-            {GENDER_OPTIONS.map((opt) => {
-              const selected = watchedGender === opt.id;
-              return (
-                <Pressable
-                  key={opt.id}
-                  onPress={() => setValue('genderPreference', opt.id)}
-                  style={[s.chip, selected && s.chipSelected]}
-                >
-                  <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={s.inputLabel}>Bathroom Type</Text>
-          <View style={s.chipsRow}>
-            {BATHROOM_OPTIONS.map((opt) => {
-              const selected = watchedBathroom === opt.id;
-              return (
-                <Pressable
-                  key={opt.id}
-                  onPress={() => setValue('bathroomType', opt.id)}
-                  style={[s.chip, selected && s.chipSelected]}
-                >
-                  <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {/* University shuttle toggle */}
-          <Pressable
-            onPress={() => setValue('universityShuttleAccessible', !watchedShuttle)}
-            style={[s.toggleRow, { marginTop: 8 }]}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={s.toggleLabel}>Walkable to University / Tech Shuttle?</Text>
-              <Text style={s.toggleDesc}>Near UT shuttle, Apple / Amazon tech transit routes.</Text>
+          {/* ─── 3. Pricing & Transparency ───────────────────────────────────── */}
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <AppIcon color={colors.appPrimary} name="wallet" size={20} />
+              <Text style={s.cardTitle}>Pricing & Utilities</Text>
             </View>
-            <View style={[s.toggleIndicator, watchedShuttle && s.toggleIndicatorActive]}>
-              <Text style={s.toggleIndicatorText}>{watchedShuttle ? 'YES' : 'NO'}</Text>
+
+            <View style={s.rowTwoCol}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.inputLabel}>Monthly Rent ($) *</Text>
+                <Controller
+                  control={control}
+                  name="price"
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      placeholder="850"
+                      placeholderTextColor={colors.muted}
+                      style={[s.input, errors.price && s.inputError]}
+                      keyboardType="numeric"
+                      value={value}
+                      onChangeText={onChange}
+                    />
+                  )}
+                />
+                {errors.price && <Text style={s.fieldError}>{errors.price.message}</Text>}
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={s.inputLabel}>Security Deposit ($)</Text>
+                <Controller
+                  control={control}
+                  name="securityDeposit"
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      placeholder="500"
+                      placeholderTextColor={colors.muted}
+                      style={s.input}
+                      keyboardType="numeric"
+                      value={value}
+                      onChangeText={onChange}
+                    />
+                  )}
+                />
+              </View>
             </View>
-          </Pressable>
-        </View>
 
-        {/* ─── 5. Dynamic Database Amenities Catalog ──────────────────────── */}
-        <View style={s.card}>
-          <View style={s.cardHeader}>
-            <AppIcon color={colors.appPrimary} name="sparks" size={20} />
-            <Text style={s.cardTitle}>Amenities & Features (Dynamic)</Text>
-          </View>
-          <Text style={s.hintText}>Select all amenities provided in this home:</Text>
+            {/* Utilities toggle */}
+            <Pressable
+              onPress={() => setValue('utilitiesIncluded', !watchedUtilitiesIncluded)}
+              style={s.toggleRow}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={s.toggleLabel}>All Utilities Included in Rent?</Text>
+                <Text style={s.toggleDesc}>
+                  Includes high-speed WiFi, electricity, water, gas, and trash.
+                </Text>
+              </View>
+              <View
+                style={[s.toggleIndicator, watchedUtilitiesIncluded && s.toggleIndicatorActive]}
+              >
+                <Text style={s.toggleIndicatorText}>{watchedUtilitiesIncluded ? 'YES' : 'NO'}</Text>
+              </View>
+            </Pressable>
 
-          <View style={s.amenitiesGrid}>
-            {amenitiesCatalog.map((amenity) => {
-              const selected = selectedAmenityCodes.includes(amenity.code);
-              return (
-                <Pressable
-                  key={amenity.code}
-                  onPress={() => toggleAmenity(amenity.code)}
-                  style={[s.amenityChip, selected && s.amenityChipSelected]}
-                >
-                  <View style={[s.amenityIconCircle, selected && s.amenityIconCircleActive]}>
-                    <AppIcon color={selected ? '#fff' : colors.appPrimary} name="check" size={12} />
-                  </View>
-                  <Text style={[s.amenityText, selected && s.amenityTextSelected]}>
-                    {amenity.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+            {!watchedUtilitiesIncluded && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={s.inputLabel}>Estimated Monthly Utility Share ($/month)</Text>
+                <Controller
+                  control={control}
+                  name="estUtilityMonthly"
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      placeholder="e.g. 60 - 80"
+                      placeholderTextColor={colors.muted}
+                      style={s.input}
+                      keyboardType="numeric"
+                      value={value}
+                      onChangeText={onChange}
+                    />
+                  )}
+                />
+              </View>
+            )}
 
-        {/* ─── 6. Photos & Images ─────────────────────────────────────────── */}
-        <View style={s.card}>
-          <View style={s.cardHeader}>
-            <AppIcon color={colors.teal} name="package" size={20} />
-            <Text style={s.cardTitle}>Room Photos</Text>
-          </View>
-
-          <Pressable onPress={pickImages} style={s.photoPickerBtn}>
-            <AppIcon color={colors.appPrimary} name="plus" size={24} />
-            <Text style={s.photoPickerText}>Select Photos from Gallery</Text>
-            <Text style={s.photoPickerSubtext}>JPG, PNG supported</Text>
-          </Pressable>
-
-          {photos.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.photoThumbRow}>
-              {photos.map((uri, idx) => (
-                <View key={idx} style={s.photoThumbWrap}>
-                  <Image source={{ uri }} style={s.photoThumbImg} />
+            <Text style={s.inputLabel}>Lease Commitment</Text>
+            <View style={s.chipsRow}>
+              {LEASE_TERMS.map((term) => {
+                const selected = watchedLeaseTerm === term.id;
+                return (
                   <Pressable
-                    onPress={() => removePhoto(idx)}
-                    style={s.photoRemoveBtn}
-                    accessibilityLabel="Remove photo"
+                    key={term.id}
+                    onPress={() => setValue('leaseTerm', term.id)}
+                    style={[s.chip, selected && s.chipSelected]}
                   >
-                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>✕</Text>
+                    <Text style={[s.chipText, selected && s.chipTextSelected]}>{term.label}</Text>
                   </Pressable>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+                );
+              })}
+            </View>
+          </View>
 
-        {/* ─── Submit CTA ─────────────────────────────────────────────────── */}
-        <View style={s.ctaWrap}>
-          <AppButton
-            label={
-              isSubmitting || createMutation.isPending || updateMutation.isPending
-                ? 'Saving...'
-                : mode === 'create'
-                  ? 'Post Room Listing'
-                  : 'Save Listing Changes'
-            }
-            onPress={handleSubmit(onSubmit)}
-            loading={isSubmitting || createMutation.isPending || updateMutation.isPending}
-            variant="primary"
-          />
-        </View>
-      </ScrollView>
+          {/* ─── 4. Cultural & Flatmate Preferences ──────────────────────────── */}
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <AppIcon color={colors.warm} name="verified-user" size={20} />
+              <Text style={s.cardTitle}>Diaspora & Flatmate Match</Text>
+            </View>
+
+            <Text style={s.inputLabel}>Dietary Kitchen Preference</Text>
+            <View style={s.chipsRow}>
+              {DIETARY_OPTIONS.map((opt) => {
+                const selected = watchedDietary === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => setValue('dietaryPreference', opt.id)}
+                    style={[s.chip, selected && s.chipSelected]}
+                  >
+                    <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={s.inputLabel}>Gender Preference</Text>
+            <View style={s.chipsRow}>
+              {GENDER_OPTIONS.map((opt) => {
+                const selected = watchedGender === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => setValue('genderPreference', opt.id)}
+                    style={[s.chip, selected && s.chipSelected]}
+                  >
+                    <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={s.inputLabel}>Bathroom Type</Text>
+            <View style={s.chipsRow}>
+              {BATHROOM_OPTIONS.map((opt) => {
+                const selected = watchedBathroom === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => setValue('bathroomType', opt.id)}
+                    style={[s.chip, selected && s.chipSelected]}
+                  >
+                    <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* University shuttle toggle */}
+            <Pressable
+              onPress={() => setValue('universityShuttleAccessible', !watchedShuttle)}
+              style={[s.toggleRow, { marginTop: 8 }]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={s.toggleLabel}>Walkable to University / Tech Shuttle?</Text>
+                <Text style={s.toggleDesc}>
+                  Near UT shuttle, Apple / Amazon tech transit routes.
+                </Text>
+              </View>
+              <View style={[s.toggleIndicator, watchedShuttle && s.toggleIndicatorActive]}>
+                <Text style={s.toggleIndicatorText}>{watchedShuttle ? 'YES' : 'NO'}</Text>
+              </View>
+            </Pressable>
+          </View>
+
+          {/* ─── 5. Dynamic Database Amenities Catalog ──────────────────────── */}
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <AppIcon color={colors.appPrimary} name="sparks" size={20} />
+              <Text style={s.cardTitle}>Amenities & Features (Dynamic)</Text>
+            </View>
+            <Text style={s.hintText}>Select all amenities provided in this home:</Text>
+
+            <View style={s.amenitiesGrid}>
+              {amenitiesCatalog.map((amenity) => {
+                const selected = selectedAmenityCodes.includes(amenity.code);
+                return (
+                  <Pressable
+                    key={amenity.code}
+                    onPress={() => toggleAmenity(amenity.code)}
+                    style={[s.amenityChip, selected && s.amenityChipSelected]}
+                  >
+                    <View style={[s.amenityIconCircle, selected && s.amenityIconCircleActive]}>
+                      <AppIcon
+                        color={selected ? '#fff' : colors.appPrimary}
+                        name="check"
+                        size={12}
+                      />
+                    </View>
+                    <Text style={[s.amenityText, selected && s.amenityTextSelected]}>
+                      {amenity.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* ─── 6. Photos & Images ─────────────────────────────────────────── */}
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <AppIcon color={colors.teal} name="package" size={20} />
+              <Text style={s.cardTitle}>Room Photos</Text>
+            </View>
+
+            <Pressable onPress={pickImages} style={s.photoPickerBtn}>
+              <AppIcon color={colors.appPrimary} name="plus" size={24} />
+              <Text style={s.photoPickerText}>Select Photos from Gallery</Text>
+              <Text style={s.photoPickerSubtext}>JPG, PNG supported</Text>
+            </Pressable>
+
+            {photos.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.photoThumbRow}>
+                {photos.map((uri, idx) => (
+                  <View key={idx} style={s.photoThumbWrap}>
+                    <Image source={{ uri }} style={s.photoThumbImg} />
+                    <Pressable
+                      onPress={() => removePhoto(idx)}
+                      style={s.photoRemoveBtn}
+                      accessibilityLabel="Remove photo"
+                    >
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          {/* ─── Submit CTA ─────────────────────────────────────────────────── */}
+          <View style={s.ctaWrap}>
+            <AppButton
+              label={
+                isSubmitting || createMutation.isPending || updateMutation.isPending
+                  ? 'Saving...'
+                  : mode === 'create'
+                    ? 'Post Room Listing'
+                    : 'Save Listing Changes'
+              }
+              onPress={handleSubmit(onSubmit)}
+              loading={isSubmitting || createMutation.isPending || updateMutation.isPending}
+              variant="primary"
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

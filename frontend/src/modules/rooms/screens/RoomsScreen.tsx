@@ -2,10 +2,12 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,7 +16,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { listRoomListings, saveRoom, unsaveRoom } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
@@ -112,6 +114,8 @@ const SORT_OPTIONS: { id: SortOption; label: string; icon: string }[] = [
 export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const isDualPane = width >= 1024;
+  const insets = useSafeAreaInsets();
 
   // State
   const [selectedCity, setSelectedCity] = useState<CityOption>(CITIES[0]);
@@ -119,6 +123,27 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(screenId === 'filters');
   const [viewMode, setViewMode] = useState<'list' | 'map'>(screenId === 'map' ? 'map' : 'list');
   const [selectedPinRoomId, setSelectedPinRoomId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isFilterModalVisible) {
+        setIsFilterModalVisible(false);
+        return true;
+      }
+      if (isCityModalVisible) {
+        setIsCityModalVisible(false);
+        return true;
+      }
+      if (viewMode === 'map' && screenId !== 'map') {
+        setViewMode('list');
+        return true;
+      }
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [isFilterModalVisible, isCityModalVisible, viewMode, screenId]);
 
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
@@ -322,7 +347,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   };
 
   return (
-    <SafeAreaView style={s.safeArea}>
+    <SafeAreaView style={[s.safeArea, { paddingBottom: Math.max(insets.bottom, 0) }]}>
       {/* ─── Top Header ───────────────────────────────────────────────────────── */}
       <View style={[s.header, isDesktop && s.headerDesktop]}>
         <View style={s.headerTop}>
@@ -458,243 +483,269 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         </ScrollView>
       </View>
 
-      {/* ─── BODY CONTENT: MAP VIEW vs LIST VIEW ─────────────────────────────── */}
-      {viewMode === 'map' ? (
-        /* ─── MAP VIEW ───────────────────────────────────────────────────────── */
-        <View style={s.mapContainer}>
-          <View style={s.mapCanvas}>
-            {/* Tech corridor area labels */}
-            <View style={[s.mapCorridorLabel, { top: '15%', right: '12%' }]}>
-              <Text style={s.mapCorridorText}>Round Rock Tech</Text>
-            </View>
-            <View style={[s.mapCorridorLabel, { top: '26%', left: '18%' }]}>
-              <Text style={s.mapCorridorText}>Domain Northside / Apple</Text>
-            </View>
-            <View style={[s.mapCorridorLabel, { top: '56%', left: '35%' }]}>
-              <Text style={s.mapCorridorText}>UT Austin / Downtown</Text>
-            </View>
+      {/* ─── BODY CONTENT: MAP VIEW vs LIST VIEW vs DUAL PANE ───────────────── */}
+      {(() => {
+        const renderMapView = () => (
+          <View style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}>
+            <View style={s.mapCanvas}>
+              {/* Tech corridor area labels */}
+              <View style={[s.mapCorridorLabel, { top: '15%', right: '12%' }]}>
+                <Text style={s.mapCorridorText}>Round Rock Tech</Text>
+              </View>
+              <View style={[s.mapCorridorLabel, { top: '26%', left: '18%' }]}>
+                <Text style={s.mapCorridorText}>Domain Northside / Apple</Text>
+              </View>
+              <View style={[s.mapCorridorLabel, { top: '56%', left: '35%' }]}>
+                <Text style={s.mapCorridorText}>UT Austin / Downtown</Text>
+              </View>
 
-            {/* Stylized highway / roadway guides */}
-            <View style={s.mapRoadwayMopac} />
-            <View style={s.mapRoadwayIH35} />
+              {/* Stylized highway / roadway guides */}
+              <View style={s.mapRoadwayMopac} />
+              <View style={s.mapRoadwayIH35} />
 
-            {/* Dynamic Map Price Pins from Backend Listings */}
-            {filteredRooms.map((room) => {
-              const isSelected = activePinRoom?.id === room.id;
-              return (
-                <Pressable
-                  key={room.id}
-                  onPress={() => setSelectedPinRoomId(room.id)}
-                  style={[
-                    s.mapPin,
-                    { left: `${room.mapX}%`, top: `${room.mapY}%` },
-                    isSelected && s.mapPinSelected,
-                  ]}
-                >
-                  <Text style={[s.mapPinText, isSelected && s.mapPinTextSelected]}>
-                    ${room.price}
-                  </Text>
-                  {isSelected ? <View style={s.mapPinPulse} /> : null}
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {/* Floating List View button to switch back to /rooms/search */}
-          <Pressable
-            onPress={() => {
-              setViewMode('list');
-              router.push('/rooms/search' as Href);
-            }}
-            style={s.floatingToggleBtn}
-            accessibilityLabel="Switch to List View"
-          >
-            <AppIcon color="#fff" name="compass" size={16} />
-            <Text style={s.floatingToggleBtnText}>List View</Text>
-          </Pressable>
-
-          {/* Floating Selected Room Card at bottom of map */}
-          {activePinRoom ? (
-            <View style={s.floatingMapCardContainer}>
-              <Pressable
-                onPress={() => router.push(`/rooms/${activePinRoom.id}` as Href)}
-                style={s.floatingMapCard}
-              >
-                <View style={s.floatingThumb}>
-                  <Text style={s.floatingEmoji}>🏢</Text>
-                  <View style={s.floatingPriceTag}>
-                    <Text style={s.floatingPriceVal}>${activePinRoom.price}/mo</Text>
-                  </View>
-                </View>
-                <View style={s.floatingInfo}>
-                  <View style={s.floatingTypeRow}>
-                    <Text style={s.floatingType}>🚪 {activePinRoom.roomType}</Text>
-                    <Text style={s.floatingBath}>
-                      {activePinRoom.bathroomType === 'PRIVATE_ATTACHED'
-                        ? '• 🚿 Private Bath'
-                        : '• 🚪 Shared Bath'}
+              {/* Dynamic Map Price Pins from Backend Listings */}
+              {filteredRooms.map((room) => {
+                const isSelected = activePinRoom?.id === room.id;
+                return (
+                  <Pressable
+                    key={room.id}
+                    onPress={() => setSelectedPinRoomId(room.id)}
+                    style={[
+                      s.mapPin,
+                      { left: `${room.mapX}%`, top: `${room.mapY}%` },
+                      isSelected && s.mapPinSelected,
+                    ]}
+                  >
+                    <Text style={[s.mapPinText, isSelected && s.mapPinTextSelected]}>
+                      ${room.price}
                     </Text>
-                  </View>
-                  <Text style={s.floatingTitle} numberOfLines={1}>
-                    {activePinRoom.title}
-                  </Text>
-                  <Text style={s.floatingLocation} numberOfLines={1}>
-                    📍 {activePinRoom.broadLocation}
-                  </Text>
-                  <View style={s.floatingCtaRow}>
-                    <View style={s.floatingDetailsBtn}>
-                      <Text style={s.floatingDetailsLink}>View Details →</Text>
-                    </View>
-                  </View>
-                </View>
-              </Pressable>
+                    {isSelected ? <View style={s.mapPinPulse} /> : null}
+                  </Pressable>
+                );
+              })}
             </View>
-          ) : null}
-        </View>
-      ) : (
-        /* ─── LIST VIEW ──────────────────────────────────────────────────────── */
-        <ScrollView
-          contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header Section info */}
-          <View style={s.sectionHeader}>
-            <View>
-              <Text style={s.sectionTitle}>Available Rooms ({filteredRooms.length})</Text>
-              <Text style={s.sectionSub}>Live listings from Supabase in {selectedCity.name}</Text>
-            </View>
-            <Pressable onPress={() => setIsFilterModalVisible(true)} style={s.filterLinkBtn}>
-              <AppIcon color={colors.appPrimary} name="wrench" size={13} />
-              <Text style={s.filterLinkText}>All Filters</Text>
-            </Pressable>
-          </View>
 
-          {/* Room Listings Feed */}
-          {isLoading ? (
-            <View style={s.loadingBox}>
-              <ActivityIndicator size="large" color={colors.appPrimary} />
-              <Text style={s.loadingText}>Fetching live room listings from Supabase...</Text>
-            </View>
-          ) : filteredRooms.length === 0 ? (
-            <View style={s.emptyBox}>
-              <Text style={s.emptyEmoji}>🔍</Text>
-              <Text style={s.emptyTitle}>No rooms match your filters</Text>
-              <Text style={s.emptySub}>
-                Try selecting a different filter or reset all filters to view all available rooms.
-              </Text>
-              <Pressable onPress={resetFilters} style={s.resetFilterBtn}>
-                <Text style={s.resetFilterBtnText}>Reset All Filters</Text>
+            {/* Floating List View button to switch back to /rooms/search (only on single-pane) */}
+            {!isDualPane && (
+              <Pressable
+                onPress={() => {
+                  setViewMode('list');
+                  router.push('/rooms/search' as Href);
+                }}
+                style={s.floatingToggleBtn}
+                accessibilityLabel="Switch to List View"
+              >
+                <AppIcon color="#fff" name="compass" size={16} />
+                <Text style={s.floatingToggleBtnText}>List View</Text>
               </Pressable>
-            </View>
-          ) : (
-            filteredRooms.map((room) => {
-              const isSaved =
-                savedIds[room.id] !== undefined ? savedIds[room.id] : room.savedByViewer;
-              return (
+            )}
+
+            {/* Floating Selected Room Card at bottom of map */}
+            {activePinRoom ? (
+              <View style={s.floatingMapCardContainer}>
                 <Pressable
-                  key={room.id}
-                  onPress={() => router.push(`/rooms/${room.id}` as Href)}
-                  style={s.roomFeedCard}
+                  onPress={() => router.push(`/rooms/${activePinRoom.id}` as Href)}
+                  style={s.floatingMapCard}
                 >
-                  <View style={s.roomCardHeader}>
-                    <View style={s.roomCardThumb}>
-                      <Text style={s.roomCardEmoji}>🛏️</Text>
-                      <View style={s.roomCardPriceBadge}>
-                        <Text style={s.roomCardPriceVal}>${room.price}</Text>
-                        <Text style={s.roomCardPricePeriod}>/mo</Text>
-                      </View>
+                  <View style={s.floatingThumb}>
+                    <Text style={s.floatingEmoji}>🏢</Text>
+                    <View style={s.floatingPriceTag}>
+                      <Text style={s.floatingPriceVal}>${activePinRoom.price}/mo</Text>
                     </View>
-                    <View style={s.roomCardMain}>
-                      <View style={s.roomCardTopRow}>
-                        <View style={s.roomTypeTag}>
-                          <Text style={s.roomTypeTagText}>🚪 {room.roomType}</Text>
-                        </View>
-                        <Pressable
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            toggleSave(room.id, Boolean(isSaved));
-                          }}
-                          style={s.saveBtn}
-                          accessibilityLabel={isSaved ? 'Unsave room' : 'Save room'}
-                        >
-                          <AppIcon
-                            color={isSaved ? '#e02424' : colors.muted}
-                            name="star"
-                            size={18}
-                          />
-                        </Pressable>
-                      </View>
-
-                      <Text style={s.roomCardTitle} numberOfLines={2}>
-                        {room.title}
+                  </View>
+                  <View style={s.floatingInfo}>
+                    <View style={s.floatingTypeRow}>
+                      <Text style={s.floatingType}>🚪 {activePinRoom.roomType}</Text>
+                      <Text style={s.floatingBath}>
+                        {activePinRoom.bathroomType === 'PRIVATE_ATTACHED'
+                          ? '• 🚿 Private Bath'
+                          : '• 🚪 Shared Bath'}
                       </Text>
-
-                      <View style={s.roomCardLocationRow}>
-                        <AppIcon color={colors.muted} name="map" size={12} />
-                        <Text style={s.roomCardLocationText} numberOfLines={1}>
-                          {room.broadLocation}
-                        </Text>
-                      </View>
                     </View>
-                  </View>
-
-                  {/* Highlights & Amenities with Icons */}
-                  <View style={s.amenitiesRow}>
-                    {(room.preferences ?? []).slice(0, 2).map((pref) => (
-                      <View key={pref} style={s.amenityChip}>
-                        <Text style={s.amenityChipText}>
-                          {getPreferenceIcon(pref)}
-                          {pref}
-                        </Text>
+                    <Text style={s.floatingTitle} numberOfLines={1}>
+                      {activePinRoom.title}
+                    </Text>
+                    <Text style={s.floatingLocation} numberOfLines={1}>
+                      📍 {activePinRoom.broadLocation}
+                    </Text>
+                    <View style={s.floatingCtaRow}>
+                      <View style={s.floatingDetailsBtn}>
+                        <Text style={s.floatingDetailsLink}>View Details →</Text>
                       </View>
-                    ))}
-                    {(room.amenities ?? []).slice(0, 3).map((amenity) => (
-                      <View key={amenity} style={s.featureChip}>
-                        <Text style={s.featureChipText}>
-                          {getAmenityIcon(amenity)}
-                          {amenity}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Footer with Host Info & CTAs */}
-                  <View style={s.roomCardFooter}>
-                    <View style={s.hostInfo}>
-                      <View style={s.hostAvatar}>
-                        <Text style={s.hostAvatarText}>{room.title[0] || 'M'}</Text>
-                      </View>
-                      <View>
-                        <Text style={s.hostName}>Verified Landlord</Text>
-                        <Text style={s.hostMeta}>Direct Contact · Quick Response</Text>
-                      </View>
-                    </View>
-
-                    <View style={s.cardActions}>
-                      <Link href={`/rooms/${room.id}/inquiry` as Href} asChild>
-                        <Pressable
-                          onPress={(e) => e.stopPropagation()}
-                          style={StyleSheet.flatten(s.inquireBtn)}
-                        >
-                          <Text style={s.inquireBtnText}>Inquire</Text>
-                        </Pressable>
-                      </Link>
-                      <Link href={`/rooms/${room.id}` as Href} asChild>
-                        <Pressable
-                          onPress={(e) => e.stopPropagation()}
-                          style={StyleSheet.flatten(s.viewDetailsBtn)}
-                        >
-                          <Text style={s.viewDetailsBtnText}>Details →</Text>
-                        </Pressable>
-                      </Link>
                     </View>
                   </View>
                 </Pressable>
-              );
-            })
-          )}
-        </ScrollView>
-      )}
+              </View>
+            ) : null}
+          </View>
+        );
+
+        const renderListView = () => (
+          <ScrollView
+            contentContainerStyle={[
+              s.content,
+              isDesktop && !isDualPane && s.contentDesktop,
+              isDualPane && s.contentDualPane,
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header Section info */}
+            <View style={s.sectionHeader}>
+              <View>
+                <Text style={s.sectionTitle}>Available Rooms ({filteredRooms.length})</Text>
+                <Text style={s.sectionSub}>Live listings from Supabase in {selectedCity.name}</Text>
+              </View>
+              <Pressable onPress={() => setIsFilterModalVisible(true)} style={s.filterLinkBtn}>
+                <AppIcon color={colors.appPrimary} name="wrench" size={13} />
+                <Text style={s.filterLinkText}>All Filters</Text>
+              </Pressable>
+            </View>
+
+            {/* Room Listings Feed */}
+            {isLoading ? (
+              <View style={s.loadingBox}>
+                <ActivityIndicator size="large" color={colors.appPrimary} />
+                <Text style={s.loadingText}>Fetching live room listings from Supabase...</Text>
+              </View>
+            ) : filteredRooms.length === 0 ? (
+              <View style={s.emptyBox}>
+                <Text style={s.emptyEmoji}>🔍</Text>
+                <Text style={s.emptyTitle}>No rooms match your filters</Text>
+                <Text style={s.emptySub}>
+                  Try selecting a different filter or reset all filters to view all available rooms.
+                </Text>
+                <Pressable onPress={resetFilters} style={s.resetFilterBtn}>
+                  <Text style={s.resetFilterBtnText}>Reset All Filters</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={isDualPane ? s.dualPaneCardGrid : undefined}>
+                {filteredRooms.map((room) => {
+                  const isSaved =
+                    savedIds[room.id] !== undefined ? savedIds[room.id] : room.savedByViewer;
+                  return (
+                    <Pressable
+                      key={room.id}
+                      onPress={() => {
+                        if (isDualPane) {
+                          setSelectedPinRoomId(room.id);
+                        }
+                        router.push(`/rooms/${room.id}` as Href);
+                      }}
+                      style={[s.roomFeedCard, isDualPane && s.roomFeedCardDualPane]}
+                    >
+                      <View style={s.roomCardHeader}>
+                        <View style={s.roomCardThumb}>
+                          <Text style={s.roomCardEmoji}>🛏️</Text>
+                          <View style={s.roomCardPriceBadge}>
+                            <Text style={s.roomCardPriceVal}>${room.price}</Text>
+                            <Text style={s.roomCardPricePeriod}>/mo</Text>
+                          </View>
+                        </View>
+                        <View style={s.roomCardMain}>
+                          <View style={s.roomCardTopRow}>
+                            <View style={s.roomTypeTag}>
+                              <Text style={s.roomTypeTagText}>🚪 {room.roomType}</Text>
+                            </View>
+                            <Pressable
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                toggleSave(room.id, Boolean(isSaved));
+                              }}
+                              style={s.saveBtn}
+                              accessibilityLabel={isSaved ? 'Unsave room' : 'Save room'}
+                            >
+                              <AppIcon
+                                color={isSaved ? '#e02424' : colors.muted}
+                                name="star"
+                                size={18}
+                              />
+                            </Pressable>
+                          </View>
+
+                          <Text style={s.roomCardTitle} numberOfLines={2}>
+                            {room.title}
+                          </Text>
+
+                          <View style={s.roomCardLocationRow}>
+                            <AppIcon color={colors.muted} name="map" size={12} />
+                            <Text style={s.roomCardLocationText} numberOfLines={1}>
+                              {room.broadLocation}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Highlights & Amenities with Icons */}
+                      <View style={s.amenitiesRow}>
+                        {(room.preferences ?? []).slice(0, 2).map((pref) => (
+                          <View key={pref} style={s.amenityChip}>
+                            <Text style={s.amenityChipText}>
+                              {getPreferenceIcon(pref)}
+                              {pref}
+                            </Text>
+                          </View>
+                        ))}
+                        {(room.amenities ?? []).slice(0, 3).map((amenity) => (
+                          <View key={amenity} style={s.featureChip}>
+                            <Text style={s.featureChipText}>
+                              {getAmenityIcon(amenity)}
+                              {amenity}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {/* Footer with Host Info & CTAs */}
+                      <View style={s.roomCardFooter}>
+                        <View style={s.hostInfo}>
+                          <View style={s.hostAvatar}>
+                            <Text style={s.hostAvatarText}>{room.title[0] || 'M'}</Text>
+                          </View>
+                          <View>
+                            <Text style={s.hostName}>Verified Landlord</Text>
+                            <Text style={s.hostMeta}>Direct Contact · Quick Response</Text>
+                          </View>
+                        </View>
+
+                        <View style={s.cardActions}>
+                          <Link href={`/rooms/${room.id}/inquiry` as Href} asChild>
+                            <Pressable
+                              onPress={(e) => e.stopPropagation()}
+                              style={StyleSheet.flatten(s.inquireBtn)}
+                            >
+                              <Text style={s.inquireBtnText}>Inquire</Text>
+                            </Pressable>
+                          </Link>
+                          <Link href={`/rooms/${room.id}` as Href} asChild>
+                            <Pressable
+                              onPress={(e) => e.stopPropagation()}
+                              style={StyleSheet.flatten(s.viewDetailsBtn)}
+                            >
+                              <Text style={s.viewDetailsBtnText}>Details →</Text>
+                            </Pressable>
+                          </Link>
+                        </View>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
+        );
+
+        if (isDualPane) {
+          return (
+            <View style={s.dualPaneContainer}>
+              <View style={s.dualPaneLeft}>{renderListView()}</View>
+              <View style={s.dualPaneRight}>{renderMapView()}</View>
+            </View>
+          );
+        }
+
+        return viewMode === 'map' ? renderMapView() : renderListView();
+      })()}
 
       {/* ─── Floating Action Button: Post Room ─────────────────────────────────── */}
       <Link href="/rooms/create-listing" asChild>
@@ -1905,5 +1956,38 @@ const s = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '800',
+  },
+  dualPaneContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  dualPaneLeft: {
+    flex: 1,
+    borderRightWidth: 1,
+    borderRightColor: '#eaedff',
+    backgroundColor: '#fff',
+  },
+  dualPaneRight: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#e6ebf5',
+  },
+  mapContainerDualPane: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  contentDualPane: {
+    paddingHorizontal: space.x4,
+    width: '100%',
+  },
+  dualPaneCardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.x3,
+  },
+  roomFeedCardDualPane: {
+    flex: 1,
+    minWidth: 260,
   },
 });

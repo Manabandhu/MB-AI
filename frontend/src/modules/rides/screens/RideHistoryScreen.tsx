@@ -1,17 +1,19 @@
 import { color as colors, radius, space, typography } from '@manabandhu/design-system';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getRideHistory, reactivateRideOffer } from '@/modules/rides/api';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -21,7 +23,18 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 export function RideHistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
+
   const [reActivatingId, setReActivatingId] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -44,8 +57,8 @@ export function RideHistoryScreen() {
           { text: 'Go to My Rides', onPress: () => router.push('/rides/mine') },
         ],
       );
-    } catch (e: any) {
-      Alert.alert('Re-activation Failed', e?.message || 'Unable to re-activate ride.');
+    } catch (e: unknown) {
+      Alert.alert('Re-activation Failed', (e as Error)?.message || 'Unable to re-activate ride.');
     } finally {
       setReActivatingId(null);
     }
@@ -66,9 +79,21 @@ export function RideHistoryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
+      <ScrollView
+        contentContainerStyle={[styles.page, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
+      >
         <View style={styles.container}>
-          <Text style={styles.eyebrow}>Past Carpools</Text>
+          <View style={styles.headerBar}>
+            <Pressable
+              accessibilityLabel="Back to Rides"
+              onPress={() => router.back()}
+              style={styles.backBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <AppIcon color={colors.ink} name="chevron-left" size={20} />
+            </Pressable>
+            <Text style={styles.eyebrow}>Past Carpools</Text>
+          </View>
           <Text style={styles.title}>Ride History</Text>
           <Text style={styles.subtitle}>
             Review completed trips, submit ratings, or re-activate past routes in 1 click.
@@ -184,4 +209,18 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', gap: space.x3, padding: space.x6 },
   emptyTitle: { ...typography.h3, color: colors.ink, textAlign: 'center' },
   emptyBody: { ...typography.body, color: colors.muted, textAlign: 'center' },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.x3,
+    marginBottom: space.x2,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(67,30,190,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

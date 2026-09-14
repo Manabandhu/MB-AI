@@ -2,8 +2,17 @@ import { radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  BackHandler,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   deleteRoomListing,
@@ -19,6 +28,15 @@ export function RoomFavoritesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [removedIds, setRemovedIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.push('/rooms' as Href);
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
 
   const { data } = useQuery({
     queryKey: ['rooms', 'favorites'],
@@ -47,6 +65,7 @@ export function RoomFavoritesScreen() {
             accessibilityLabel="Back to Rooms"
             onPress={() => router.push('/rooms' as Href)}
             style={styles.backBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <AppIcon color="#1a1c28" name="chevron-left" size={20} />
           </Pressable>
@@ -60,14 +79,19 @@ export function RoomFavoritesScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {allSaved.length > 0 ? (
-          <View style={styles.listGrid}>
-            {allSaved.map((room) => (
-              <SavedRoomCard key={room.id} room={room} onUnsave={() => handleUnsave(room.id)} />
-            ))}
-          </View>
-        ) : (
+      <FlatList
+        data={allSaved}
+        keyExtractor={(room) => room.id}
+        renderItem={({ item: room }) => (
+          <SavedRoomCard room={room} onUnsave={() => handleUnsave(room.id)} />
+        )}
+        contentContainerStyle={[styles.scrollContent, styles.listGrid]}
+        ItemSeparatorComponent={() => <View style={{ height: space.x3 }} />}
+        initialNumToRender={6}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
+        ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyEmoji}>❤️</Text>
             <Text style={styles.emptyTitle}>No saved rooms yet</Text>
@@ -82,8 +106,8 @@ export function RoomFavoritesScreen() {
               <Text style={styles.exploreBtnText}>Browse Available Rooms</Text>
             </Pressable>
           </View>
-        )}
-      </ScrollView>
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -184,6 +208,15 @@ export function RoomMyListingsScreen() {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [deleteModalListing, setDeleteModalListing] = useState<OwnerRoomListing | null>(null);
 
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.push('/rooms' as Href);
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
+
   const { data } = useQuery({
     queryKey: ['rooms', 'my-listings'],
     queryFn: getMyListings,
@@ -229,6 +262,7 @@ export function RoomMyListingsScreen() {
             accessibilityLabel="Back to Rooms"
             onPress={() => router.push('/rooms' as Href)}
             style={styles.backBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <AppIcon color="#1a1c28" name="chevron-left" size={20} />
           </Pressable>
@@ -274,132 +308,135 @@ export function RoomMyListingsScreen() {
         })}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {filteredListings.length > 0 ? (
-          <View style={styles.listGrid}>
-            {filteredListings.map((listing) => {
-              const isRented = listing.status === 'RENTED' || listing.status === 'ARCHIVED';
-              const isMenuOpen = activeMenuId === listing.id;
+      <FlatList
+        data={filteredListings}
+        keyExtractor={(listing) => listing.id}
+        renderItem={({ item: listing }) => {
+          const isRented = listing.status === 'RENTED' || listing.status === 'ARCHIVED';
+          const isMenuOpen = activeMenuId === listing.id;
 
-              return (
-                <View
-                  key={listing.id}
-                  style={[styles.myListingCard, isRented && styles.myListingCardRented]}
-                >
-                  <View style={styles.cardHeaderInfo}>
-                    <View style={styles.cardTypeRow}>
-                      <View
-                        style={[
-                          styles.statusBadgeContainer,
-                          isRented
-                            ? styles.statusBadgeRented
-                            : listing.status === 'ACTIVE'
-                              ? styles.statusBadgeActive
-                              : styles.statusBadgeDraft,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.statusBadgeLabel,
-                            isRented
-                              ? styles.statusBadgeLabelRented
-                              : listing.status === 'ACTIVE'
-                                ? styles.statusBadgeLabelActive
-                                : styles.statusBadgeLabelDraft,
-                          ]}
-                        >
-                          {listing.status}
-                        </Text>
-                      </View>
-
-                      {/* Three-dot action menu toggle */}
-                      <Pressable
-                        accessibilityLabel="Listing options"
-                        onPress={() => setActiveMenuId(isMenuOpen ? null : listing.id)}
-                        style={styles.menuTriggerBtn}
-                      >
-                        <Text style={styles.menuTriggerDots}>⋮</Text>
-                      </Pressable>
-                    </View>
-
-                    {/* Popover / expanded action menu */}
-                    {isMenuOpen && (
-                      <View style={styles.menuPopover}>
-                        <Pressable
-                          onPress={() => {
-                            setActiveMenuId(null);
-                            router.push(`/rooms/${listing.id}/edit` as Href);
-                          }}
-                          style={styles.menuItem}
-                        >
-                          <Text style={styles.menuItemText}>✏️ Edit Listing</Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => {
-                            const newStatus = isRented ? 'ACTIVE' : 'RENTED';
-                            updateStatus.mutate({ id: listing.id, status: newStatus });
-                          }}
-                          style={styles.menuItem}
-                        >
-                          <Text style={styles.menuItemText}>
-                            {isRented ? '🔄 Mark as Active' : '🏷️ Mark as Rented'}
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => {
-                            setActiveMenuId(null);
-                            setDeleteModalListing(listing);
-                          }}
-                          style={[styles.menuItem, styles.menuItemDestructive]}
-                        >
-                          <Text style={styles.menuItemDestructiveText}>🗑️ Delete Listing</Text>
-                        </Pressable>
-                      </View>
-                    )}
-
-                    <View style={styles.titlePriceRow}>
-                      <Text style={styles.cardTitle}>{listing.title}</Text>
-                      <Text style={styles.priceValue}>${listing.price}/mo</Text>
-                    </View>
-
-                    <Text style={styles.locationText}>{listing.broadLocation}</Text>
+          return (
+            <View
+              key={listing.id}
+              style={[styles.myListingCard, isRented && styles.myListingCardRented]}
+            >
+              <View style={styles.cardHeaderInfo}>
+                <View style={styles.cardTypeRow}>
+                  <View
+                    style={[
+                      styles.statusBadgeContainer,
+                      isRented
+                        ? styles.statusBadgeRented
+                        : listing.status === 'ACTIVE'
+                          ? styles.statusBadgeActive
+                          : styles.statusBadgeDraft,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusBadgeLabel,
+                        isRented
+                          ? styles.statusBadgeLabelRented
+                          : listing.status === 'ACTIVE'
+                            ? styles.statusBadgeLabelActive
+                            : styles.statusBadgeLabelDraft,
+                      ]}
+                    >
+                      {listing.status}
+                    </Text>
                   </View>
 
-                  <View style={styles.actionButtonGroup}>
+                  {/* Three-dot action menu toggle */}
+                  <Pressable
+                    accessibilityLabel="Listing options"
+                    onPress={() => setActiveMenuId(isMenuOpen ? null : listing.id)}
+                    style={styles.menuTriggerBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.menuTriggerDots}>⋮</Text>
+                  </Pressable>
+                </View>
+
+                {/* Popover / expanded action menu */}
+                {isMenuOpen && (
+                  <View style={styles.menuPopover}>
                     <Pressable
-                      onPress={() => router.push(`/rooms/${listing.id}/edit` as Href)}
-                      style={styles.cardActionBtn}
+                      onPress={() => {
+                        setActiveMenuId(null);
+                        router.push(`/rooms/${listing.id}/edit` as Href);
+                      }}
+                      style={styles.menuItem}
                     >
-                      <Text style={styles.cardActionBtnText}>Edit</Text>
+                      <Text style={styles.menuItemText}>✏️ Edit Listing</Text>
                     </Pressable>
                     <Pressable
                       onPress={() => {
                         const newStatus = isRented ? 'ACTIVE' : 'RENTED';
                         updateStatus.mutate({ id: listing.id, status: newStatus });
                       }}
-                      style={[styles.cardActionBtn, isRented && styles.cardActionBtnAccent]}
+                      style={styles.menuItem}
                     >
-                      <Text
-                        style={[
-                          styles.cardActionBtnText,
-                          isRented && styles.cardActionBtnTextAccent,
-                        ]}
-                      >
-                        {isRented ? 'Mark Active' : 'Mark Rented'}
+                      <Text style={styles.menuItemText}>
+                        {isRented ? '🔄 Mark as Active' : '🏷️ Mark as Rented'}
                       </Text>
                     </Pressable>
                     <Pressable
-                      onPress={() => setDeleteModalListing(listing)}
-                      style={[styles.cardActionBtn, styles.cardActionBtnDanger]}
+                      onPress={() => {
+                        setActiveMenuId(null);
+                        setDeleteModalListing(listing);
+                      }}
+                      style={[styles.menuItem, styles.menuItemDestructive]}
                     >
-                      <Text style={styles.cardActionBtnDangerText}>Delete</Text>
+                      <Text style={styles.menuItemDestructiveText}>🗑️ Delete Listing</Text>
                     </Pressable>
                   </View>
+                )}
+
+                <View style={styles.titlePriceRow}>
+                  <Text style={styles.cardTitle}>{listing.title}</Text>
+                  <Text style={styles.priceValue}>${listing.price}/mo</Text>
                 </View>
-              );
-            })}
-          </View>
-        ) : (
+
+                <Text style={styles.locationText}>{listing.broadLocation}</Text>
+              </View>
+
+              <View style={styles.actionButtonGroup}>
+                <Pressable
+                  onPress={() => router.push(`/rooms/${listing.id}/edit` as Href)}
+                  style={styles.cardActionBtn}
+                >
+                  <Text style={styles.cardActionBtnText}>Edit</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    const newStatus = isRented ? 'ACTIVE' : 'RENTED';
+                    updateStatus.mutate({ id: listing.id, status: newStatus });
+                  }}
+                  style={[styles.cardActionBtn, isRented && styles.cardActionBtnAccent]}
+                >
+                  <Text
+                    style={[styles.cardActionBtnText, isRented && styles.cardActionBtnTextAccent]}
+                  >
+                    {isRented ? 'Mark Active' : 'Mark Rented'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setDeleteModalListing(listing)}
+                  style={[styles.cardActionBtn, styles.cardActionBtnDanger]}
+                >
+                  <Text style={styles.cardActionBtnDangerText}>Delete</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        }}
+        contentContainerStyle={[styles.scrollContent, styles.listGrid]}
+        ItemSeparatorComponent={() => <View style={{ height: space.x3 }} />}
+        initialNumToRender={6}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
+        ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyEmoji}>🏡</Text>
             <Text style={styles.emptyTitle}>
@@ -424,8 +461,8 @@ export function RoomMyListingsScreen() {
               <Text style={styles.exploreBtnText}>Post a Room Listing</Text>
             </Pressable>
           </View>
-        )}
-      </ScrollView>
+        }
+      />
 
       {/* Confirmation Modal for Delete */}
       <Modal

@@ -2,11 +2,13 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,17 +16,10 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
-import {
-  bookRideSeat,
-  getRideOffer,
-  provisionRideChat,
-  saveRide,
-  unsaveRide,
-} from '@/modules/rides/api';
-import type { RideOffer } from '@/modules/rides/types';
+import { bookRideSeat, getRideOffer, provisionRideChat } from '@/modules/rides/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
@@ -46,7 +41,17 @@ export function RideDetailScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, []);
 
   const authStatus = useAuthStore((state) => state.status);
   const isAuthenticated = authStatus === 'authenticated';
@@ -73,8 +78,11 @@ export function RideDetailScreen() {
           `/chat?recipient=${encodeURIComponent(detailData?.driverName || 'Driver')}` as Href,
         );
       }
-    } catch (e: any) {
-      Alert.alert('Ride Chat', e?.message || 'Unable to access ephemeral chat right now.');
+    } catch (e: unknown) {
+      Alert.alert(
+        'Ride Chat',
+        (e as Error)?.message || 'Unable to access ephemeral chat right now.',
+      );
     } finally {
       setJoiningChat(false);
     }
@@ -209,13 +217,20 @@ export function RideDetailScreen() {
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       {/* ── Top App Bar ────────────────────────────────────────────────────────── */}
-      <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
+      <View
+        style={[
+          styles.topBar,
+          isDesktop && styles.topBarDesktop,
+          { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) },
+        ]}
+      >
         <View style={styles.topBarLeft}>
           <Pressable
             accessibilityLabel="Go back"
             accessibilityRole="button"
             onPress={() => router.back()}
             style={styles.backIconButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <AppIcon color={colors.ink} name="chevron-left" size={22} />
           </Pressable>
@@ -237,6 +252,7 @@ export function RideDetailScreen() {
             accessibilityRole="button"
             onPress={() => setIsSaved(!isSaved)}
             style={styles.iconButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <AppIcon color={isSaved ? colors.warm : colors.inkSecondary} name="star" size={22} />
           </Pressable>
@@ -246,13 +262,20 @@ export function RideDetailScreen() {
             accessibilityRole="button"
             onPress={() => {}}
             style={styles.iconButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Text style={{ fontSize: 16, color: colors.inkSecondary }}>↗</Text>
           </Pressable>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 80 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={[styles.mainContainer, isDesktop && styles.mainContainerDesktop]}>
           {/* ── Driver Profile Card ─────────────────────────────────────────── */}
           <View style={styles.card}>
@@ -458,7 +481,7 @@ export function RideDetailScreen() {
 
             {/* Amenities Grid */}
             <View style={styles.amenitiesGrid}>
-              {detailData.amenities.map((item: any, idx: number) => (
+              {detailData.amenities.map((item: { icon: string; label: string }, idx: number) => (
                 <View key={idx} style={styles.amenityItem}>
                   <Text style={styles.amenityIcon}>{item.icon}</Text>
                   <Text style={styles.amenityLabel}>{item.label}</Text>
@@ -750,7 +773,13 @@ export function RideDetailScreen() {
       </ScrollView>
 
       {/* ── Sticky Bottom Action Bar ────────────────────────────────────────── */}
-      <View style={[styles.bottomBar, isDesktop && styles.bottomBarDesktop]}>
+      <View
+        style={[
+          styles.bottomBar,
+          isDesktop && styles.bottomBarDesktop,
+          { paddingBottom: Math.max(insets.bottom, 16) },
+        ]}
+      >
         <View style={styles.bottomBarLeft}>
           <Text style={styles.bottomBarTotal}>${totalCost}</Text>
           <Text style={styles.bottomBarSeatCount}>

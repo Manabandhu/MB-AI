@@ -2,9 +2,19 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
+import {
+  BackHandler,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getRoomDetail, inquireRoom } from '@/modules/rooms/api';
 import type { RoomInquiryInput } from '@/modules/rooms/types';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -46,6 +56,16 @@ export function RoomInquiryScreen() {
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
 
   const today = new Date().toISOString().split('T')[0];
   const [moveInDate, setMoveInDate] = useState(today);
@@ -112,105 +132,121 @@ export function RoomInquiryScreen() {
 
   return (
     <SafeAreaView style={s.safeArea}>
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityLabel="Back">
-          <AppIcon color={colors.ink} name="chevron-left" size={20} />
-        </Pressable>
-        <Text style={s.headerTitle}>Contact Host & Start Chat</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        {/* Listing Summary Card */}
-        <View style={s.summaryCard}>
-          <View style={s.summaryBadge}>
-            <Text style={s.summaryBadgeText}>Room Inquiry</Text>
-          </View>
-          <Text style={s.summaryTitle}>{data.title}</Text>
-          <View style={s.summaryMetaRow}>
-            <Text style={s.summaryPrice}>${data.price}/month</Text>
-            <Text style={s.summaryLocation}>• {data.broadLocation}</Text>
-          </View>
-        </View>
-
-        {error && (
-          <View style={s.errorBanner}>
-            <AppIcon color={colors.danger} name="warning" size={18} />
-            <Text style={s.errorBannerText}>{error}</Text>
-          </View>
-        )}
-
-        {/* Move-In Date */}
-        <View style={s.card}>
-          <Text style={s.inputLabel}>Target Move-In Date</Text>
-          <TextInput
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.muted}
-            style={s.input}
-            value={moveInDate}
-            onChangeText={setMoveInDate}
-          />
-
-          {/* Stay Duration */}
-          <Text style={s.inputLabel}>Expected Stay Duration</Text>
-          <View style={s.chipsRow}>
-            {DURATION_OPTIONS.map((opt) => {
-              const selected = durationMonths === opt.value;
-              return (
-                <Pressable
-                  key={opt.value}
-                  onPress={() => setDurationMonths(opt.value)}
-                  style={[s.chip, selected && s.chipSelected]}
-                >
-                  <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {/* Dietary Lifestyle */}
-          <Text style={s.inputLabel}>Your Dietary Lifestyle</Text>
-          <View style={s.chipsRow}>
-            {DIETARY_OPTIONS.map((opt) => {
-              const selected = dietary === opt;
-              return (
-                <Pressable
-                  key={opt}
-                  onPress={() => setDietary(opt)}
-                  style={[s.chip, selected && s.chipSelected]}
-                >
-                  <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {/* Message */}
-          <Text style={s.inputLabel}>Introductory Note & Questions *</Text>
-          <TextArea
-            value={message}
-            onChangeText={setMessage}
-            placeholder="Hi, I'm interested in this room. I work nearby / study at UT and am looking for a quiet, clean flatmate..."
-            maxLength={4000}
-          />
-        </View>
-
-        <View style={s.handshakeNotice}>
-          <AppIcon color={colors.teal} name="message" size={18} />
-          <Text style={s.handshakeNoticeText}>
-            Submitting will instantly create a conversation with the host and take you directly to
-            your chat!
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        {/* Header */}
+        <View style={[s.header, { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) }]}>
+          <Pressable
+            onPress={() => router.back()}
+            style={s.backBtn}
+            accessibilityLabel="Back"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <AppIcon color={colors.ink} name="chevron-left" size={20} />
+          </Pressable>
+          <Text style={s.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+            Contact Host & Start Chat
           </Text>
+          <View style={{ width: 36 }} />
         </View>
 
-        <AppButton
-          label={mutation.isPending ? 'Connecting...' : 'Send Inquiry & Start Chat'}
-          onPress={handleSubmit}
-          loading={mutation.isPending}
-          variant="primary"
-        />
-      </ScrollView>
+        <ScrollView
+          contentContainerStyle={[s.content, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Listing Summary Card */}
+          <View style={s.summaryCard}>
+            <View style={s.summaryBadge}>
+              <Text style={s.summaryBadgeText}>Room Inquiry</Text>
+            </View>
+            <Text style={s.summaryTitle}>{data.title}</Text>
+            <View style={s.summaryMetaRow}>
+              <Text style={s.summaryPrice}>${data.price}/month</Text>
+              <Text style={s.summaryLocation}>• {data.broadLocation}</Text>
+            </View>
+          </View>
+
+          {error && (
+            <View style={s.errorBanner}>
+              <AppIcon color={colors.danger} name="warning" size={18} />
+              <Text style={s.errorBannerText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Move-In Date */}
+          <View style={s.card}>
+            <Text style={s.inputLabel}>Target Move-In Date</Text>
+            <TextInput
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.muted}
+              style={s.input}
+              value={moveInDate}
+              onChangeText={setMoveInDate}
+            />
+
+            {/* Stay Duration */}
+            <Text style={s.inputLabel}>Expected Stay Duration</Text>
+            <View style={s.chipsRow}>
+              {DURATION_OPTIONS.map((opt) => {
+                const selected = durationMonths === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setDurationMonths(opt.value)}
+                    style={[s.chip, selected && s.chipSelected]}
+                  >
+                    <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Dietary Lifestyle */}
+            <Text style={s.inputLabel}>Your Dietary Lifestyle</Text>
+            <View style={s.chipsRow}>
+              {DIETARY_OPTIONS.map((opt) => {
+                const selected = dietary === opt;
+                return (
+                  <Pressable
+                    key={opt}
+                    onPress={() => setDietary(opt)}
+                    style={[s.chip, selected && s.chipSelected]}
+                  >
+                    <Text style={[s.chipText, selected && s.chipTextSelected]}>{opt}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Message */}
+            <Text style={s.inputLabel}>Introductory Note & Questions *</Text>
+            <TextArea
+              value={message}
+              onChangeText={setMessage}
+              placeholder="Hi, I'm interested in this room. I work nearby / study at UT and am looking for a quiet, clean flatmate..."
+              maxLength={4000}
+            />
+          </View>
+
+          <View style={s.handshakeNotice}>
+            <AppIcon color={colors.teal} name="message" size={18} />
+            <Text style={s.handshakeNoticeText}>
+              Submitting will instantly create a conversation with the host and take you directly to
+              your chat!
+            </Text>
+          </View>
+
+          <AppButton
+            label={mutation.isPending ? 'Connecting...' : 'Send Inquiry & Start Chat'}
+            onPress={handleSubmit}
+            loading={mutation.isPending}
+            variant="primary"
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

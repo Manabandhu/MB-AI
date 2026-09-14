@@ -1,17 +1,19 @@
 import { color as colors, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   getRideForOwner,
@@ -29,7 +31,18 @@ import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 export function RideManageScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
+
   const [seats, setSeats] = useState('');
   const [contribution, setContribution] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -73,8 +86,8 @@ export function RideManageScreen() {
       queryClient.invalidateQueries({ queryKey: ['rides', 'owner', rideId] });
       queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
       Alert.alert('Trip Started', 'Ride status is now IN_PROGRESS. Passengers have been notified.');
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to start trip.');
+    } catch (e: unknown) {
+      Alert.alert('Error', (e as Error)?.message || 'Failed to start trip.');
     } finally {
       setActionLoading(null);
     }
@@ -100,8 +113,8 @@ export function RideManageScreen() {
                 'Ride Completed 🎉',
                 'Ride is marked COMPLETED. Ephemeral chat will self-delete in 2 hours.',
               );
-            } catch (e: any) {
-              Alert.alert('Error', e?.message || 'Failed to complete trip.');
+            } catch (e: unknown) {
+              Alert.alert('Error', (e as Error)?.message || 'Failed to complete trip.');
             } finally {
               setActionLoading(null);
             }
@@ -123,8 +136,8 @@ export function RideManageScreen() {
         { text: 'Go to My Rides', onPress: () => router.push('/rides/mine') },
         { text: 'View New Offer', onPress: () => router.push(`/rides/${cloned.id}`) },
       ]);
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to clone ride.');
+    } catch (e: unknown) {
+      Alert.alert('Error', (e as Error)?.message || 'Failed to clone ride.');
     } finally {
       setActionLoading(null);
     }
@@ -140,8 +153,8 @@ export function RideManageScreen() {
       } else {
         router.push('/chat');
       }
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to open coordination chat.');
+    } catch (e: unknown) {
+      Alert.alert('Error', (e as Error)?.message || 'Failed to open coordination chat.');
     } finally {
       setActionLoading(null);
     }
@@ -173,9 +186,21 @@ export function RideManageScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
+      <ScrollView
+        contentContainerStyle={[styles.page, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
+      >
         <View style={styles.container}>
-          <Text style={styles.eyebrow}>Driver Control Panel</Text>
+          <View style={styles.headerBar}>
+            <Pressable
+              accessibilityLabel="Back to My Rides"
+              onPress={() => router.back()}
+              style={styles.backBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <AppIcon color={colors.ink} name="chevron-left" size={20} />
+            </Pressable>
+            <Text style={styles.eyebrow}>Driver Control Panel</Text>
+          </View>
           <View style={styles.titleRow}>
             <Text style={styles.title}>Manage Ride</Text>
             <View
@@ -448,4 +473,18 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
   errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
   successText: { color: colors.success, fontSize: 14, fontWeight: '700' },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.x3,
+    marginBottom: space.x2,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(67,30,190,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
