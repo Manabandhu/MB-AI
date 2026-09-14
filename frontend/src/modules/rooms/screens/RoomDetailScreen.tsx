@@ -6,6 +6,7 @@ import { useState } from 'react';
 import {
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -16,9 +17,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
 import { getRoomDetail, saveRoom, unsaveRoom } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
 const colors = {
@@ -42,7 +43,7 @@ export function RoomDetailScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  const [isSavedLocal, setIsSavedLocal] = useState(false);
+  const [isSavedLocal, setIsSavedLocal] = useState<boolean | null>(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   const { data: apiRoom, isLoading } = useQuery({
@@ -52,35 +53,7 @@ export function RoomDetailScreen() {
     retry: false,
   });
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={s.safeArea}>
-        <LoadingState label="Loading room details..." />
-      </SafeAreaView>
-    );
-  }
-
-  if (!apiRoom) {
-    return (
-      <SafeAreaView style={s.safeArea}>
-        <View style={[s.navBar, isDesktop && s.navBarDesktop]}>
-          <Pressable onPress={() => router.back()} style={s.navBtn} accessibilityLabel="Back">
-            <AppIcon color={colors.ink} name="chevron-left" size={20} />
-          </Pressable>
-          <Text style={s.navTitle} numberOfLines={1}>Room Details</Text>
-        </View>
-        <ErrorState
-          title="Room not found"
-          body="The room listing you are looking for does not exist or has been removed."
-          retryLabel="Browse Rooms"
-          onRetry={() => router.push('/rooms' as Href)}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  const room: RoomListing = apiRoom;
-  const isSaved = isSavedLocal || room.savedByViewer;
+  const isSaved = isSavedLocal !== null ? isSavedLocal : Boolean(apiRoom?.savedByViewer);
 
   const toggleSaveMutation = useMutation({
     mutationFn: async () => {
@@ -98,15 +71,86 @@ export function RoomDetailScreen() {
     },
   });
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <LoadingState label="Loading room details..." />
+      </SafeAreaView>
+    );
+  }
+
+  if (!apiRoom) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <View style={[s.navBar, isDesktop && s.navBarDesktop]}>
+          <Pressable onPress={() => router.back()} style={s.navBtn} accessibilityLabel="Back">
+            <AppIcon color={colors.ink} name="chevron-left" size={20} />
+          </Pressable>
+          <Text style={s.navTitle} numberOfLines={1}>
+            Room Details
+          </Text>
+        </View>
+        <ErrorState
+          title="Room not found"
+          body="The room listing you are looking for does not exist or has been removed."
+          retryLabel="Browse Rooms"
+          onRetry={() => router.push('/rooms' as Href)}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const room: RoomListing = apiRoom;
+
   const handleSaveToggle = () => {
     if (!isAuthenticated) {
-      router.push('/sign-in');
+      router.push('/sign-in' as Href);
       return;
     }
     toggleSaveMutation.mutate();
   };
 
-  const samplePhotos = ['🛏️ Master Bed', '🚿 Attached Bath', '🍳 Modular Kitchen', '🏊 Community Pool'];
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        title: room.title,
+        message: `Check out this housing on ManaBandhu: ${room.title} ($${room.price}/mo)\nmanabandhu://rooms/${roomId}`,
+        url: `manabandhu://rooms/${roomId}`,
+      });
+    } catch (e) {
+      console.warn('Share error:', e);
+    }
+  };
+
+  const samplePhotos = [
+    '🛏️ Master Bed',
+    '🚿 Attached Bath',
+    '🍳 Modular Kitchen',
+    '🏊 Community Pool',
+  ];
+
+  const dietaryLabel =
+    room.dietaryPreference === 'PURE_VEG'
+      ? '🥦 Pure Veg Only'
+      : room.dietaryPreference === 'VEG_FRIENDLY'
+        ? '🍳 Veg Friendly'
+        : room.dietaryPreference === 'NON_VEG_ALLOWED'
+          ? '🍗 Non-Veg OK'
+          : '🌱 Any Diet';
+
+  const genderLabel =
+    room.genderPreference === 'FEMALE_ONLY'
+      ? '👩 Female Only'
+      : room.genderPreference === 'MALE_ONLY'
+        ? '👨 Male Only'
+        : '👥 Any Gender';
+
+  const bathLabel =
+    room.bathroomType === 'PRIVATE_ATTACHED'
+      ? '🚿 Private Attached'
+      : room.bathroomType === 'PRIVATE_DEDICATED'
+        ? '🛁 Dedicated Bath'
+        : '🚪 Shared Bath';
 
   return (
     <SafeAreaView style={s.safeArea}>
@@ -115,27 +159,36 @@ export function RoomDetailScreen() {
         <Pressable onPress={() => router.back()} style={s.navBtn} accessibilityLabel="Back">
           <AppIcon color={colors.ink} name="chevron-left" size={20} />
         </Pressable>
-        <Text style={s.navTitle} numberOfLines={1}>Room Details</Text>
+        <Text style={s.navTitle} numberOfLines={1}>
+          Room Details
+        </Text>
         <View style={s.navActions}>
           <Pressable onPress={handleSaveToggle} style={s.navBtn} accessibilityLabel="Save Room">
             <AppIcon color={isSaved ? '#ba1a1a' : colors.muted} name="star" size={18} />
           </Pressable>
-          <Pressable onPress={() => router.push('/rooms/search')} style={s.navBtn} accessibilityLabel="Share">
+          <Pressable onPress={handleShare} style={s.navBtn} accessibilityLabel="Share">
             <AppIcon color={colors.ink} name="globe" size={18} />
           </Pressable>
         </View>
       </View>
 
       {/* ─── Main Content ──────────────────────────────────────────────────────── */}
-      <ScrollView contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Photo Gallery Carousel */}
         <View style={s.galleryContainer}>
           <View style={s.gallerySlide}>
             <Text style={s.galleryEmoji}>{samplePhotos[activePhotoIndex].split(' ')[0]}</Text>
-            <Text style={s.galleryCaption}>{samplePhotos[activePhotoIndex].split(' ').slice(1).join(' ')}</Text>
+            <Text style={s.galleryCaption}>
+              {samplePhotos[activePhotoIndex].split(' ').slice(1).join(' ')}
+            </Text>
           </View>
           <View style={s.photoCounterPill}>
-            <Text style={s.photoCounterText}>{activePhotoIndex + 1} / {samplePhotos.length}</Text>
+            <Text style={s.photoCounterText}>
+              {activePhotoIndex + 1} / {samplePhotos.length}
+            </Text>
           </View>
           <View style={s.photoThumbnailRow}>
             {samplePhotos.map((photo, i) => (
@@ -150,11 +203,14 @@ export function RoomDetailScreen() {
           </View>
         </View>
 
-        {/* Title, Pricing & Zero-Brokerage Badge */}
+        {/* Title, Badges & Zero-Brokerage Banner */}
         <View style={s.mainHeaderSection}>
           <View style={s.typeTagRow}>
             <View style={s.roomTypeTag}>
               <Text style={s.roomTypeTagText}>{room.roomType}</Text>
+            </View>
+            <View style={s.dietTag}>
+              <Text style={s.dietTagText}>{dietaryLabel}</Text>
             </View>
             <View style={s.zeroBrokerageTag}>
               <AppIcon color={colors.teal} name="shield" size={12} />
@@ -169,18 +225,37 @@ export function RoomDetailScreen() {
             <Text style={s.locationMetaText}>{room.broadLocation}</Text>
           </View>
 
-          {/* Pricing & Terms Card */}
+          {/* Pricing Breakdown Card (Rent + Utilities + Deposit) */}
           <View style={s.pricingCard}>
-            <View style={s.priceMainCol}>
-              <View style={s.priceRow}>
-                <Text style={s.priceValue}>${room.price}</Text>
-                <Text style={s.pricePeriod}>/ month</Text>
+            <View style={s.priceBreakdownRow}>
+              <View style={s.priceCol}>
+                <Text style={s.priceColLabel}>Base Rent</Text>
+                <Text style={s.priceColVal}>
+                  ${room.price}
+                  <Text style={s.priceColPeriod}>/mo</Text>
+                </Text>
               </View>
-              <Text style={s.utilitiesText}>⚡ Direct Community Listing • Zero Brokerage</Text>
+              <View style={s.priceDivider} />
+              <View style={s.priceCol}>
+                <Text style={s.priceColLabel}>Utilities</Text>
+                <Text style={s.priceColVal}>
+                  {room.utilitiesIncluded ? 'Included' : `+$${room.estUtilityMonthly ?? 60}/mo`}
+                </Text>
+              </View>
+              <View style={s.priceDivider} />
+              <View style={s.priceCol}>
+                <Text style={s.priceColLabel}>Deposit</Text>
+                <Text style={s.priceColVal}>
+                  {room.securityDeposit ? `$${room.securityDeposit}` : '$0'}
+                </Text>
+              </View>
             </View>
-            <View style={s.priceMetaCol}>
-              <Text style={s.depositText}>Type: <Text style={s.depositVal}>{room.roomType}</Text></Text>
-              <Text style={s.leaseText}>Status: <Text style={s.depositVal}>{room.status}</Text></Text>
+            <View style={s.priceTagBottom}>
+              <Text style={s.utilitiesText}>
+                {room.utilitiesIncluded
+                  ? '⚡ High-speed WiFi, electricity, water & trash included in rent'
+                  : '⚡ Electricity, water & internet split equally among flatmates'}
+              </Text>
             </View>
           </View>
         </View>
@@ -200,44 +275,83 @@ export function RoomDetailScreen() {
                 </View>
               </View>
               <Text style={s.hostWorkText}>Direct Community Member • ManaBandhu Network</Text>
-              <Text style={s.hostReplyText}>⚡ Direct contact upon inquiry • Zero Brokerage</Text>
+              <Text style={s.hostReplyText}>
+                ⚡ Instant Chat handshake upon inquiry • Zero Brokerage
+              </Text>
             </View>
           </View>
         </View>
 
-        {/* Desi Flatmate Compatibility & Lifestyle */}
+        {/* Desi Flatmate Compatibility Badges */}
         <View style={s.sectionBlock}>
-          <Text style={s.sectionHeading}>Flatmate Compatibility & Lifestyle</Text>
-          <Text style={s.sectionSubtitle}>Preferences requested by the current flatmates</Text>
-          <View style={s.preferencesGrid}>
-            {(room.preferences ?? []).map((pref) => (
-              <View key={pref} style={s.preferencePill}>
-                <Text style={s.preferencePillText}>{pref}</Text>
-              </View>
-            ))}
+          <Text style={s.sectionHeading}>Flatmate Compatibility & Preferences</Text>
+          <View style={s.compatBadgesRow}>
+            <View style={s.compatBadge}>
+              <Text style={s.compatBadgeLabel}>Kitchen</Text>
+              <Text style={s.compatBadgeVal}>{dietaryLabel}</Text>
+            </View>
+            <View style={s.compatBadge}>
+              <Text style={s.compatBadgeLabel}>Flatmates</Text>
+              <Text style={s.compatBadgeVal}>{genderLabel}</Text>
+            </View>
+            <View style={s.compatBadge}>
+              <Text style={s.compatBadgeLabel}>Bathroom</Text>
+              <Text style={s.compatBadgeVal}>{bathLabel}</Text>
+            </View>
+            <View style={s.compatBadge}>
+              <Text style={s.compatBadgeLabel}>Lease</Text>
+              <Text style={s.compatBadgeVal}>{room.leaseTerm || 'Flexible'}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Room & Apartment Amenities Grid */}
+        {/* Room & Apartment Amenities */}
         <View style={s.sectionBlock}>
           <Text style={s.sectionHeading}>Included Amenities</Text>
           <View style={s.amenitiesGrid}>
-            {(room.amenities ?? []).map((amenity) => (
-              <View key={amenity} style={s.amenityItem}>
-                <View style={s.amenityCheckCircle}>
-                  <AppIcon color={colors.teal} name="check" size={12} strokeWidth={3} />
+            {(room.amenities ?? []).length > 0 ? (
+              room.amenities.map((amenity) => (
+                <View key={amenity} style={s.amenityItem}>
+                  <View style={s.amenityCheckCircle}>
+                    <AppIcon color={colors.teal} name="check" size={12} strokeWidth={3} />
+                  </View>
+                  <Text style={s.amenityLabel}>{amenity}</Text>
                 </View>
-                <Text style={s.amenityLabel}>{amenity}</Text>
-              </View>
-            ))}
+              ))
+            ) : (
+              <Text style={s.descriptionText}>
+                High-speed WiFi, In-unit Laundry, Kitchen Access
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Commute & Indian Groceries Notes */}
+        <View style={s.sectionBlock}>
+          <Text style={s.sectionHeading}>Commute & Neighborhood</Text>
+          <View style={s.commuteRow}>
+            <AppIcon color={colors.appPrimary} name="map" size={16} />
+            <Text style={s.commuteText}>
+              {room.universityShuttleAccessible
+                ? '🚌 Walkable to University shuttle route and tech transit hubs'
+                : '📍 Convenient access to major highway tech corridors'}
+            </Text>
+          </View>
+          <View style={s.commuteRow}>
+            <AppIcon color={colors.teal} name="check" size={16} />
+            <Text style={s.commuteText}>
+              🛒 Close to Indian grocery stores (Patel Brothers, India Bazaar, Desi restaurants)
+            </Text>
           </View>
         </View>
 
         {/* Description Section */}
-        <View style={s.sectionBlock}>
-          <Text style={s.sectionHeading}>About this Home</Text>
-          <Text style={s.descriptionText}>{room.description}</Text>
-        </View>
+        {room.description ? (
+          <View style={s.sectionBlock}>
+            <Text style={s.sectionHeading}>About this Home</Text>
+            <Text style={s.descriptionText}>{room.description}</Text>
+          </View>
+        ) : null}
 
         {/* Privacy & Location Notice */}
         <View style={s.privacyNoticeCard}>
@@ -245,32 +359,33 @@ export function RoomDetailScreen() {
           <View style={s.privacyNoticeContent}>
             <Text style={s.privacyNoticeTitle}>Location Privacy Protected</Text>
             <Text style={s.privacyNoticeBody}>
-              Approximate neighborhood shown for member safety. The exact street address and unit number are shared automatically once your booking inquiry is accepted by the host.
+              Approximate neighborhood shown for member safety. The exact street address and unit
+              number are shared automatically once your inquiry is accepted by the host.
             </Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* ─── Sticky Bottom Bar ─────────────────────────────────────────────────── */}
+      {/* ─── Sticky Bottom Bar (1-Click Real-Time Chat Handshake) ─────────────── */}
       <View style={[s.bottomBar, isDesktop && s.bottomBarDesktop]}>
         <View style={s.bottomPriceCol}>
           <View style={s.priceRow}>
             <Text style={s.bottomPriceVal}>${room.price}</Text>
             <Text style={s.bottomPricePeriod}>/mo</Text>
           </View>
-          <Text style={s.bottomDeposit}>Direct Owner Listing</Text>
+          <Text style={s.bottomDeposit}>
+            {room.utilitiesIncluded ? 'Utilities Included' : 'Low Deposit'}
+          </Text>
         </View>
 
         <View style={s.bottomActions}>
-          <Link href={`/chat/new?recipient=host`} asChild>
-            <Pressable style={StyleSheet.flatten(s.chatBtn)} accessibilityLabel="Chat with Host">
-              <AppIcon color={colors.appPrimary} name="message" size={16} />
-              <Text style={s.chatBtnText}>Chat</Text>
-            </Pressable>
-          </Link>
           <Link href={`/rooms/${roomId}/inquiry` as Href} asChild>
-            <Pressable style={StyleSheet.flatten(s.inquireCtaBtn)} accessibilityLabel="Send Inquiry">
-              <Text style={s.inquireCtaBtnText}>Send Inquiry</Text>
+            <Pressable
+              style={StyleSheet.flatten(s.inquireCtaBtn)}
+              accessibilityLabel="Chat with Host"
+            >
+              <AppIcon color="#fff" name="message" size={16} />
+              <Text style={s.inquireCtaBtnText}>Chat with Host</Text>
             </Pressable>
           </Link>
         </View>
@@ -338,7 +453,7 @@ const s = StyleSheet.create({
     borderColor: colors.border,
   },
   gallerySlide: {
-    height: 220,
+    height: 200,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
@@ -396,6 +511,7 @@ const s = StyleSheet.create({
   },
   typeTagRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
   },
@@ -407,6 +523,17 @@ const s = StyleSheet.create({
   },
   roomTypeTagText: {
     color: colors.appPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  dietTag: {
+    backgroundColor: colors.tealSoft,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  dietTagText: {
+    color: colors.teal,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -441,81 +568,72 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
   pricingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: colors.surface,
     borderColor: 'rgba(67,30,190,0.18)',
     borderWidth: 1.5,
     borderRadius: 18,
     padding: space.x4,
-    marginTop: space.x2,
+    gap: 12,
   },
-  priceMainCol: {
-    gap: 4,
-  },
-  priceRow: {
+  priceBreakdownRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
+    alignItems: 'center',
+    justifyContent: 'space-around',
   },
-  priceValue: {
+  priceCol: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  priceColLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  priceColVal: {
     color: colors.appPrimary,
-    fontSize: 26,
+    fontSize: 18,
     fontWeight: '900',
   },
-  pricePeriod: {
+  priceColPeriod: {
+    fontSize: 11,
     color: colors.muted,
-    fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
+  },
+  priceDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: colors.border,
+  },
+  priceTagBottom: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 8,
   },
   utilitiesText: {
     color: colors.teal,
     fontSize: 12,
     fontWeight: '700',
-  },
-  priceMetaCol: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  depositText: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  depositVal: {
-    color: colors.ink,
-    fontWeight: '800',
-  },
-  leaseText: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '500',
+    textAlign: 'center',
   },
   hostCard: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
     borderRadius: 18,
     padding: space.x4,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   hostCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.x3,
+    gap: 12,
   },
   hostCardAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.appPrimary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  hostCardAvatarText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
   },
   hostCardInfo: {
     flex: 1,
@@ -524,7 +642,7 @@ const s = StyleSheet.create({
   hostNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   hostNameText: {
     color: colors.ink,
@@ -536,9 +654,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     backgroundColor: colors.tealSoft,
-    borderRadius: radius.pill,
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 2,
+    borderRadius: radius.pill,
   },
   verifiedHostPillText: {
     color: colors.teal,
@@ -548,7 +666,7 @@ const s = StyleSheet.create({
   hostWorkText: {
     color: colors.muted,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   hostReplyText: {
     color: colors.appPrimary,
@@ -556,47 +674,43 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
   sectionBlock: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: space.x4,
-    gap: space.x2,
+    gap: 8,
   },
   sectionHeading: {
     color: colors.ink,
     fontSize: 16,
     fontWeight: '800',
   },
-  sectionSubtitle: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  preferencesGrid: {
+  compatBadgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 4,
   },
-  preferencePill: {
-    backgroundColor: 'rgba(67,30,190,0.06)',
-    borderColor: 'rgba(67,30,190,0.16)',
+  compatBadge: {
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.x3,
-    paddingVertical: 6,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 2,
+    minWidth: 100,
   },
-  preferencePillText: {
-    color: colors.appPrimary,
-    fontSize: 12,
+  compatBadgeLabel: {
+    color: colors.muted,
+    fontSize: 10,
     fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  compatBadgeVal: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '800',
   },
   amenitiesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 4,
+    gap: 8,
   },
   amenityItem: {
     flexDirection: 'row',
@@ -616,6 +730,22 @@ const s = StyleSheet.create({
     color: colors.ink,
     fontSize: 13,
     fontWeight: '600',
+    flex: 1,
+  },
+  commuteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.surface,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  commuteText: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: '500',
     flex: 1,
   },
   descriptionText: {
@@ -672,6 +802,11 @@ const s = StyleSheet.create({
   bottomPriceCol: {
     gap: 2,
   },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
+  },
   bottomPriceVal: {
     color: colors.appPrimary,
     fontSize: 22,
@@ -692,31 +827,18 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: space.x2,
   },
-  chatBtn: {
+  inquireCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.surfaceContainerLow,
-    borderColor: colors.appPrimary,
-    borderWidth: 1.5,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.x4,
-    paddingVertical: 10,
-  },
-  chatBtnText: {
-    color: colors.appPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  inquireCtaBtn: {
     backgroundColor: colors.appPrimary,
     borderRadius: radius.pill,
     paddingHorizontal: space.x5,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   inquireCtaBtnText: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
 });

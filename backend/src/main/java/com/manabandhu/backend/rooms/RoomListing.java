@@ -28,7 +28,7 @@ public class RoomListing {
     @Column(nullable = false, precision = 10, scale = 2)
     BigDecimal price;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 50)
     String roomType;
 
     @Column(nullable = false, length = 20)
@@ -45,6 +45,39 @@ public class RoomListing {
 
     @Column(precision = 11, scale = 6)
     BigDecimal longitude;
+
+    @Column(name = "dietary_preference", length = 50)
+    String dietaryPreference = "ANY";
+
+    @Column(name = "gender_preference", length = 50)
+    String genderPreference = "ANY";
+
+    @Column(name = "bathroom_type", length = 50)
+    String bathroomType = "SHARED";
+
+    @Column(name = "utilities_included")
+    Boolean utilitiesIncluded = false;
+
+    @Column(name = "est_utility_monthly", precision = 10, scale = 2)
+    BigDecimal estUtilityMonthly = BigDecimal.ZERO;
+
+    @Column(name = "security_deposit", precision = 10, scale = 2)
+    BigDecimal securityDeposit = BigDecimal.ZERO;
+
+    @Column(name = "lease_term", length = 50)
+    String leaseTerm = "FLEXIBLE";
+
+    @Column(name = "is_verified_host")
+    Boolean isVerifiedHost = false;
+
+    @Column(name = "university_shuttle_accessible")
+    Boolean universityShuttleAccessible = false;
+
+    @Column(name = "state_code", length = 10)
+    String stateCode;
+
+    @Column(length = 100)
+    String county;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     Instant createdAt;
@@ -67,6 +100,15 @@ public class RoomListing {
         this.exactAddress = exactAddress;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.dietaryPreference = "ANY";
+        this.genderPreference = "ANY";
+        this.bathroomType = "SHARED";
+        this.utilitiesIncluded = false;
+        this.estUtilityMonthly = BigDecimal.ZERO;
+        this.securityDeposit = BigDecimal.ZERO;
+        this.leaseTerm = "FLEXIBLE";
+        this.isVerifiedHost = false;
+        this.universityShuttleAccessible = false;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
@@ -82,12 +124,39 @@ public class RoomListing {
     public String getExactAddress() { return exactAddress; }
     public BigDecimal getLatitude() { return latitude; }
     public BigDecimal getLongitude() { return longitude; }
+    public String getDietaryPreference() { return dietaryPreference; }
+    public String getGenderPreference() { return genderPreference; }
+    public String getBathroomType() { return bathroomType; }
+    public Boolean getUtilitiesIncluded() { return utilitiesIncluded; }
+    public BigDecimal getEstUtilityMonthly() { return estUtilityMonthly; }
+    public BigDecimal getSecurityDeposit() { return securityDeposit; }
+    public String getLeaseTerm() { return leaseTerm; }
+    public Boolean getIsVerifiedHost() { return isVerifiedHost; }
+    public Boolean getUniversityShuttleAccessible() { return universityShuttleAccessible; }
+    public String getStateCode() { return stateCode; }
+    public String getCounty() { return county; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
     void setTitle(String title) { this.title = title; }
     void setDescription(String description) { this.description = description; }
     void setPrice(BigDecimal price) { this.price = price; }
+    void setRoomType(String roomType) { this.roomType = roomType; }
+    void setBroadLocation(String broadLocation) { this.broadLocation = broadLocation; }
+    void setExactAddress(String exactAddress) { this.exactAddress = exactAddress; }
+    void setLatitude(BigDecimal latitude) { this.latitude = latitude; }
+    void setLongitude(BigDecimal longitude) { this.longitude = longitude; }
     void setStatus(String status) { this.status = status; }
+    void setDietaryPreference(String dietaryPreference) { this.dietaryPreference = dietaryPreference; }
+    void setGenderPreference(String genderPreference) { this.genderPreference = genderPreference; }
+    void setBathroomType(String bathroomType) { this.bathroomType = bathroomType; }
+    void setUtilitiesIncluded(Boolean utilitiesIncluded) { this.utilitiesIncluded = utilitiesIncluded; }
+    void setEstUtilityMonthly(BigDecimal estUtilityMonthly) { this.estUtilityMonthly = estUtilityMonthly; }
+    void setSecurityDeposit(BigDecimal securityDeposit) { this.securityDeposit = securityDeposit; }
+    void setLeaseTerm(String leaseTerm) { this.leaseTerm = leaseTerm; }
+    void setIsVerifiedHost(Boolean isVerifiedHost) { this.isVerifiedHost = isVerifiedHost; }
+    void setUniversityShuttleAccessible(Boolean universityShuttleAccessible) { this.universityShuttleAccessible = universityShuttleAccessible; }
+    void setStateCode(String stateCode) { this.stateCode = stateCode; }
+    void setCounty(String county) { this.county = county; }
     void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

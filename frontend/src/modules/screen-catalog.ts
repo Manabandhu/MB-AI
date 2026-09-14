@@ -81,6 +81,7 @@ export const screenCatalog = [
       screen('rooms', 'create-listing', 'Create Listing'),
       screen('rooms', 'details', 'Room Details', '/rooms/[roomId]'),
       screen('rooms', 'edit-listing', 'Edit Listing', '/rooms/[roomId]/edit'),
+      screen('rooms', 'inquiry', 'Room Inquiry', '/rooms/[roomId]/inquiry'),
     ],
   },
   {

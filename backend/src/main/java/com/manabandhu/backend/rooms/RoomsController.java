@@ -1,5 +1,6 @@
 package com.manabandhu.backend.rooms;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.chat.Conversation;
+import com.manabandhu.backend.chat.ConversationParticipant;
+import com.manabandhu.backend.chat.ConversationParticipantService;
+import com.manabandhu.backend.chat.ConversationService;
+import com.manabandhu.backend.chat.Message;
+import com.manabandhu.backend.chat.MessageService;
+
 @RestController
 @RequestMapping("/api/v1/rooms")
 public class RoomsController {
@@ -37,12 +45,18 @@ public class RoomsController {
     private final RoomSavedSearchService savedSearchService;
     private final RoomReportService reportService;
     private final RoomAnalyticsService analyticsService;
+    private final RoomInquiryRepository inquiryRepository;
+    private final ConversationService conversationService;
+    private final ConversationParticipantService participantService;
+    private final MessageService messageService;
 
-    RoomsController(RoomsContentService contentService, RoomListingService listingService,
-                    RoomAvailabilityService availabilityService, RoomBookingService bookingService,
-                    RoomImageService imageService, RoomFavoriteService favoriteService,
-                    RoomSavedSearchService savedSearchService, RoomReportService reportService,
-                    RoomAnalyticsService analyticsService) {
+    public RoomsController(RoomsContentService contentService, RoomListingService listingService,
+                           RoomAvailabilityService availabilityService, RoomBookingService bookingService,
+                           RoomImageService imageService, RoomFavoriteService favoriteService,
+                           RoomSavedSearchService savedSearchService, RoomReportService reportService,
+                           RoomAnalyticsService analyticsService, RoomInquiryRepository inquiryRepository,
+                           ConversationService conversationService, ConversationParticipantService participantService,
+                           MessageService messageService) {
         this.contentService = contentService;
         this.listingService = listingService;
         this.availabilityService = availabilityService;
@@ -52,6 +66,10 @@ public class RoomsController {
         this.savedSearchService = savedSearchService;
         this.reportService = reportService;
         this.analyticsService = analyticsService;
+        this.inquiryRepository = inquiryRepository;
+        this.conversationService = conversationService;
+        this.participantService = participantService;
+        this.messageService = messageService;
     }
 
     private static UUID actorId(Authentication authentication) {
@@ -66,6 +84,11 @@ public class RoomsController {
                 .anyMatch(a -> a.equals("ROLE_SUPER_ADMIN") || a.equals("ROLE_ADMIN"));
     }
 
+    @GetMapping("/amenities")
+    public List<RoomAmenityCatalog> amenities() {
+        return listingService.getAmenitiesCatalog();
+    }
+
     @GetMapping("/screens/{screenId}")
     com.manabandhu.backend.foundation.CatalogScreenContent screen(@PathVariable String screenId) {
         return contentService.screen(screenId);
@@ -76,9 +99,29 @@ public class RoomsController {
             Authentication authentication,
             @RequestParam(required = false) String location,
             @RequestParam(required = false) String roomType,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String state,
+            @RequestParam(required = false) String dietaryPreference,
+            @RequestParam(required = false) String genderPreference,
+            @RequestParam(required = false) BigDecimal minRent,
+            @RequestParam(required = false) BigDecimal maxRent,
+            @RequestParam(required = false) Boolean privateBathOnly,
+            @RequestParam(required = false) BigDecimal lat,
+            @RequestParam(required = false) BigDecimal lng,
+            @RequestParam(required = false) Double radiusMiles,
             Pageable pageable) {
         var viewerId = authentication == null ? null : actorId(authentication);
-        var listings = listingService.search(location, roomType, pageable);
+        String searchCity = city != null ? city : location;
+        String bath = Boolean.TRUE.equals(privateBathOnly) ? "PRIVATE_ATTACHED" : null;
+
+        Page<RoomListing> listings;
+        if (city != null || state != null || dietaryPreference != null || genderPreference != null
+                || minRent != null || maxRent != null || bath != null) {
+            listings = listingService.search(searchCity, state, dietaryPreference, genderPreference,
+                    minRent, maxRent, bath, pageable);
+        } else {
+            listings = listingService.search(location, roomType, pageable);
+        }
         return listings.map(l -> toResponse(l, viewerId));
     }
 
@@ -240,6 +283,62 @@ public class RoomsController {
         var requesterId = actorId(authentication);
         var booking = bookingService.create(listingId, requesterId, input);
         return ResponseEntity.created(URI.create("/api/v1/rooms/bookings/" + booking.getId())).body(booking);
+    }
+
+    @PostMapping("/{roomId}/inquire")
+    public ResponseEntity<RoomInquiryResponse> inquire(
+            Authentication authentication,
+            @PathVariable UUID roomId,
+            @Valid @RequestBody RoomInquiryInput input) {
+        if (authentication == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required to submit room inquiry");
+        }
+        var senderId = actorId(authentication);
+        var listing = listingService.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
+        var hostId = listing.getOwnerId();
+
+        if (senderId.equals(hostId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot inquire about your own room listing");
+        }
+
+        // Create direct conversation for room inquiry with title
+        var title = "Room Inquiry: " + listing.getTitle();
+        var conversation = conversationService.create(senderId, Conversation.ConversationType.ROOM_INQUIRY, title);
+        participantService.add(conversation.getId(), hostId, ConversationParticipant.ParticipantRole.MEMBER);
+
+        // Format and post intro chat message
+        String introText = String.format(
+                "👋 Room Inquiry for \"%s\" ($%s/mo)\n\n" +
+                "📅 Preferred Move-In: %s\n" +
+                "⏳ Stay Duration: %d months\n" +
+                "🥗 Dietary Preference: %s\n\n" +
+                "💬 Message: %s",
+                listing.getTitle(),
+                listing.getPrice() != null ? listing.getPrice().toPlainString() : "N/A",
+                input.moveInDate(),
+                input.stayDurationMonths() != null ? input.stayDurationMonths() : 6,
+                input.dietaryLifestyle() != null ? input.dietaryLifestyle() : "Flexible",
+                input.introMessage()
+        );
+        messageService.send(conversation.getId(), senderId, introText, Message.MessageType.TEXT);
+
+        // Record room inquiry
+        var inquiry = inquiryRepository.save(new RoomInquiry(
+                roomId, senderId, hostId, conversation.getId(),
+                input.moveInDate(), input.stayDurationMonths(),
+                input.dietaryLifestyle(), input.introMessage()
+        ));
+
+        return ResponseEntity.ok(new RoomInquiryResponse(inquiry.getId(), conversation.getId()));
+    }
+
+    @PostMapping("/listings/{listingId}/inquire")
+    public ResponseEntity<RoomInquiryResponse> inquireByListingId(
+            Authentication authentication,
+            @PathVariable UUID listingId,
+            @Valid @RequestBody RoomInquiryInput input) {
+        return inquire(authentication, listingId, input);
     }
 
     @GetMapping("/bookings/{bookingId}")

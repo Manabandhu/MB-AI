@@ -24,7 +24,18 @@ public record OwnerRoomListingResponse(
         Instant createdAt,
         Instant updatedAt,
         List<String> amenities,
-        List<String> preferences) {
+        List<String> preferences,
+        String dietaryPreference,
+        String genderPreference,
+        String bathroomType,
+        Boolean utilitiesIncluded,
+        BigDecimal estUtilityMonthly,
+        BigDecimal securityDeposit,
+        String leaseTerm,
+        Boolean isVerifiedHost,
+        Boolean universityShuttleAccessible,
+        String stateCode,
+        String county) {
 
     public static OwnerRoomListingResponse from(RoomListing listing, List<String> amenities,
             List<String> preferences) {
@@ -43,6 +54,17 @@ public record OwnerRoomListingResponse(
                 listing.getCreatedAt(),
                 listing.getUpdatedAt(),
                 amenities,
-                preferences);
+                preferences,
+                listing.getDietaryPreference(),
+                listing.getGenderPreference(),
+                listing.getBathroomType(),
+                listing.getUtilitiesIncluded(),
+                listing.getEstUtilityMonthly(),
+                listing.getSecurityDeposit(),
+                listing.getLeaseTerm(),
+                listing.getIsVerifiedHost(),
+                listing.getUniversityShuttleAccessible(),
+                listing.getStateCode(),
+                listing.getCounty());
     }
 }

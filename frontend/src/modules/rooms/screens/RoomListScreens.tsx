@@ -1,20 +1,18 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  archiveRoomListing,
+  deleteRoomListing,
   getFavorites,
   getMyListings,
-  pauseRoomListing,
-  publishRoomListing,
   unsaveRoom,
+  updateRoomListing,
 } from '@/modules/rooms/api';
-import type { RoomListing } from '@/modules/rooms/types';
-import { AppButton } from '@/modules/shared/ui/AppButton';
+import type { OwnerRoomListing, RoomListing } from '@/modules/rooms/types';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 export function RoomFavoritesScreen() {
@@ -22,7 +20,7 @@ export function RoomFavoritesScreen() {
   const queryClient = useQueryClient();
   const [removedIds, setRemovedIds] = useState<Record<string, boolean>>({});
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ['rooms', 'favorites'],
     queryFn: getFavorites,
     retry: false,
@@ -66,11 +64,7 @@ export function RoomFavoritesScreen() {
         {allSaved.length > 0 ? (
           <View style={styles.listGrid}>
             {allSaved.map((room) => (
-              <SavedRoomCard
-                key={room.id}
-                room={room}
-                onUnsave={() => handleUnsave(room.id)}
-              />
+              <SavedRoomCard key={room.id} room={room} onUnsave={() => handleUnsave(room.id)} />
             ))}
           </View>
         ) : (
@@ -94,20 +88,11 @@ export function RoomFavoritesScreen() {
   );
 }
 
-function SavedRoomCard({
-  room,
-  onUnsave,
-}: {
-  room: RoomListing;
-  onUnsave: () => void;
-}) {
+function SavedRoomCard({ room, onUnsave }: { room: RoomListing; onUnsave: () => void }) {
   const router = useRouter();
 
   return (
-    <Pressable
-      onPress={() => router.push(`/rooms/${room.id}` as Href)}
-      style={styles.savedCard}
-    >
+    <Pressable onPress={() => router.push(`/rooms/${room.id}` as Href)} style={styles.savedCard}>
       <View style={styles.cardHeader}>
         <View style={styles.thumbBox}>
           <Text style={styles.thumbEmoji}>🛏️</Text>
@@ -190,11 +175,16 @@ function SavedRoomCard({
   );
 }
 
+type ListingTab = 'ACTIVE' | 'DRAFT' | 'RENTED';
+
 export function RoomMyListingsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [selectedTab, setSelectedTab] = useState<ListingTab>('ACTIVE');
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [deleteModalListing, setDeleteModalListing] = useState<OwnerRoomListing | null>(null);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data } = useQuery({
     queryKey: ['rooms', 'my-listings'],
     queryFn: getMyListings,
     retry: false,
@@ -202,20 +192,34 @@ export function RoomMyListingsScreen() {
 
   const listings = data ?? [];
 
-  const publish = useMutation({
-    mutationFn: publishRoomListing,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] }),
+  const updateStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      updateRoomListing(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] });
+      setActiveMenuId(null);
+    },
   });
 
-  const pause = useMutation({
-    mutationFn: pauseRoomListing,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] }),
+  const deleteListing = useMutation({
+    mutationFn: (id: string) => deleteRoomListing(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] });
+      setDeleteModalListing(null);
+      setActiveMenuId(null);
+    },
   });
 
-  const archive = useMutation({
-    mutationFn: archiveRoomListing,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] }),
-  });
+  const activeListings = listings.filter((l) => l.status === 'ACTIVE' || l.status === 'PUBLISHED');
+  const draftListings = listings.filter((l) => l.status === 'DRAFT' || l.status === 'PAUSED');
+  const rentedListings = listings.filter((l) => l.status === 'RENTED' || l.status === 'ARCHIVED');
+
+  const filteredListings =
+    selectedTab === 'ACTIVE'
+      ? activeListings
+      : selectedTab === 'DRAFT'
+        ? draftListings
+        : rentedListings;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -241,64 +245,176 @@ export function RoomMyListingsScreen() {
         </Link>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {listings.length > 0 ? (
-          <View style={styles.listGrid}>
-            {listings.map((listing) => (
-              <View key={listing.id} style={styles.myListingCard}>
-                <View style={styles.cardHeaderInfo}>
-                  <View style={styles.cardTypeRow}>
-                    <Text style={styles.statusBadge}>{listing.status}</Text>
-                    <Text style={styles.priceValue}>${listing.price}/mo</Text>
-                  </View>
-                  <Text style={styles.cardTitle}>{listing.title}</Text>
-                  <Text style={styles.locationText}>{listing.broadLocation}</Text>
-                </View>
-
-                <View style={styles.actionButtonGroup}>
-                  <AppButton
-                    label="Edit"
-                    onPress={() => router.push(`/rooms/${listing.id}/edit` as Href)}
-                    variant="secondary"
-                  />
-                  {listing.status === 'DRAFT' ? (
-                    <AppButton
-                      label="Publish"
-                      onPress={() => publish.mutate(listing.id)}
-                      loading={publish.isPending}
-                      variant="primary"
-                    />
-                  ) : listing.status === 'ACTIVE' ? (
-                    <AppButton
-                      label="Pause"
-                      onPress={() => pause.mutate(listing.id)}
-                      loading={pause.isPending}
-                      variant="secondary"
-                    />
-                  ) : listing.status === 'PAUSED' ? (
-                    <AppButton
-                      label="Publish"
-                      onPress={() => publish.mutate(listing.id)}
-                      loading={publish.isPending}
-                      variant="primary"
-                    />
-                  ) : null}
-                  <AppButton
-                    label="Archive"
-                    onPress={() => archive.mutate(listing.id)}
-                    loading={archive.isPending}
-                    variant="ghost"
-                  />
-                </View>
+      {/* Tabs Filter Bar: Active, Draft, Rented */}
+      <View style={styles.tabsContainer}>
+        {(
+          [
+            { key: 'ACTIVE', label: 'Active', count: activeListings.length },
+            { key: 'DRAFT', label: 'Draft', count: draftListings.length },
+            { key: 'RENTED', label: 'Rented', count: rentedListings.length },
+          ] as const
+        ).map((tab) => {
+          const isSelected = selectedTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => setSelectedTab(tab.key)}
+              style={[styles.tabButton, isSelected && styles.tabButtonActive]}
+            >
+              <Text style={[styles.tabButtonText, isSelected && styles.tabButtonTextActive]}>
+                {tab.label}
+              </Text>
+              <View style={[styles.tabBadge, isSelected && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, isSelected && styles.tabBadgeTextActive]}>
+                  {tab.count}
+                </Text>
               </View>
-            ))}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {filteredListings.length > 0 ? (
+          <View style={styles.listGrid}>
+            {filteredListings.map((listing) => {
+              const isRented = listing.status === 'RENTED' || listing.status === 'ARCHIVED';
+              const isMenuOpen = activeMenuId === listing.id;
+
+              return (
+                <View
+                  key={listing.id}
+                  style={[styles.myListingCard, isRented && styles.myListingCardRented]}
+                >
+                  <View style={styles.cardHeaderInfo}>
+                    <View style={styles.cardTypeRow}>
+                      <View
+                        style={[
+                          styles.statusBadgeContainer,
+                          isRented
+                            ? styles.statusBadgeRented
+                            : listing.status === 'ACTIVE'
+                              ? styles.statusBadgeActive
+                              : styles.statusBadgeDraft,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusBadgeLabel,
+                            isRented
+                              ? styles.statusBadgeLabelRented
+                              : listing.status === 'ACTIVE'
+                                ? styles.statusBadgeLabelActive
+                                : styles.statusBadgeLabelDraft,
+                          ]}
+                        >
+                          {listing.status}
+                        </Text>
+                      </View>
+
+                      {/* Three-dot action menu toggle */}
+                      <Pressable
+                        accessibilityLabel="Listing options"
+                        onPress={() => setActiveMenuId(isMenuOpen ? null : listing.id)}
+                        style={styles.menuTriggerBtn}
+                      >
+                        <Text style={styles.menuTriggerDots}>⋮</Text>
+                      </Pressable>
+                    </View>
+
+                    {/* Popover / expanded action menu */}
+                    {isMenuOpen && (
+                      <View style={styles.menuPopover}>
+                        <Pressable
+                          onPress={() => {
+                            setActiveMenuId(null);
+                            router.push(`/rooms/${listing.id}/edit` as Href);
+                          }}
+                          style={styles.menuItem}
+                        >
+                          <Text style={styles.menuItemText}>✏️ Edit Listing</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => {
+                            const newStatus = isRented ? 'ACTIVE' : 'RENTED';
+                            updateStatus.mutate({ id: listing.id, status: newStatus });
+                          }}
+                          style={styles.menuItem}
+                        >
+                          <Text style={styles.menuItemText}>
+                            {isRented ? '🔄 Mark as Active' : '🏷️ Mark as Rented'}
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => {
+                            setActiveMenuId(null);
+                            setDeleteModalListing(listing);
+                          }}
+                          style={[styles.menuItem, styles.menuItemDestructive]}
+                        >
+                          <Text style={styles.menuItemDestructiveText}>🗑️ Delete Listing</Text>
+                        </Pressable>
+                      </View>
+                    )}
+
+                    <View style={styles.titlePriceRow}>
+                      <Text style={styles.cardTitle}>{listing.title}</Text>
+                      <Text style={styles.priceValue}>${listing.price}/mo</Text>
+                    </View>
+
+                    <Text style={styles.locationText}>{listing.broadLocation}</Text>
+                  </View>
+
+                  <View style={styles.actionButtonGroup}>
+                    <Pressable
+                      onPress={() => router.push(`/rooms/${listing.id}/edit` as Href)}
+                      style={styles.cardActionBtn}
+                    >
+                      <Text style={styles.cardActionBtnText}>Edit</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        const newStatus = isRented ? 'ACTIVE' : 'RENTED';
+                        updateStatus.mutate({ id: listing.id, status: newStatus });
+                      }}
+                      style={[styles.cardActionBtn, isRented && styles.cardActionBtnAccent]}
+                    >
+                      <Text
+                        style={[
+                          styles.cardActionBtnText,
+                          isRented && styles.cardActionBtnTextAccent,
+                        ]}
+                      >
+                        {isRented ? 'Mark Active' : 'Mark Rented'}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setDeleteModalListing(listing)}
+                      style={[styles.cardActionBtn, styles.cardActionBtnDanger]}
+                    >
+                      <Text style={styles.cardActionBtnDangerText}>Delete</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
           </View>
         ) : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyEmoji}>🏡</Text>
-            <Text style={styles.emptyTitle}>No listings posted yet</Text>
+            <Text style={styles.emptyTitle}>
+              {selectedTab === 'ACTIVE'
+                ? 'No active listings'
+                : selectedTab === 'DRAFT'
+                  ? 'No draft listings'
+                  : 'No rented listings'}
+            </Text>
             <Text style={styles.emptyBody}>
-              Have a spare room or leasing an apartment? Reach thousands of verified flatmates today.
+              {selectedTab === 'ACTIVE'
+                ? 'Ready to host? Post a room listing to connect with diaspora housemates.'
+                : selectedTab === 'DRAFT'
+                  ? 'Draft listings in progress will appear here.'
+                  : 'Listings marked as rented will appear here for your records.'}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -310,6 +426,46 @@ export function RoomMyListingsScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Confirmation Modal for Delete */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={Boolean(deleteModalListing)}
+        onRequestClose={() => setDeleteModalListing(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconWrap}>
+              <Text style={styles.modalIconEmoji}>⚠️</Text>
+            </View>
+            <Text style={styles.modalTitle}>Delete Room Listing?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to permanently delete &ldquo;
+              {deleteModalListing?.title}&rdquo;? All inquiries and data associated with this
+              listing will be permanently removed.
+            </Text>
+
+            <View style={styles.modalActions}>
+              <Pressable onPress={() => setDeleteModalListing(null)} style={styles.modalCancelBtn}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  if (deleteModalListing) {
+                    deleteListing.mutate(deleteModalListing.id);
+                  }
+                }}
+                style={styles.modalDeleteBtn}
+              >
+                <Text style={styles.modalDeleteText}>
+                  {deleteListing.isPending ? 'Deleting...' : 'Delete Listing'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -635,5 +791,240 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f2f3ff',
     paddingTop: space.x3,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+    gap: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaedff',
+  },
+  tabButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    backgroundColor: '#f2f3ff',
+  },
+  tabButtonActive: {
+    backgroundColor: '#431ebe',
+  },
+  tabButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#55596e',
+  },
+  tabButtonTextActive: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  tabBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  tabBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  tabBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#55596e',
+  },
+  tabBadgeTextActive: {
+    color: '#fff',
+  },
+  myListingCardRented: {
+    opacity: 0.85,
+    borderColor: '#e0e2ec',
+    backgroundColor: '#fafafc',
+  },
+  statusBadgeContainer: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  statusBadgeActive: {
+    backgroundColor: 'rgba(0,105,107,0.1)',
+  },
+  statusBadgeDraft: {
+    backgroundColor: 'rgba(67,30,190,0.1)',
+  },
+  statusBadgeRented: {
+    backgroundColor: '#e2e3e9',
+  },
+  statusBadgeLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  statusBadgeLabelActive: {
+    color: '#00696b',
+  },
+  statusBadgeLabelDraft: {
+    color: '#431ebe',
+  },
+  statusBadgeLabelRented: {
+    color: '#545869',
+  },
+  menuTriggerBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f2f3ff',
+  },
+  menuTriggerDots: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1c28',
+    marginTop: -4,
+  },
+  menuPopover: {
+    position: 'absolute',
+    top: 36,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#eaedff',
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    width: 170,
+  },
+  menuItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  menuItemText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1a1c28',
+  },
+  menuItemDestructive: {
+    borderTopWidth: 1,
+    borderTopColor: '#f2f3ff',
+    marginTop: 4,
+  },
+  menuItemDestructiveText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#ba1a1a',
+  },
+  titlePriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: space.x2,
+    marginTop: 4,
+  },
+  cardActionBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: '#f2f3ff',
+  },
+  cardActionBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#431ebe',
+  },
+  cardActionBtnAccent: {
+    backgroundColor: 'rgba(0,105,107,0.08)',
+  },
+  cardActionBtnTextAccent: {
+    color: '#00696b',
+  },
+  cardActionBtnDanger: {
+    backgroundColor: '#ffedee',
+  },
+  cardActionBtnDangerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ba1a1a',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: space.x4,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: space.x5,
+    width: '100%',
+    maxWidth: 400,
+    gap: space.x3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  modalIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ffedee',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+  },
+  modalIconEmoji: {
+    fontSize: 24,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1a1c28',
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 13,
+    color: '#55596e',
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: space.x3,
+    marginTop: space.x2,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.pill,
+    backgroundColor: '#f2f3ff',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#55596e',
+  },
+  modalDeleteBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.pill,
+    backgroundColor: '#ba1a1a',
+    alignItems: 'center',
+  },
+  modalDeleteText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

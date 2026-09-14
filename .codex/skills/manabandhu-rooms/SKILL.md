@@ -70,9 +70,27 @@ Backend services: `RoomListingService`, `RoomAvailabilityService`, `RoomBookingS
 
 ## Data Model
 
-Migration `V16__extend_rooms.sql` adds `room_amenities`, `room_preferences`, `room_saved_searches`, `room_reports`, `room_analytics`, `room_moderation_actions`. Existing tables: `room_listings`, `room_images`, `room_availabilities`, `room_bookings`, `room_favorites`.
+- Migration `V16__extend_rooms.sql` adds `room_listing_amenities`, `room_preferences`, `room_saved_searches`, `room_reports`, `room_analytics`, `room_moderation_actions`. Existing tables: `room_listings`, `room_images`, `room_availabilities`, `room_bookings`, `room_favorites`.
+- Migration `V24__enhance_rooms_and_amenities.sql`:
+  - Renames legacy listing-amenity junction to `room_listing_amenities`.
+  - Creates dynamic master catalog `room_amenities` (`id`, `code`, `label`, `category`, `icon_name`, `is_active`, `sort_order`) seeded with 12 diaspora housing amenities.
+  - Enhances `room_listings` with diaspora & transparent pricing attributes: `dietary_preference`, `gender_preference`, `bathroom_type`, `utilities_included`, `est_utility_monthly`, `security_deposit`, `lease_term`, `is_verified_host`, `university_shuttle_accessible`, `amenity_codes`, `state_code`, `county`.
+  - Creates `room_inquiries` table with RLS (`auth.uid() = sender_id OR auth.uid() = host_id`) linking inquiries directly to chat conversations.
 
-Listing statuses: `draft`, `active`, `paused`, `archived`, `rejected`. Booking statuses: `pending`, `accepted`, `rejected`, `cancelled`.
+Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`. Booking/Inquiry statuses: `pending`, `accepted`, `declined`, `cancelled`, `archived`.
+
+## Free Zero-Cost Location & Geocoding Services
+
+- `country-state-city`: Offline US states (`getUSStates()`) and cities by state (`getCitiesByState(stateCode)`) with zero network latency or API keys.
+- OpenStreetMap Photon API (`https://photon.komoot.io/api/?q={query}&limit=5&bbox=-125,24,-66,49`): Instant address autocomplete and lat/lng coordinates for US bounds with zero billing/keys.
+- Zippopotam.us (`https://api.zippopotam.us/us/{zip}`): 1-step ZIP code lookup returning city, state abbreviation, and coordinates.
+
+## Real-Time Chat Handshake Invariant
+
+- Contacting a host via `/rooms/[roomId]/inquiry` triggers `POST /api/v1/rooms/{roomId}/inquire`.
+- Backend automatically creates a chat conversation with `type = ROOM_INQUIRY`, adds the host and sender as participants, and posts an introductory message containing a structured summary of the move-in date, stay duration, dietary preferences, and custom questions.
+- Endpoint returns `{ inquiryId, conversationId }`.
+- Frontend transitions seamlessly in 1 click directly to `/chat/[conversationId]`.
 
 ## Authorization and Privacy Rules
 
@@ -97,14 +115,16 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rejected`. Booking s
 - Home actions: Search, Map, Saved, Create listing
 - Search actions: Filters, Map, Saved
 - Cross-module: deep link to `/rooms/[roomId]` from explore, saved, and search
+- Chat handoff: 1-click transition from room inquiry to `/chat/[conversationId]`
 
 ## Implementation Notes for Expo React Native
 
 - Route files in `frontend/src/app/rooms/` are thin wrappers.
-- `RoomsScreen` uses `useQuery`; home/search now render real listings from the content service.
+- `RoomsScreen` uses `useQuery`; home/search render live listings from the backend REST API with horizontal filter chips and city switcher.
 - Detail, create, edit, favorites, my-listings, and inquiry screens use TanStack Query against the real REST API.
-- Forms use `react-hook-form` + `zod` with string-based numeric fields converted on submit.
+- Unified `RoomForm.tsx` consolidates creation and editing forms with react-hook-form + zod, live Photon address search, country-state-city chips, dynamic Supabase amenities catalog, and multi-image picker with thumbnail previews.
 - Save/unsave uses optimistic invalidation of the detail and favorites queries.
+- My Listings management supports tab filtering (`Active`, `Draft`, `Rented`) and a 3-dot action menu (`Edit`, `Mark as Rented`, and `Delete` modal with `#ba1a1a` destructive button).
 
 ## Accessibility and Responsive Behavior Rules
 
@@ -116,16 +136,9 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rejected`. Booking s
 
 ## Current Implementation Status
 
-- **Complete**: End-to-end vertical slice across database (V16), backend (controllers/services/repositories/DTOs/authorization), REST contracts (openapi.yaml), and frontend (list, detail, create, edit, favorites, my-listings, inquiry). Service-layer authorization covers ownership, cross-user protection, address privacy, and state transitions. Backend tests cover authorization, transitions, and address protection.
-
-- The legacy GraphQL rooms path and the `AdminRoomsScreen` retain their original shape; the canonical rooms APIs are REST under `/api/v1/rooms`.
-
-- Recent backend fixes: rooms controller/service method signatures now consistently pass actor/admin flags, room listing ownership checks are enforced in services, and room booking/availability/delete flows require authenticated ownership or admin override.
-
-- Recent backend changes: added aliased routes to `RoomsController` (`/{roomId}`, `/{roomId}/owner`, `/{roomId}` PATCH/DELETE, `/{roomId}/publish`, `/{roomId}/pause`, `/{roomId}/archive`) alongside existing `/listings/{listingId}` paths to match frontend API calls.
-- Stitch Design Alignment for Rooms: Overhauled RoomsScreen.tsx and RoomDetailScreen.tsx matching Stitch designs (projects/9663298292574415459). RoomsScreen adds interactive search header with city/count picker, filter chips, Zero-Brokerage Guarantee trust assurance banner, featured subleases carousel, rich room feed cards with utility/deposit tags, and floating action button. RoomDetailScreen features gallery carousel, pricing breakdown card, verified host profile card, Desi flatmate compatibility badges, amenities checklist, and location privacy protection notice.
-- Interactive City Selector, Filter Sheet, Sorting & Map View: Added interactive Metro Area modal (Austin, DFW, Houston, Bay Area, Seattle, Jersey City) with live room counts, quick sorting chips, and a segmented controller providing a vector-rendered Austin Map View with interactive price pins, pulse rings, and floating room preview card.
-- Responsive Bottom-up / Web Centered Modal & Rich Iconography: Replaced separate modal with an adaptive Filters & Sorting modal that renders as a bottom-up bottom sheet on mobile screens with pull indicator, and as a centered dialog modal on web/desktop. Added rich icons to all amenities, filters, sort orders, category chips, and room cards.
-- Live Backend & Supabase Database Seeding: Removed hardcoded UI listings. Seeded realistic room listings, amenities, and preferences into Supabase PostgreSQL (Austin tech corridors, Domain, UT Austin, Round Rock, Cedar Park, Downtown) and wired client to query live records through Spring Boot REST endpoint `listRoomListings()`. Unwrapped Spring Data `Page.content` format for seamless client mapping.
-- Clean UI Layout: Removed zero-brokerage banners, guarantee banners, and featured subleases carousel from rooms discovery, saved rooms, and create listing screens for a cleaner, direct discovery experience.
-- Hardcoded data cleanup: removed hardcoded host persona ("Karthik Raman"), static deposits and lease lengths from `RoomDetailScreen` in favor of dynamic room listing fields and verified member badges; removed demo autofill and mock submission bypass from `RoomForm` with real auth redirection to `/sign-in`; removed static city count numbers in `RoomsScreen` in favor of dynamic calculation from active listings.
+- **Complete**: End-to-end vertical slice across database (V16 & V24), backend (controllers/services/repositories/DTOs/authorization/chat handshake), REST contracts (openapi.yaml), and frontend (list, detail, create, edit, favorites, my-listings, inquiry).
+- **Zero Hardcoding**: All dynamic amenities, lifestyles, preferences, and locations fetched from Supabase / REST backend.
+- **Free Geocoding**: Integrated `country-state-city`, OpenStreetMap Photon autocomplete, and Zippopotam.us ZIP auto-fill.
+- **Chat Handshake**: Direct 1-click transition from room inquiry into `/chat/[conversationId]`.
+- **Code Consolidation**: Unified `RoomForm.tsx` eliminates duplication across create and edit screens.
+- **Modern Vibrant Design**: Applied ManaBandhu design tokens (`#431ebe` primary, `#00696b` teal, `#131b2e` ink, `#faf8ff` background).

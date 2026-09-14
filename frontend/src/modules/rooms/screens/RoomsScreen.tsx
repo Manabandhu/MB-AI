@@ -1,5 +1,5 @@
 import { color as baseColors, radius, space } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { listRoomListings } from '@/modules/rooms/api';
+import { listRoomListings, saveRoom, unsaveRoom } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
@@ -57,12 +57,32 @@ type CityOption = {
 };
 
 const CITIES: CityOption[] = [
-  { id: 'austin', name: 'Austin, TX', landmarks: ['Domain Northside', 'Apple Riata', 'UT Austin', 'Round Rock'] },
-  { id: 'dfw', name: 'Dallas-Fort Worth, TX', landmarks: ['Irving', 'Plano', 'Frisco', 'Richardson'] },
-  { id: 'houston', name: 'Houston, TX', landmarks: ['Sugar Land', 'Katy', 'Medical Center', 'Galleria'] },
-  { id: 'bayarea', name: 'Bay Area, CA', landmarks: ['Sunnyvale', 'Fremont', 'Santa Clara', 'San Jose'] },
+  {
+    id: 'austin',
+    name: 'Austin, TX',
+    landmarks: ['Domain Northside', 'Apple Riata', 'UT Austin', 'Round Rock'],
+  },
+  {
+    id: 'dfw',
+    name: 'Dallas-Fort Worth, TX',
+    landmarks: ['Irving', 'Plano', 'Frisco', 'Richardson'],
+  },
+  {
+    id: 'houston',
+    name: 'Houston, TX',
+    landmarks: ['Sugar Land', 'Katy', 'Medical Center', 'Galleria'],
+  },
+  {
+    id: 'bayarea',
+    name: 'Bay Area, CA',
+    landmarks: ['Sunnyvale', 'Fremont', 'Santa Clara', 'San Jose'],
+  },
   { id: 'seattle', name: 'Seattle, WA', landmarks: ['Bellevue', 'Redmond', 'South Lake Union'] },
-  { id: 'jersey', name: 'Jersey City / NYC', landmarks: ['Journal Square', 'Newport', 'Edison, NJ'] },
+  {
+    id: 'jersey',
+    name: 'Jersey City / NYC',
+    landmarks: ['Journal Square', 'Newport', 'Edison, NJ'],
+  },
 ];
 
 type ExtendedRoom = RoomListing & {
@@ -72,15 +92,12 @@ type ExtendedRoom = RoomListing & {
 };
 
 const filterCategories = [
-  { id: 'all', label: '🏠 All' },
-  { id: 'private', label: '🚪 Private Room' },
-  { id: 'shared', label: '👥 Shared 2B2B' },
-  { id: 'studio', label: '🏢 1BHK Studio' },
-  { id: 'veg', label: '🥦 Pure Veg' },
-  { id: 'female', label: '👩 Girls Only' },
-  { id: 'tech', label: '📍 Near Apple / UT' },
-  { id: 'furnished', label: '🛏️ Furnished' },
-  { id: 'fast', label: '⚡ Immediate Move-in' },
+  { id: 'all', label: 'All' },
+  { id: 'veg', label: 'Pure Veg Only' },
+  { id: 'bath', label: 'Private Bath' },
+  { id: 'female', label: 'Female Only' },
+  { id: 'under800', label: 'Under $800' },
+  { id: 'furnished', label: 'Furnished' },
 ];
 
 type SortOption = 'recommended' | 'price_low' | 'price_high' | 'newest';
@@ -103,10 +120,25 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const [viewMode, setViewMode] = useState<'list' | 'map'>(screenId === 'map' ? 'map' : 'list');
   const [selectedPinRoomId, setSelectedPinRoomId] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('🏠 All');
+  const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [savedIds, setSavedIds] = useState<Record<string, boolean>>({});
+
+  const saveMutation = useMutation({
+    mutationFn: async ({ roomId, isSaved }: { roomId: string; isSaved: boolean }) => {
+      if (isSaved) {
+        await unsaveRoom(roomId);
+      } else {
+        await saveRoom(roomId);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms', 'favorites'] });
+    },
+  });
 
   // Filter state for modal
   const [filterPriceMax, setFilterPriceMax] = useState<number | null>(null);
@@ -117,7 +149,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const [filterSelectedAmenities, setFilterSelectedAmenities] = useState<string[]>([]);
 
   // Query real API listings directly from backend / Supabase
-  const { data: listings, isLoading, refetch } = useQuery({
+  const { data: listings, isLoading } = useQuery({
     queryKey: ['rooms', 'listings'],
     queryFn: () => listRoomListings(),
     retry: 1,
@@ -131,8 +163,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
       let mapY = 50;
       if (l.latitude && l.longitude) {
         // Austin bounds: lat 30.20 to 30.55, lng -97.85 to -97.65
-        mapX = Math.min(85, Math.max(15, Math.round(((l.longitude - -97.85) / (-97.65 - -97.85)) * 100)));
-        mapY = Math.min(85, Math.max(15, Math.round(((30.55 - l.latitude) / (30.55 - 30.20)) * 100)));
+        mapX = Math.min(
+          85,
+          Math.max(15, Math.round(((l.longitude - -97.85) / (-97.65 - -97.85)) * 100)),
+        );
+        mapY = Math.min(
+          85,
+          Math.max(15, Math.round(((30.55 - l.latitude) / (30.55 - 30.2)) * 100)),
+        );
       } else {
         mapX = 25 + ((i * 26) % 55);
         mapY = 22 + ((i * 20) % 55);
@@ -165,18 +203,55 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
       if (!matchTitle && !matchLoc && !matchType) return false;
     }
 
-    // Category chips
-    if (activeCategory === '🚪 Private Room' && room.roomType !== 'Private Room') return false;
-    if (activeCategory === '👥 Shared 2B2B' && !room.roomType.includes('Shared') && !room.title.includes('2B2B')) return false;
-    if (activeCategory === '🏢 1BHK Studio' && !room.roomType.includes('1BHK') && !room.roomType.includes('Studio')) return false;
-    if (activeCategory === '🥦 Pure Veg' && !(room.preferences ?? []).some((p) => p.toLowerCase().includes('veg'))) return false;
-    if (activeCategory === '👩 Girls Only' && !(room.preferences ?? []).some((p) => p.toLowerCase().includes('female') || p.toLowerCase().includes('girls'))) return false;
+    // Horizontal category chips
+    if (activeCategory === 'Pure Veg Only') {
+      const isVeg =
+        room.dietaryPreference === 'PURE_VEG' ||
+        (room.preferences ?? []).some((p) => p.toLowerCase().includes('veg'));
+      if (!isVeg) return false;
+    }
+    if (activeCategory === 'Private Bath') {
+      const hasPrivateBath =
+        room.bathroomType === 'PRIVATE_ATTACHED' ||
+        room.bathroomType === 'PRIVATE_DEDICATED' ||
+        (room.amenities ?? []).some(
+          (a) => a.toLowerCase().includes('bath') || a.toLowerCase().includes('private'),
+        );
+      if (!hasPrivateBath) return false;
+    }
+    if (activeCategory === 'Female Only') {
+      const isFemale =
+        room.genderPreference === 'FEMALE_ONLY' ||
+        (room.preferences ?? []).some(
+          (p) => p.toLowerCase().includes('female') || p.toLowerCase().includes('girls'),
+        );
+      if (!isFemale) return false;
+    }
+    if (activeCategory === 'Under $800') {
+      if (room.price > 800) return false;
+    }
+    if (activeCategory === 'Furnished') {
+      const isFurnished = (room.amenities ?? []).some(
+        (a) => a.toLowerCase().includes('furnished') || a.toLowerCase().includes('bed'),
+      );
+      if (!isFurnished) return false;
+    }
 
     // Advanced modal filters
     if (filterPriceMax !== null && room.price > filterPriceMax) return false;
     if (filterRoomType !== 'All' && room.roomType !== filterRoomType) return false;
-    if (filterDiet === 'Veg Only' && !(room.preferences ?? []).some((p) => p.toLowerCase().includes('veg'))) return false;
-    if (filterGender === 'Female Only' && !(room.preferences ?? []).some((p) => p.toLowerCase().includes('female') || p.toLowerCase().includes('girls'))) return false;
+    if (
+      filterDiet === 'Veg Only' &&
+      !(room.preferences ?? []).some((p) => p.toLowerCase().includes('veg'))
+    )
+      return false;
+    if (
+      filterGender === 'Female Only' &&
+      !(room.preferences ?? []).some(
+        (p) => p.toLowerCase().includes('female') || p.toLowerCase().includes('girls'),
+      )
+    )
+      return false;
     if (filterVerifiedOnly && !room.verifiedHost) return false;
 
     if (filterSelectedAmenities.length > 0) {
@@ -194,12 +269,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   filteredRooms = [...filteredRooms].sort((a, b) => {
     if (sortBy === 'price_low') return a.price - b.price;
     if (sortBy === 'price_high') return b.price - a.price;
-    if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    if (sortBy === 'newest')
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     return 0; // recommended
   });
 
-  const toggleSave = (id: string) => {
-    setSavedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleSave = (id: string, currentlySaved: boolean) => {
+    setSavedIds((prev) => ({ ...prev, [id]: !currentlySaved }));
+    saveMutation.mutate({ roomId: id, isSaved: currentlySaved });
   };
 
   const toggleAmenityFilter = (amenity: string) => {
@@ -249,7 +326,11 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
       {/* ─── Top Header ───────────────────────────────────────────────────────── */}
       <View style={[s.header, isDesktop && s.headerDesktop]}>
         <View style={s.headerTop}>
-          <Pressable onPress={() => router.push('/home')} style={s.backBtn} accessibilityLabel="Back to Home">
+          <Pressable
+            onPress={() => router.push('/home')}
+            style={s.backBtn}
+            accessibilityLabel="Back to Home"
+          >
             <AppIcon color={colors.ink} name="chevron-left" size={20} />
           </Pressable>
 
@@ -261,7 +342,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           >
             <AppIcon color={colors.appPrimary} name="map" size={14} />
             <Text style={s.locationTitle}>
-              {selectedCity.name} · {rawListings.length > 0 ? `${rawListings.length} Active` : 'Active Hub'}
+              {selectedCity.name} ·{' '}
+              {rawListings.length > 0 ? `${rawListings.length} Active` : 'Active Hub'}
             </Text>
             <AppIcon color={colors.muted} name="chevron-down" size={14} />
           </Pressable>
@@ -273,7 +355,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               </Pressable>
             </Link>
             <Link href="/rooms/create-listing" asChild>
-              <Pressable accessibilityLabel="Post a Room" style={StyleSheet.flatten(s.postRoomBtnSmall)}>
+              <Pressable
+                accessibilityLabel="Post a Room"
+                style={StyleSheet.flatten(s.postRoomBtnSmall)}
+              >
                 <AppIcon color="#fff" name="plus" size={16} />
                 <Text style={s.postRoomBtnSmallText}>Post Room</Text>
               </Pressable>
@@ -329,7 +414,11 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           </View>
 
           {/* Quick Sort Options with Icons */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.sortScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.sortScroll}
+          >
             {SORT_OPTIONS.map((opt) => (
               <Pressable
                 key={opt.id}
@@ -345,14 +434,23 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         </View>
 
         {/* Category Pill Filters with Icons */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.categoryScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.categoryScroll}
+        >
           {filterCategories.map((cat) => (
             <Pressable
               key={cat.id}
               onPress={() => setActiveCategory(cat.label)}
               style={[s.categoryChip, activeCategory === cat.label && s.categoryChipActive]}
             >
-              <Text style={[s.categoryChipText, activeCategory === cat.label && s.categoryChipTextActive]}>
+              <Text
+                style={[
+                  s.categoryChipText,
+                  activeCategory === cat.label && s.categoryChipTextActive,
+                ]}
+              >
                 {cat.label}
               </Text>
             </Pressable>
@@ -402,6 +500,19 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             })}
           </View>
 
+          {/* Floating List View button to switch back to /rooms/search */}
+          <Pressable
+            onPress={() => {
+              setViewMode('list');
+              router.push('/rooms/search' as Href);
+            }}
+            style={s.floatingToggleBtn}
+            accessibilityLabel="Switch to List View"
+          >
+            <AppIcon color="#fff" name="compass" size={16} />
+            <Text style={s.floatingToggleBtnText}>List View</Text>
+          </Pressable>
+
           {/* Floating Selected Room Card at bottom of map */}
           {activePinRoom ? (
             <View style={s.floatingMapCardContainer}>
@@ -418,6 +529,11 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 <View style={s.floatingInfo}>
                   <View style={s.floatingTypeRow}>
                     <Text style={s.floatingType}>🚪 {activePinRoom.roomType}</Text>
+                    <Text style={s.floatingBath}>
+                      {activePinRoom.bathroomType === 'PRIVATE_ATTACHED'
+                        ? '• 🚿 Private Bath'
+                        : '• 🚪 Shared Bath'}
+                    </Text>
                   </View>
                   <Text style={s.floatingTitle} numberOfLines={1}>
                     {activePinRoom.title}
@@ -426,7 +542,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     📍 {activePinRoom.broadLocation}
                   </Text>
                   <View style={s.floatingCtaRow}>
-                    <Text style={s.floatingDetailsLink}>View Details →</Text>
+                    <View style={s.floatingDetailsBtn}>
+                      <Text style={s.floatingDetailsLink}>View Details →</Text>
+                    </View>
                   </View>
                 </View>
               </Pressable>
@@ -435,40 +553,43 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         </View>
       ) : (
         /* ─── LIST VIEW ──────────────────────────────────────────────────────── */
-        <ScrollView contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Header Section info */}
           <View style={s.sectionHeader}>
             <View>
-              <Text style={s.sectionTitle}>
-                Available Rooms ({filteredRooms.length})
-              </Text>
-              <Text style={s.sectionSub}>
-                Live listings from Supabase in {selectedCity.name}
-              </Text>
+              <Text style={s.sectionTitle}>Available Rooms ({filteredRooms.length})</Text>
+              <Text style={s.sectionSub}>Live listings from Supabase in {selectedCity.name}</Text>
             </View>
             <Pressable onPress={() => setIsFilterModalVisible(true)} style={s.filterLinkBtn}>
               <AppIcon color={colors.appPrimary} name="wrench" size={13} />
-              <Text style={s.filterLinkText}>Filters & Sort</Text>
+              <Text style={s.filterLinkText}>All Filters</Text>
             </Pressable>
           </View>
 
+          {/* Room Listings Feed */}
           {isLoading ? (
             <View style={s.loadingBox}>
-              <ActivityIndicator color={colors.appPrimary} size="large" />
-              <Text style={s.loadingText}>Fetching live rooms from database...</Text>
+              <ActivityIndicator size="large" color={colors.appPrimary} />
+              <Text style={s.loadingText}>Fetching live room listings from Supabase...</Text>
             </View>
           ) : filteredRooms.length === 0 ? (
             <View style={s.emptyBox}>
               <Text style={s.emptyEmoji}>🔍</Text>
               <Text style={s.emptyTitle}>No rooms match your filters</Text>
-              <Text style={s.emptySub}>Try adjusting budget, room type, or search terms</Text>
-              <Pressable onPress={resetFilters} style={s.resetBtn}>
-                <Text style={s.resetBtnText}>Reset All Filters</Text>
+              <Text style={s.emptySub}>
+                Try selecting a different filter or reset all filters to view all available rooms.
+              </Text>
+              <Pressable onPress={resetFilters} style={s.resetFilterBtn}>
+                <Text style={s.resetFilterBtnText}>Reset All Filters</Text>
               </Pressable>
             </View>
           ) : (
             filteredRooms.map((room) => {
-              const isSaved = savedIds[room.id] || room.savedByViewer;
+              const isSaved =
+                savedIds[room.id] !== undefined ? savedIds[room.id] : room.savedByViewer;
               return (
                 <Pressable
                   key={room.id}
@@ -491,7 +612,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                         <Pressable
                           onPress={(e) => {
                             e.stopPropagation();
-                            toggleSave(room.id);
+                            toggleSave(room.id, Boolean(isSaved));
                           }}
                           style={s.saveBtn}
                           accessibilityLabel={isSaved ? 'Unsave room' : 'Save room'}
@@ -521,12 +642,18 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   <View style={s.amenitiesRow}>
                     {(room.preferences ?? []).slice(0, 2).map((pref) => (
                       <View key={pref} style={s.amenityChip}>
-                        <Text style={s.amenityChipText}>{getPreferenceIcon(pref)}{pref}</Text>
+                        <Text style={s.amenityChipText}>
+                          {getPreferenceIcon(pref)}
+                          {pref}
+                        </Text>
                       </View>
                     ))}
                     {(room.amenities ?? []).slice(0, 3).map((amenity) => (
                       <View key={amenity} style={s.featureChip}>
-                        <Text style={s.featureChipText}>{getAmenityIcon(amenity)}{amenity}</Text>
+                        <Text style={s.featureChipText}>
+                          {getAmenityIcon(amenity)}
+                          {amenity}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -583,8 +710,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
 
       {/* ─── City Selector Modal ──────────────────────────────────────────────── */}
       <Modal visible={isCityModalVisible} transparent animationType={isDesktop ? 'fade' : 'slide'}>
-        <Pressable onPress={() => setIsCityModalVisible(false)} style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}>
-          <Pressable onPress={(e) => e.stopPropagation()} style={[s.cityModalCard, !isDesktop && s.cityModalCardMobile]}>
+        <Pressable
+          onPress={() => setIsCityModalVisible(false)}
+          style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={[s.cityModalCard, !isDesktop && s.cityModalCardMobile]}
+          >
             {!isDesktop ? <View style={s.bottomSheetHandle} /> : null}
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>Choose Metro Area</Text>
@@ -607,21 +740,25 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     style={[s.cityOptionRow, isSelected && s.cityOptionRowActive]}
                   >
                     <View style={s.cityOptionLeft}>
-                      <AppIcon color={isSelected ? colors.appPrimary : colors.muted} name="map" size={16} />
+                      <AppIcon
+                        color={isSelected ? colors.appPrimary : colors.muted}
+                        name="map"
+                        size={16}
+                      />
                       <View>
                         <Text style={[s.cityOptionName, isSelected && s.cityOptionNameActive]}>
                           {city.name}
                         </Text>
-                        <Text style={s.cityOptionLandmarks}>
-                          {city.landmarks.join(' • ')}
-                        </Text>
+                        <Text style={s.cityOptionLandmarks}>{city.landmarks.join(' • ')}</Text>
                       </View>
                     </View>
                     <View style={[s.cityCountPill, isSelected && s.cityCountPillActive]}>
                       <Text style={[s.cityCountText, isSelected && s.cityCountTextActive]}>
                         {(() => {
                           const cityNamePrefix = city.name.split(',')[0].toLowerCase();
-                          const count = rawListings.filter((r) => r.broadLocation?.toLowerCase().includes(cityNamePrefix)).length;
+                          const count = rawListings.filter((r) =>
+                            r.broadLocation?.toLowerCase().includes(cityNamePrefix),
+                          ).length;
                           return count > 0 ? `${count} active` : 'Active Hub';
                         })()}
                       </Text>
@@ -635,7 +772,11 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
       </Modal>
 
       {/* ─── RESPONSIVE FILTERS & SORTING MODAL (Bottom-up on Mobile, Centered on Web) ── */}
-      <Modal visible={isFilterModalVisible} transparent animationType={isDesktop ? 'fade' : 'slide'}>
+      <Modal
+        visible={isFilterModalVisible}
+        transparent
+        animationType={isDesktop ? 'fade' : 'slide'}
+      >
         <View style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}>
           <View style={[s.filterModalCard, !isDesktop && s.filterModalCardMobile]}>
             {!isDesktop ? <View style={s.bottomSheetHandle} /> : null}
@@ -649,7 +790,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               </Pressable>
             </View>
 
-            <ScrollView style={{ maxHeight: isDesktop ? 480 : 540 }} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={{ maxHeight: isDesktop ? 480 : 540 }}
+              showsVerticalScrollIndicator={false}
+            >
               {/* Sort Order Section */}
               <View style={s.filterSection}>
                 <Text style={s.filterSectionLabel}>Sort Listings By</Text>
@@ -662,7 +806,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                         onPress={() => setSortBy(opt.id)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
                       >
-                        <Text style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}>
+                        <Text
+                          style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}
+                        >
                           {opt.icon} {opt.label}
                         </Text>
                       </Pressable>
@@ -689,7 +835,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                         onPress={() => setFilterPriceMax(p.val)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
                       >
-                        <Text style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}>
+                        <Text
+                          style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}
+                        >
                           {p.label}
                         </Text>
                       </Pressable>
@@ -715,7 +863,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                         onPress={() => setFilterRoomType(t.val)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
                       >
-                        <Text style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}>
+                        <Text
+                          style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}
+                        >
                           {t.label}
                         </Text>
                       </Pressable>
@@ -743,7 +893,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                         onPress={() => toggleAmenityFilter(amenity.id)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
                       >
-                        <Text style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}>
+                        <Text
+                          style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}
+                        >
                           {amenity.label}
                         </Text>
                       </Pressable>
@@ -768,7 +920,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                         onPress={() => setFilterDiet(d.val)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
                       >
-                        <Text style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}>
+                        <Text
+                          style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}
+                        >
                           {d.label}
                         </Text>
                       </Pressable>
@@ -793,7 +947,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                         onPress={() => setFilterGender(g.val)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
                       >
-                        <Text style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}>
+                        <Text
+                          style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}
+                        >
                           {g.label}
                         </Text>
                       </Pressable>
@@ -803,10 +959,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               </View>
 
               {/* Verified Hosts Only Switch */}
-              <Pressable
-                onPress={() => setFilterVerifiedOnly((prev) => !prev)}
-                style={s.toggleRow}
-              >
+              <Pressable onPress={() => setFilterVerifiedOnly((prev) => !prev)} style={s.toggleRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.toggleLabel}>🛡️ Verified Hosts Only</Text>
                   <Text style={s.toggleSub}>Employer & ID verified Desi hosts</Text>
@@ -821,13 +974,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               <Pressable onPress={resetFilters} style={s.resetFilterBtn}>
                 <Text style={s.resetFilterBtnText}>Reset All</Text>
               </Pressable>
-              <Pressable
-                onPress={() => setIsFilterModalVisible(false)}
-                style={s.applyFilterBtn}
-              >
-                <Text style={s.applyFilterBtnText}>
-                  Show {filteredRooms.length} Rooms
-                </Text>
+              <Pressable onPress={() => setIsFilterModalVisible(false)} style={s.applyFilterBtn}>
+                <Text style={s.applyFilterBtnText}>Show {filteredRooms.length} Rooms</Text>
               </Pressable>
             </View>
           </View>
@@ -1471,13 +1619,49 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: colors.muted,
   },
+  floatingBath: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.teal,
+    marginLeft: 6,
+  },
   floatingCtaRow: {
-    marginTop: 2,
+    marginTop: 4,
+  },
+  floatingDetailsBtn: {
+    backgroundColor: 'rgba(67,30,190,0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    alignSelf: 'flex-start',
   },
   floatingDetailsLink: {
     fontSize: 12,
     fontWeight: '800',
     color: colors.appPrimary,
+  },
+  floatingToggleBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.appPrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    zIndex: 20,
+  },
+  floatingToggleBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
   },
   modalOverlay: {
     flex: 1,

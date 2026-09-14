@@ -50,6 +50,6 @@ public class Conversation {
     }
 
     public enum ConversationType {
-        DIRECT, GROUP
+        DIRECT, GROUP, ROOM_INQUIRY
     }
 }

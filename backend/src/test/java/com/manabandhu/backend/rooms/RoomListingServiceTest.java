@@ -30,6 +30,9 @@ class RoomListingServiceTest {
     @Mock
     RoomPreferenceRepository preferenceRepository;
 
+    @Mock
+    RoomAmenityCatalogRepository amenityCatalogRepository;
+
     @InjectMocks
     RoomListingService service;
 
@@ -148,5 +151,15 @@ class RoomListingServiceTest {
         var response = OwnerRoomListingResponse.from(listing, List.of("wifi"), List.of("quiet"));
         org.assertj.core.api.Assertions.assertThat(
                 response.toString().contains("123 Main St")).isTrue();
+    }
+
+    @Test
+    void getAmenitiesCatalogReturnsActiveItems() {
+        var amenity = new RoomAmenityCatalog("pure_veg", "Pure Veg", "cultural", "leaf", true, 1);
+        when(amenityCatalogRepository.findByIsActiveTrueOrderBySortOrderAsc()).thenReturn(List.of(amenity));
+        var list = service.getAmenitiesCatalog();
+        assertThat(list).hasSize(1);
+        assertThat(list.get(0).getCode()).isEqualTo("pure_veg");
+        assertThat(list.get(0).getLabel()).isEqualTo("Pure Veg");
     }
 }

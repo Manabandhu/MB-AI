@@ -25,7 +25,18 @@ public record RoomListingResponse(
         Instant updatedAt,
         List<String> amenities,
         List<String> preferences,
-        boolean savedByViewer) {
+        boolean savedByViewer,
+        String dietaryPreference,
+        String genderPreference,
+        String bathroomType,
+        Boolean utilitiesIncluded,
+        BigDecimal estUtilityMonthly,
+        BigDecimal securityDeposit,
+        String leaseTerm,
+        Boolean isVerifiedHost,
+        Boolean universityShuttleAccessible,
+        String stateCode,
+        String county) {
 
     public static RoomListingResponse from(RoomListing listing, List<String> amenities,
             List<String> preferences, boolean savedByViewer) {
@@ -44,6 +55,17 @@ public record RoomListingResponse(
                 listing.getUpdatedAt(),
                 amenities,
                 preferences,
-                savedByViewer);
+                savedByViewer,
+                listing.getDietaryPreference(),
+                listing.getGenderPreference(),
+                listing.getBathroomType(),
+                listing.getUtilitiesIncluded(),
+                listing.getEstUtilityMonthly(),
+                listing.getSecurityDeposit(),
+                listing.getLeaseTerm(),
+                listing.getIsVerifiedHost(),
+                listing.getUniversityShuttleAccessible(),
+                listing.getStateCode(),
+                listing.getCounty());
     }
 }

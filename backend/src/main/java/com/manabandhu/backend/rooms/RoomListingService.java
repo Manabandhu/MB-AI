@@ -1,5 +1,6 @@
 package com.manabandhu.backend.rooms;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,12 +20,26 @@ public class RoomListingService {
     private final RoomListingRepository repository;
     private final RoomAmenityRepository amenityRepository;
     private final RoomPreferenceRepository preferenceRepository;
+    private final RoomAmenityCatalogRepository amenityCatalogRepository;
 
-    RoomListingService(RoomListingRepository repository, RoomAmenityRepository amenityRepository,
-                       RoomPreferenceRepository preferenceRepository) {
+    public RoomListingService(RoomListingRepository repository, RoomAmenityRepository amenityRepository,
+                              RoomPreferenceRepository preferenceRepository,
+                              RoomAmenityCatalogRepository amenityCatalogRepository) {
         this.repository = repository;
         this.amenityRepository = amenityRepository;
         this.preferenceRepository = preferenceRepository;
+        this.amenityCatalogRepository = amenityCatalogRepository;
+    }
+
+    RoomListingService(RoomListingRepository repository, RoomAmenityRepository amenityRepository,
+                       RoomPreferenceRepository preferenceRepository) {
+        this(repository, amenityRepository, preferenceRepository, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RoomAmenityCatalog> getAmenitiesCatalog() {
+        if (amenityCatalogRepository == null) return List.of();
+        return amenityCatalogRepository.findByIsActiveTrueOrderBySortOrderAsc();
     }
 
     @Transactional(readOnly = true)
@@ -63,11 +78,36 @@ public class RoomListingService {
         return repository.findByStatusOrderByCreatedAtDesc("active", pageable);
     }
 
+    @Transactional(readOnly = true)
+    public Page<RoomListing> search(
+            String city,
+            String stateCode,
+            String dietaryPreference,
+            String genderPreference,
+            BigDecimal minRent,
+            BigDecimal maxRent,
+            String bathroomType,
+            Pageable pageable) {
+        return repository.searchListings("active", city, stateCode, dietaryPreference, genderPreference,
+                minRent, maxRent, bathroomType, pageable);
+    }
+
     @Transactional
     public RoomListing create(UUID ownerId, CreateRoomListingInput input) {
         var listing = new RoomListing(ownerId, input.title(), input.description(), input.price(),
                 input.roomType(), "draft", input.broadLocation(), input.exactAddress(),
                 input.latitude(), input.longitude());
+        if (input.dietaryPreference() != null) listing.setDietaryPreference(input.dietaryPreference());
+        if (input.genderPreference() != null) listing.setGenderPreference(input.genderPreference());
+        if (input.bathroomType() != null) listing.setBathroomType(input.bathroomType());
+        if (input.utilitiesIncluded() != null) listing.setUtilitiesIncluded(input.utilitiesIncluded());
+        if (input.estUtilityMonthly() != null) listing.setEstUtilityMonthly(input.estUtilityMonthly());
+        if (input.securityDeposit() != null) listing.setSecurityDeposit(input.securityDeposit());
+        if (input.leaseTerm() != null) listing.setLeaseTerm(input.leaseTerm());
+        if (input.isVerifiedHost() != null) listing.setIsVerifiedHost(input.isVerifiedHost());
+        if (input.universityShuttleAccessible() != null) listing.setUniversityShuttleAccessible(input.universityShuttleAccessible());
+        if (input.stateCode() != null) listing.setStateCode(input.stateCode());
+        if (input.county() != null) listing.setCounty(input.county());
         return repository.save(listing);
     }
 
@@ -77,11 +117,22 @@ public class RoomListingService {
         if (input.title() != null) listing.setTitle(input.title());
         if (input.description() != null) listing.setDescription(input.description());
         if (input.price() != null) listing.setPrice(input.price());
-        if (input.roomType() != null) listing.roomType = input.roomType();
-        if (input.broadLocation() != null) listing.broadLocation = input.broadLocation();
-        if (input.exactAddress() != null) listing.exactAddress = input.exactAddress();
+        if (input.roomType() != null) listing.setRoomType(input.roomType());
+        if (input.broadLocation() != null) listing.setBroadLocation(input.broadLocation());
+        if (input.exactAddress() != null) listing.setExactAddress(input.exactAddress());
         if (input.latitude() != null) listing.latitude = input.latitude();
         if (input.longitude() != null) listing.longitude = input.longitude();
+        if (input.dietaryPreference() != null) listing.setDietaryPreference(input.dietaryPreference());
+        if (input.genderPreference() != null) listing.setGenderPreference(input.genderPreference());
+        if (input.bathroomType() != null) listing.setBathroomType(input.bathroomType());
+        if (input.utilitiesIncluded() != null) listing.setUtilitiesIncluded(input.utilitiesIncluded());
+        if (input.estUtilityMonthly() != null) listing.setEstUtilityMonthly(input.estUtilityMonthly());
+        if (input.securityDeposit() != null) listing.setSecurityDeposit(input.securityDeposit());
+        if (input.leaseTerm() != null) listing.setLeaseTerm(input.leaseTerm());
+        if (input.isVerifiedHost() != null) listing.setIsVerifiedHost(input.isVerifiedHost());
+        if (input.universityShuttleAccessible() != null) listing.setUniversityShuttleAccessible(input.universityShuttleAccessible());
+        if (input.stateCode() != null) listing.setStateCode(input.stateCode());
+        if (input.county() != null) listing.setCounty(input.county());
         if (input.status() != null) {
             validateTransition(listing.getStatus(), input.status(), isAdmin);
             listing.setStatus(input.status());
