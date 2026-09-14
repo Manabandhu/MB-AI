@@ -41,3 +41,22 @@ export async function listMarketplaceCategories(): Promise<ListingCategory[]> {
   }
   return response.json();
 }
+
+export async function createMarketplaceListing(
+  input: import('./types').CreateListingInput,
+): Promise<MarketplaceListing> {
+  const response = await apiFetch('/api/v1/marketplace/listings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...input,
+      currency: input.currency ?? 'USD',
+      negotiable: input.negotiable ?? true,
+    }),
+  });
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Failed to create marketplace listing (${response.status}): ${errText}`);
+  }
+  return response.json();
+}

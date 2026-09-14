@@ -26,6 +26,16 @@ export type MarketplaceListing = {
   negotiable: boolean;
   status: string;
   createdAt: string;
-  updatedAt: string;
   images?: ListingImage[];
+};
+
+export type CreateListingInput = {
+  categoryId: string;
+  title: string;
+  description?: string;
+  price: number;
+  currency?: string;
+  condition?: string;
+  location?: string;
+  negotiable?: boolean;
 };

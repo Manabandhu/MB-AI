@@ -21,6 +21,11 @@ public class SafetyReportService {
     }
 
     @Transactional(readOnly = true)
+    public List<SafetyReport> findAllForAdmin() {
+        return repository.findAll();
+    }
+
+    @Transactional(readOnly = true)
     public java.util.Optional<SafetyReport> findById(UUID id) {
         return repository.findById(id);
     }

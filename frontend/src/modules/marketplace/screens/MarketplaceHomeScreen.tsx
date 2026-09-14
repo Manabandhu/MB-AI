@@ -17,21 +17,21 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { listMarketplaceListings, listMarketplaceCategories } from '../api';
 import type { MarketplaceListing } from '../types';
 
-// Palette tokens aligned with Stitch design system
+// Palette tokens aligned with ManaBandhu Modern Vibrant design system
 const C = {
-  primary: '#E05638', // Warm Saffron
-  secondary: '#0D5C75', // Deep Gulf Teal
-  bg: '#FFFDF9', // Soft warm ivory
-  cardBg: '#FFFFFF',
-  border: '#E8DEC8',
-  ink: '#151D21',
-  inkMuted: '#6B7280',
-  emerald: '#16A34A',
-  emeraldBg: '#DCFCE7',
-  saffronBg: '#FEE2E2',
-  tealBg: '#E0F2FE',
-  goldBg: '#FEF3C7',
-  goldText: '#B45309',
+  primary: '#431ebe', // Royal Indigo
+  secondary: '#00696b', // Deep Teal
+  bg: '#faf8ff', // Soft pristine canvas
+  cardBg: '#ffffff',
+  border: '#e2e8f0',
+  ink: '#131b2e',
+  inkMuted: '#625f6e',
+  emerald: '#1b873f',
+  emeraldBg: '#e6f7ed',
+  saffronBg: '#fff0e8',
+  tealBg: '#e6f4f4',
+  goldBg: '#fef3c7',
+  goldText: '#b45309',
 };
 
 export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) {

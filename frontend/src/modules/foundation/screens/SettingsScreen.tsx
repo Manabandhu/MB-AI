@@ -16,16 +16,16 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { useAuthStore } from '@/lib/authStore';
 
 const C = {
-  primary: '#E05638', // Warm Saffron
-  secondary: '#0D5C75', // Deep Gulf Teal
-  bg: '#FFFDF9', // Soft warm ivory
-  cardBg: '#FFFFFF',
-  border: '#E8DEC8',
-  ink: '#151D21',
-  inkMuted: '#6B7280',
-  tealBg: '#E0F2FE',
-  saffronBg: '#FEE2E2',
-  danger: '#EF4444',
+  primary: '#431ebe', // Royal Indigo
+  secondary: '#00696b', // Deep Teal
+  bg: '#faf8ff', // Soft pristine canvas
+  cardBg: '#ffffff',
+  border: '#e2e8f0',
+  ink: '#131b2e',
+  inkMuted: '#625f6e',
+  tealBg: '#e6f4f4',
+  saffronBg: '#fff0e8',
+  danger: '#ba1a1a',
 };
 
 export function SettingsScreen() {

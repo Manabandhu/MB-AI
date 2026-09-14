@@ -18,17 +18,17 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
 const C = {
-  primary: '#E05638',
-  secondary: '#0D5C75',
-  bg: '#FFFDF9',
-  cardBg: '#FFFFFF',
-  border: '#E8DEC8',
-  ink: '#151D21',
-  inkMuted: '#6B7280',
-  emerald: '#16A34A',
-  emeraldBg: '#DCFCE7',
-  tealBg: '#E0F2FE',
-  saffronBg: '#FEE2E2',
+  primary: '#431ebe',
+  secondary: '#00696b',
+  bg: '#faf8ff',
+  cardBg: '#ffffff',
+  border: '#e2e8f0',
+  ink: '#131b2e',
+  inkMuted: '#625f6e',
+  emerald: '#1b873f',
+  emeraldBg: '#e6f7ed',
+  tealBg: '#e6f4f4',
+  saffronBg: '#fff0e8',
 };
 
 function getCategoryIcon(title: string): { icon: AppIconName; bg: string; color: string } {
