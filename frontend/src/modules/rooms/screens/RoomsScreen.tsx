@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   BackHandler,
   Modal,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -195,6 +196,30 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     });
     return () => sub.remove();
   }, [isFilterModalVisible, isCityModalVisible, viewMode, screenId]);
+
+  const createDismissPanResponder = useCallback(
+    (onDismiss: () => void) =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dy > 30 || gestureState.vy > 0.3) {
+            onDismiss();
+          }
+        },
+      }),
+    [],
+  );
+
+  const citySheetPanResponder = useMemo(
+    () => createDismissPanResponder(() => setIsCityModalVisible(false)),
+    [createDismissPanResponder],
+  );
+
+  const filterSheetPanResponder = useMemo(
+    () => createDismissPanResponder(() => setIsFilterModalVisible(false)),
+    [createDismissPanResponder],
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [citySearchInput, setCitySearchInput] = useState('');
@@ -432,15 +457,6 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 <AppIcon color={colors.appPrimary} name="star" size={18} />
               </Pressable>
             </Link>
-            <Link href="/rooms/create-listing" asChild>
-              <Pressable
-                accessibilityLabel="Post a Room"
-                style={StyleSheet.flatten(s.postRoomBtnSmall)}
-              >
-                <AppIcon color="#fff" name="plus" size={16} />
-                <Text style={s.postRoomBtnSmallText}>Post Room</Text>
-              </Pressable>
-            </Link>
           </View>
         </View>
 
@@ -573,21 +589,6 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 onPolygonComplete={(poly) => setDrawnBoundary(poly)}
                 onClearPolygon={() => setDrawnBoundary(null)}
               />
-
-              {/* Floating List View button to switch back to /rooms/search (only on single-pane) */}
-              {!isDualPane && (
-                <Pressable
-                  onPress={() => {
-                    setViewMode('list');
-                    router.push('/rooms/search' as Href);
-                  }}
-                  style={s.floatingToggleBtn}
-                  accessibilityLabel="Switch to List View"
-                >
-                  <AppIcon color="#fff" name="compass" size={16} />
-                  <Text style={s.floatingToggleBtnText}>List View</Text>
-                </Pressable>
-              )}
 
               {/* Floating Selected Room Card at bottom of map */}
               {activePinRoom ? (
@@ -809,7 +810,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         return viewMode === 'map' ? renderMapView() : renderListView();
       })()}
 
-      {/* ─── Floating Action Button: Post Room ─────────────────────────────────── */}
+      {/* ─── Floating Action Button: Post a Room ──────────────────────────────── */}
       <Link href="/rooms/create-listing" asChild>
         <Pressable
           accessibilityLabel="Post a room"
@@ -817,12 +818,17 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           style={StyleSheet.flatten(s.fab)}
         >
           <AppIcon color="#fff" name="plus" size={20} />
-          <Text style={s.fabText}>Post Room</Text>
+          <Text style={s.fabText}>Post a Room</Text>
         </Pressable>
       </Link>
 
       {/* ─── City Selector Modal ──────────────────────────────────────────────── */}
-      <Modal visible={isCityModalVisible} transparent animationType={isDesktop ? 'fade' : 'slide'}>
+      <Modal
+        visible={isCityModalVisible}
+        transparent
+        animationType={isDesktop ? 'fade' : 'slide'}
+        onRequestClose={() => setIsCityModalVisible(false)}
+      >
         <Pressable
           onPress={() => setIsCityModalVisible(false)}
           style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}
@@ -831,12 +837,13 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             onPress={(e) => e.stopPropagation()}
             style={[s.cityModalCard, !isDesktop && s.cityModalCardMobile]}
           >
-            {!isDesktop ? <View style={s.bottomSheetHandle} /> : null}
+            {!isDesktop ? (
+              <View {...citySheetPanResponder.panHandlers} style={s.bottomSheetHandleArea}>
+                <View style={s.bottomSheetHandle} />
+              </View>
+            ) : null}
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>Choose Metro Area</Text>
-              <Pressable onPress={() => setIsCityModalVisible(false)} style={s.modalCloseBtn}>
-                <Text style={s.modalCloseText}>✕</Text>
-              </Pressable>
             </View>
             <Text style={s.modalSubtitle}>Discover verified flatmates & housing in your metro</Text>
 
@@ -967,18 +974,26 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         visible={isFilterModalVisible}
         transparent
         animationType={isDesktop ? 'fade' : 'slide'}
+        onRequestClose={() => setIsFilterModalVisible(false)}
       >
-        <View style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}>
-          <View style={[s.filterModalCard, !isDesktop && s.filterModalCardMobile]}>
-            {!isDesktop ? <View style={s.bottomSheetHandle} /> : null}
+        <Pressable
+          onPress={() => setIsFilterModalVisible(false)}
+          style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={[s.filterModalCard, !isDesktop && s.filterModalCardMobile]}
+          >
+            {!isDesktop ? (
+              <View {...filterSheetPanResponder.panHandlers} style={s.bottomSheetHandleArea}>
+                <View style={s.bottomSheetHandle} />
+              </View>
+            ) : null}
             <View style={s.modalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <AppIcon color={colors.appPrimary} name="wrench" size={18} />
                 <Text style={s.modalTitle}>Filters & Sorting</Text>
               </View>
-              <Pressable onPress={() => setIsFilterModalVisible(false)} style={s.modalCloseBtn}>
-                <Text style={s.modalCloseText}>✕</Text>
-              </Pressable>
             </View>
 
             <ScrollView
@@ -1169,8 +1184,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 <Text style={s.applyFilterBtnText}>Show {filteredRooms.length} Rooms</Text>
               </Pressable>
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
@@ -1681,7 +1696,8 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
-    elevation: 6,
+    elevation: 8,
+    zIndex: 99,
   },
   fabText: {
     color: '#fff',
@@ -1896,13 +1912,20 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
     padding: 0,
   },
+  bottomSheetHandleArea: {
+    width: '100%',
+    paddingTop: 8,
+    paddingBottom: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bottomSheetHandle: {
     width: 44,
     height: 5,
     borderRadius: 3,
     backgroundColor: '#d5dafc',
     alignSelf: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   cityModalCard: {
     backgroundColor: '#fff',

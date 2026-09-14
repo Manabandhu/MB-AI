@@ -26,7 +26,7 @@ Owns room discovery, search, map, filters, saved rooms, listings, listing creati
 
 ## Component Inventory
 
-- `RoomsScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` (react-native-maps Apple Maps on iOS, MapKit JS on web) for real interactive map view with freehand draw-to-filter boundary search (Zillow/Apartments style) and point-in-polygon filtering; includes all-US metro & city search via `searchAllUSCities`
+- `RoomsScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` (react-native-maps Apple Maps on iOS, MapKit JS on web) for real interactive map view with freehand draw-to-filter boundary search (Zillow/Apartments style) and point-in-polygon filtering; includes all-US metro & city search via `searchAllUSCities`; mobile features floating "+ Post a Room" action button (FAB), uncluttered map view without redundant floating toggles, and swipe-down / tap-outside dismissible bottom sheets for metro selection and filters
 - `RoomDetailScreen` - real listing detail with save/unsave and contact handoff
 - `RoomEditScreen` / `RoomCreateScreen` - real forms backed by `RoomForm` (react-hook-form + zod)
 - `RoomForm` - shared create/edit form with validation
