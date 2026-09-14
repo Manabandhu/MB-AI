@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import {
   Animated,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -84,12 +85,12 @@ export function SafetyCenterScreen() {
         Animated.timing(pulseAnim, {
           toValue: 1.25,
           duration: 800,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 800,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]),
     );
