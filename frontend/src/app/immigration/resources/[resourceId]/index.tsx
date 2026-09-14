@@ -5,4 +5,3 @@ export default function ResourceDetailRoute() {
   const { resourceId } = useLocalSearchParams<{ resourceId: string }>();
   return <ResourceDetailScreen resourceId={resourceId!} />;
 }
-

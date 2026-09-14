@@ -1,7 +1,7 @@
-import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Modal,
@@ -9,12 +9,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
   useWindowDimensions,
+  View,
 } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { getEvent } from '@/modules/events/api';
-import type { Event } from '@/modules/events/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
@@ -53,7 +52,12 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
   const [rsvpModalVisible, setRsvpModalVisible] = useState(false);
   const [hasRsvpd, setHasRsvpd] = useState(false);
 
-  const { data: event, isLoading, isError, refetch } = useQuery({
+  const {
+    data: event,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['events', resolvedEventId],
     queryFn: () => getEvent(resolvedEventId as string),
     enabled: !!resolvedEventId,
@@ -100,7 +104,9 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
       <View style={s.centerContainer}>
         <Text style={s.errorEmoji}>⚠️</Text>
         <Text style={s.errorTitle}>Event Not Found</Text>
-        <Text style={s.errorSubtitle}>This event might have concluded or the link has expired.</Text>
+        <Text style={s.errorSubtitle}>
+          This event might have concluded or the link has expired.
+        </Text>
         <Pressable onPress={() => router.back()} style={s.backBtn}>
           <Text style={s.backBtnText}>Back to Events</Text>
         </Pressable>
@@ -109,7 +115,8 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
   }
 
   const isDiwali = event.title.toLowerCase().includes('diwali');
-  const isTech = event.title.toLowerCase().includes('tech') || event.title.toLowerCase().includes('ai');
+  const isTech =
+    event.title.toLowerCase().includes('tech') || event.title.toLowerCase().includes('ai');
 
   const handleRsvp = () => {
     if (!session) {
@@ -157,7 +164,11 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
             <View style={s.badgeRow}>
               <View style={s.categoryPill}>
                 <Text style={s.categoryPillText}>
-                  {isDiwali ? '🎉 Mega Cultural Festival' : isTech ? '💼 Tech & AI Meetup' : '🏏 Community Meetup'}
+                  {isDiwali
+                    ? '🎉 Mega Cultural Festival'
+                    : isTech
+                      ? '💼 Tech & AI Meetup'
+                      : '🏏 Community Meetup'}
                 </Text>
               </View>
               <View style={s.capacityPill}>
@@ -204,7 +215,9 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
             </View>
             <View style={s.dateMeta}>
               <Text style={s.dateTitle}>{formatEventDate(event.startAt)}</Text>
-              <Text style={s.timeSubtitle}>{formatEventTime(event.startAt, event.endAt)} (Gates open 30m early)</Text>
+              <Text style={s.timeSubtitle}>
+                {formatEventTime(event.startAt, event.endAt)} (Gates open 30m early)
+              </Text>
             </View>
             <Pressable
               onPress={() => Alert.alert('Calendar Sync', 'Event added to your mobile calendar.')}
@@ -235,10 +248,7 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
               <Text style={s.directionsBtnText}>Get Directions 🗺️</Text>
             </Pressable>
 
-            <Pressable
-              onPress={() => router.push('/rides' as any)}
-              style={s.carpoolPromoBtn}
-            >
+            <Pressable onPress={() => router.push('/rides' as any)} style={s.carpoolPromoBtn}>
               <Text style={s.carpoolPromoText}>🚗 Carpool Rides Available</Text>
             </Pressable>
           </View>
@@ -390,14 +400,13 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
                 <View style={s.qrBox}>
                   <Text style={s.qrEmoji}>🏁 [QR: MB-{event.id.slice(0, 8).toUpperCase()}]</Text>
                 </View>
-                <Text style={s.qrInstructions}>Show this digital pass at the entrance gate for quick check-in.</Text>
+                <Text style={s.qrInstructions}>
+                  Show this digital pass at the entrance gate for quick check-in.
+                </Text>
               </View>
             </View>
 
-            <Pressable
-              onPress={() => setRsvpModalVisible(false)}
-              style={s.doneTicketBtn}
-            >
+            <Pressable onPress={() => setRsvpModalVisible(false)} style={s.doneTicketBtn}>
               <Text style={s.doneTicketBtnText}>Save Ticket & Close</Text>
             </Pressable>
           </View>

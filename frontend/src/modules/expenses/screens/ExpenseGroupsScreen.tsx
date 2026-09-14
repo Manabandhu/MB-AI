@@ -1,6 +1,6 @@
-import { color, space, typography } from '@manabandhu/design-system';
+import { space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { StyleSheet, useColorScheme, View } from 'react-native';
 import { apiFetch } from '@/lib/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';

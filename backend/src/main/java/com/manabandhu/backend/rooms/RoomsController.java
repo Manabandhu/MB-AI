@@ -14,7 +14,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +38,8 @@ import com.manabandhu.backend.chat.MessageService;
 @RestController
 @RequestMapping("/api/v1/rooms")
 public class RoomsController {
+
+    private static final Logger log = LoggerFactory.getLogger(RoomsController.class);
 
     private final RoomsContentService contentService;
     private final RoomListingService listingService;
@@ -459,5 +464,18 @@ public class RoomsController {
         return OwnerRoomListingResponse.from(listing,
                 listingService.amenitiesFor(listing.getId()),
                 listingService.preferencesFor(listing.getId()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleException(Exception ex) {
+        log.error("Rooms error: {}", ex.getMessage(), ex);
+        var status = HttpStatus.INTERNAL_SERVER_ERROR;
+        if (ex instanceof ResponseStatusException rse) {
+            status = HttpStatus.valueOf(rse.getStatusCode().value());
+        }
+        return ResponseEntity.status(status).body(Map.of(
+                "error", ex.getMessage() != null ? ex.getMessage() : "Unknown error",
+                "type", ex.getClass().getSimpleName()
+        ));
     }
 }

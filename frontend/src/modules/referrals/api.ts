@@ -86,15 +86,21 @@ export async function listPublicReferrals(): Promise<Referral[]> {
 
 export async function getReferralOffer(referralId: string): Promise<ReferralOfferDetails | null> {
   try {
-    return await parseJson(await apiFetch(`/api/v1/referrals/${encodeURIComponent(referralId)}/offer`));
+    return await parseJson(
+      await apiFetch(`/api/v1/referrals/${encodeURIComponent(referralId)}/offer`),
+    );
   } catch {
     return null;
   }
 }
 
-export async function getReferralRequest(referralId: string): Promise<ReferralRequestDetails | null> {
+export async function getReferralRequest(
+  referralId: string,
+): Promise<ReferralRequestDetails | null> {
   try {
-    return await parseJson(await apiFetch(`/api/v1/referrals/${encodeURIComponent(referralId)}/request`));
+    return await parseJson(
+      await apiFetch(`/api/v1/referrals/${encodeURIComponent(referralId)}/request`),
+    );
   } catch {
     return null;
   }

@@ -1,19 +1,16 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 import { getImmigrationScreen } from '@/modules/immigration/api';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { FeatureScreen } from '@/modules/shared/components/FeatureScreen';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { useAdaptiveLayout } from '@/platform/adaptive';
-
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 
 type ImmigrationScreenProps = {
   screenId: keyof typeof immigrationRoutes;
@@ -138,7 +135,12 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
             <View style={s.heroActions}>
               <Pressable
                 style={s.heroTrackBtn}
-                onPress={() => Alert.alert('Priority Date Tracking', 'You will receive push notifications when your priority date moves.')}
+                onPress={() =>
+                  Alert.alert(
+                    'Priority Date Tracking',
+                    'You will receive push notifications when your priority date moves.',
+                  )
+                }
               >
                 <AppIcon name="bell" size={16} color="#431ebe" />
                 <Text style={s.heroTrackBtnText}>Track Your Priority Date</Text>
@@ -153,13 +155,17 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
               style={[s.chip, activeTab === 'all' && s.chipActive]}
               onPress={() => setActiveTab('all')}
             >
-              <Text style={[s.chipText, activeTab === 'all' && s.chipTextActive]}>All Guides (32)</Text>
+              <Text style={[s.chipText, activeTab === 'all' && s.chipTextActive]}>
+                All Guides (32)
+              </Text>
             </Pressable>
             <Pressable
               style={[s.chip, activeTab === 'h1b' && s.chipActive]}
               onPress={() => setActiveTab('h1b')}
             >
-              <Text style={[s.chipText, activeTab === 'h1b' && s.chipTextActive]}>H-1B & Stamping</Text>
+              <Text style={[s.chipText, activeTab === 'h1b' && s.chipTextActive]}>
+                H-1B & Stamping
+              </Text>
             </Pressable>
             <Pressable
               style={[s.chip, activeTab === 'opt' && s.chipActive]}
@@ -171,13 +177,17 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
               style={[s.chip, activeTab === 'greencard' && s.chipActive]}
               onPress={() => setActiveTab('greencard')}
             >
-              <Text style={[s.chipText, activeTab === 'greencard' && s.chipTextActive]}>Green Card</Text>
+              <Text style={[s.chipText, activeTab === 'greencard' && s.chipTextActive]}>
+                Green Card
+              </Text>
             </Pressable>
             <Pressable
               style={[s.chip, activeTab === 'parents' && s.chipActive]}
               onPress={() => setActiveTab('parents')}
             >
-              <Text style={[s.chipText, activeTab === 'parents' && s.chipTextActive]}>B-1/B-2 Parents</Text>
+              <Text style={[s.chipText, activeTab === 'parents' && s.chipTextActive]}>
+                B-1/B-2 Parents
+              </Text>
             </Pressable>
           </ScrollView>
 
@@ -188,7 +198,9 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
               <View style={s.guideCard}>
                 <View style={s.guideTopRow}>
                   <View style={s.guideTagBlue}>
-                    <Text style={s.guideTagBlueText}>Checklist Included • Hyderabad/Chennai VAC</Text>
+                    <Text style={s.guideTagBlueText}>
+                      Checklist Included • Hyderabad/Chennai VAC
+                    </Text>
                   </View>
                   <Pressable onPress={() => toggleSave('guide-h1b')}>
                     <AppIcon
@@ -204,9 +216,15 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
                 </Text>
 
                 <View style={s.bulletsBox}>
-                  <Text style={s.bulletItem}>• 221(g) blue slip prevention & client letter formats</Text>
-                  <Text style={s.bulletItem}>• DS-160 photo specifications & fee receipt locking</Text>
-                  <Text style={s.bulletItem}>• Biometrics slot booking & document collection tips</Text>
+                  <Text style={s.bulletItem}>
+                    • 221(g) blue slip prevention & client letter formats
+                  </Text>
+                  <Text style={s.bulletItem}>
+                    • DS-160 photo specifications & fee receipt locking
+                  </Text>
+                  <Text style={s.bulletItem}>
+                    • Biometrics slot booking & document collection tips
+                  </Text>
                 </View>
 
                 <View style={s.guideFooter}>
@@ -242,9 +260,15 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
                 </Text>
 
                 <View style={s.bulletsBox}>
-                  <Text style={s.bulletItem}>• Form I-983 training plan sample packet & DSO approval window</Text>
-                  <Text style={s.bulletItem}>• Form I-765 online e-filing walkthrough with live screenshots</Text>
-                  <Text style={s.bulletItem}>• 180-day automatic work authorization grace period safeguards</Text>
+                  <Text style={s.bulletItem}>
+                    • Form I-983 training plan sample packet & DSO approval window
+                  </Text>
+                  <Text style={s.bulletItem}>
+                    • Form I-765 online e-filing walkthrough with live screenshots
+                  </Text>
+                  <Text style={s.bulletItem}>
+                    • 180-day automatic work authorization grace period safeguards
+                  </Text>
                 </View>
 
                 <View style={s.guideFooter}>
@@ -280,9 +304,15 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
                 </Text>
 
                 <View style={s.bulletsBox}>
-                  <Text style={s.bulletItem}>• Patriot America Plus vs INF Elite visitor insurance comparison</Text>
-                  <Text style={s.bulletItem}>• CBP port-of-entry questions & immigration counter tips</Text>
-                  <Text style={s.bulletItem}>• Form I-539 6-month stay extension filing checklist & affidavit</Text>
+                  <Text style={s.bulletItem}>
+                    • Patriot America Plus vs INF Elite visitor insurance comparison
+                  </Text>
+                  <Text style={s.bulletItem}>
+                    • CBP port-of-entry questions & immigration counter tips
+                  </Text>
+                  <Text style={s.bulletItem}>
+                    • Form I-539 6-month stay extension filing checklist & affidavit
+                  </Text>
                 </View>
 
                 <View style={s.guideFooter}>
@@ -308,7 +338,8 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
 
             <Text style={s.attorneyTitle}>Need Personalized Legal Advice?</Text>
             <Text style={s.attorneyBody}>
-              Connect with vetted Indian-origin immigration attorneys for H-1B RFE responses, I-140 NIW evaluations, and Green Card filings.
+              Connect with vetted Indian-origin immigration attorneys for H-1B RFE responses, I-140
+              NIW evaluations, and Green Card filings.
             </Text>
 
             <View style={s.attorneyProfileRow}>
@@ -323,7 +354,12 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
 
             <Pressable
               style={s.attorneyBookBtn}
-              onPress={() => Alert.alert('Attorney Consultation', 'Intro call request forwarded to Attorney Rajesh Sharma. Office will contact you within 24 hours.')}
+              onPress={() =>
+                Alert.alert(
+                  'Attorney Consultation',
+                  'Intro call request forwarded to Attorney Rajesh Sharma. Office will contact you within 24 hours.',
+                )
+              }
             >
               <Text style={s.attorneyBookBtnText}>Book Free 15-Min Intro Call</Text>
             </Pressable>
@@ -331,7 +367,11 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
 
           {/* Bottom Nav Links */}
           <View style={s.footerLinks}>
-            <AppButton label="Browse All 32 Guides" route="/immigration/resources" variant="secondary" />
+            <AppButton
+              label="Browse All 32 Guides"
+              route="/immigration/resources"
+              variant="secondary"
+            />
           </View>
         </View>
       </ScrollView>
@@ -350,10 +390,34 @@ const DEFAULT_IMMIGRATION_DATA: Record<string, CatalogScreenContent> = {
       { label: 'Attorneys', value: '18' },
     ],
     items: [
-      { id: 'resources', title: 'Resources', body: 'Browse all guides and official references.', meta: 'Library', route: '/immigration/resources' },
-      { id: 'guides', title: 'Step-by-step Guides', body: 'H-1B, OPT, and green card walk-throughs.', meta: 'Guides', route: '/immigration/guides' },
-      { id: 'checklists', title: 'Checklists', body: 'Document checklists for visa interviews.', meta: 'Tools', route: '/immigration/checklists' },
-      { id: 'faq', title: 'Community FAQ', body: 'Frequently asked questions answered by experts.', meta: 'Answers', route: '/immigration/faq' },
+      {
+        id: 'resources',
+        title: 'Resources',
+        body: 'Browse all guides and official references.',
+        meta: 'Library',
+        route: '/immigration/resources',
+      },
+      {
+        id: 'guides',
+        title: 'Step-by-step Guides',
+        body: 'H-1B, OPT, and green card walk-throughs.',
+        meta: 'Guides',
+        route: '/immigration/guides',
+      },
+      {
+        id: 'checklists',
+        title: 'Checklists',
+        body: 'Document checklists for visa interviews.',
+        meta: 'Tools',
+        route: '/immigration/checklists',
+      },
+      {
+        id: 'faq',
+        title: 'Community FAQ',
+        body: 'Frequently asked questions answered by experts.',
+        meta: 'Answers',
+        route: '/immigration/faq',
+      },
     ],
   },
   resources: {

@@ -48,7 +48,10 @@ export default function EventsSearchScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title="Search Events" subtitle="Discover upcoming community events and gatherings" />
+          <SectionHeader
+            title="Search Events"
+            subtitle="Discover upcoming community events and gatherings"
+          />
           <SearchBar
             value={query}
             onChangeText={setQuery}

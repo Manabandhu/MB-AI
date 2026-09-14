@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -58,7 +58,7 @@ export function AddExpenseScreen() {
       return;
     }
     const num = parseFloat(amount);
-    if (isNaN(num) || num <= 0) {
+    if (Number.isNaN(num) || num <= 0) {
       setError('Please enter a valid expense amount greater than $0.');
       return;
     }
@@ -75,7 +75,8 @@ export function AddExpenseScreen() {
           </View>
           <Text style={s.successTitle}>Expense Recorded!</Text>
           <Text style={s.successBody}>
-            ${parseFloat(amount).toFixed(2)} for "{title}" has been split and added to your group balance.
+            ${parseFloat(amount).toFixed(2)} for "{title}" has been split and added to your group
+            balance.
           </Text>
           <View style={s.successCard}>
             <View style={s.successRow}>
@@ -113,7 +114,10 @@ export function AddExpenseScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}>
+        <ScrollView
+          contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header */}
           <View style={s.headerRow}>
             <Pressable
@@ -121,6 +125,7 @@ export function AddExpenseScreen() {
               accessibilityLabel="Go back"
               onPress={() => router.back()}
               style={s.backBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <AppIcon color={C.ink} name="chevron-left" size={20} />
             </Pressable>
@@ -172,7 +177,11 @@ export function AddExpenseScreen() {
             {/* Category Chips */}
             <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>CATEGORY</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.chipsRow}
+              >
                 {CATEGORIES.map((cat) => {
                   const active = selectedCategory === cat;
                   return (
@@ -181,7 +190,9 @@ export function AddExpenseScreen() {
                       onPress={() => setSelectedCategory(cat)}
                       style={[s.categoryChip, active && s.categoryChipActive]}
                     >
-                      <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>{cat}</Text>
+                      <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>
+                        {cat}
+                      </Text>
                     </Pressable>
                   );
                 })}
@@ -196,7 +207,12 @@ export function AddExpenseScreen() {
                   onPress={() => setSplitMethod('equal')}
                   style={[s.splitOption, splitMethod === 'equal' && s.splitOptionActive]}
                 >
-                  <Text style={[s.splitOptionTitle, splitMethod === 'equal' && s.splitOptionTitleActive]}>
+                  <Text
+                    style={[
+                      s.splitOptionTitle,
+                      splitMethod === 'equal' && s.splitOptionTitleActive,
+                    ]}
+                  >
                     Split 50 / 50
                   </Text>
                   <Text style={s.splitOptionSub}>Equally between all flatmates</Text>
@@ -205,7 +221,12 @@ export function AddExpenseScreen() {
                   onPress={() => setSplitMethod('you_paid')}
                   style={[s.splitOption, splitMethod === 'you_paid' && s.splitOptionActive]}
                 >
-                  <Text style={[s.splitOptionTitle, splitMethod === 'you_paid' && s.splitOptionTitleActive]}>
+                  <Text
+                    style={[
+                      s.splitOptionTitle,
+                      splitMethod === 'you_paid' && s.splitOptionTitleActive,
+                    ]}
+                  >
                     You Paid Entirely
                   </Text>
                   <Text style={s.splitOptionSub}>Others owe you full amount</Text>

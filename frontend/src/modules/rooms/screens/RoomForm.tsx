@@ -76,7 +76,7 @@ const roomFormSchema = z.object({
   broadLocation: z.string().min(1, 'Location / Neighborhood is required').max(200),
   exactAddress: z.string().max(4000).optional(),
   zipCode: z.string().max(10).optional(),
-  stateCode: z.string().max(10).optional(),
+  stateCode: z.string().max(50).optional(),
   county: z.string().max(100).optional(),
   latitude: z.string().optional(),
   longitude: z.string().optional(),

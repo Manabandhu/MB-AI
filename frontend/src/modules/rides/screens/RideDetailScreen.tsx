@@ -161,6 +161,7 @@ export function RideDetailScreen() {
       setBookingSuccess(true);
       queryClient.invalidateQueries({ queryKey: ['rides', 'detail', rideId] });
       queryClient.invalidateQueries({ queryKey: ['rides', 'offers'] });
+      queryClient.invalidateQueries({ queryKey: ['rides', 'saved'] });
     },
   });
 

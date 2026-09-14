@@ -1,7 +1,7 @@
-import { color as baseColors, radius, typography } from '@manabandhu/design-system';
+import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -9,12 +9,11 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
   useWindowDimensions,
+  View,
 } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { listJobPostings } from '@/modules/jobs/api';
-import type { JobPosting } from '@/modules/jobs/types';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
@@ -35,7 +34,6 @@ const sp = {
   xl: 24,
   xxl: 32,
 };
-
 
 type FilterState = {
   keyword: string;
@@ -82,7 +80,11 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
 
   // Fetch live jobs from Supabase via Spring Boot API
-  const { data: rawJobs = [], isLoading, refetch } = useQuery({
+  const {
+    data: rawJobs = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['jobs', 'list'],
     queryFn: () => listJobPostings(0, 50),
     staleTime: 1000 * 60 * 2,
@@ -98,51 +100,54 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
   };
 
   const filteredJobs = useMemo(() => {
-    return rawJobs.filter((job) => {
-      if (filters.keyword.trim()) {
-        const q = filters.keyword.toLowerCase();
-        const matchTitle = job.title.toLowerCase().includes(q);
-        const matchCompany = (job.company || '').toLowerCase().includes(q);
-        const matchDesc = (job.description || '').toLowerCase().includes(q);
-        if (!matchTitle && !matchCompany && !matchDesc) return false;
-      }
+    return rawJobs
+      .filter((job) => {
+        if (filters.keyword.trim()) {
+          const q = filters.keyword.toLowerCase();
+          const matchTitle = job.title.toLowerCase().includes(q);
+          const matchCompany = (job.company || '').toLowerCase().includes(q);
+          const matchDesc = (job.description || '').toLowerCase().includes(q);
+          if (!matchTitle && !matchCompany && !matchDesc) return false;
+        }
 
-      if (filters.location.trim()) {
-        const loc = filters.location.toLowerCase();
-        if (!(job.location || '').toLowerCase().includes(loc)) return false;
-      }
+        if (filters.location.trim()) {
+          const loc = filters.location.toLowerCase();
+          if (!(job.location || '').toLowerCase().includes(loc)) return false;
+        }
 
-      if (filters.selectedTag === 'h1b') {
-        const text = `${job.title} ${job.description} ${job.company}`.toLowerCase();
-        if (!text.includes('h-1b') && !text.includes('h1b')) return false;
-      } else if (filters.selectedTag === 'opt') {
-        const text = `${job.title} ${job.description}`.toLowerCase();
-        if (!text.includes('opt') && !text.includes('stem')) return false;
-      } else if (filters.selectedTag === 'remote') {
-        if (!job.isRemote && !(job.location || '').toLowerCase().includes('remote')) return false;
-      } else if (filters.selectedTag === 'staff') {
-        const text = job.title.toLowerCase();
-        if (!text.includes('staff') && !text.includes('lead') && !text.includes('principal')) return false;
-      } else if (filters.selectedTag === 'austin') {
-        if (!(job.location || '').toLowerCase().includes('austin')) return false;
-      }
+        if (filters.selectedTag === 'h1b') {
+          const text = `${job.title} ${job.description} ${job.company}`.toLowerCase();
+          if (!text.includes('h-1b') && !text.includes('h1b')) return false;
+        } else if (filters.selectedTag === 'opt') {
+          const text = `${job.title} ${job.description}`.toLowerCase();
+          if (!text.includes('opt') && !text.includes('stem')) return false;
+        } else if (filters.selectedTag === 'remote') {
+          if (!job.isRemote && !(job.location || '').toLowerCase().includes('remote')) return false;
+        } else if (filters.selectedTag === 'staff') {
+          const text = job.title.toLowerCase();
+          if (!text.includes('staff') && !text.includes('lead') && !text.includes('principal'))
+            return false;
+        } else if (filters.selectedTag === 'austin') {
+          if (!(job.location || '').toLowerCase().includes('austin')) return false;
+        }
 
-      if (filters.minSalary > 0) {
-        if ((job.salaryMin || 0) < filters.minSalary) return false;
-      }
+        if (filters.minSalary > 0) {
+          if ((job.salaryMin || 0) < filters.minSalary) return false;
+        }
 
-      if (filters.workModel === 'remote' && !job.isRemote) return false;
+        if (filters.workModel === 'remote' && !job.isRemote) return false;
 
-      return true;
-    }).sort((a, b) => {
-      if (filters.sortBy === 'salary_high') {
-        return (b.salaryMax || b.salaryMin || 0) - (a.salaryMax || a.salaryMin || 0);
-      }
-      if (filters.sortBy === 'salary_low') {
-        return (a.salaryMin || 0) - (b.salaryMin || 0);
-      }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+        return true;
+      })
+      .sort((a, b) => {
+        if (filters.sortBy === 'salary_high') {
+          return (b.salaryMax || b.salaryMin || 0) - (a.salaryMax || a.salaryMin || 0);
+        }
+        if (filters.sortBy === 'salary_low') {
+          return (a.salaryMin || 0) - (b.salaryMin || 0);
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
   }, [rawJobs, filters]);
 
   const formatSalary = (min?: number, max?: number) => {
@@ -151,7 +156,6 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
     if (min) return `From $${Math.round(min / 1000)}k / yr`;
     return `Up to $${Math.round((max ?? 0) / 1000)}k / yr`;
   };
-
 
   return (
     <View style={s.container}>
@@ -173,7 +177,9 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
               style={s.citySelectorPill}
               accessibilityRole="button"
             >
-              <Text style={s.citySelectorText}>📍 {selectedCity} · {filteredJobs.length} Verified Roles</Text>
+              <Text style={s.citySelectorText}>
+                📍 {selectedCity} · {filteredJobs.length} Verified Roles
+              </Text>
               <AppIcon name="chevron-down" size={14} color={colors.inkSecondary} />
             </Pressable>
           </View>
@@ -232,10 +238,7 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
               />
             </View>
 
-            <Pressable
-              onPress={() => setFilterModalVisible(true)}
-              style={s.filterTriggerBtn}
-            >
+            <Pressable onPress={() => setFilterModalVisible(true)} style={s.filterTriggerBtn}>
               <Text style={s.filterTriggerIcon}>⚙️</Text>
               <Text style={s.filterTriggerText}>Filters</Text>
             </Pressable>
@@ -266,9 +269,7 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                 onPress={() => setFilters((prev) => ({ ...prev, selectedTag: tag.id }))}
                 style={[s.chipPill, isSelected && s.chipPillActive]}
               >
-                <Text style={[s.chipText, isSelected && s.chipTextActive]}>
-                  {tag.label}
-                </Text>
+                <Text style={[s.chipText, isSelected && s.chipTextActive]}>{tag.label}</Text>
               </Pressable>
             );
           })}
@@ -282,7 +283,8 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
           <View style={s.trustContent}>
             <Text style={s.trustTitle}>Direct Community Jobs & Employee Referrals</Text>
             <Text style={s.trustSubtitle}>
-              100% Verified Corporate Work Emails (@google, @apple, @stripe) · Transparent Compensation · Zero Brokerage or Middleman Fees
+              100% Verified Corporate Work Emails (@google, @apple, @stripe) · Transparent
+              Compensation · Zero Brokerage or Middleman Fees
             </Text>
           </View>
         </View>
@@ -303,11 +305,10 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
           <View style={s.emptyStateBox}>
             <Text style={s.emptyStateEmoji}>🔍</Text>
             <Text style={s.emptyStateTitle}>No jobs match your filter</Text>
-            <Text style={s.emptyStateSubtitle}>Try clearing search filters or search for another technology stack.</Text>
-            <Pressable
-              onPress={() => setFilters(INITIAL_FILTERS)}
-              style={s.resetButton}
-            >
+            <Text style={s.emptyStateSubtitle}>
+              Try clearing search filters or search for another technology stack.
+            </Text>
+            <Pressable onPress={() => setFilters(INITIAL_FILTERS)} style={s.resetButton}>
               <Text style={s.resetButtonText}>Reset Filters</Text>
             </Pressable>
           </View>
@@ -382,9 +383,7 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                   <View style={s.referrerBox}>
                     <Text style={s.referrerEmoji}>🤝</Text>
                     <View style={s.referrerContent}>
-                      <Text style={s.referrerTitle}>
-                        Internal Referral Support Available
-                      </Text>
+                      <Text style={s.referrerTitle}>Internal Referral Support Available</Text>
                       <Text style={s.referrerSubtitle}>
                         Direct employee referral and introduction via ManaBandhu members
                       </Text>
@@ -449,7 +448,12 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                     onPress={() => setFilters((p) => ({ ...p, visaAuth: opt.id as any }))}
                     style={[s.filterChip, filters.visaAuth === opt.id && s.filterChipActive]}
                   >
-                    <Text style={[s.filterChipText, filters.visaAuth === opt.id && s.filterChipTextActive]}>
+                    <Text
+                      style={[
+                        s.filterChipText,
+                        filters.visaAuth === opt.id && s.filterChipTextActive,
+                      ]}
+                    >
                       {opt.label}
                     </Text>
                   </Pressable>
@@ -469,7 +473,12 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                     onPress={() => setFilters((p) => ({ ...p, workModel: opt.id as any }))}
                     style={[s.filterChip, filters.workModel === opt.id && s.filterChipActive]}
                   >
-                    <Text style={[s.filterChipText, filters.workModel === opt.id && s.filterChipTextActive]}>
+                    <Text
+                      style={[
+                        s.filterChipText,
+                        filters.workModel === opt.id && s.filterChipTextActive,
+                      ]}
+                    >
                       {opt.label}
                     </Text>
                   </Pressable>
@@ -490,7 +499,12 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                     onPress={() => setFilters((p) => ({ ...p, minSalary: sal.value }))}
                     style={[s.filterChip, filters.minSalary === sal.value && s.filterChipActive]}
                   >
-                    <Text style={[s.filterChipText, filters.minSalary === sal.value && s.filterChipTextActive]}>
+                    <Text
+                      style={[
+                        s.filterChipText,
+                        filters.minSalary === sal.value && s.filterChipTextActive,
+                      ]}
+                    >
                       {sal.label}
                     </Text>
                   </Pressable>
@@ -510,7 +524,12 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                     onPress={() => setFilters((p) => ({ ...p, sortBy: sOpt.id as any }))}
                     style={[s.filterChip, filters.sortBy === sOpt.id && s.filterChipActive]}
                   >
-                    <Text style={[s.filterChipText, filters.sortBy === sOpt.id && s.filterChipTextActive]}>
+                    <Text
+                      style={[
+                        s.filterChipText,
+                        filters.sortBy === sOpt.id && s.filterChipTextActive,
+                      ]}
+                    >
                       {sOpt.label}
                     </Text>
                   </Pressable>
@@ -519,16 +538,10 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
             </ScrollView>
 
             <View style={s.modalFooter}>
-              <Pressable
-                onPress={() => setFilters(INITIAL_FILTERS)}
-                style={s.modalResetBtn}
-              >
+              <Pressable onPress={() => setFilters(INITIAL_FILTERS)} style={s.modalResetBtn}>
                 <Text style={s.modalResetText}>Reset All</Text>
               </Pressable>
-              <Pressable
-                onPress={() => setFilterModalVisible(false)}
-                style={s.modalApplyBtn}
-              >
+              <Pressable onPress={() => setFilterModalVisible(false)} style={s.modalApplyBtn}>
                 <Text style={s.modalApplyText}>Show {filteredJobs.length} Roles</Text>
               </Pressable>
             </View>
@@ -1248,4 +1261,3 @@ const s = StyleSheet.create({
 });
 
 export { JobsHomeScreen as JobsScreen };
-

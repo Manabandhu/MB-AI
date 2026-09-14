@@ -7,4 +7,3 @@ export default function GroupDetailsRoute() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   return <GroupDetailsScreen groupId={groupId!} />;
 }
-

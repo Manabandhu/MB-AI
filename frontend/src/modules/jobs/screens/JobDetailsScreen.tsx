@@ -1,7 +1,7 @@
-import { color as baseColors, radius, typography } from '@manabandhu/design-system';
+import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Modal,
@@ -10,12 +10,11 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
   useWindowDimensions,
+  View,
 } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { getJobPosting } from '@/modules/jobs/api';
-import type { JobPosting } from '@/modules/jobs/types';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
@@ -51,12 +50,16 @@ export function JobDetailsScreen() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Load job details from live Spring / Supabase API
-  const { data: job, isLoading, error, refetch } = useQuery({
+  const {
+    data: job,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['jobs', 'detail', jobId],
     queryFn: () => getJobPosting(jobId as string),
     enabled: Boolean(jobId),
   });
-
 
   const formatSalary = (min?: number, max?: number) => {
     if (!min && !max) return '$160,000 - $220,000 / yr + RSUs';
@@ -78,7 +81,9 @@ export function JobDetailsScreen() {
       <View style={s.centerContainer}>
         <Text style={s.errorEmoji}>⚠️</Text>
         <Text style={s.errorTitle}>Job Not Found</Text>
-        <Text style={s.errorSubtitle}>This position may have been filled or the link has expired.</Text>
+        <Text style={s.errorSubtitle}>
+          This position may have been filled or the link has expired.
+        </Text>
         <Pressable onPress={() => router.back()} style={s.backNavBtn}>
           <Text style={s.backNavBtnText}>Back to Jobs</Text>
         </Pressable>
@@ -104,7 +109,7 @@ export function JobDetailsScreen() {
       setIsSubmitted(false);
       Alert.alert(
         'Referral Request Sent!',
-        `Your request and resume have been submitted for ${job.title} at ${job.company || 'the hiring company'}.`
+        `Your request and resume have been submitted for ${job.title} at ${job.company || 'the hiring company'}.`,
       );
     }, 1200);
   };
@@ -113,11 +118,7 @@ export function JobDetailsScreen() {
     <View style={s.container}>
       {/* Top App Bar */}
       <View style={s.topBar}>
-        <Pressable
-          onPress={() => router.back()}
-          style={s.iconButton}
-          accessibilityLabel="Back"
-        >
+        <Pressable onPress={() => router.back()} style={s.iconButton} accessibilityLabel="Back">
           <AppIcon name="chevron-left" size={20} color={colors.ink} />
         </Pressable>
 
@@ -210,7 +211,9 @@ export function JobDetailsScreen() {
               <Text style={s.referrerAvatarEmoji}>🤝</Text>
             </View>
             <View style={s.referrerProfileMeta}>
-              <Text style={s.referrerName}>{job.company ? `${job.company} Employee Network` : 'Verified Employee Network'}</Text>
+              <Text style={s.referrerName}>
+                {job.company ? `${job.company} Employee Network` : 'Verified Employee Network'}
+              </Text>
               <Text style={s.referrerRole}>ManaBandhu Referral Community</Text>
               <Text style={s.emailTag}>🛡️ Verified Corporate Email Match</Text>
             </View>
@@ -218,7 +221,9 @@ export function JobDetailsScreen() {
 
           <View style={s.quoteBox}>
             <Text style={s.quoteText}>
-              “Request an internal employee referral directly through the ManaBandhu network. Verified alumni and team members review profiles and submit candidates directly to internal hiring pipelines.”
+              “Request an internal employee referral directly through the ManaBandhu network.
+              Verified alumni and team members review profiles and submit candidates directly to
+              internal hiring pipelines.”
             </Text>
           </View>
 
@@ -302,9 +307,21 @@ export function JobDetailsScreen() {
               { icon: '🏥', title: 'Comprehensive Health', desc: '100% medical, dental, & vision' },
               { icon: '📈', title: '401(k) Match', desc: '50% employer match on contributions' },
               { icon: '🌴', title: 'Flexible PTO', desc: 'Generous vacation & parental leave' },
-              { icon: '⚖️', title: 'Immigration Legal', desc: 'Full H-1B transfer & PERM legal support' },
-              { icon: '🧘', title: 'Wellness Stipend', desc: '$2,000 annual health & fitness stipend' },
-              { icon: '🚌', title: 'Austin Shuttle Pass', desc: 'Free campus commuter shuttle & EV perks' },
+              {
+                icon: '⚖️',
+                title: 'Immigration Legal',
+                desc: 'Full H-1B transfer & PERM legal support',
+              },
+              {
+                icon: '🧘',
+                title: 'Wellness Stipend',
+                desc: '$2,000 annual health & fitness stipend',
+              },
+              {
+                icon: '🚌',
+                title: 'Austin Shuttle Pass',
+                desc: 'Free campus commuter shuttle & EV perks',
+              },
             ].map((b) => (
               <View key={b.title} style={s.benefitCard}>
                 <Text style={s.benefitIcon}>{b.icon}</Text>
@@ -321,7 +338,8 @@ export function JobDetailsScreen() {
           <View style={s.guaranteeContent}>
             <Text style={s.guaranteeTitle}>100% Free Community Referral</Text>
             <Text style={s.guaranteeSubtitle}>
-              No recruiter commissions, no placement fees, and no middleman cuts. Direct peer-to-peer Indian tech network support powered by ManaBandhu Trust Protocol.
+              No recruiter commissions, no placement fees, and no middleman cuts. Direct
+              peer-to-peer Indian tech network support powered by ManaBandhu Trust Protocol.
             </Text>
           </View>
         </View>
@@ -375,7 +393,8 @@ export function JobDetailsScreen() {
 
             <ScrollView style={s.modalBody} showsVerticalScrollIndicator={false}>
               <Text style={s.modalNote}>
-                A verified member from {job.company || 'the hiring company'} will review your profile and submit your referral through the internal company portal.
+                A verified member from {job.company || 'the hiring company'} will review your
+                profile and submit your referral through the internal company portal.
               </Text>
 
               <Text style={s.formLabel}>LinkedIn Profile or Resume Link *</Text>
@@ -401,22 +420,24 @@ export function JobDetailsScreen() {
               <View style={s.modalTrustReminder}>
                 <Text style={s.reminderEmoji}>⚡</Text>
                 <Text style={s.reminderText}>
-                  Referral requests are shared directly with verified employees at {job.company || 'the organization'}. You will be notified in your ManaBandhu inbox once reviewed.
+                  Referral requests are shared directly with verified employees at{' '}
+                  {job.company || 'the organization'}. You will be notified in your ManaBandhu inbox
+                  once reviewed.
                 </Text>
               </View>
             </ScrollView>
 
             <View style={s.modalFooter}>
-              <Pressable
-                onPress={() => setReferralModalVisible(false)}
-                style={s.modalCancelBtn}
-              >
+              <Pressable onPress={() => setReferralModalVisible(false)} style={s.modalCancelBtn}>
                 <Text style={s.modalCancelText}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={handleConfirmReferral}
                 disabled={isSubmitted || !resumeUrl.trim()}
-                style={[s.modalSubmitBtn, (!resumeUrl.trim() || isSubmitted) && s.modalSubmitBtnDisabled]}
+                style={[
+                  s.modalSubmitBtn,
+                  (!resumeUrl.trim() || isSubmitted) && s.modalSubmitBtnDisabled,
+                ]}
               >
                 <Text style={s.modalSubmitText}>
                   {isSubmitted ? 'Submitting...' : 'Submit Referral Request'}

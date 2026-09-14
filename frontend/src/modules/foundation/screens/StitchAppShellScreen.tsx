@@ -25,7 +25,6 @@ import {
 } from '@/modules/foundation/homeApi';
 import {
   ALL_APP_MODULES,
-  type ModuleItem,
   useDynamicModules,
   useUserActivityStore,
 } from '@/modules/foundation/userActivityStore';
@@ -87,7 +86,9 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
       {/* Sticky header */}
       <View style={[s.header, isDesktop && s.headerDesktop]}>
         <View style={s.headerLeft}>
-          <View style={s.logoMark}><Text style={s.logoText}>M</Text></View>
+          <View style={s.logoMark}>
+            <Text style={s.logoText}>M</Text>
+          </View>
           {isDesktop ? <Text style={s.brandName}>ManaBandhu</Text> : null}
         </View>
 
@@ -142,11 +143,15 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
           contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
           showsVerticalScrollIndicator={false}
         >
-          {kind === 'home' && <HomeShell data={data} displayName={displayName} isDesktop={isDesktop} />}
+          {kind === 'home' && (
+            <HomeShell data={data} displayName={displayName} isDesktop={isDesktop} />
+          )}
           {kind === 'explore' && <ExploreShell data={data} isDesktop={isDesktop} />}
           {kind === 'chat' && <ChatShell data={data} isDesktop={isDesktop} />}
           {kind === 'community' && <CommunityShell data={data} isDesktop={isDesktop} />}
-          {kind === 'profile' && <ProfileShell data={data} displayName={displayName} isDesktop={isDesktop} />}
+          {kind === 'profile' && (
+            <ProfileShell data={data} displayName={displayName} isDesktop={isDesktop} />
+          )}
         </ScrollView>
       )}
 
@@ -157,9 +162,17 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
             const active = tab.key === kind;
             return (
               <Link key={tab.key} href={tab.route as Href} asChild>
-                <Pressable style={s.tab} accessibilityRole="tab" accessibilityState={{ selected: active }}>
+                <Pressable
+                  style={s.tab}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                >
                   {active ? <View style={s.tabPill} /> : null}
-                  <AppIcon color={active ? colors.appPrimary : colors.muted} name={tab.icon} size={22} />
+                  <AppIcon
+                    color={active ? colors.appPrimary : colors.muted}
+                    name={tab.icon}
+                    size={22}
+                  />
                   <Text style={[s.tabLabel, active && s.tabLabelActive]}>{tab.label}</Text>
                 </Pressable>
               </Link>
@@ -172,19 +185,45 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
 }
 
 // ─── Quick actions data ───────────────────────────────────────────────────────
-const quickActions: { icon: AppIconName; label: string; route: string; bg: string; iconColor: string }[] = [
+const _quickActions: {
+  icon: AppIconName;
+  label: string;
+  route: string;
+  bg: string;
+  iconColor: string;
+}[] = [
   { icon: 'home', label: 'Rooms', route: '/rooms', bg: '#e8e4fb', iconColor: '#431ebe' },
   { icon: 'car', label: 'Rides', route: '/rides', bg: '#d9f5f5', iconColor: '#00696b' },
   { icon: 'briefcase', label: 'Jobs', route: '/jobs', bg: '#fff0e6', iconColor: '#ff7e33' },
-  { icon: 'community', label: 'Community', route: '/community', bg: '#fce8f3', iconColor: '#b5198d' },
+  {
+    icon: 'community',
+    label: 'Community',
+    route: '/community',
+    bg: '#fce8f3',
+    iconColor: '#b5198d',
+  },
   { icon: 'message', label: 'Chat', route: '/chat', bg: '#e4ecff', iconColor: '#2a5be0' },
   { icon: 'calendar', label: 'Events', route: '/events', bg: '#fff4e0', iconColor: '#c97a00' },
-  { icon: 'marketplace', label: 'Market', route: '/marketplace', bg: '#e2f9ef', iconColor: '#1a8a5c' },
+  {
+    icon: 'marketplace',
+    label: 'Market',
+    route: '/marketplace',
+    bg: '#e2f9ef',
+    iconColor: '#1a8a5c',
+  },
   { icon: 'shield', label: 'Safety', route: '/safety', bg: '#ffeaea', iconColor: '#ba1a1a' },
 ];
 
 // ─── HOME SHELL ───────────────────────────────────────────────────────────────
-export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellData; displayName: string; isDesktop: boolean }) {
+export function HomeShell({
+  data,
+  displayName,
+  isDesktop,
+}: {
+  data: HomeShellData;
+  displayName: string;
+  isDesktop: boolean;
+}) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const feed = data?.feed ?? [];
@@ -200,7 +239,9 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
   return (
     <>
       <View style={s.greetRow}>
-        <Text style={s.greetText}>{greeting}, {displayName.split(' ')[0]} 👋</Text>
+        <Text style={s.greetText}>
+          {greeting}, {displayName.split(' ')[0]} 👋
+        </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Explore Rooms"
@@ -229,12 +270,23 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
       <View style={s.sectionHeader}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={s.sectionTitle}>Frequently Used & Recent</Text>
-          <View style={{ backgroundColor: 'rgba(67,30,190,0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.appPrimary }}>DYNAMIC</Text>
+          <View
+            style={{
+              backgroundColor: 'rgba(67,30,190,0.08)',
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              borderRadius: 4,
+            }}
+          >
+            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.appPrimary }}>
+              DYNAMIC
+            </Text>
           </View>
         </View>
         <Link href="/explore" asChild>
-          <Pressable accessibilityRole="link"><Text style={s.seeAll}>All Features →</Text></Pressable>
+          <Pressable accessibilityRole="link">
+            <Text style={s.seeAll}>All Features →</Text>
+          </Pressable>
         </Link>
       </View>
 
@@ -245,10 +297,18 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
               accessibilityRole="button"
               accessibilityLabel={qa.label}
               onPress={() => recordModuleVisit(qa.id)}
-              style={StyleSheet.flatten([s.qaTile, isDesktop && s.qaTileDesktop, { backgroundColor: qa.bg }])}
+              style={StyleSheet.flatten([
+                s.qaTile,
+                isDesktop && s.qaTileDesktop,
+                { backgroundColor: qa.bg },
+              ])}
             >
               <AppIcon color={qa.iconColor} name={qa.icon} size={22} />
-              <Text style={[s.qaLabel, { color: qa.iconColor }]} numberOfLines={1} adjustsFontSizeToFit>
+              <Text
+                style={[s.qaLabel, { color: qa.iconColor }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 {qa.label}
               </Text>
             </Pressable>
@@ -267,12 +327,11 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
             ];
             const c = pillColors[i % pillColors.length];
             return (
-              <View
-                key={metric.label}
-                style={[s.statPill, { backgroundColor: c.bg }]}
-              >
+              <View key={metric.label} style={[s.statPill, { backgroundColor: c.bg }]}>
                 <View style={[s.statDot, { backgroundColor: c.color }]} />
-                <Text style={[s.statPillText, { color: c.color }]}>{metric.value} {metric.label}</Text>
+                <Text style={[s.statPillText, { color: c.color }]}>
+                  {metric.value} {metric.label}
+                </Text>
               </View>
             );
           })}
@@ -281,20 +340,25 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
 
       <View style={s.sectionHeader}>
         <Text style={s.sectionTitle}>Rooms Near You</Text>
-        <Link href="/rooms" asChild><Pressable accessibilityRole="link"><Text style={s.seeAll}>See All →</Text></Pressable></Link>
+        <Link href="/rooms" asChild>
+          <Pressable accessibilityRole="link">
+            <Text style={s.seeAll}>See All →</Text>
+          </Pressable>
+        </Link>
       </View>
       {roomItems.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.hScroll}>
           {roomItems.map((room) => (
             <Link key={room.id} href={room.route as Href} asChild>
-              <Pressable
-                onPress={() => recordModuleVisit('rooms')}
-                style={s.roomCard}
-              >
-                <View style={s.roomThumb}><Text style={s.roomThumbEmoji}>🏠</Text></View>
+              <Pressable onPress={() => recordModuleVisit('rooms')} style={s.roomCard}>
+                <View style={s.roomThumb}>
+                  <Text style={s.roomThumbEmoji}>🏠</Text>
+                </View>
                 <View style={s.roomInfo}>
                   <Text style={s.roomPrice}>{room.meta}</Text>
-                  <Text style={s.roomTitle} numberOfLines={1}>{room.title}</Text>
+                  <Text style={s.roomTitle} numberOfLines={1}>
+                    {room.title}
+                  </Text>
                   <View style={s.roomMeta}>
                     <AppIcon color={colors.muted} name="map" size={11} />
                     <Text style={s.roomLocation}>{room.body}</Text>
@@ -305,7 +369,13 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
           ))}
         </ScrollView>
       ) : (
-        <Pressable onPress={() => { recordModuleVisit('rooms'); router.push('/rooms'); }} style={s.roomCard}>
+        <Pressable
+          onPress={() => {
+            recordModuleVisit('rooms');
+            router.push('/rooms');
+          }}
+          style={s.roomCard}
+        >
           <View style={s.roomInfo}>
             <Text style={s.roomTitle}>Find or post a room</Text>
             <Text style={s.roomLocation}>Explore verified shared rooms and apartments</Text>
@@ -315,45 +385,50 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
 
       <View style={s.sectionHeader}>
         <Text style={s.sectionTitle}>Community Feed</Text>
-        <Link href="/community" asChild><Pressable accessibilityRole="link"><Text style={s.seeAll}>See All →</Text></Pressable></Link>
+        <Link href="/community" asChild>
+          <Pressable accessibilityRole="link">
+            <Text style={s.seeAll}>See All →</Text>
+          </Pressable>
+        </Link>
       </View>
       {postItems.length > 0 ? (
         postItems.map((post) => (
           <Link key={post.id} href={post.route as Href} asChild>
-            <Pressable
-              onPress={() => recordModuleVisit('community')}
-              style={s.postCard}
-            >
+            <Pressable onPress={() => recordModuleVisit('community')} style={s.postCard}>
               <Text style={s.postName}>{post.title}</Text>
-              <Text style={s.postBody} numberOfLines={2}>{post.body}</Text>
+              <Text style={s.postBody} numberOfLines={2}>
+                {post.body}
+              </Text>
               <Text style={s.postTime}>{post.meta}</Text>
             </Pressable>
           </Link>
         ))
       ) : (
         <Link href="/community" asChild>
-          <Pressable
-            onPress={() => recordModuleVisit('community')}
-            style={s.postCard}
-          >
+          <Pressable onPress={() => recordModuleVisit('community')} style={s.postCard}>
             <Text style={s.postName}>Join the conversation</Text>
-            <Text style={s.postBody}>Connect with local community members, ask questions, and share advice.</Text>
+            <Text style={s.postBody}>
+              Connect with local community members, ask questions, and share advice.
+            </Text>
           </Pressable>
         </Link>
       )}
 
       <View style={s.sectionHeader}>
         <Text style={s.sectionTitle}>Job Referrals</Text>
-        <Link href="/jobs" asChild><Pressable accessibilityRole="link"><Text style={s.seeAll}>See All →</Text></Pressable></Link>
+        <Link href="/jobs" asChild>
+          <Pressable accessibilityRole="link">
+            <Text style={s.seeAll}>See All →</Text>
+          </Pressable>
+        </Link>
       </View>
       {jobItems.length > 0 ? (
         jobItems.map((job) => (
           <Link key={job.id} href={job.route as Href} asChild>
-            <Pressable
-              onPress={() => recordModuleVisit('jobs')}
-              style={s.jobRow}
-            >
-              <View style={s.jobLogo}><Text style={s.jobLogoText}>{job.title[0]}</Text></View>
+            <Pressable onPress={() => recordModuleVisit('jobs')} style={s.jobRow}>
+              <View style={s.jobLogo}>
+                <Text style={s.jobLogoText}>{job.title[0]}</Text>
+              </View>
               <View style={s.jobInfo}>
                 <Text style={s.jobTitle}>{job.title}</Text>
                 <Text style={s.jobLocation}>{job.body}</Text>
@@ -366,11 +441,10 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
         ))
       ) : (
         <Link href="/jobs" asChild>
-          <Pressable
-            onPress={() => recordModuleVisit('jobs')}
-            style={s.jobRow}
-          >
-            <View style={s.jobLogo}><Text style={s.jobLogoText}>💼</Text></View>
+          <Pressable onPress={() => recordModuleVisit('jobs')} style={s.jobRow}>
+            <View style={s.jobLogo}>
+              <Text style={s.jobLogoText}>💼</Text>
+            </View>
             <View style={s.jobInfo}>
               <Text style={s.jobTitle}>Explore Job Referrals</Text>
               <Text style={s.jobLocation}>Browse tech openings and request employee referrals</Text>
@@ -383,7 +457,13 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
 }
 
 // ─── EXPLORE SHELL (Master Capabilities Hub) ──────────────────────────────────
-const exploreCategories = ['All', 'Living & Mobility', 'Career & Jobs', 'Community & Culture', 'Desi Essentials & Safety'];
+const exploreCategories = [
+  'All',
+  'Living & Mobility',
+  'Career & Jobs',
+  'Community & Culture',
+  'Desi Essentials & Safety',
+];
 
 export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
   const [activeCategory, setActiveCategory] = useState('All');
@@ -397,7 +477,8 @@ export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDeskt
       (activeCategory === 'Living & Mobility' && item.category === 'living') ||
       (activeCategory === 'Career & Jobs' && item.category === 'career') ||
       (activeCategory === 'Community & Culture' && item.category === 'community') ||
-      (activeCategory === 'Desi Essentials & Safety' && (item.category === 'essentials' || item.category === 'safety'));
+      (activeCategory === 'Desi Essentials & Safety' &&
+        (item.category === 'essentials' || item.category === 'safety'));
 
     const matchesSearch =
       searchQuery.trim() === '' ||
@@ -411,7 +492,9 @@ export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDeskt
     <>
       <View style={s.exploreHero}>
         <Text style={s.exploreHeroTitle}>Explore Capabilities</Text>
-        <Text style={s.exploreHeroSub}>Master directory of all ManaBandhu tools, community networks, and diaspora services.</Text>
+        <Text style={s.exploreHeroSub}>
+          Master directory of all ManaBandhu tools, community networks, and diaspora services.
+        </Text>
       </View>
 
       {/* Live search input */}
@@ -439,7 +522,9 @@ export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDeskt
             onPress={() => setActiveCategory(cat)}
             style={[s.catChip, activeCategory === cat && s.catChipActive]}
           >
-            <Text style={[s.catChipText, activeCategory === cat && s.catChipTextActive]}>{cat}</Text>
+            <Text style={[s.catChipText, activeCategory === cat && s.catChipTextActive]}>
+              {cat}
+            </Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -465,13 +550,19 @@ export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDeskt
                 <AppIcon color={item.iconColor} name={item.icon} size={22} />
               </View>
               <View style={s.exploreHubContent}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}
+                >
                   <Text style={s.exploreHubTitle}>{item.label}</Text>
                   <View style={[s.exploreHubBadge, { backgroundColor: item.bg }]}>
-                    <Text style={[s.exploreHubBadgeText, { color: item.iconColor }]}>{item.category.toUpperCase()}</Text>
+                    <Text style={[s.exploreHubBadgeText, { color: item.iconColor }]}>
+                      {item.category.toUpperCase()}
+                    </Text>
                   </View>
                 </View>
-                <Text style={s.exploreHubDesc} numberOfLines={2}>{item.description}</Text>
+                <Text style={s.exploreHubDesc} numberOfLines={2}>
+                  {item.description}
+                </Text>
               </View>
               <AppIcon color={colors.muted} name="chevron-right" size={16} />
             </Pressable>
@@ -489,17 +580,47 @@ export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDeskt
             {feed.slice(0, 4).map((item) => (
               <Link key={item.id} href={item.route as Href} asChild>
                 <Pressable
-                  onPress={() => recordModuleVisit(item.kind === 'room' ? 'rooms' : item.kind === 'job' ? 'jobs' : 'community')}
+                  onPress={() =>
+                    recordModuleVisit(
+                      item.kind === 'room' ? 'rooms' : item.kind === 'job' ? 'jobs' : 'community',
+                    )
+                  }
                   style={s.exploreCard}
                 >
-                  <View style={[s.exploreCardThumb, { backgroundColor: item.kind === 'room' ? colors.indigoSoft : item.kind === 'job' ? colors.orangeSoft : colors.tealSoft }]}>
-                    <Text style={s.exploreCardEmoji}>{item.kind === 'room' ? '🏠' : item.kind === 'job' ? '💼' : item.kind === 'ride' ? '🚗' : '🎉'}</Text>
+                  <View
+                    style={[
+                      s.exploreCardThumb,
+                      {
+                        backgroundColor:
+                          item.kind === 'room'
+                            ? colors.indigoSoft
+                            : item.kind === 'job'
+                              ? colors.orangeSoft
+                              : colors.tealSoft,
+                      },
+                    ]}
+                  >
+                    <Text style={s.exploreCardEmoji}>
+                      {item.kind === 'room'
+                        ? '🏠'
+                        : item.kind === 'job'
+                          ? '💼'
+                          : item.kind === 'ride'
+                            ? '🚗'
+                            : '🎉'}
+                    </Text>
                   </View>
                   <View style={s.exploreCardBody}>
-                    <Text style={s.exploreCardTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={s.exploreCardSub} numberOfLines={1}>{item.body}</Text>
+                    <Text style={s.exploreCardTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={s.exploreCardSub} numberOfLines={1}>
+                      {item.body}
+                    </Text>
                     <View style={[s.exploreBadge, { backgroundColor: colors.surfaceContainer }]}>
-                      <Text style={[s.exploreBadgeText, { color: colors.appPrimary }]}>{item.meta}</Text>
+                      <Text style={[s.exploreBadgeText, { color: colors.appPrimary }]}>
+                        {item.meta}
+                      </Text>
                     </View>
                   </View>
                 </Pressable>
@@ -526,7 +647,12 @@ export function ChatShell({ isDesktop }: { data: HomeShellData; isDesktop: boole
     <>
       <View style={s.chatHeader}>
         <Text style={s.chatTitle}>Messages</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="New conversation" onPress={() => router.push('/chat/new')} style={s.composeBtn}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="New conversation"
+          onPress={() => router.push('/chat/new')}
+          style={s.composeBtn}
+        >
           <AppIcon color="#fff" name="plus" size={16} />
         </Pressable>
       </View>
@@ -553,15 +679,26 @@ export function ChatShell({ isDesktop }: { data: HomeShellData; isDesktop: boole
                 </View>
                 <View style={s.convBody}>
                   <View style={s.convTop}>
-                    <Text style={s.convName} numberOfLines={1}>{conv.title ?? 'Conversation'}</Text>
-                    {conv.lastMessageAt ? <Text style={s.convTime}>{new Date(conv.lastMessageAt).toLocaleDateString()}</Text> : null}
+                    <Text style={s.convName} numberOfLines={1}>
+                      {conv.title ?? 'Conversation'}
+                    </Text>
+                    {conv.lastMessageAt ? (
+                      <Text style={s.convTime}>
+                        {new Date(conv.lastMessageAt).toLocaleDateString()}
+                      </Text>
+                    ) : null}
                   </View>
-                  <Text style={[s.convPreview, (conv.unreadCount ?? 0) > 0 && s.convPreviewUnread]} numberOfLines={1}>
+                  <Text
+                    style={[s.convPreview, (conv.unreadCount ?? 0) > 0 && s.convPreviewUnread]}
+                    numberOfLines={1}
+                  >
                     {conv.lastMessage ?? 'No messages yet'}
                   </Text>
                 </View>
                 {(conv.unreadCount ?? 0) > 0 ? (
-                  <View style={s.unreadBadge}><Text style={s.unreadText}>{conv.unreadCount}</Text></View>
+                  <View style={s.unreadBadge}>
+                    <Text style={s.unreadText}>{conv.unreadCount}</Text>
+                  </View>
                 ) : null}
               </Pressable>
             </Link>
@@ -600,7 +737,11 @@ export function CommunityShell({ data, isDesktop }: { data: HomeShellData; isDes
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillRow}>
         {communityTabs.map((tab) => (
-          <Pressable key={tab} onPress={() => setActiveTab(tab)} style={[s.commTab, activeTab === tab && s.commTabActive]}>
+          <Pressable
+            key={tab}
+            onPress={() => setActiveTab(tab)}
+            style={[s.commTab, activeTab === tab && s.commTabActive]}
+          >
             <Text style={[s.commTabText, activeTab === tab && s.commTabTextActive]}>{tab}</Text>
           </Pressable>
         ))}
@@ -620,12 +761,19 @@ export function CommunityShell({ data, isDesktop }: { data: HomeShellData; isDes
         <Link href="/community" asChild>
           <Pressable style={s.postCard}>
             <Text style={s.postName}>Welcome to the Community</Text>
-            <Text style={s.postBody}>Join circles, share advice, discuss schools, and participate in local conversations.</Text>
+            <Text style={s.postBody}>
+              Join circles, share advice, discuss schools, and participate in local conversations.
+            </Text>
           </Pressable>
         </Link>
       )}
 
-      <Pressable accessibilityRole="button" accessibilityLabel="Create post" onPress={() => router.push('/community/create-post')} style={s.fab}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Create post"
+        onPress={() => router.push('/community/create-post')}
+        style={s.fab}
+      >
         <AppIcon color="#fff" name="plus" size={22} />
       </Pressable>
     </>
@@ -634,9 +782,24 @@ export function CommunityShell({ data, isDesktop }: { data: HomeShellData; isDes
 
 // ─── PROFILE SHELL ────────────────────────────────────────────────────────────
 const profileBadges = [
-  { label: 'ID Verified', icon: 'shield' as AppIconName, color: '#00696b', bg: 'rgba(0,105,107,0.08)' },
-  { label: 'Community Member', icon: 'community' as AppIconName, color: '#431ebe', bg: 'rgba(67,30,190,0.07)' },
-  { label: 'Safe Connect', icon: 'heart' as AppIconName, color: '#ff7e33', bg: 'rgba(255,126,51,0.10)' },
+  {
+    label: 'ID Verified',
+    icon: 'shield' as AppIconName,
+    color: '#00696b',
+    bg: 'rgba(0,105,107,0.08)',
+  },
+  {
+    label: 'Community Member',
+    icon: 'community' as AppIconName,
+    color: '#431ebe',
+    bg: 'rgba(67,30,190,0.07)',
+  },
+  {
+    label: 'Safe Connect',
+    icon: 'heart' as AppIconName,
+    color: '#ff7e33',
+    bg: 'rgba(255,126,51,0.10)',
+  },
 ];
 
 const profileLinks = [
@@ -654,7 +817,14 @@ const profileSettings = [
   { label: 'Help & Support', icon: 'help' as AppIconName, route: '/settings' },
 ];
 
-export function ProfileShell({ data, displayName }: { data: HomeShellData; displayName: string; isDesktop: boolean }) {
+export function ProfileShell({
+  data,
+  displayName,
+}: {
+  data: HomeShellData;
+  displayName: string;
+  isDesktop: boolean;
+}) {
   const user = useAuthStore((s) => s.user);
   const name = user?.user_metadata?.full_name ?? displayName;
   const email = user?.email ?? 'member@manabandhu.com';
@@ -664,7 +834,9 @@ export function ProfileShell({ data, displayName }: { data: HomeShellData; displ
   return (
     <>
       <View style={s.profileHero}>
-        <View style={s.profileAvatar}><Text style={s.profileAvatarText}>{initial}</Text></View>
+        <View style={s.profileAvatar}>
+          <Text style={s.profileAvatarText}>{initial}</Text>
+        </View>
         <Text style={s.profileName}>{name}</Text>
         <Text style={s.profileEmail}>{email}</Text>
         <View style={s.profileLocationRow}>
@@ -701,7 +873,9 @@ export function ProfileShell({ data, displayName }: { data: HomeShellData; displ
           <Link key={link.label} href={link.route as Href} asChild>
             <Pressable style={s.settingsRow} accessibilityRole="link">
               <View style={s.settingsRowLeft}>
-                <View style={s.settingsIconBg}><AppIcon color={colors.appPrimary} name={link.icon} size={16} /></View>
+                <View style={s.settingsIconBg}>
+                  <AppIcon color={colors.appPrimary} name={link.icon} size={16} />
+                </View>
                 <Text style={s.settingsLabel}>{link.label}</Text>
               </View>
               <AppIcon color={colors.muted} name="chevron-right" size={16} />
@@ -716,16 +890,24 @@ export function ProfileShell({ data, displayName }: { data: HomeShellData; displ
           <Link key={setting.label} href={setting.route as Href} asChild>
             <Pressable style={s.settingsRow} accessibilityRole="link">
               <View style={s.settingsRowLeft}>
-                <View style={s.settingsIconBg}><AppIcon color={colors.muted} name={setting.icon} size={16} /></View>
+                <View style={s.settingsIconBg}>
+                  <AppIcon color={colors.muted} name={setting.icon} size={16} />
+                </View>
                 <Text style={s.settingsLabel}>{setting.label}</Text>
               </View>
               <AppIcon color={colors.muted} name="chevron-right" size={16} />
             </Pressable>
           </Link>
         ))}
-        <Pressable accessibilityRole="button" onPress={() => useAuthStore.getState().signOut()} style={[s.settingsRow, s.signOutRow]}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => useAuthStore.getState().signOut()}
+          style={[s.settingsRow, s.signOutRow]}
+        >
           <View style={s.settingsRowLeft}>
-            <View style={[s.settingsIconBg, { backgroundColor: 'rgba(186,26,26,0.08)' }]}><AppIcon color="#ba1a1a" name="logout" size={16} /></View>
+            <View style={[s.settingsIconBg, { backgroundColor: 'rgba(186,26,26,0.08)' }]}>
+              <AppIcon color="#ba1a1a" name="logout" size={16} />
+            </View>
             <Text style={s.signOutLabel}>Sign Out</Text>
           </View>
         </Pressable>
@@ -735,30 +917,61 @@ export function ProfileShell({ data, displayName }: { data: HomeShellData; displ
 }
 
 // ─── SHARED SUB-COMPONENTS ────────────────────────────────────────────────────
-function PostCard({ post }: { post: { initials: string; name: string; time: string; group: string; body: string; likes: number; comments: number } }) {
+function PostCard({
+  post,
+}: {
+  post: {
+    initials: string;
+    name: string;
+    time: string;
+    group: string;
+    body: string;
+    likes: number;
+    comments: number;
+  };
+}) {
   return (
     <View style={s.postCard}>
       <View style={s.postHeader}>
-        <View style={s.postAvatar}><Text style={s.postAvatarText}>{post.initials}</Text></View>
+        <View style={s.postAvatar}>
+          <Text style={s.postAvatarText}>{post.initials}</Text>
+        </View>
         <View style={s.postMeta}>
           <Text style={s.postName}>{post.name}</Text>
-          <Text style={s.postTime}>{post.time} · {post.group}</Text>
+          <Text style={s.postTime}>
+            {post.time} · {post.group}
+          </Text>
         </View>
       </View>
       <Text style={s.postBody}>{post.body}</Text>
       <View style={s.postActions}>
-        <Pressable style={s.postAction}><AppIcon color={colors.muted} name="star" size={15} /><Text style={s.postActionText}>{post.likes}</Text></Pressable>
-        <Pressable style={s.postAction}><AppIcon color={colors.muted} name="message" size={15} /><Text style={s.postActionText}>{post.comments}</Text></Pressable>
-        <Pressable style={s.postAction}><AppIcon color={colors.muted} name="globe" size={15} /><Text style={s.postActionText}>Share</Text></Pressable>
+        <Pressable style={s.postAction}>
+          <AppIcon color={colors.muted} name="star" size={15} />
+          <Text style={s.postActionText}>{post.likes}</Text>
+        </Pressable>
+        <Pressable style={s.postAction}>
+          <AppIcon color={colors.muted} name="message" size={15} />
+          <Text style={s.postActionText}>{post.comments}</Text>
+        </Pressable>
+        <Pressable style={s.postAction}>
+          <AppIcon color={colors.muted} name="globe" size={15} />
+          <Text style={s.postActionText}>Share</Text>
+        </Pressable>
       </View>
     </View>
   );
 }
 
-function JobRow({ job }: { job: { company: string; title: string; location: string; bonus: string } }) {
+function _JobRow({
+  job,
+}: {
+  job: { company: string; title: string; location: string; bonus: string };
+}) {
   return (
     <View style={s.jobRow}>
-      <View style={s.jobLogo}><Text style={s.jobLogoText}>{job.company}</Text></View>
+      <View style={s.jobLogo}>
+        <Text style={s.jobLogoText}>{job.company}</Text>
+      </View>
       <View style={s.jobInfo}>
         <Text style={s.jobTitle}>{job.title}</Text>
         <Text style={s.jobLocation}>{job.location}</Text>
@@ -773,31 +986,59 @@ function JobRow({ job }: { job: { company: string; title: string; location: stri
 
 // Legacy re-exports for backwards compatibility
 export { PostCard as CommunityPostCard };
-export function SectionTitle({ title }: { title: string }) { return <Text style={s.sectionTitle}>{title}</Text>; }
+export function SectionTitle({ title }: { title: string }) {
+  return <Text style={s.sectionTitle}>{title}</Text>;
+}
 export type ServiceItem = { icon: AppIconName; label: string; route: string };
-export function FeedItem({ icon, title, body, meta }: { icon?: AppIconName; title: string; body: string; meta?: string }) {
+export function FeedItem({
+  icon,
+  title,
+  body,
+  meta,
+}: {
+  icon?: AppIconName;
+  title: string;
+  body: string;
+  meta?: string;
+}) {
   return (
     <View style={s.feedItem}>
-      {icon ? <View style={s.feedIcon}><AppIcon color={colors.appPrimary} name={icon} size={20} /></View> : null}
+      {icon ? (
+        <View style={s.feedIcon}>
+          <AppIcon color={colors.appPrimary} name={icon} size={20} />
+        </View>
+      ) : null}
       <View style={s.feedCopy}>
-        <View style={s.feedTop}><Text style={s.feedTitle}>{title}</Text>{meta ? <Text style={s.feedMeta}>{meta}</Text> : null}</View>
+        <View style={s.feedTop}>
+          <Text style={s.feedTitle}>{title}</Text>
+          {meta ? <Text style={s.feedMeta}>{meta}</Text> : null}
+        </View>
         <Text style={s.feedBody}>{body}</Text>
       </View>
     </View>
   );
 }
 export function Stat({ value, label }: { value: string; label: string }) {
-  return <View style={s.stat}><Text style={s.statValue}>{value}</Text><Text style={s.statLabel2}>{label}</Text></View>;
+  return (
+    <View style={s.stat}>
+      <Text style={s.statValue}>{value}</Text>
+      <Text style={s.statLabel2}>{label}</Text>
+    </View>
+  );
 }
 export function ServiceGroup({ title, items }: { title: string; items: ServiceItem[] }) {
   return (
     <View style={s.serviceGroup}>
-      <View style={s.serviceGroupHeader}><Text style={s.serviceGroupTitle}>{title}</Text></View>
+      <View style={s.serviceGroupHeader}>
+        <Text style={s.serviceGroupTitle}>{title}</Text>
+      </View>
       <View style={s.serviceGrid}>
         {items.map((item) => (
           <Link key={`${title}-${item.label}`} href={item.route as Href} asChild>
             <Pressable style={s.superTile} accessibilityRole="button">
-              <View style={s.superIcon}><AppIcon color={colors.appPrimary} name={item.icon} size={22} /></View>
+              <View style={s.superIcon}>
+                <AppIcon color={colors.appPrimary} name={item.icon} size={22} />
+              </View>
               <Text style={s.superLabel}>{item.label}</Text>
             </Pressable>
           </Link>
@@ -809,34 +1050,88 @@ export function ServiceGroup({ title, items }: { title: string; items: ServiceIt
 export function SuperTile({ icon, label, route }: ServiceItem & { featured?: boolean }) {
   return (
     <Link href={route as Href} asChild>
-      <Pressable style={s.superTile} accessibilityRole="button" accessibilityLabel={`${label} service`}>
-        <View style={s.superIcon}><AppIcon color={colors.appPrimary} name={icon} size={22} /></View>
+      <Pressable
+        style={s.superTile}
+        accessibilityRole="button"
+        accessibilityLabel={`${label} service`}
+      >
+        <View style={s.superIcon}>
+          <AppIcon color={colors.appPrimary} name={icon} size={22} />
+        </View>
         <Text style={s.superLabel}>{label}</Text>
       </Pressable>
     </Link>
   );
 }
-export function MiniAction({ icon, label, route }: { icon: AppIconName; label: string; route: string }) {
+export function MiniAction({
+  icon,
+  label,
+  route,
+}: {
+  icon: AppIconName;
+  label: string;
+  route: string;
+}) {
   return (
     <Link href={route as Href} asChild>
-      <Pressable style={s.miniAction}><AppIcon color={colors.appPrimary} name={icon} size={20} /><Text style={s.miniLabel}>{label}</Text></Pressable>
+      <Pressable style={s.miniAction}>
+        <AppIcon color={colors.appPrimary} name={icon} size={20} />
+        <Text style={s.miniLabel}>{label}</Text>
+      </Pressable>
     </Link>
   );
 }
 export function ImageCard({ title, meta }: { image: string; title: string; meta: string }) {
-  return <View style={s.imageCard}><View style={s.imageCardThumb} /><Text style={s.cardTitle}>{title}</Text><Text style={s.cardMeta}>{meta}</Text></View>;
+  return (
+    <View style={s.imageCard}>
+      <View style={s.imageCardThumb} />
+      <Text style={s.cardTitle}>{title}</Text>
+      <Text style={s.cardMeta}>{meta}</Text>
+    </View>
+  );
 }
-export function InfoCard({ title, body, meta }: { title: string; body: string; meta: string; accent?: boolean }) {
-  return <View style={s.infoCard}><Text style={s.cardMeta}>{meta}</Text><Text style={s.cardTitle}>{title}</Text><Text style={s.feedBody}>{body}</Text></View>;
+export function InfoCard({
+  title,
+  body,
+  meta,
+}: {
+  title: string;
+  body: string;
+  meta: string;
+  accent?: boolean;
+}) {
+  return (
+    <View style={s.infoCard}>
+      <Text style={s.cardMeta}>{meta}</Text>
+      <Text style={s.cardTitle}>{title}</Text>
+      <Text style={s.feedBody}>{body}</Text>
+    </View>
+  );
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   safe: { backgroundColor: colors.background, flex: 1 },
-  header: { alignItems: 'center', backgroundColor: 'rgba(250,248,255,0.96)', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', height: 60, justifyContent: 'space-between', paddingHorizontal: space.x4 },
+  header: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(250,248,255,0.96)',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    height: 60,
+    justifyContent: 'space-between',
+    paddingHorizontal: space.x4,
+  },
   headerDesktop: { height: 68, paddingHorizontal: space.x6 },
   headerLeft: { alignItems: 'center', flexDirection: 'row', gap: space.x2 },
-  logoMark: { alignItems: 'center', backgroundColor: colors.appPrimary, borderRadius: 10, height: 34, justifyContent: 'center', width: 34 },
+  logoMark: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 10,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
   logoText: { color: '#fff', fontSize: 18, fontWeight: '900' },
   brandName: { color: colors.appPrimary, fontSize: 18, fontWeight: '800' },
   desktopNav: { flexDirection: 'row', gap: space.x2 },
@@ -844,14 +1139,55 @@ const s = StyleSheet.create({
   desktopNavText: { color: colors.muted, fontSize: 14, fontWeight: '700' },
   desktopNavActive: { color: colors.appPrimary },
   headerRight: { alignItems: 'center', flexDirection: 'row', gap: space.x3 },
-  headerIconBtn: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, height: 34, justifyContent: 'center', width: 34 },
-  notifDot: { backgroundColor: '#ba1a1a', borderColor: colors.surface, borderRadius: 5, borderWidth: 1.5, bottom: 5, height: 9, position: 'absolute', right: 5, width: 9 },
+  headerIconBtn: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  notifDot: {
+    backgroundColor: '#ba1a1a',
+    borderColor: colors.surface,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    bottom: 5,
+    height: 9,
+    position: 'absolute',
+    right: 5,
+    width: 9,
+  },
   content: { gap: space.x4, padding: space.x4, paddingBottom: 100 },
   contentDesktop: { paddingHorizontal: space.x8, paddingTop: space.x6 },
-  searchBar: { alignItems: 'center', backgroundColor: colors.surfaceContainerLow, borderColor: 'rgba(67,30,190,0.15)', borderRadius: radius.pill, borderWidth: 1.5, flexDirection: 'row', gap: space.x3, minHeight: 50, paddingHorizontal: space.x4 },
+  searchBar: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+    borderColor: 'rgba(67,30,190,0.15)',
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: space.x3,
+    minHeight: 50,
+    paddingHorizontal: space.x4,
+  },
   searchPlaceholder: { color: colors.muted, flex: 1, fontSize: 14, fontWeight: '600' },
-  filterPill: { alignItems: 'center', backgroundColor: colors.indigoSoft, borderRadius: 10, height: 30, justifyContent: 'center', width: 30 },
-  sectionHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: space.x2 },
+  filterPill: {
+    alignItems: 'center',
+    backgroundColor: colors.indigoSoft,
+    borderRadius: 10,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
+  },
+  sectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: space.x2,
+  },
   sectionTitle: { color: colors.ink, fontSize: 18, fontWeight: '800' },
   seeAll: { color: colors.appPrimary, fontSize: 13, fontWeight: '800' },
   greetRow: { gap: 4 },
@@ -860,27 +1196,81 @@ const s = StyleSheet.create({
   locationText: { color: colors.muted, fontSize: 13, fontWeight: '600' },
   qaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
   qaGridDesktop: { gap: 14, justifyContent: 'flex-start' },
-  qaTile: { alignItems: 'center', borderRadius: 16, gap: 4, justifyContent: 'center', minHeight: 74, paddingVertical: 8, paddingHorizontal: 4, width: '23%' },
+  qaTile: {
+    alignItems: 'center',
+    borderRadius: 16,
+    gap: 4,
+    justifyContent: 'center',
+    minHeight: 74,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    width: '23%',
+  },
   qaTileDesktop: { width: '11%', minHeight: 86 },
   qaLabel: { fontSize: 11, fontWeight: '800', textAlign: 'center' },
   pillRow: { marginVertical: space.x1 },
-  statPill: { alignItems: 'center', borderRadius: radius.pill, flexDirection: 'row', gap: 6, marginRight: space.x2, paddingHorizontal: space.x3, paddingVertical: 8 },
+  statPill: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 6,
+    marginRight: space.x2,
+    paddingHorizontal: space.x3,
+    paddingVertical: 8,
+  },
   statDot: { borderRadius: 4, height: 7, width: 7 },
   statPillText: { fontSize: 12, fontWeight: '700' },
   hScroll: { marginVertical: space.x1 },
-  roomCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, marginRight: space.x3, overflow: 'hidden', width: 180 },
-  roomThumb: { alignItems: 'center', backgroundColor: colors.indigoSoft, height: 100, justifyContent: 'center' },
+  roomCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginRight: space.x3,
+    overflow: 'hidden',
+    width: 180,
+  },
+  roomThumb: {
+    alignItems: 'center',
+    backgroundColor: colors.indigoSoft,
+    height: 100,
+    justifyContent: 'center',
+  },
   roomThumbEmoji: { fontSize: 36 },
   roomInfo: { gap: 4, padding: space.x3 },
   roomPrice: { color: colors.appPrimary, fontSize: 16, fontWeight: '900' },
   roomTitle: { color: colors.ink, fontSize: 13, fontWeight: '700' },
   roomMeta: { alignItems: 'center', flexDirection: 'row', gap: 3 },
   roomLocation: { color: colors.muted, fontSize: 11, fontWeight: '600' },
-  verifiedBadge: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: colors.tealSoft, borderRadius: 999, flexDirection: 'row', gap: 3, marginTop: 2, paddingHorizontal: 7, paddingVertical: 3 },
+  verifiedBadge: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.tealSoft,
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 3,
+    marginTop: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
   verifiedText: { color: colors.teal, fontSize: 10, fontWeight: '800' },
-  postCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, gap: space.x3, padding: space.x4 },
+  postCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: space.x3,
+    padding: space.x4,
+  },
   postHeader: { alignItems: 'center', flexDirection: 'row', gap: space.x3 },
-  postAvatar: { alignItems: 'center', backgroundColor: colors.appPrimary, borderRadius: 22, height: 42, justifyContent: 'center', width: 42 },
+  postAvatar: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 22,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
   postAvatarText: { color: '#fff', fontSize: 14, fontWeight: '800' },
   postMeta: { gap: 2 },
   postName: { color: colors.ink, fontSize: 14, fontWeight: '800' },
@@ -889,8 +1279,24 @@ const s = StyleSheet.create({
   postActions: { flexDirection: 'row', gap: space.x4, paddingTop: space.x1 },
   postAction: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   postActionText: { color: colors.muted, fontSize: 13, fontWeight: '700' },
-  jobRow: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, flexDirection: 'row', gap: space.x3, padding: space.x4 },
-  jobLogo: { alignItems: 'center', backgroundColor: colors.indigoSoft, borderRadius: 14, height: 46, justifyContent: 'center', width: 46 },
+  jobRow: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: space.x3,
+    padding: space.x4,
+  },
+  jobLogo: {
+    alignItems: 'center',
+    backgroundColor: colors.indigoSoft,
+    borderRadius: 14,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
   jobLogoText: { color: colors.appPrimary, fontSize: 18, fontWeight: '900' },
   jobInfo: { flex: 1, gap: 2 },
   jobTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
@@ -901,11 +1307,26 @@ const s = StyleSheet.create({
   exploreHero: { gap: 4 },
   exploreHeroTitle: { color: colors.ink, fontSize: 28, fontWeight: '900' },
   exploreHeroSub: { color: colors.muted, fontSize: 15, fontWeight: '600' },
-  catChip: { backgroundColor: colors.surfaceContainerLow, borderRadius: radius.pill, marginRight: space.x2, paddingHorizontal: space.x4, paddingVertical: 8 },
+  catChip: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: radius.pill,
+    marginRight: space.x2,
+    paddingHorizontal: space.x4,
+    paddingVertical: 8,
+  },
   catChipActive: { backgroundColor: colors.appPrimary },
   catChipText: { color: colors.muted, fontSize: 13, fontWeight: '800' },
   catChipTextActive: { color: '#fff' },
-  featuredCard: { alignItems: 'center', backgroundColor: colors.primaryContainer, borderRadius: 22, flexDirection: 'row', justifyContent: 'space-between', minHeight: 120, overflow: 'hidden', padding: space.x4 },
+  featuredCard: {
+    alignItems: 'center',
+    backgroundColor: colors.primaryContainer,
+    borderRadius: 22,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 120,
+    overflow: 'hidden',
+    padding: space.x4,
+  },
   featuredOverlay: { flex: 1, gap: 6 },
   featuredBadge: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '800' },
   featuredTitle: { color: '#fff', fontSize: 18, fontWeight: '900' },
@@ -913,17 +1334,45 @@ const s = StyleSheet.create({
   featuredEmoji: { fontSize: 44 },
   exploreGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3 },
   exploreGridDesktop: { gap: space.x4 },
-  exploreCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, overflow: 'hidden', width: '47%' },
+  exploreCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+    width: '47%',
+  },
   exploreCardThumb: { alignItems: 'center', height: 90, justifyContent: 'center' },
   exploreCardEmoji: { fontSize: 32 },
   exploreCardBody: { gap: 4, padding: space.x3 },
   exploreCardTitle: { color: colors.ink, fontSize: 13, fontWeight: '800' },
   exploreCardSub: { color: colors.muted, fontSize: 11, fontWeight: '600' },
-  exploreBadge: { alignSelf: 'flex-start', borderRadius: radius.pill, marginTop: 4, paddingHorizontal: 8, paddingVertical: 3 },
+  exploreBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.pill,
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
   exploreBadgeText: { fontSize: 10, fontWeight: '800' },
   exploreHubList: { gap: 10 },
-  exploreHubCard: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 14 },
-  exploreHubIcon: { alignItems: 'center', borderRadius: 14, height: 46, justifyContent: 'center', width: 46 },
+  exploreHubCard: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+  },
+  exploreHubIcon: {
+    alignItems: 'center',
+    borderRadius: 14,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
   exploreHubContent: { flex: 1 },
   exploreHubTitle: { color: colors.ink, fontSize: 15, fontWeight: '800' },
   exploreHubBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
@@ -931,47 +1380,178 @@ const s = StyleSheet.create({
   exploreHubDesc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   chatHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   chatTitle: { color: colors.ink, fontSize: 26, fontWeight: '900' },
-  composeBtn: { alignItems: 'center', backgroundColor: colors.appPrimary, borderRadius: 14, height: 38, justifyContent: 'center', width: 38 },
-  pinnedRow: { alignItems: 'center', backgroundColor: colors.tealSoft, borderColor: 'rgba(0,105,107,0.2)', borderRadius: 16, borderWidth: 1, flexDirection: 'row', gap: space.x3, padding: space.x3 },
-  pinnedIcon: { alignItems: 'center', backgroundColor: 'rgba(0,105,107,0.15)', borderRadius: 12, height: 38, justifyContent: 'center', width: 38 },
+  composeBtn: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 14,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  pinnedRow: {
+    alignItems: 'center',
+    backgroundColor: colors.tealSoft,
+    borderColor: 'rgba(0,105,107,0.2)',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: space.x3,
+    padding: space.x3,
+  },
+  pinnedIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,105,107,0.15)',
+    borderRadius: 12,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
   pinnedBody: { flex: 1, gap: 2 },
   pinnedTitle: { color: colors.teal, fontSize: 13, fontWeight: '800' },
   pinnedSub: { color: colors.muted, fontSize: 11, fontWeight: '600' },
-  convList: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
-  convListHeader: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.5, paddingHorizontal: space.x4, paddingVertical: space.x3 },
-  convRow: { alignItems: 'center', borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', gap: space.x3, paddingHorizontal: space.x4, paddingVertical: space.x3 },
+  convList: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  convListHeader: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+  },
+  convRow: {
+    alignItems: 'center',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: space.x3,
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+  },
   convAvatarWrap: { position: 'relative' },
-  convAvatar: { alignItems: 'center', backgroundColor: colors.appPrimary, borderRadius: 24, height: 48, justifyContent: 'center', width: 48 },
+  convAvatar: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
   convAvatarGroup: { backgroundColor: colors.teal },
   convAvatarText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  onlineDot: { backgroundColor: '#22c55e', borderColor: colors.surface, borderRadius: 7, borderWidth: 2, bottom: 0, height: 13, position: 'absolute', right: 0, width: 13 },
+  onlineDot: {
+    backgroundColor: '#22c55e',
+    borderColor: colors.surface,
+    borderRadius: 7,
+    borderWidth: 2,
+    bottom: 0,
+    height: 13,
+    position: 'absolute',
+    right: 0,
+    width: 13,
+  },
   convBody: { flex: 1, gap: 3 },
   convTop: { flexDirection: 'row', justifyContent: 'space-between' },
   convName: { color: colors.ink, flex: 1, fontSize: 14, fontWeight: '800' },
   convTime: { color: colors.muted, fontSize: 12, fontWeight: '600' },
   convPreview: { color: colors.muted, fontSize: 13, fontWeight: '500' },
   convPreviewUnread: { color: colors.ink, fontWeight: '700' },
-  unreadBadge: { alignItems: 'center', backgroundColor: colors.appPrimary, borderRadius: 12, height: 22, justifyContent: 'center', minWidth: 22, paddingHorizontal: 5 },
+  unreadBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 12,
+    height: 22,
+    justifyContent: 'center',
+    minWidth: 22,
+    paddingHorizontal: 5,
+  },
   unreadText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  newChatBtn: { alignItems: 'center', borderColor: colors.appPrimary, borderRadius: 16, borderWidth: 1.5, flexDirection: 'row', gap: space.x2, justifyContent: 'center', paddingVertical: space.x3 },
+  newChatBtn: {
+    alignItems: 'center',
+    borderColor: colors.appPrimary,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: space.x2,
+    justifyContent: 'center',
+    paddingVertical: space.x3,
+  },
   newChatText: { color: colors.appPrimary, fontSize: 14, fontWeight: '800' },
   communityHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   communityHeaderActions: { alignItems: 'center', flexDirection: 'row', gap: space.x2 },
-  commTab: { borderRadius: radius.pill, marginRight: space.x2, paddingHorizontal: space.x4, paddingVertical: 8 },
+  commTab: {
+    borderRadius: radius.pill,
+    marginRight: space.x2,
+    paddingHorizontal: space.x4,
+    paddingVertical: 8,
+  },
   commTabActive: { backgroundColor: colors.appPrimary },
   commTabText: { color: colors.muted, fontSize: 13, fontWeight: '800' },
   commTabTextActive: { color: '#fff' },
-  storiesLabel: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.5, marginBottom: 8 },
+  storiesLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
   storiesRow: { flexDirection: 'row', gap: space.x3 },
   storyWrap: { alignItems: 'center', gap: 4 },
   storyRing: { borderColor: colors.appPrimary, borderRadius: 32, borderWidth: 2.5, padding: 2 },
-  storyAvatar: { alignItems: 'center', borderRadius: 28, height: 54, justifyContent: 'center', width: 54 },
+  storyAvatar: {
+    alignItems: 'center',
+    borderRadius: 28,
+    height: 54,
+    justifyContent: 'center',
+    width: 54,
+  },
   storyInitials: { color: colors.ink, fontSize: 16, fontWeight: '800' },
-  trendChip: { backgroundColor: colors.tealSoft, borderRadius: radius.pill, marginRight: space.x2, paddingHorizontal: space.x3, paddingVertical: 8 },
+  trendChip: {
+    backgroundColor: colors.tealSoft,
+    borderRadius: radius.pill,
+    marginRight: space.x2,
+    paddingHorizontal: space.x3,
+    paddingVertical: 8,
+  },
   trendChipText: { color: colors.teal, fontSize: 12, fontWeight: '800' },
-  fab: { alignItems: 'center', alignSelf: 'flex-end', backgroundColor: colors.appPrimary, borderRadius: 20, elevation: 6, height: 56, justifyContent: 'center', shadowColor: colors.appPrimary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, width: 56 },
-  profileHero: { alignItems: 'center', backgroundColor: colors.appPrimary, borderRadius: 24, gap: space.x2, overflow: 'hidden', paddingBottom: space.x5, paddingTop: space.x5 },
-  profileAvatar: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.25)', borderColor: 'rgba(255,255,255,0.5)', borderRadius: 52, borderWidth: 3, height: 96, justifyContent: 'center', width: 96 },
+  fab: {
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 20,
+    elevation: 6,
+    height: 56,
+    justifyContent: 'center',
+    shadowColor: colors.appPrimary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    width: 56,
+  },
+  profileHero: {
+    alignItems: 'center',
+    backgroundColor: colors.appPrimary,
+    borderRadius: 24,
+    gap: space.x2,
+    overflow: 'hidden',
+    paddingBottom: space.x5,
+    paddingTop: space.x5,
+  },
+  profileAvatar: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 52,
+    borderWidth: 3,
+    height: 96,
+    justifyContent: 'center',
+    width: 96,
+  },
   profileAvatarText: { color: '#fff', fontSize: 36, fontWeight: '900' },
   profileName: { color: '#fff', fontSize: 22, fontWeight: '900' },
   profileEmail: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '600' },
@@ -981,35 +1561,113 @@ const s = StyleSheet.create({
   profileStatItem: { alignItems: 'center', gap: 3 },
   profileStatValue: { color: '#fff', fontSize: 20, fontWeight: '900' },
   profileStatLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '700' },
-  completionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, gap: space.x3, padding: space.x4 },
+  completionCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: space.x3,
+    padding: space.x4,
+  },
   completionHeader: { alignItems: 'center', flexDirection: 'row', gap: space.x2 },
   completionTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-  progressBg: { backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 6, height: 8, overflow: 'hidden' },
+  progressBg: {
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    borderRadius: 6,
+    height: 8,
+    overflow: 'hidden',
+  },
   progressFill: { backgroundColor: colors.appPrimary, borderRadius: 6, height: 8 },
   completionChips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
-  completionChip: { backgroundColor: colors.indigoSoft, borderRadius: radius.pill, paddingHorizontal: space.x3, paddingVertical: 6 },
+  completionChip: {
+    backgroundColor: colors.indigoSoft,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.x3,
+    paddingVertical: 6,
+  },
   completionChipText: { color: colors.appPrimary, fontSize: 12, fontWeight: '800' },
   badgesSection: { gap: space.x3 },
   badgesSectionTitle: { color: colors.ink, fontSize: 15, fontWeight: '800' },
   badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
-  badge: { alignItems: 'center', borderRadius: radius.pill, flexDirection: 'row', gap: 6, paddingHorizontal: space.x3, paddingVertical: 8 },
+  badge: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: space.x3,
+    paddingVertical: 8,
+  },
   badgeText: { fontSize: 12, fontWeight: '800' },
-  settingsSection: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
-  settingsSectionTitle: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.5, paddingHorizontal: space.x4, paddingVertical: space.x3 },
-  settingsRow: { alignItems: 'center', borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: space.x4, paddingVertical: space.x3 },
+  settingsSection: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  settingsSectionTitle: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+  },
+  settingsRow: {
+    alignItems: 'center',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+  },
   settingsRowLeft: { alignItems: 'center', flexDirection: 'row', gap: space.x3 },
-  settingsIconBg: { alignItems: 'center', backgroundColor: colors.surfaceContainerLow, borderRadius: 10, height: 34, justifyContent: 'center', width: 34 },
+  settingsIconBg: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: 10,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
   settingsLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
   signOutRow: {},
   signOutLabel: { color: '#ba1a1a', fontSize: 14, fontWeight: '700' },
-  tabBar: { backgroundColor: 'rgba(250,248,255,0.97)', borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', height: 70, paddingHorizontal: space.x2 },
+  tabBar: {
+    backgroundColor: 'rgba(250,248,255,0.97)',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    height: 70,
+    paddingHorizontal: space.x2,
+  },
   tab: { alignItems: 'center', flex: 1, gap: 3, justifyContent: 'center', paddingTop: 6 },
-  tabPill: { backgroundColor: colors.appPrimary, borderRadius: 3, height: 3, marginBottom: 2, width: 20 },
+  tabPill: {
+    backgroundColor: colors.appPrimary,
+    borderRadius: 3,
+    height: 3,
+    marginBottom: 2,
+    width: 20,
+  },
   tabLabel: { color: colors.muted, fontSize: 11, fontWeight: '700' },
   tabLabelActive: { color: colors.appPrimary },
   // Legacy shared
-  feedItem: { backgroundColor: colors.surface, borderRadius: 16, flexDirection: 'row', gap: space.x3, padding: space.x3 },
-  feedIcon: { alignItems: 'center', backgroundColor: colors.indigoSoft, borderRadius: 22, height: 44, justifyContent: 'center', width: 44 },
+  feedItem: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: space.x3,
+    padding: space.x3,
+  },
+  feedIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.indigoSoft,
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
   feedCopy: { flex: 1, gap: space.x1 },
   feedTop: { flexDirection: 'row', gap: space.x2, justifyContent: 'space-between' },
   feedTitle: { color: colors.ink, flex: 1, fontSize: 14, fontWeight: '800' },
@@ -1018,19 +1676,70 @@ const s = StyleSheet.create({
   stat: { alignItems: 'center', gap: space.x1 },
   statValue: { color: colors.appPrimary, fontSize: 20, fontWeight: '800' },
   statLabel2: { color: colors.muted, fontSize: 12, fontWeight: '700' },
-  serviceGroup: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: space.x3, padding: space.x4 },
-  serviceGroupHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  serviceGroup: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: space.x3,
+    padding: space.x4,
+  },
+  serviceGroupHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   serviceGroupTitle: { color: colors.ink, fontSize: 17, fontWeight: '800' },
   serviceGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.x4 },
-  superTile: { alignItems: 'center', flexBasis: '25%', gap: space.x2, minHeight: 88, minWidth: 74, paddingHorizontal: space.x1 },
-  superIcon: { alignItems: 'center', backgroundColor: colors.indigoSoft, borderRadius: 18, height: 52, justifyContent: 'center', width: 52 },
+  superTile: {
+    alignItems: 'center',
+    flexBasis: '25%',
+    gap: space.x2,
+    minHeight: 88,
+    minWidth: 74,
+    paddingHorizontal: space.x1,
+  },
+  superIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.indigoSoft,
+    borderRadius: 18,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
   superLabel: { color: colors.ink, fontSize: 12, fontWeight: '800', textAlign: 'center' },
-  imageCard: { backgroundColor: colors.surface, borderRadius: 24, flex: 1, minWidth: 180, overflow: 'hidden' },
+  imageCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    flex: 1,
+    minWidth: 180,
+    overflow: 'hidden',
+  },
   imageCardThumb: { backgroundColor: colors.indigoSoft, height: 140, width: '100%' },
-  cardTitle: { color: colors.ink, fontSize: 17, fontWeight: '800', lineHeight: 23, paddingHorizontal: space.x4, paddingTop: space.x3 },
-  cardMeta: { color: colors.appPrimary, fontSize: 12, fontWeight: '800', paddingHorizontal: space.x4, paddingVertical: space.x2 },
+  cardTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: '800',
+    lineHeight: 23,
+    paddingHorizontal: space.x4,
+    paddingTop: space.x3,
+  },
+  cardMeta: {
+    color: colors.appPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x2,
+  },
   infoCard: { backgroundColor: colors.surface, borderRadius: 20, gap: space.x2, padding: space.x4 },
-  miniAction: { backgroundColor: colors.surfaceContainerHigh, borderRadius: 20, flex: 1, gap: space.x2, minHeight: 112, minWidth: 150, padding: space.x3 },
+  miniAction: {
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: 20,
+    flex: 1,
+    gap: space.x2,
+    minHeight: 112,
+    minWidth: 150,
+    padding: space.x3,
+  },
   miniLabel: { color: colors.ink, fontSize: 14, fontWeight: '800' },
 });
-

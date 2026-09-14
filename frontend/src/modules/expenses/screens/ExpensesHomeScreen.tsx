@@ -1,4 +1,4 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -6,15 +6,13 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getExpensesScreen } from '@/modules/expenses/api';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
+import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 import { FeatureScreen } from '@/modules/shared/components/FeatureScreen';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { useAdaptiveLayout } from '@/platform/adaptive';
-
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 
 type ExpensesScreenProps = {
   screenId: keyof typeof expenseRoutes;
@@ -27,7 +25,11 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
   const layout = useAdaptiveLayout();
   const [activeTab, setActiveTab] = useState<TabType>('groups');
   const [settleModalVisible, setSettleModalVisible] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<{ name: string; amount: string; note: string } | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<{
+    name: string;
+    amount: string;
+    note: string;
+  } | null>(null);
 
   const screen = useQuery({
     queryKey: ['expenses', 'screen', screenId],
@@ -65,7 +67,10 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
   };
 
   const handleConfirmZelle = () => {
-    Alert.alert('Zelle Settlement', `Payment of ${selectedPerson?.amount ?? '$45.00'} marked as settled.`);
+    Alert.alert(
+      'Zelle Settlement',
+      `Payment of ${selectedPerson?.amount ?? '$45.00'} marked as settled.`,
+    );
     setSettleModalVisible(false);
   };
 
@@ -133,17 +138,20 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
 
             {/* Quick Hero Actions */}
             <View style={s.heroActionsRow}>
-              <Pressable
-                style={s.heroActionPrimary}
-                onPress={() => router.push('/expenses/add')}
-              >
+              <Pressable style={s.heroActionPrimary} onPress={() => router.push('/expenses/add')}>
                 <AppIcon name="plus" size={16} color="#431ebe" />
                 <Text style={s.heroActionPrimaryText}>Add Expense</Text>
               </Pressable>
 
               <Pressable
                 style={s.heroActionSecondary}
-                onPress={() => handleOpenSettle({ name: 'Priya M.', amount: '$45.00', note: 'I-35 Carpool Fuel' })}
+                onPress={() =>
+                  handleOpenSettle({
+                    name: 'Priya M.',
+                    amount: '$45.00',
+                    note: 'I-35 Carpool Fuel',
+                  })
+                }
               >
                 <AppIcon name="wallet" size={16} color="#fff" />
                 <Text style={s.heroActionSecondaryText}>Settle via Zelle</Text>
@@ -157,19 +165,25 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
               style={[s.tabItem, activeTab === 'groups' && s.tabItemActive]}
               onPress={() => setActiveTab('groups')}
             >
-              <Text style={[s.tabText, activeTab === 'groups' && s.tabTextActive]}>Active Groups (4)</Text>
+              <Text style={[s.tabText, activeTab === 'groups' && s.tabTextActive]}>
+                Active Groups (4)
+              </Text>
             </Pressable>
             <Pressable
               style={[s.tabItem, activeTab === 'balances' && s.tabItemActive]}
               onPress={() => setActiveTab('balances')}
             >
-              <Text style={[s.tabText, activeTab === 'balances' && s.tabTextActive]}>Who Owes Whom</Text>
+              <Text style={[s.tabText, activeTab === 'balances' && s.tabTextActive]}>
+                Who Owes Whom
+              </Text>
             </Pressable>
             <Pressable
               style={[s.tabItem, activeTab === 'activity' && s.tabItemActive]}
               onPress={() => setActiveTab('activity')}
             >
-              <Text style={[s.tabText, activeTab === 'activity' && s.tabTextActive]}>Recent Activity</Text>
+              <Text style={[s.tabText, activeTab === 'activity' && s.tabTextActive]}>
+                Recent Activity
+              </Text>
             </Pressable>
           </View>
 
@@ -199,12 +213,21 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
                 </View>
 
                 <View style={s.groupFooter}>
-                  <Pressable style={s.groupActionBtn} onPress={() => router.push('/expenses/groups')}>
+                  <Pressable
+                    style={s.groupActionBtn}
+                    onPress={() => router.push('/expenses/groups')}
+                  >
                     <Text style={s.groupActionBtnText}>View Group Bills</Text>
                   </Pressable>
                   <Pressable
                     style={s.groupSettleBtn}
-                    onPress={() => handleOpenSettle({ name: 'Ravi Teja', amount: '$35.00', note: 'Grocery split' })}
+                    onPress={() =>
+                      handleOpenSettle({
+                        name: 'Ravi Teja',
+                        amount: '$35.00',
+                        note: 'Grocery split',
+                      })
+                    }
                   >
                     <Text style={s.groupSettleBtnText}>Request Zelle</Text>
                   </Pressable>
@@ -234,7 +257,10 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
                 </View>
 
                 <View style={s.groupFooter}>
-                  <Pressable style={s.groupActionBtn} onPress={() => router.push('/expenses/groups')}>
+                  <Pressable
+                    style={s.groupActionBtn}
+                    onPress={() => router.push('/expenses/groups')}
+                  >
                     <Text style={s.groupActionBtnText}>View Receipts</Text>
                   </Pressable>
                 </View>
@@ -263,12 +289,21 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
                 </View>
 
                 <View style={s.groupFooter}>
-                  <Pressable style={s.groupActionBtn} onPress={() => router.push('/expenses/groups')}>
+                  <Pressable
+                    style={s.groupActionBtn}
+                    onPress={() => router.push('/expenses/groups')}
+                  >
                     <Text style={s.groupActionBtnText}>Details</Text>
                   </Pressable>
                   <Pressable
                     style={[s.groupSettleBtn, { backgroundColor: '#ff7e33' }]}
-                    onPress={() => handleOpenSettle({ name: 'Rajesh K.', amount: '$15.00', note: 'Cricket turf & samosa split' })}
+                    onPress={() =>
+                      handleOpenSettle({
+                        name: 'Rajesh K.',
+                        amount: '$15.00',
+                        note: 'Cricket turf & samosa split',
+                      })
+                    }
                   >
                     <Text style={s.groupSettleBtnText}>Pay $15 via Zelle</Text>
                   </Pressable>
@@ -300,7 +335,9 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
               </View>
 
               <View style={s.balanceItemCard}>
-                <View style={[s.balanceAvatar, { backgroundColor: '#fff7ed', borderColor: '#ff7e33' }]}>
+                <View
+                  style={[s.balanceAvatar, { backgroundColor: '#fff7ed', borderColor: '#ff7e33' }]}
+                >
                   <Text style={[s.balanceAvatarText, { color: '#ff7e33' }]}>PM</Text>
                 </View>
                 <View style={s.balanceDetails}>
@@ -311,7 +348,13 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
                   <Text style={s.balanceOweOrange}>You owe $45.00</Text>
                   <Pressable
                     style={s.balancePayBtn}
-                    onPress={() => handleOpenSettle({ name: 'Priya M.', amount: '$45.00', note: 'I-35 Carpool Fuel' })}
+                    onPress={() =>
+                      handleOpenSettle({
+                        name: 'Priya M.',
+                        amount: '$45.00',
+                        note: 'I-35 Carpool Fuel',
+                      })
+                    }
                   >
                     <Text style={s.balancePayText}>Pay via Zelle</Text>
                   </Pressable>
@@ -326,7 +369,9 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
               <View style={s.activityRow}>
                 <View style={s.activityDot} />
                 <View style={s.activityBody}>
-                  <Text style={s.activityTitle}>Karthik V. added Spectrum 1Gbps WiFi bill ($70.00)</Text>
+                  <Text style={s.activityTitle}>
+                    Karthik V. added Spectrum 1Gbps WiFi bill ($70.00)
+                  </Text>
                   <Text style={s.activityMeta}>Domain 2B2B Flatmates • 2 hours ago</Text>
                 </View>
               </View>
@@ -340,7 +385,9 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
               <View style={s.activityRow}>
                 <View style={s.activityDot} />
                 <View style={s.activityBody}>
-                  <Text style={s.activityTitle}>Suresh R. recorded Patel Brothers Grocery ($164.20)</Text>
+                  <Text style={s.activityTitle}>
+                    Suresh R. recorded Patel Brothers Grocery ($164.20)
+                  </Text>
                   <Text style={s.activityMeta}>Domain 2B2B Flatmates • 3 days ago</Text>
                 </View>
               </View>
@@ -349,7 +396,11 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
 
           {/* Quick Footer Links */}
           <View style={s.footerNav}>
-            <AppButton label="View All Expense Groups" route="/expenses/groups" variant="secondary" />
+            <AppButton
+              label="View All Expense Groups"
+              route="/expenses/groups"
+              variant="secondary"
+            />
           </View>
         </View>
       </ScrollView>
@@ -375,7 +426,8 @@ export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
             <View style={s.zelleTipsBox}>
               <Text style={s.zelleTipHeader}>✓ Direct Bank Transfer Instructions</Text>
               <Text style={s.zelleTipText}>
-                Open your bank app (Chase, BoA, Wells Fargo) and transfer directly to the member's verified community phone/email.
+                Open your bank app (Chase, BoA, Wells Fargo) and transfer directly to the member's
+                verified community phone/email.
               </Text>
             </View>
 
@@ -403,8 +455,20 @@ const DEFAULT_EXPENSES_DATA: Record<string, CatalogScreenContent> = {
       { label: 'Outstanding', value: '$186.50' },
     ],
     items: [
-      { id: 'groups', title: 'Your groups', body: 'Open groups you belong to with live balances.', meta: 'Groups', route: '/expenses/groups' },
-      { id: 'balances', title: 'Who owes whom', body: 'See net balances and settlement suggestions.', meta: 'Balances', route: '/expenses/balances' },
+      {
+        id: 'groups',
+        title: 'Your groups',
+        body: 'Open groups you belong to with live balances.',
+        meta: 'Groups',
+        route: '/expenses/groups',
+      },
+      {
+        id: 'balances',
+        title: 'Who owes whom',
+        body: 'See net balances and settlement suggestions.',
+        meta: 'Balances',
+        route: '/expenses/balances',
+      },
     ],
   },
   groups: {
@@ -416,8 +480,20 @@ const DEFAULT_EXPENSES_DATA: Record<string, CatalogScreenContent> = {
       { label: 'Settled', value: '12' },
     ],
     items: [
-      { id: 'apt-402', title: 'Apt 402 Utilities', body: 'Austin TX · 4 flatmates · Water, Gas & Internet', meta: 'Monthly', route: '/expenses/groups' },
-      { id: 'dallas-trip', title: 'Dallas Diwali Roadtrip', body: 'Carpool & Gas split · 3 members', meta: 'Recent', route: '/expenses/groups' },
+      {
+        id: 'apt-402',
+        title: 'Apt 402 Utilities',
+        body: 'Austin TX · 4 flatmates · Water, Gas & Internet',
+        meta: 'Monthly',
+        route: '/expenses/groups',
+      },
+      {
+        id: 'dallas-trip',
+        title: 'Dallas Diwali Roadtrip',
+        body: 'Carpool & Gas split · 3 members',
+        meta: 'Recent',
+        route: '/expenses/groups',
+      },
     ],
   },
   balances: {
@@ -429,8 +505,20 @@ const DEFAULT_EXPENSES_DATA: Record<string, CatalogScreenContent> = {
       { label: 'You are owed', value: '$120.00' },
     ],
     items: [
-      { id: 'b1', title: 'Ravi Teja owes you $75.00', body: 'Groceries at Patel Brothers', meta: 'Pending', route: '/expenses/settlements' },
-      { id: 'b2', title: 'You owe Priya $45.00', body: 'Gas on I-35 carpool', meta: 'Due', route: '/expenses/settlements' },
+      {
+        id: 'b1',
+        title: 'Ravi Teja owes you $75.00',
+        body: 'Groceries at Patel Brothers',
+        meta: 'Pending',
+        route: '/expenses/settlements',
+      },
+      {
+        id: 'b2',
+        title: 'You owe Priya $45.00',
+        body: 'Gas on I-35 carpool',
+        meta: 'Due',
+        route: '/expenses/settlements',
+      },
     ],
   },
   settlements: {
@@ -442,7 +530,13 @@ const DEFAULT_EXPENSES_DATA: Record<string, CatalogScreenContent> = {
       { label: 'This month', value: '$240' },
     ],
     items: [
-      { id: 's1', title: 'Settled $120.00 with Suresh', body: 'Paid via Zelle · Oct 2', meta: 'Completed', route: '/expenses/balances' },
+      {
+        id: 's1',
+        title: 'Settled $120.00 with Suresh',
+        body: 'Paid via Zelle · Oct 2',
+        meta: 'Completed',
+        route: '/expenses/balances',
+      },
     ],
   },
   add: {
@@ -451,7 +545,13 @@ const DEFAULT_EXPENSES_DATA: Record<string, CatalogScreenContent> = {
     eyebrow: 'New Expense',
     metrics: [],
     items: [
-      { id: 'quick-split', title: 'Equal Split', body: 'Divide total equally among group members.', meta: 'Standard', route: '/expenses/groups' },
+      {
+        id: 'quick-split',
+        title: 'Equal Split',
+        body: 'Divide total equally among group members.',
+        meta: 'Standard',
+        route: '/expenses/groups',
+      },
     ],
   },
 };

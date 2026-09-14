@@ -1,19 +1,19 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  Pressable,
-  TextInput,
-  useWindowDimensions,
   ActivityIndicator,
   Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { getPost, addComment, reactPost } from '../api';
+import { addComment, getPost, reactPost } from '../api';
 
 const C = {
   primary: '#E05638', // Warm Saffron
@@ -142,9 +142,7 @@ export function PostDetailsScreen() {
             style={s.navIconBtn}
             onPress={() => setIsSaved(!isSaved)}
           >
-            <Text style={[s.heartIcon, isSaved && s.heartIconSaved]}>
-              {isSaved ? '♥' : '♡'}
-            </Text>
+            <Text style={[s.heartIcon, isSaved && s.heartIconSaved]}>{isSaved ? '♥' : '♡'}</Text>
           </Pressable>
         </View>
       </View>
@@ -181,7 +179,8 @@ export function PostDetailsScreen() {
               <Text style={s.pinnedTitle}>Community Guidelines & Moderation</Text>
             </View>
             <Text style={s.pinnedBody}>
-              ManaBandhu discussions are moderated for trust, mutual respect, and community safety. Direct helpful advice and local insights are encouraged.
+              ManaBandhu discussions are moderated for trust, mutual respect, and community safety.
+              Direct helpful advice and local insights are encouraged.
             </Text>
           </View>
 
@@ -236,9 +235,7 @@ export function PostDetailsScreen() {
                 </View>
                 <View style={s.commentAuthorMeta}>
                   <Text style={s.commentAuthorName}>{comm.authorName ?? 'Community Member'}</Text>
-                  <Text style={s.commentTime}>
-                    {new Date(comm.createdAt).toLocaleDateString()}
-                  </Text>
+                  <Text style={s.commentTime}>{new Date(comm.createdAt).toLocaleDateString()}</Text>
                 </View>
                 <View style={s.upvotePill}>
                   <Text style={s.upvoteIcon}>💬</Text>

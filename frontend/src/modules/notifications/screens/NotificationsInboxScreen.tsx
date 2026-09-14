@@ -84,7 +84,7 @@ const DEFAULT_NOTIFICATIONS = [
 export function NotificationsInboxScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isCompact = width < 360;
+  const _isCompact = width < 360;
   const isDesktop = width >= 768;
 
   const [query, setQuery] = useState('');

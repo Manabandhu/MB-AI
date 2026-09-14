@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import {
   Animated,
   Linking,
@@ -14,7 +14,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getSafetyCenter } from '@/modules/safety/api';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
@@ -44,16 +43,37 @@ const DEFAULT_SAFETY_DATA = {
     { label: 'Blocked users', value: '0' },
   ],
   items: [
-    { id: 'reports', title: 'Your reports', body: 'Track reports you have submitted and their status.', meta: 'Open reports', route: '/safety/reports', status: null },
-    { id: 'blocked', title: 'Blocked users', body: 'Manage users you have blocked and the reasons.', meta: 'Blocked', route: '/safety/blocked-users', status: null },
-    { id: 'trusted', title: 'Trusted contacts', body: 'Manage people you trust for safety check-ins.', meta: 'Trusted', route: '/safety/trusted-contacts', status: null },
+    {
+      id: 'reports',
+      title: 'Your reports',
+      body: 'Track reports you have submitted and their status.',
+      meta: 'Open reports',
+      route: '/safety/reports',
+      status: null,
+    },
+    {
+      id: 'blocked',
+      title: 'Blocked users',
+      body: 'Manage users you have blocked and the reasons.',
+      meta: 'Blocked',
+      route: '/safety/blocked-users',
+      status: null,
+    },
+    {
+      id: 'trusted',
+      title: 'Trusted contacts',
+      body: 'Manage people you trust for safety check-ins.',
+      meta: 'Trusted',
+      route: '/safety/trusted-contacts',
+      status: null,
+    },
   ],
 };
 
 export function SafetyCenterScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isCompact = width < 360;
+  const _isCompact = width < 360;
   const isDesktop = width >= 768;
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -71,13 +91,17 @@ export function SafetyCenterScreen() {
           duration: 800,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     loop.start();
     return () => loop.stop();
   }, [pulseAnim]);
 
-  const center = useQuery({ queryKey: ['safety', 'center'], queryFn: getSafetyCenter, retry: false });
+  const center = useQuery({
+    queryKey: ['safety', 'center'],
+    queryFn: getSafetyCenter,
+    retry: false,
+  });
 
   if (center.isLoading) {
     return (
@@ -153,14 +177,27 @@ export function SafetyCenterScreen() {
         <View style={s.sosBanner}>
           <View style={s.sosHeaderRow}>
             <View style={s.sosIconOuter}>
-              <Animated.View style={[s.sosHalo, { transform: [{ scale: pulseAnim }], opacity: pulseAnim.interpolate({ inputRange: [1, 1.25], outputRange: [0.6, 0] }) }]} />
+              <Animated.View
+                style={[
+                  s.sosHalo,
+                  {
+                    transform: [{ scale: pulseAnim }],
+                    opacity: pulseAnim.interpolate({
+                      inputRange: [1, 1.25],
+                      outputRange: [0.6, 0],
+                    }),
+                  },
+                ]}
+              />
               <View style={s.sosIconWrap}>
                 <AppIcon name="warning" size={20} color="#FFFFFF" />
               </View>
             </View>
             <View style={s.sosTextWrap}>
               <Text style={s.sosTitle}>In an Immediate Emergency?</Text>
-              <Text style={s.sosSubtitle}>Call 911 for emergency services, police, or ambulance assistance.</Text>
+              <Text style={s.sosSubtitle}>
+                Call 911 for emergency services, police, or ambulance assistance.
+              </Text>
             </View>
           </View>
           <View style={s.sosActionsRow}>
@@ -226,7 +263,8 @@ export function SafetyCenterScreen() {
             <View style={s.trustContent}>
               <Text style={s.trustHeading}>Verified Member Identity</Text>
               <Text style={s.trustDesc}>
-                All room hosts, drivers, and referrers undergo ID and contact verification before listing.
+                All room hosts, drivers, and referrers undergo ID and contact verification before
+                listing.
               </Text>
             </View>
           </View>
@@ -236,7 +274,8 @@ export function SafetyCenterScreen() {
             <View style={s.trustContent}>
               <Text style={s.trustHeading}>Zero Harassment Policy</Text>
               <Text style={s.trustDesc}>
-                Strict zero tolerance for scams, abusive behavior, or discrimination. Accounts are banned upon verification.
+                Strict zero tolerance for scams, abusive behavior, or discrimination. Accounts are
+                banned upon verification.
               </Text>
             </View>
           </View>
@@ -246,7 +285,8 @@ export function SafetyCenterScreen() {
             <View style={s.trustContent}>
               <Text style={s.trustHeading}>Shareable Trip & Stay Details</Text>
               <Text style={s.trustDesc}>
-                Always share your ride route or room visit details with your Trusted Contacts with one tap.
+                Always share your ride route or room visit details with your Trusted Contacts with
+                one tap.
               </Text>
             </View>
           </View>

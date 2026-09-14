@@ -73,7 +73,7 @@ public class RoomListing {
     @Column(name = "university_shuttle_accessible")
     Boolean universityShuttleAccessible = false;
 
-    @Column(name = "state_code", length = 10)
+    @Column(name = "state_code", length = 50)
     String stateCode;
 
     @Column(length = 100)

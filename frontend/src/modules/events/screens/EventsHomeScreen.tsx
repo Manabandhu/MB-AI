@@ -1,20 +1,18 @@
-import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
   useWindowDimensions,
+  View,
 } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { listEvents } from '@/modules/events/api';
-import type { Event } from '@/modules/events/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
@@ -50,16 +48,20 @@ export default function EventsHomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isCompact = width < 360;
-  const isDesktop = width >= 768;
+  const _isDesktop = width >= 768;
   const { session } = useAuthStore();
 
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [_filterModalVisible, _setFilterModalVisible] = useState(false);
   const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
 
   // Fetch live events from Spring / Supabase
-  const { data: rawEvents = [], isLoading, refetch } = useQuery({
+  const {
+    data: rawEvents = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['events', 'list'],
     queryFn: listEvents,
     staleTime: 1000 * 60 * 2,
@@ -87,13 +89,32 @@ export default function EventsHomeScreen() {
       if (selectedCategory !== 'all') {
         const text = `${ev.title} ${ev.description} ${ev.location}`.toLowerCase();
         if (selectedCategory === 'cultural') {
-          if (!text.includes('diwali') && !text.includes('dasara') && !text.includes('bathukamma') && !text.includes('festival')) return false;
+          if (
+            !text.includes('diwali') &&
+            !text.includes('dasara') &&
+            !text.includes('bathukamma') &&
+            !text.includes('festival')
+          )
+            return false;
         } else if (selectedCategory === 'tech') {
-          if (!text.includes('tech') && !text.includes('mixer') && !text.includes('ai') && !text.includes('founder')) return false;
+          if (
+            !text.includes('tech') &&
+            !text.includes('mixer') &&
+            !text.includes('ai') &&
+            !text.includes('founder')
+          )
+            return false;
         } else if (selectedCategory === 'sports') {
-          if (!text.includes('cricket') && !text.includes('sport') && !text.includes('league')) return false;
+          if (!text.includes('cricket') && !text.includes('sport') && !text.includes('league'))
+            return false;
         } else if (selectedCategory === 'food') {
-          if (!text.includes('chai') && !text.includes('food') && !text.includes('social') && !text.includes('potluck')) return false;
+          if (
+            !text.includes('chai') &&
+            !text.includes('food') &&
+            !text.includes('social') &&
+            !text.includes('potluck')
+          )
+            return false;
         }
       }
 
@@ -102,10 +123,7 @@ export default function EventsHomeScreen() {
   }, [rawEvents, query, selectedCategory]);
 
   const featuredEvent = useMemo(() => {
-    return (
-      rawEvents.find((e) => e.title.toLowerCase().includes('diwali')) ||
-      rawEvents[0]
-    );
+    return rawEvents.find((e) => e.title.toLowerCase().includes('diwali')) || rawEvents[0];
   }, [rawEvents]);
 
   const regularEvents = useMemo(() => {
@@ -147,7 +165,9 @@ export default function EventsHomeScreen() {
               )}
             </View>
             <Text style={s.subtitleText} numberOfLines={1}>
-              {isCompact ? `${rawEvents.length} Events` : `Austin & Central TX · ${rawEvents.length} Events`}
+              {isCompact
+                ? `${rawEvents.length} Events`
+                : `Austin & Central TX · ${rawEvents.length} Events`}
             </Text>
           </View>
         </View>
@@ -212,9 +232,7 @@ export default function EventsHomeScreen() {
                 onPress={() => setSelectedCategory(cat.id)}
                 style={[s.chipPill, isSelected && s.chipPillActive]}
               >
-                <Text style={[s.chipText, isSelected && s.chipTextActive]}>
-                  {cat.label}
-                </Text>
+                <Text style={[s.chipText, isSelected && s.chipTextActive]}>{cat.label}</Text>
               </Pressable>
             );
           })}
@@ -286,7 +304,9 @@ export default function EventsHomeScreen() {
           <View style={s.eventsGrid}>
             {regularEvents.map((event) => {
               const isSaved = savedEvents.has(event.id);
-              const isTech = event.title.toLowerCase().includes('tech') || event.title.toLowerCase().includes('ai');
+              const isTech =
+                event.title.toLowerCase().includes('tech') ||
+                event.title.toLowerCase().includes('ai');
               const isSports = event.title.toLowerCase().includes('cricket');
 
               return (
@@ -294,7 +314,11 @@ export default function EventsHomeScreen() {
                   <View style={s.cardTopRow}>
                     <View style={s.categoryTagPill}>
                       <Text style={s.categoryTagText}>
-                        {isTech ? '💼 Tech & Networking' : isSports ? '🏏 Sports & League' : '🎉 Cultural Festival'}
+                        {isTech
+                          ? '💼 Tech & Networking'
+                          : isSports
+                            ? '🏏 Sports & League'
+                            : '🎉 Cultural Festival'}
                       </Text>
                     </View>
                     <Pressable onPress={() => toggleSaveEvent(event.id)}>
@@ -313,12 +337,20 @@ export default function EventsHomeScreen() {
                   <View style={s.eventBadgesRow}>
                     <View style={s.eventPill}>
                       <Text style={s.eventPillText}>
-                        {isTech ? '☕ Free Chai & Snacks' : isSports ? '🏆 Tennis Ball 12 Overs' : '🍛 Traditional Potluck'}
+                        {isTech
+                          ? '☕ Free Chai & Snacks'
+                          : isSports
+                            ? '🏆 Tennis Ball 12 Overs'
+                            : '🍛 Traditional Potluck'}
                       </Text>
                     </View>
                     <View style={s.eventPill}>
                       <Text style={s.eventPillText}>
-                        {isTech ? '🤝 120 Techies RSVPs' : isSports ? '45 Players Attending' : '350 Families Attending'}
+                        {isTech
+                          ? '🤝 120 Techies RSVPs'
+                          : isSports
+                            ? '45 Players Attending'
+                            : '350 Families Attending'}
                       </Text>
                     </View>
                   </View>
@@ -351,7 +383,8 @@ export default function EventsHomeScreen() {
           <View style={s.hostPromptContent}>
             <Text style={s.hostPromptTitle}>Hosting a Community Event?</Text>
             <Text style={s.hostPromptSubtitle}>
-              Publish your festival puja, cricket match, garba night, or tech meetup for free to 25,000+ verified members in Central Texas.
+              Publish your festival puja, cricket match, garba night, or tech meetup for free to
+              25,000+ verified members in Central Texas.
             </Text>
           </View>
           <Pressable

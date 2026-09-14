@@ -1,6 +1,6 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
-import type { JobCategory, JobPosting } from '@/modules/jobs/types';
+import type { CreateJobInput, JobCategory, JobPosting } from '@/modules/jobs/types';
 
 export async function getJobsScreen(screenId: string): Promise<CatalogScreenContent> {
   return parseJsonOrThrow(await apiFetch(`/api/v1/jobs/screens/${screenId}`), 'Jobs screen');
@@ -22,4 +22,11 @@ export async function getJobPosting(jobId: string): Promise<JobPosting> {
 export async function listJobCategories(): Promise<JobCategory[]> {
   const response = await apiFetch('/api/v1/jobs/categories');
   return parseJsonOrThrow<JobCategory[]>(response, 'Job categories');
+}
+
+export async function createJobPosting(input: CreateJobInput): Promise<JobPosting> {
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/jobs', { method: 'POST', body: JSON.stringify(input) }),
+    'Create job posting',
+  );
 }

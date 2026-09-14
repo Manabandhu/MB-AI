@@ -1,23 +1,15 @@
-import { useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  Pressable,
-  useWindowDimensions,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { listRoomListings } from '@/modules/rooms/api';
-import type { RoomListing } from '@/modules/rooms/types';
-import { listEvents } from '@/modules/events/api';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Event } from '@/modules/events/api';
+import { listEvents } from '@/modules/events/api';
 import { listMarketplaceListings } from '@/modules/marketplace/api';
 import type { MarketplaceListing } from '@/modules/marketplace/types';
+import { listRoomListings } from '@/modules/rooms/api';
+import type { RoomListing } from '@/modules/rooms/types';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const C = {
   primary: '#E05638', // Warm Saffron
@@ -45,9 +37,18 @@ export function SavedScreen() {
 
   const [activeTab, setActiveTab] = useState('all');
 
-  const { data: rooms = [] } = useQuery<RoomListing[]>({ queryKey: ['rooms', 'saved-preview'], queryFn: () => listRoomListings().catch(() => []) });
-  const { data: events = [] } = useQuery<Event[]>({ queryKey: ['events', 'saved-preview'], queryFn: () => listEvents().catch(() => []) });
-  const { data: market = [] } = useQuery<MarketplaceListing[]>({ queryKey: ['market', 'saved-preview'], queryFn: () => listMarketplaceListings().catch(() => []) });
+  const { data: rooms = [] } = useQuery<RoomListing[]>({
+    queryKey: ['rooms', 'saved-preview'],
+    queryFn: () => listRoomListings().catch(() => []),
+  });
+  const { data: events = [] } = useQuery<Event[]>({
+    queryKey: ['events', 'saved-preview'],
+    queryFn: () => listEvents().catch(() => []),
+  });
+  const { data: market = [] } = useQuery<MarketplaceListing[]>({
+    queryKey: ['market', 'saved-preview'],
+    queryFn: () => listMarketplaceListings().catch(() => []),
+  });
 
   // For demonstration, showcase first available active items as saved
   const savedRooms: RoomListing[] = rooms.slice(0, 2);
@@ -118,8 +119,12 @@ export function SavedScreen() {
                       <Text style={s.cardEmoji}>🏠</Text>
                     </View>
                     <View style={s.cardInfo}>
-                      <Text style={s.cardTitle} numberOfLines={1}>{r.title}</Text>
-                      <Text style={s.cardSub}>{r.broadLocation ?? 'Austin, TX'} · ${r.price}/mo</Text>
+                      <Text style={s.cardTitle} numberOfLines={1}>
+                        {r.title}
+                      </Text>
+                      <Text style={s.cardSub}>
+                        {r.broadLocation ?? 'Austin, TX'} · ${r.price}/mo
+                      </Text>
                     </View>
                   </View>
                   <AppIcon name="chevron-right" size={16} color={C.secondary} />
@@ -148,8 +153,12 @@ export function SavedScreen() {
                       <Text style={s.cardEmoji}>🛍️</Text>
                     </View>
                     <View style={s.cardInfo}>
-                      <Text style={s.cardTitle} numberOfLines={1}>{m.title}</Text>
-                      <Text style={s.cardSub}>{m.location ?? 'Austin'} · ${m.price} {m.negotiable ? '(Negotiable)' : ''}</Text>
+                      <Text style={s.cardTitle} numberOfLines={1}>
+                        {m.title}
+                      </Text>
+                      <Text style={s.cardSub}>
+                        {m.location ?? 'Austin'} · ${m.price} {m.negotiable ? '(Negotiable)' : ''}
+                      </Text>
                     </View>
                   </View>
                   <AppIcon name="chevron-right" size={16} color={C.secondary} />
@@ -178,8 +187,12 @@ export function SavedScreen() {
                       <Text style={s.cardEmoji}>🎉</Text>
                     </View>
                     <View style={s.cardInfo}>
-                      <Text style={s.cardTitle} numberOfLines={1}>{e.title}</Text>
-                      <Text style={s.cardSub}>{e.location} · {e.date ? new Date(e.date).toLocaleDateString() : 'Upcoming'}</Text>
+                      <Text style={s.cardTitle} numberOfLines={1}>
+                        {e.title}
+                      </Text>
+                      <Text style={s.cardSub}>
+                        {e.location} · {e.date ? new Date(e.date).toLocaleDateString() : 'Upcoming'}
+                      </Text>
                     </View>
                   </View>
                   <AppIcon name="chevron-right" size={16} color={C.secondary} />
@@ -192,7 +205,10 @@ export function SavedScreen() {
             <View style={s.emptyState}>
               <Text style={s.emptyEmoji}>🔖</Text>
               <Text style={s.emptyTitle}>No saved items yet</Text>
-              <Text style={s.emptySub}>Tap the heart or bookmark icon on any room, marketplace listing, or festival to save it here.</Text>
+              <Text style={s.emptySub}>
+                Tap the heart or bookmark icon on any room, marketplace listing, or festival to save
+                it here.
+              </Text>
             </View>
           )}
         </ScrollView>

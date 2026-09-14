@@ -1,10 +1,9 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
+import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,10 +14,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getReferralDetail, getReferralOffer, getReferralRequest, type Referral } from '@/modules/referrals/api';
+import {
+  getReferralDetail,
+  getReferralOffer,
+  getReferralRequest,
+  type Referral,
+} from '@/modules/referrals/api';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 export function ReferralDetailsScreen() {
@@ -33,7 +36,12 @@ export function ReferralDetailsScreen() {
   const [fitPitch, setFitPitch] = useState('');
   const [requestSent, setRequestSent] = useState(false);
 
-  const { data: referral, isLoading, isError, refetch } = useQuery({
+  const {
+    data: referral,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['referrals', 'detail', referralId],
     queryFn: () => getReferralDetail(referralId),
     enabled: Boolean(referralId),
@@ -62,7 +70,12 @@ export function ReferralDetailsScreen() {
   if (isError || !referral) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <ErrorState title="Referral not found" body="The referral you are looking for does not exist or has been removed." retryLabel="Retry" onRetry={() => refetch()} />
+        <ErrorState
+          title="Referral not found"
+          body="The referral you are looking for does not exist or has been removed."
+          retryLabel="Retry"
+          onRetry={() => refetch()}
+        />
       </SafeAreaView>
     );
   }
@@ -122,21 +135,14 @@ export function ReferralDetailsScreen() {
             onPress={() => setBookmarked(!bookmarked)}
             style={styles.iconBtn}
           >
-            <AppIcon
-              name="star"
-              size={18}
-              color={bookmarked ? '#EA580C' : colors.muted}
-            />
+            <AppIcon name="star" size={18} color={bookmarked ? '#EA580C' : colors.muted} />
           </Pressable>
         </View>
       </View>
 
       {/* Main Content Area */}
       <ScrollView
-        contentContainerStyle={[
-          styles.scrollContainer,
-          isDesktop && styles.scrollContainerDesktop,
-        ]}
+        contentContainerStyle={[styles.scrollContainer, isDesktop && styles.scrollContainerDesktop]}
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.mainWrapper, isDesktop && styles.mainWrapperDesktop]}>
@@ -194,9 +200,7 @@ export function ReferralDetailsScreen() {
             <View style={styles.referrerProfileRow}>
               <View style={styles.avatarRing}>
                 <View style={styles.avatarInner}>
-                  <Text style={styles.avatarInitials}>
-                    {data.type === 'offer' ? 'VR' : 'MB'}
-                  </Text>
+                  <Text style={styles.avatarInitials}>{data.type === 'offer' ? 'VR' : 'MB'}</Text>
                 </View>
                 <View style={styles.avatarVerifiedCheck}>
                   <AppIcon name="verified-user" size={11} color="#FFFFFF" />
@@ -210,12 +214,8 @@ export function ReferralDetailsScreen() {
                   </Text>
                   <AppIcon name="verified-user" size={14} color="#10B981" />
                 </View>
-                <Text style={styles.referrerRole}>
-                  {data.category || 'Professional Network'}
-                </Text>
-                <Text style={styles.referrerChapter}>
-                  ManaBandhu Member Network
-                </Text>
+                <Text style={styles.referrerRole}>{data.category || 'Professional Network'}</Text>
+                <Text style={styles.referrerChapter}>ManaBandhu Member Network</Text>
               </View>
             </View>
 
@@ -237,9 +237,7 @@ export function ReferralDetailsScreen() {
 
             {/* Quote Box */}
             <View style={styles.quoteBox}>
-              <Text style={styles.quoteText}>
-                {data.description}
-              </Text>
+              <Text style={styles.quoteText}>{data.description}</Text>
             </View>
 
             {offerDetails?.terms ? (
@@ -286,7 +284,8 @@ export function ReferralDetailsScreen() {
                 <View style={styles.criteriaContent}>
                   <Text style={styles.criteriaHeading}>Technical Stack & Experience</Text>
                   <Text style={styles.criteriaText}>
-                    3+ years experience with Distributed Systems, High-throughput microservices, Go, Java, C++, Python, or Rust.
+                    3+ years experience with Distributed Systems, High-throughput microservices, Go,
+                    Java, C++, Python, or Rust.
                   </Text>
                 </View>
               </View>
@@ -298,7 +297,8 @@ export function ReferralDetailsScreen() {
                 <View style={styles.criteriaContent}>
                   <Text style={styles.criteriaHeading}>Visa & Work Authorization</Text>
                   <Text style={styles.criteriaText}>
-                    H-1B transfer supported, OPT STEM extensions, and Green Card PERM processing for full-time hires.
+                    H-1B transfer supported, OPT STEM extensions, and Green Card PERM processing for
+                    full-time hires.
                   </Text>
                 </View>
               </View>
@@ -322,7 +322,8 @@ export function ReferralDetailsScreen() {
                 <View style={styles.checklistContent}>
                   <Text style={styles.checklistTitle}>Updated Resume PDF</Text>
                   <Text style={styles.checklistDesc}>
-                    Clean 1-page format highlighting production metrics, scale, and modern tech stack.
+                    Clean 1-page format highlighting production metrics, scale, and modern tech
+                    stack.
                   </Text>
                 </View>
               </View>
@@ -358,7 +359,8 @@ export function ReferralDetailsScreen() {
             <AppIcon name="verified-user" size={24} color="#EA580C" />
             <Text style={styles.pledgeTitle}>ManaBandhu Community Pledge</Text>
             <Text style={styles.pledgeText}>
-              100% Free & Direct. ManaBandhu members never charge or accept money for job referrals. If anyone asks for payment, report immediately.
+              100% Free & Direct. ManaBandhu members never charge or accept money for job referrals.
+              If anyone asks for payment, report immediately.
             </Text>
           </View>
         </View>
@@ -397,7 +399,10 @@ export function ReferralDetailsScreen() {
         onRequestClose={() => setShowRequestModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowRequestModal(false)}>
-          <Pressable style={[styles.modalCard, isDesktop && styles.modalCardDesktop]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalCard, isDesktop && styles.modalCardDesktop]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>Request Referral</Text>

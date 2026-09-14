@@ -1,4 +1,4 @@
-import { radius, space, typography } from '@manabandhu/design-system';
+import { space } from '@manabandhu/design-system';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -68,10 +68,7 @@ export function CatalogScreen({
       {metrics.length > 0 ? (
         <View style={styles.metrics}>
           {metrics.map((metric, idx) => (
-            <View
-              key={metric.label}
-              style={[styles.metric, idx === 0 && styles.metricPrimary]}
-            >
+            <View key={metric.label} style={[styles.metric, idx === 0 && styles.metricPrimary]}>
               <Text style={[styles.metricValue, idx === 0 && styles.metricValuePrimary]}>
                 {metric.value}
               </Text>

@@ -1,10 +1,10 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { listConversations, type Conversation } from '@/modules/chat/api';
+import { type Conversation, listConversations } from '@/modules/chat/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -111,8 +111,7 @@ export default function ChatListScreen() {
         (c.lastMessage ?? '').toLowerCase().includes(query.toLowerCase()) ||
         (c.inquiryContext ?? '').toLowerCase().includes(query.toLowerCase());
 
-      const matchesTab =
-        activeTab === 'All' || c.moduleCategory === activeTab;
+      const matchesTab = activeTab === 'All' || c.moduleCategory === activeTab;
 
       return matchesSearch && matchesTab;
     });
@@ -214,7 +213,11 @@ export default function ChatListScreen() {
           ) : filtered.length === 0 ? (
             <EmptyState
               title="No messages found"
-              body={query ? "No conversations match your search." : "Start a new conversation to connect with fellow Bandhus."}
+              body={
+                query
+                  ? 'No conversations match your search.'
+                  : 'Start a new conversation to connect with fellow Bandhus.'
+              }
               actionLabel="Start New Chat"
               onAction={() => router.push('/chat/new')}
             />
@@ -260,7 +263,10 @@ export default function ChatListScreen() {
                       {/* Inquiry Context Pill */}
                       {c.inquiryContext ? (
                         <View style={[styles.contextPill, { backgroundColor: badge.bg }]}>
-                          <Text style={[styles.contextText, { color: badge.text }]} numberOfLines={1}>
+                          <Text
+                            style={[styles.contextText, { color: badge.text }]}
+                            numberOfLines={1}
+                          >
                             {c.inquiryContext}
                           </Text>
                         </View>

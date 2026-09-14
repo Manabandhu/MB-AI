@@ -87,4 +87,3 @@ export async function listMyEvents(): Promise<Event[]> {
   if (Array.isArray(data)) return data;
   return [];
 }
-

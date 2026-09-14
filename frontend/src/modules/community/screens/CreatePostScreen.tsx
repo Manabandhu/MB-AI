@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -42,7 +42,15 @@ const CATEGORIES = [
   'Visa & Legal Advice',
 ];
 
-const SUGGESTED_TAGS = ['#Austin', '#UTAustin', '#RoommateNeeded', '#H1B', '#DesiEats', '#Sublease', '#AirportRide'];
+const SUGGESTED_TAGS = [
+  '#Austin',
+  '#UTAustin',
+  '#RoommateNeeded',
+  '#H1B',
+  '#DesiEats',
+  '#Sublease',
+  '#AirportRide',
+];
 
 export function CreatePostScreen() {
   const router = useRouter();
@@ -59,7 +67,8 @@ export function CreatePostScreen() {
 
   const mutation = useMutation({
     mutationFn: () => {
-      const finalBody = selectedTags.length > 0 ? `${body.trim()}\n\n${selectedTags.join(' ')}` : body.trim();
+      const finalBody =
+        selectedTags.length > 0 ? `${body.trim()}\n\n${selectedTags.join(' ')}` : body.trim();
       return createPost({
         communityId: communityId ?? 'c1',
         title: `[${selectedCategory}] ${title.trim()}`,
@@ -103,7 +112,10 @@ export function CreatePostScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}>
+        <ScrollView
+          contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header */}
           <View style={s.headerRow}>
             <Pressable
@@ -111,6 +123,7 @@ export function CreatePostScreen() {
               accessibilityLabel="Go back"
               onPress={() => router.back()}
               style={s.backBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <AppIcon color={C.ink} name="chevron-left" size={20} />
             </Pressable>
@@ -133,7 +146,11 @@ export function CreatePostScreen() {
             {/* Category Selector */}
             <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>SELECT TOPIC CATEGORY</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.chipsRow}
+              >
                 {CATEGORIES.map((cat) => {
                   const active = selectedCategory === cat;
                   return (
@@ -144,7 +161,9 @@ export function CreatePostScreen() {
                       onPress={() => setSelectedCategory(cat)}
                       style={[s.categoryChip, active && s.categoryChipActive]}
                     >
-                      <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>{cat}</Text>
+                      <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>
+                        {cat}
+                      </Text>
                     </Pressable>
                   );
                 })}
@@ -211,7 +230,8 @@ export function CreatePostScreen() {
             <View style={s.trustBox}>
               <AppIcon color={C.primary} name="shield" size={18} />
               <Text style={s.trustBoxText}>
-                ManaBandhu discussions are moderated by verified community members. Be respectful and constructive.
+                ManaBandhu discussions are moderated by verified community members. Be respectful
+                and constructive.
               </Text>
             </View>
 

@@ -1,11 +1,10 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
+import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { listPublicReferrals, type Referral } from '@/modules/referrals/api';
+import { listPublicReferrals } from '@/modules/referrals/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 type TabType = 'offers' | 'requests';
@@ -39,7 +38,11 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const { data: rawReferrals, isLoading, refetch } = useQuery({
+  const {
+    data: rawReferrals,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['referrals', 'public'],
     queryFn: listPublicReferrals,
   });
@@ -56,17 +59,28 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
         searchQuery.trim() === '' ||
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.category && item.category.toLowerCase().includes(searchQuery.toLowerCase()));
+        item.category?.toLowerCase().includes(searchQuery.toLowerCase());
 
       let matchesFilter = true;
       if (selectedFilter === 'jobs') {
-        matchesFilter = item.title.toLowerCase().includes('engineer') || item.title.toLowerCase().includes('manager') || item.title.toLowerCase().includes('scientist') || (item.category?.toLowerCase().includes('tech') ?? false);
+        matchesFilter =
+          item.title.toLowerCase().includes('engineer') ||
+          item.title.toLowerCase().includes('manager') ||
+          item.title.toLowerCase().includes('scientist') ||
+          (item.category?.toLowerCase().includes('tech') ?? false);
       } else if (selectedFilter === 'legal') {
-        matchesFilter = item.title.toLowerCase().includes('attorney') || item.title.toLowerCase().includes('eb-2') || item.description.toLowerCase().includes('immigration');
+        matchesFilter =
+          item.title.toLowerCase().includes('attorney') ||
+          item.title.toLowerCase().includes('eb-2') ||
+          item.description.toLowerCase().includes('immigration');
       } else if (selectedFilter === 'skills') {
-        matchesFilter = item.title.toLowerCase().includes('skill') || item.description.toLowerCase().includes('review');
+        matchesFilter =
+          item.title.toLowerCase().includes('skill') ||
+          item.description.toLowerCase().includes('review');
       } else if (selectedFilter === 'housing') {
-        matchesFilter = item.title.toLowerCase().includes('housing') || item.description.toLowerCase().includes('room');
+        matchesFilter =
+          item.title.toLowerCase().includes('housing') ||
+          item.description.toLowerCase().includes('room');
       }
 
       return matchesSearch && matchesFilter;
@@ -164,17 +178,8 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
                 onPress={() => setSelectedFilter(chip.id)}
                 style={[styles.filterChip, isSelected && styles.filterChipActive]}
               >
-                <AppIcon
-                  name={chip.icon}
-                  size={14}
-                  color={isSelected ? '#FFFFFF' : '#475569'}
-                />
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    isSelected && styles.filterChipTextActive,
-                  ]}
-                >
+                <AppIcon name={chip.icon} size={14} color={isSelected ? '#FFFFFF' : '#475569'} />
+                <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
                   {chip.label}
                 </Text>
               </Pressable>
@@ -185,10 +190,7 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
 
       {/* Main Scrollable Content */}
       <ScrollView
-        contentContainerStyle={[
-          styles.scrollContainer,
-          isDesktop && styles.scrollContainerDesktop,
-        ]}
+        contentContainerStyle={[styles.scrollContainer, isDesktop && styles.scrollContainerDesktop]}
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.mainWrapper, isDesktop && styles.mainWrapperDesktop]}>
@@ -201,11 +203,10 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
               </View>
             </View>
 
-            <Text style={styles.heroTitle}>
-              Connect & Grow with Bandhus in Tech & Beyond
-            </Text>
+            <Text style={styles.heroTitle}>Connect & Grow with Bandhus in Tech & Beyond</Text>
             <Text style={styles.heroDescription}>
-              Connect directly with Telugu & Indian professionals for company referrals, mock interviews, and trusted introductions. Zero brokerages, 100% community goodwill.
+              Connect directly with Telugu & Indian professionals for company referrals, mock
+              interviews, and trusted introductions. Zero brokerages, 100% community goodwill.
             </Text>
 
             <View style={styles.heroActionsRow}>
@@ -251,10 +252,7 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
           <View style={styles.segmentedControl}>
             <Pressable
               onPress={() => setActiveTab('offers')}
-              style={[
-                styles.segmentBtn,
-                activeTab === 'offers' && styles.segmentBtnActive,
-              ]}
+              style={[styles.segmentBtn, activeTab === 'offers' && styles.segmentBtnActive]}
             >
               <AppIcon
                 name="star"
@@ -288,10 +286,7 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
 
             <Pressable
               onPress={() => setActiveTab('requests')}
-              style={[
-                styles.segmentBtn,
-                activeTab === 'requests' && styles.segmentBtnActive,
-              ]}
+              style={[styles.segmentBtn, activeTab === 'requests' && styles.segmentBtnActive]}
             >
               <AppIcon
                 name="community"
@@ -328,10 +323,14 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
           <View style={styles.subHeaderRow}>
             <View>
               <Text style={styles.subHeaderTitle}>
-                {activeTab === 'offers' ? 'Verified Professional Offers' : 'Active Community Requests'}
+                {activeTab === 'offers'
+                  ? 'Verified Professional Offers'
+                  : 'Active Community Requests'}
               </Text>
               <Text style={styles.subHeaderDesc}>
-                {activeTab === 'offers' ? 'Direct response from verified company employees' : 'Bandhus seeking referrals, guidance & legal recommendations'}
+                {activeTab === 'offers'
+                  ? 'Direct response from verified company employees'
+                  : 'Bandhus seeking referrals, guidance & legal recommendations'}
               </Text>
             </View>
             <View style={styles.verifiedTag}>
@@ -353,10 +352,7 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
               <Text style={styles.emptyDesc}>
                 Be the first to offer or request a referral in the community.
               </Text>
-              <Pressable
-                onPress={() => router.push('/referrals/offer')}
-                style={styles.clearBtn}
-              >
+              <Pressable onPress={() => router.push('/referrals/offer')} style={styles.clearBtn}>
                 <Text style={styles.clearBtnText}>Offer a Referral</Text>
               </Pressable>
             </View>
@@ -407,17 +403,13 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
                         </Text>
                       </View>
                       <View style={[styles.tagPill, { backgroundColor: '#F8FAFC' }]}>
-                        <Text style={[styles.tagPillText, { color: '#64748B' }]}>
-                          100% Free
-                        </Text>
+                        <Text style={[styles.tagPillText, { color: '#64748B' }]}>100% Free</Text>
                       </View>
                     </View>
 
                     {/* Card Action Row */}
                     <View style={styles.cardActionRow}>
-                      <Text style={styles.postedTime}>
-                        Active referral exchange
-                      </Text>
+                      <Text style={styles.postedTime}>Active referral exchange</Text>
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="View Referral Details"
@@ -459,7 +451,10 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
         onRequestClose={() => setShowFilterModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowFilterModal(false)}>
-          <Pressable style={[styles.modalCard, isDesktop && styles.modalCardDesktop]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalCard, isDesktop && styles.modalCardDesktop]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter Referrals</Text>
               <Pressable onPress={() => setShowFilterModal(false)}>
@@ -474,10 +469,15 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
                 return (
                   <Pressable
                     key={chip.id}
-                    onPress={() => { setSelectedFilter(chip.id); setShowFilterModal(false); }}
+                    onPress={() => {
+                      setSelectedFilter(chip.id);
+                      setShowFilterModal(false);
+                    }}
                     style={[styles.modalOptionBtn, isSelected && styles.modalOptionBtnActive]}
                   >
-                    <Text style={[styles.modalOptionText, isSelected && styles.modalOptionTextActive]}>
+                    <Text
+                      style={[styles.modalOptionText, isSelected && styles.modalOptionTextActive]}
+                    >
                       {chip.label}
                     </Text>
                   </Pressable>
@@ -485,10 +485,7 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
               })}
             </View>
 
-            <Pressable
-              onPress={() => setShowFilterModal(false)}
-              style={styles.modalDoneBtn}
-            >
+            <Pressable onPress={() => setShowFilterModal(false)} style={styles.modalDoneBtn}>
               <Text style={styles.modalDoneBtnText}>Apply Filter</Text>
             </Pressable>
           </Pressable>

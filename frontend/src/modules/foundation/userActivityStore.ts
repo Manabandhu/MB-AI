@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import { useMemo } from 'react';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -140,7 +140,16 @@ export const ALL_APP_MODULES: ModuleItem[] = [
 ];
 
 // Default starter modules for brand new users
-const DEFAULT_TOP_MODULE_IDS = ['rooms', 'community', 'rides', 'jobs', 'marketplace', 'events', 'expenses', 'utilities'];
+const DEFAULT_TOP_MODULE_IDS = [
+  'rooms',
+  'community',
+  'rides',
+  'jobs',
+  'marketplace',
+  'events',
+  'expenses',
+  'utilities',
+];
 
 const memoryStore = new Map<string, string>();
 
@@ -193,7 +202,7 @@ const universalStorage = {
 export function computeDynamicModules(
   frequencyMap: Record<string, number>,
   recentVisits: { moduleId: string; timestamp: number }[],
-  limit = 8
+  limit = 8,
 ): ModuleItem[] {
   // Score each module: frequency * 3 + recency bonus + starter default priority
   const scoredModules = ALL_APP_MODULES.map((m) => {
@@ -248,8 +257,8 @@ export const useUserActivityStore = create<UserActivityState>()(
     {
       name: 'manabandhu-user-activity',
       storage: createJSONStorage(() => universalStorage),
-    }
-  )
+    },
+  ),
 );
 
 export function useDynamicModules(limit = 8): ModuleItem[] {

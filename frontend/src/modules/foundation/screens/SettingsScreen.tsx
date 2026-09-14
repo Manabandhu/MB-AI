@@ -1,19 +1,17 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
   Pressable,
+  ScrollView,
+  StyleSheet,
   Switch,
+  Text,
   useWindowDimensions,
-  Alert,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { useAuthStore } from '@/lib/authStore';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const C = {
   primary: '#431ebe', // Royal Indigo
@@ -139,10 +137,7 @@ export function SettingsScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>Safety & Trust</Text>
             <View style={s.cardGroup}>
-              <Pressable
-                onPress={() => router.push('/safety')}
-                style={s.linkRow}
-              >
+              <Pressable onPress={() => router.push('/safety')} style={s.linkRow}>
                 <View style={s.linkLeft}>
                   <View style={[s.linkIconWrap, { backgroundColor: '#FEE2E2' }]}>
                     <AppIcon name="shield" size={16} color="#DC2626" />
@@ -157,10 +152,7 @@ export function SettingsScreen() {
 
               <View style={s.divider} />
 
-              <Pressable
-                onPress={() => router.push('/notifications/settings')}
-                style={s.linkRow}
-              >
+              <Pressable onPress={() => router.push('/notifications/settings')} style={s.linkRow}>
                 <View style={s.linkLeft}>
                   <View style={s.linkIconWrap}>
                     <AppIcon name="bell" size={16} color={C.secondary} />
@@ -179,10 +171,7 @@ export function SettingsScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>About & Help</Text>
             <View style={s.cardGroup}>
-              <Pressable
-                onPress={() => router.push('/splash')}
-                style={s.linkRow}
-              >
+              <Pressable onPress={() => router.push('/splash')} style={s.linkRow}>
                 <View style={s.linkLeft}>
                   <View style={s.linkIconWrap}>
                     <AppIcon name="help" size={16} color={C.secondary} />

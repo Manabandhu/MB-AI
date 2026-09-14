@@ -34,7 +34,8 @@ const slides: SlideItem[] = [
     tagColor: color.primary,
     stat: 'Zero Brokerage',
     iconName: 'home',
-    testimonial: '“Find shared rooms and lease transfers directly from verified community residents.”',
+    testimonial:
+      '“Find shared rooms and lease transfers directly from verified community residents.”',
     author: 'Verified Community Resident',
     bullets: [
       'ID verified hosts & tenants',
@@ -68,7 +69,8 @@ const slides: SlideItem[] = [
     tagColor: color.warm,
     stat: 'Direct Employee Referrals',
     iconName: 'briefcase',
-    testimonial: '“Connect with fellow professionals across top tech hubs for direct internal referrals.”',
+    testimonial:
+      '“Connect with fellow professionals across top tech hubs for direct internal referrals.”',
     author: 'Verified Community Professional',
     bullets: [
       'Direct employee internal referrals',
@@ -85,7 +87,8 @@ const slides: SlideItem[] = [
     tagColor: color.primary,
     stat: 'Zero Commission',
     iconName: 'community',
-    testimonial: '“Connect with trusted locals for festivals, housing support, and pre-loved items.”',
+    testimonial:
+      '“Connect with trusted locals for festivals, housing support, and pre-loved items.”',
     author: 'ManaBandhu Community Member',
     bullets: [
       'Festive & cultural local meetups',

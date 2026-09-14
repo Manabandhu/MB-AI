@@ -1,22 +1,21 @@
+import { useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
-  ScrollView,
-  Pressable,
-  Image,
-  useWindowDimensions,
-  ActivityIndicator,
-  Modal,
   TextInput,
-  Alert,
+  useWindowDimensions,
+  View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { getMarketplaceListing, getMarketplaceListingImages } from '../api';
-import type { MarketplaceListing } from '../types';
 
 const C = {
   primary: '#431ebe', // Royal Indigo
@@ -147,9 +146,7 @@ export function ListingDetailsScreen() {
             style={s.navIconBtn}
             onPress={() => setIsSaved(!isSaved)}
           >
-            <Text style={[s.heartText, isSaved && s.heartTextSaved]}>
-              {isSaved ? '♥' : '♡'}
-            </Text>
+            <Text style={[s.heartText, isSaved && s.heartTextSaved]}>{isSaved ? '♥' : '♡'}</Text>
           </Pressable>
         </View>
       </View>
@@ -162,10 +159,7 @@ export function ListingDetailsScreen() {
           {/* Left Column: Image Carousel */}
           <View style={[s.galleryColumn, isDesktop && s.galleryColumnDesktop]}>
             <View style={s.heroImageContainer}>
-              <Image
-                source={{ uri: galleryUrls[activeImageIndex] }}
-                style={s.heroImage}
-              />
+              <Image source={{ uri: galleryUrls[activeImageIndex] }} style={s.heroImage} />
               <View style={s.pageBadge}>
                 <Text style={s.pageBadgeText}>
                   {activeImageIndex + 1} / {galleryUrls.length}
@@ -180,10 +174,7 @@ export function ListingDetailsScreen() {
                   <Pressable
                     key={idx}
                     onPress={() => setActiveImageIndex(idx)}
-                    style={[
-                      s.thumbBox,
-                      activeImageIndex === idx && s.thumbBoxActive,
-                    ]}
+                    style={[s.thumbBox, activeImageIndex === idx && s.thumbBoxActive]}
                   >
                     <Image source={{ uri: url }} style={s.thumbImg} />
                   </Pressable>
@@ -199,9 +190,10 @@ export function ListingDetailsScreen() {
                   <Text style={s.safetyTitle}>ManaBandhu Safe Deal Promise</Text>
                 </View>
                 <Text style={s.safetyText}>
-                  • Meet in daylight at designated public community spots (e.g., Patel Brothers Austin, HEB Round Rock).{'\n'}
-                  • Verify seller identity via ManaBandhu community profile.{'\n'}
-                  • Never send wires or gift cards. Inspect goods in person before paying via Zelle/Cash.
+                  • Meet in daylight at designated public community spots (e.g., Patel Brothers
+                  Austin, HEB Round Rock).{'\n'}• Verify seller identity via ManaBandhu community
+                  profile.{'\n'}• Never send wires or gift cards. Inspect goods in person before
+                  paying via Zelle/Cash.
                 </Text>
               </View>
             )}
@@ -255,12 +247,16 @@ export function ListingDetailsScreen() {
                 <View style={s.sellerInfo}>
                   <View style={s.sellerNameRow}>
                     <Text style={s.sellerName}>
-                      {listing.ownerId ? `Resident #${listing.ownerId.slice(0, 6)}` : 'Verified Resident'}
+                      {listing.ownerId
+                        ? `Resident #${listing.ownerId.slice(0, 6)}`
+                        : 'Verified Resident'}
                     </Text>
                     <AppIcon name="verified-user" size={16} color={C.secondary} />
                   </View>
                   <Text style={s.sellerMeta}>Verified Community Resident · Austin Metro</Text>
-                  <Text style={s.sellerLanguage}>⚡ Direct chat available · Zero brokerage community sale</Text>
+                  <Text style={s.sellerLanguage}>
+                    ⚡ Direct chat available · Zero brokerage community sale
+                  </Text>
                 </View>
               </View>
             </View>
@@ -299,7 +295,8 @@ export function ListingDetailsScreen() {
                   <Text style={s.safetyTitle}>ManaBandhu Safe Deal Promise</Text>
                 </View>
                 <Text style={s.safetyText}>
-                  Always meet in public daylight locations like Patel Brothers or HEB. Inspect before paying.
+                  Always meet in public daylight locations like Patel Brothers or HEB. Inspect
+                  before paying.
                 </Text>
               </View>
             )}
@@ -389,11 +386,7 @@ export function ListingDetailsScreen() {
               />
             </View>
 
-            <Pressable
-              style={s.submitOfferBtn}
-              onPress={handleMakeOffer}
-              disabled={offerSubmitted}
-            >
+            <Pressable style={s.submitOfferBtn} onPress={handleMakeOffer} disabled={offerSubmitted}>
               {offerSubmitted ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (

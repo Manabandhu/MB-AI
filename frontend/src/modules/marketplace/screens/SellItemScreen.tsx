@@ -67,11 +67,11 @@ export function SellItemScreen() {
   const [condition, setCondition] = useState<string>('Like New');
   const [isFree, setIsFree] = useState(false);
   const [price, setPrice] = useState('65');
-  const [originalPrice, setOriginalPrice] = useState('135');
+  const [originalPrice, _setOriginalPrice] = useState('135');
   const [negotiable, setNegotiable] = useState(true);
   const [location, setLocation] = useState('Round Rock / North Austin, TX');
   const [safePickupSpot, setSafePickupSpot] = useState(SAFE_PICKUP_SPOTS[0]);
-  const [publicSpotOnly, setPublicSpotOnly] = useState(true);
+  const [_publicSpotOnly, _setPublicSpotOnly] = useState(true);
   const [description, setDescription] = useState(
     'Works flawlessly on 110V US sockets without converter. 2 stainless steel jars (1.5L wet + 0.5L chutney) with spare coupler and original box.',
   );
@@ -120,9 +120,10 @@ export function SellItemScreen() {
     );
     const categoryId = catMatch?.id ?? '00000000-0000-0000-0000-000000000001';
 
-    const fullDesc = selectedTags.length > 0
-      ? `${description.trim()}\n\nTags: ${selectedTags.join(', ')}\nPickup: ${safePickupSpot}`
-      : `${description.trim()}\nPickup: ${safePickupSpot}`;
+    const fullDesc =
+      selectedTags.length > 0
+        ? `${description.trim()}\n\nTags: ${selectedTags.join(', ')}\nPickup: ${safePickupSpot}`
+        : `${description.trim()}\nPickup: ${safePickupSpot}`;
 
     const payload: CreateListingInput = {
       categoryId,
@@ -147,8 +148,8 @@ export function SellItemScreen() {
           </View>
           <Text style={s.successTitle}>Item Listed on Marketplace! 🎉</Text>
           <Text style={s.successSubtitle}>
-            Your listing is now active and visible to verified Telugu and Indian community members in{' '}
-            {location}.
+            Your listing is now active and visible to verified Telugu and Indian community members
+            in {location}.
           </Text>
           <View style={s.successCard}>
             <Text style={s.successItemTitle}>{title}</Text>
@@ -156,10 +157,7 @@ export function SellItemScreen() {
             <Text style={s.successItemSpot}>📍 Safe Daylight Pickup: {safePickupSpot}</Text>
           </View>
           <View style={s.successActions}>
-            <Pressable
-              style={s.primaryBtn}
-              onPress={() => router.replace('/marketplace')}
-            >
+            <Pressable style={s.primaryBtn} onPress={() => router.replace('/marketplace')}>
               <Text style={s.primaryBtnText}>View in Marketplace</Text>
             </Pressable>
             <Pressable
@@ -179,10 +177,7 @@ export function SellItemScreen() {
 
   return (
     <SafeAreaView style={s.safe}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={s.flex}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
         {/* Top Navigation Bar */}
         <View style={s.topBar}>
           <Pressable style={s.iconBtn} onPress={() => router.back()}>
@@ -367,10 +362,7 @@ export function SellItemScreen() {
             )}
 
             {!isFree && (
-              <Pressable
-                style={s.checkboxRow}
-                onPress={() => setNegotiable(!negotiable)}
-              >
+              <Pressable style={s.checkboxRow} onPress={() => setNegotiable(!negotiable)}>
                 <View style={[s.checkbox, negotiable && s.checkboxChecked]}>
                   {negotiable ? <AppIcon name="check" size={14} color="#ffffff" /> : null}
                 </View>
@@ -459,9 +451,7 @@ export function SellItemScreen() {
           {/* Seller Trust Banner */}
           <View style={s.sellerCard}>
             <View style={s.sellerAvatar}>
-              <Text style={s.sellerAvatarText}>
-                {user?.user_metadata?.full_name?.[0] ?? 'S'}
-              </Text>
+              <Text style={s.sellerAvatarText}>{user?.user_metadata?.full_name?.[0] ?? 'S'}</Text>
             </View>
             <View style={s.sellerInfo}>
               <Text style={s.sellerName}>

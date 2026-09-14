@@ -7,9 +7,8 @@ import '../../global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaListener } from 'react-native-safe-area-context';
 import { Uniwind } from 'uniwind';
-
-import { GluestackUIProvider } from '@/modules/shared/ui/gluestack/gluestack-ui-provider';
 import { useAuthStore } from '@/lib/authStore';
+import { GluestackUIProvider } from '@/modules/shared/ui/gluestack/gluestack-ui-provider';
 
 export default function RootLayout() {
   const [queryClient] = useState(
@@ -23,7 +22,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     ExpoSplashScreen.hideAsync().catch(() => undefined);
-    useAuthStore.getState().checkSession().catch(() => undefined);
+    useAuthStore
+      .getState()
+      .checkSession()
+      .catch(() => undefined);
   }, []);
 
   return (

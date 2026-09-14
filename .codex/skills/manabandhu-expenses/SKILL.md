@@ -82,5 +82,4 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 - Fallback cleanup: deleted `expensesFallbacks.ts` and removed inline fallbacks from `ExpensesHomeScreen`, `ExpenseGroupsScreen`, `BalancesScreen`, `GroupDetailsScreen`, and `SettlementsScreen` in favor of live backend endpoints, loading states, and error/empty states; added resilient `DEFAULT_EXPENSES_DATA` fallback to `ExpensesScreen` to avoid mobile network blockages; updated group details route with `useLocalSearchParams`.
 - Shared Expenses Hub overhaul: replaced generic `FeatureScreen` placeholder in `ExpensesHomeScreen.tsx` with dedicated Flatmate Splitwise & Shared Expenses screen featuring net balance hero card ("+$75.00 You are owed"), quick split action cards, multi-tab view (Active Groups, Who Owes Whom, Recent Splits), and interactive Zelle/Venmo settlement modal. Matching Stitch screen: `b542ab6def1c4837882b82929c0744db`.
 - Add Expense form modernization: upgraded `AddExpenseScreen.tsx` with category selector chips, formatted currency amount input, 50/50 vs individual settlement split rules, and success summary card.
-
-
+- Repo-Wide Code Review & Defect Remediation: Enforced `keyboardShouldPersistTaps="handled"` on `AddExpenseScreen.tsx` ScrollView, added `hitSlop` on back button, and verified dynamic group route parameters (`/expenses/groups/[groupId]`).

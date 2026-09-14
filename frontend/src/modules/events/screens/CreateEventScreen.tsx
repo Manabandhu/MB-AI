@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -115,7 +115,10 @@ export default function CreateEventScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}>
+        <ScrollView
+          contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header */}
           <View style={s.headerRow}>
             <Pressable
@@ -123,6 +126,7 @@ export default function CreateEventScreen() {
               accessibilityLabel="Go back"
               onPress={() => router.back()}
               style={s.backBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <AppIcon color={C.ink} name="chevron-left" size={20} />
             </Pressable>
@@ -145,7 +149,11 @@ export default function CreateEventScreen() {
             {/* Category Chips */}
             <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>EVENT CATEGORY</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.chipsRow}
+              >
                 {CATEGORIES.map((cat) => {
                   const active = selectedCategory === cat.id;
                   return (
@@ -156,7 +164,9 @@ export default function CreateEventScreen() {
                       onPress={() => setSelectedCategory(cat.id)}
                       style={[s.categoryChip, active && s.categoryChipActive]}
                     >
-                      <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>{cat.label}</Text>
+                      <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>
+                        {cat.label}
+                      </Text>
                     </Pressable>
                   );
                 })}
@@ -233,14 +243,18 @@ export default function CreateEventScreen() {
                   style={[s.formatOption, !isVirtual && s.formatOptionActive]}
                 >
                   <AppIcon color={!isVirtual ? C.primary : C.inkMuted} name="map" size={18} />
-                  <Text style={[s.formatOptionText, !isVirtual && s.formatOptionTextActive]}>In-Person Venue</Text>
+                  <Text style={[s.formatOptionText, !isVirtual && s.formatOptionTextActive]}>
+                    In-Person Venue
+                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setIsVirtual(true)}
                   style={[s.formatOption, isVirtual && s.formatOptionActive]}
                 >
                   <AppIcon color={isVirtual ? C.primary : C.inkMuted} name="globe" size={18} />
-                  <Text style={[s.formatOptionText, isVirtual && s.formatOptionTextActive]}>Virtual / Online</Text>
+                  <Text style={[s.formatOptionText, isVirtual && s.formatOptionTextActive]}>
+                    Virtual / Online
+                  </Text>
                 </Pressable>
               </View>
             </View>

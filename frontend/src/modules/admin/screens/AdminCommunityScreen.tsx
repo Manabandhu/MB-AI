@@ -45,7 +45,10 @@ export default function AdminCommunityScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.container}>
-          <SectionHeader title="Community Posts" subtitle="Moderate community posts and discussions." />
+          <SectionHeader
+            title="Community Posts"
+            subtitle="Moderate community posts and discussions."
+          />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search posts" />
           {isLoading ? (
             <LoadingState />

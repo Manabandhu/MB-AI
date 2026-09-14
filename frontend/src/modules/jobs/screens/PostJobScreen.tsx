@@ -1,9 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { color, space, typography } from '@manabandhu/design-system';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
+
+import { createJobPosting } from '@/modules/jobs/api';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { TextArea } from '@/modules/shared/components/TextArea';
@@ -21,19 +24,37 @@ type JobFormData = z.infer<typeof jobSchema>;
 
 export function PostJobScreen() {
   const [submitted, setSubmitted] = useState(false);
+  const queryClient = useQueryClient();
   const {
     control,
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
     defaultValues: { title: '', company: '', description: '', location: '' },
   });
 
-  const onSubmit = (_data: JobFormData) => {
-    setSubmitted(true);
+  const mutation = useMutation({
+    mutationFn: createJobPosting,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['foundation', 'shell', 'explore'] });
+      setSubmitted(true);
+    },
+    onError: (err: Error) => {
+      Alert.alert('Post Failed', err.message);
+    },
+  });
+
+  const onSubmit = (data: JobFormData) => {
+    mutation.mutate({
+      title: data.title,
+      company: data.company,
+      description: data.description,
+      location: data.location,
+    });
   };
 
   if (submitted) {
@@ -84,7 +105,7 @@ export function PostJobScreen() {
             <Text style={styles.error}>{errors.description.message}</Text>
           ) : null}
         </View>
-        <AppButton label="Post job" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
+        <AppButton label="Post job" onPress={handleSubmit(onSubmit)} loading={mutation.isPending} />
       </View>
     </ScreenShell>
   );

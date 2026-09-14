@@ -1,19 +1,19 @@
-import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
-  ScrollView,
-  Pressable,
   TextInput,
   useWindowDimensions,
-  ActivityIndicator,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/apiClient';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { listCommunities } from '../api';
-import { apiFetch } from '@/lib/apiClient';
 
 const C = {
   primary: '#E05638', // Warm Saffron
@@ -86,8 +86,8 @@ export function CommunityHomeScreen() {
         if (!matchTitle && !matchBody) return false;
       }
       if (selectedTopic !== 'all') {
-        const matchingComm = communities.find(
-          (c) => c.name.toLowerCase().includes(selectedTopic.toLowerCase()),
+        const matchingComm = communities.find((c) =>
+          c.name.toLowerCase().includes(selectedTopic.toLowerCase()),
         );
         if (matchingComm && p.communityId !== matchingComm.id) return false;
       }
@@ -259,9 +259,7 @@ export function CommunityHomeScreen() {
                       </View>
                       <Text style={s.commBadge}>{commName}</Text>
                     </View>
-                    <Text style={s.postDate}>
-                      {new Date(post.createdAt).toLocaleDateString()}
-                    </Text>
+                    <Text style={s.postDate}>{new Date(post.createdAt).toLocaleDateString()}</Text>
                   </View>
 
                   {/* Title & Body Snippet */}

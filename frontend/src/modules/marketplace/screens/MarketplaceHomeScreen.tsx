@@ -1,20 +1,20 @@
-import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
-  ScrollView,
-  Pressable,
   TextInput,
-  Image,
   useWindowDimensions,
-  ActivityIndicator,
-  Modal,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { listMarketplaceListings, listMarketplaceCategories } from '../api';
+import { listMarketplaceCategories, listMarketplaceListings } from '../api';
 import type { MarketplaceListing } from '../types';
 
 // Palette tokens aligned with ManaBandhu Modern Vibrant design system
@@ -51,7 +51,11 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Queries
-  const { data: listings = [], isLoading, refetch } = useQuery({
+  const {
+    data: listings = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['marketplace', 'listings'],
     queryFn: listMarketplaceListings,
   });
@@ -84,7 +88,10 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
         }
         // Category
         if (selectedCategory !== 'all') {
-          if (item.category?.slug !== selectedCategory && item.category?.name !== selectedCategory) {
+          if (
+            item.category?.slug !== selectedCategory &&
+            item.category?.name !== selectedCategory
+          ) {
             return false;
           }
         }
@@ -104,13 +111,26 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
         if (sortBy === 'price_high') return b.price - a.price;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [listings, searchQuery, selectedCategory, selectedCondition, under50Only, negotiableOnly, sortBy]);
+  }, [
+    listings,
+    searchQuery,
+    selectedCategory,
+    selectedCondition,
+    under50Only,
+    negotiableOnly,
+    sortBy,
+  ]);
 
   // Fallback image helper
   const getItemImage = (item: MarketplaceListing) => {
     if (item.images && item.images.length > 0) return item.images[0].url;
     const t = item.title.toLowerCase();
-    if (t.includes('mixer') || t.includes('grinder') || t.includes('pot') || t.includes('cookware')) {
+    if (
+      t.includes('mixer') ||
+      t.includes('grinder') ||
+      t.includes('pot') ||
+      t.includes('cookware')
+    ) {
       return 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80';
     }
     if (t.includes('cricket') || t.includes('bat') || t.includes('sports')) {
@@ -200,10 +220,7 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
             onPress={() => setSelectedCategory('all')}
           >
             <Text
-              style={[
-                s.categoryChipText,
-                selectedCategory === 'all' && s.categoryChipTextActive,
-              ]}
+              style={[s.categoryChipText, selectedCategory === 'all' && s.categoryChipTextActive]}
             >
               All Items ({listings.length})
             </Text>
@@ -217,12 +234,7 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
                 style={[s.categoryChip, isActive && s.categoryChipActive]}
                 onPress={() => setSelectedCategory(isActive ? 'all' : cat.slug)}
               >
-                <Text
-                  style={[
-                    s.categoryChipText,
-                    isActive && s.categoryChipTextActive,
-                  ]}
-                >
+                <Text style={[s.categoryChipText, isActive && s.categoryChipTextActive]}>
                   {cat.name}
                 </Text>
               </Pressable>
@@ -236,25 +248,15 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
             style={[s.quickPill, under50Only && s.quickPillActive]}
             onPress={() => setUnder50Only(!under50Only)}
           >
-            <AppIcon
-              name="wallet"
-              size={14}
-              color={under50Only ? '#FFF' : C.inkMuted}
-            />
-            <Text style={[s.quickPillText, under50Only && s.quickPillTextActive]}>
-              Under $50
-            </Text>
+            <AppIcon name="wallet" size={14} color={under50Only ? '#FFF' : C.inkMuted} />
+            <Text style={[s.quickPillText, under50Only && s.quickPillTextActive]}>Under $50</Text>
           </Pressable>
 
           <Pressable
             style={[s.quickPill, negotiableOnly && s.quickPillActive]}
             onPress={() => setNegotiableOnly(!negotiableOnly)}
           >
-            <AppIcon
-              name="wallet"
-              size={14}
-              color={negotiableOnly ? '#FFF' : C.inkMuted}
-            />
+            <AppIcon name="wallet" size={14} color={negotiableOnly ? '#FFF' : C.inkMuted} />
             <Text style={[s.quickPillText, negotiableOnly && s.quickPillTextActive]}>
               Negotiable Deals
             </Text>
@@ -272,10 +274,7 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
               color={selectedCondition === 'Like New' ? '#FFF' : C.inkMuted}
             />
             <Text
-              style={[
-                s.quickPillText,
-                selectedCondition === 'Like New' && s.quickPillTextActive,
-              ]}
+              style={[s.quickPillText, selectedCondition === 'Like New' && s.quickPillTextActive]}
             >
               Like New
             </Text>
@@ -468,10 +467,7 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
                     onPress={() => setSelectedCondition(c)}
                   >
                     <Text
-                      style={[
-                        s.modalChipText,
-                        selectedCondition === c && s.modalChipTextActive,
-                      ]}
+                      style={[s.modalChipText, selectedCondition === c && s.modalChipTextActive]}
                     >
                       {c === 'all' ? 'Any Condition' : c}
                     </Text>
@@ -481,20 +477,14 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
 
               {/* Price Toggles */}
               <Text style={s.filterSectionTitle}>Special Preferences</Text>
-              <Pressable
-                style={s.toggleRow}
-                onPress={() => setUnder50Only(!under50Only)}
-              >
+              <Pressable style={s.toggleRow} onPress={() => setUnder50Only(!under50Only)}>
                 <Text style={s.toggleLabel}>Items Under $50</Text>
                 <View style={[s.checkbox, under50Only && s.checkboxChecked]}>
                   {under50Only && <AppIcon name="check" size={14} color="#FFF" />}
                 </View>
               </Pressable>
 
-              <Pressable
-                style={s.toggleRow}
-                onPress={() => setNegotiableOnly(!negotiableOnly)}
-              >
+              <Pressable style={s.toggleRow} onPress={() => setNegotiableOnly(!negotiableOnly)}>
                 <Text style={s.toggleLabel}>Negotiable Deals Only</Text>
                 <View style={[s.checkbox, negotiableOnly && s.checkboxChecked]}>
                   {negotiableOnly && <AppIcon name="check" size={14} color="#FFF" />}
@@ -514,10 +504,7 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
               >
                 <Text style={s.modalResetText}>Reset</Text>
               </Pressable>
-              <Pressable
-                style={s.modalApplyBtn}
-                onPress={() => setIsFilterModalOpen(false)}
-              >
+              <Pressable style={s.modalApplyBtn} onPress={() => setIsFilterModalOpen(false)}>
                 <Text style={s.modalApplyText}>Apply Filters</Text>
               </Pressable>
             </View>

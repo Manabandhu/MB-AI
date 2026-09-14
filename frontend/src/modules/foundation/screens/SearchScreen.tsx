@@ -1,26 +1,25 @@
-import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
-  ScrollView,
-  Pressable,
   TextInput,
   useWindowDimensions,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
-
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { listRoomListings } from '@/modules/rooms/api';
-import type { RoomListing } from '@/modules/rooms/types';
-import { listEvents } from '@/modules/events/api';
 import type { Event } from '@/modules/events/api';
-import { listMarketplaceListings } from '@/modules/marketplace/api';
-import type { MarketplaceListing } from '@/modules/marketplace/types';
+import { listEvents } from '@/modules/events/api';
 import { listJobPostings } from '@/modules/jobs/api';
 import type { JobPosting } from '@/modules/jobs/types';
+import { listMarketplaceListings } from '@/modules/marketplace/api';
+import type { MarketplaceListing } from '@/modules/marketplace/types';
+import { listRoomListings } from '@/modules/rooms/api';
+import type { RoomListing } from '@/modules/rooms/types';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const C = {
   primary: '#E05638', // Warm Saffron
@@ -61,16 +60,35 @@ export function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
 
-  const { data: rooms = [] } = useQuery<RoomListing[]>({ queryKey: ['rooms', 'search-pool'], queryFn: () => listRoomListings().catch(() => []) });
-  const { data: events = [] } = useQuery<Event[]>({ queryKey: ['events', 'search-pool'], queryFn: () => listEvents().catch(() => []) });
-  const { data: market = [] } = useQuery<MarketplaceListing[]>({ queryKey: ['market', 'search-pool'], queryFn: () => listMarketplaceListings().catch(() => []) });
-  const { data: jobs = [] } = useQuery<JobPosting[]>({ queryKey: ['jobs', 'search-pool'], queryFn: () => listJobPostings().catch(() => []) });
+  const { data: rooms = [] } = useQuery<RoomListing[]>({
+    queryKey: ['rooms', 'search-pool'],
+    queryFn: () => listRoomListings().catch(() => []),
+  });
+  const { data: events = [] } = useQuery<Event[]>({
+    queryKey: ['events', 'search-pool'],
+    queryFn: () => listEvents().catch(() => []),
+  });
+  const { data: market = [] } = useQuery<MarketplaceListing[]>({
+    queryKey: ['market', 'search-pool'],
+    queryFn: () => listMarketplaceListings().catch(() => []),
+  });
+  const { data: jobs = [] } = useQuery<JobPosting[]>({
+    queryKey: ['jobs', 'search-pool'],
+    queryFn: () => listJobPostings().catch(() => []),
+  });
 
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
 
-    const results: { id: string; title: string; subtitle: string; category: string; route: string; badge: string }[] = [];
+    const results: {
+      id: string;
+      title: string;
+      subtitle: string;
+      category: string;
+      route: string;
+      badge: string;
+    }[] = [];
 
     if (activeCategory === 'all' || activeCategory === 'rooms') {
       rooms.forEach((r: RoomListing) => {
@@ -214,8 +232,12 @@ export function SearchScreen() {
                       <View style={s.resultBadgeRow}>
                         <Text style={s.resultBadge}>{item.badge}</Text>
                       </View>
-                      <Text style={s.resultTitle} numberOfLines={1}>{item.title}</Text>
-                      <Text style={s.resultSub} numberOfLines={1}>{item.subtitle}</Text>
+                      <Text style={s.resultTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <Text style={s.resultSub} numberOfLines={1}>
+                        {item.subtitle}
+                      </Text>
                     </View>
                     <AppIcon name="chevron-right" size={16} color={C.secondary} />
                   </Pressable>
@@ -225,7 +247,9 @@ export function SearchScreen() {
               <View style={s.emptyState}>
                 <Text style={s.emptyEmoji}>🔍</Text>
                 <Text style={s.emptyTitle}>No results for "{searchQuery}"</Text>
-                <Text style={s.emptySub}>Try searching with broader terms or check another category.</Text>
+                <Text style={s.emptySub}>
+                  Try searching with broader terms or check another category.
+                </Text>
               </View>
             )
           ) : (
@@ -250,12 +274,48 @@ export function SearchScreen() {
               <Text style={[s.sectionHeader, { marginTop: 24 }]}>Quick Jump</Text>
               <View style={s.quickGrid}>
                 {[
-                  { label: 'Explore Rooms', icon: 'home', route: '/rooms', bg: '#e8e4fb', color: '#431ebe' },
-                  { label: 'Carpool Rides', icon: 'car', route: '/rides', bg: '#d9f5f5', color: '#00696b' },
-                  { label: 'Tech Jobs', icon: 'briefcase', route: '/jobs', bg: '#fff0e6', color: '#ff7e33' },
-                  { label: 'Festivals & Mela', icon: 'calendar', route: '/events', bg: '#fff4e0', color: '#c97a00' },
-                  { label: 'Marketplace', icon: 'marketplace', route: '/marketplace', bg: '#e2f9ef', color: '#1a8a5c' },
-                  { label: 'Safety & SOS', icon: 'shield', route: '/safety', bg: '#ffeaea', color: '#ba1a1a' },
+                  {
+                    label: 'Explore Rooms',
+                    icon: 'home',
+                    route: '/rooms',
+                    bg: '#e8e4fb',
+                    color: '#431ebe',
+                  },
+                  {
+                    label: 'Carpool Rides',
+                    icon: 'car',
+                    route: '/rides',
+                    bg: '#d9f5f5',
+                    color: '#00696b',
+                  },
+                  {
+                    label: 'Tech Jobs',
+                    icon: 'briefcase',
+                    route: '/jobs',
+                    bg: '#fff0e6',
+                    color: '#ff7e33',
+                  },
+                  {
+                    label: 'Festivals & Mela',
+                    icon: 'calendar',
+                    route: '/events',
+                    bg: '#fff4e0',
+                    color: '#c97a00',
+                  },
+                  {
+                    label: 'Marketplace',
+                    icon: 'marketplace',
+                    route: '/marketplace',
+                    bg: '#e2f9ef',
+                    color: '#1a8a5c',
+                  },
+                  {
+                    label: 'Safety & SOS',
+                    icon: 'shield',
+                    route: '/safety',
+                    bg: '#ffeaea',
+                    color: '#ba1a1a',
+                  },
                 ].map((q) => (
                   <Pressable
                     key={q.label}

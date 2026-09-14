@@ -1,4 +1,4 @@
-import { color as colors, contentWidth, radius, space } from '@manabandhu/design-system';
+import { contentWidth, space } from '@manabandhu/design-system';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -81,13 +81,7 @@ export function FeatureScreen({
           {metrics.length > 0 ? (
             <View style={[styles.metricsGrid, isDesktop && styles.metricsGridWide]}>
               {metrics.map((metric, idx) => (
-                <View
-                  key={metric.label}
-                  style={[
-                    styles.metric,
-                    idx === 0 && styles.metricPrimary,
-                  ]}
-                >
+                <View key={metric.label} style={[styles.metric, idx === 0 && styles.metricPrimary]}>
                   <Text style={[styles.metricValue, idx === 0 && styles.metricValuePrimary]}>
                     {metric.value}
                   </Text>
@@ -116,9 +110,8 @@ export function FeatureScreen({
           {/* Cards Grid */}
           {cards.length > 0 ? (
             <View style={[styles.cardGrid, isDesktop && styles.cardGridWide]}>
-              {cards.map((card) => {
-                const content = <FeatureCardContent card={card} />;
-                return card.route ? (
+              {cards.map((card) =>
+                card.route ? (
                   <Pressable
                     key={card.id}
                     accessibilityRole="button"
@@ -126,14 +119,14 @@ export function FeatureScreen({
                     onPress={() => router.push(card.route as Href)}
                     style={styles.card}
                   >
-                    {content}
+                    <FeatureCardContent card={card} />
                   </Pressable>
                 ) : (
                   <View key={card.id} style={styles.card}>
-                    {content}
+                    <FeatureCardContent card={card} />
                   </View>
-                );
-              })}
+                ),
+              )}
             </View>
           ) : null}
         </View>
@@ -151,12 +144,12 @@ function FeatureCardContent({ card }: { card: FeatureCard }) {
             <Text style={styles.cardEyebrow}>{card.eyebrow}</Text>
           </View>
         ) : null}
-        {card.route ? (
-          <AppIcon color={C.secondary} name="chevron-right" size={16} />
-        ) : null}
+        {card.route ? <AppIcon color={C.secondary} name="chevron-right" size={16} /> : null}
       </View>
       <Text style={styles.cardTitle}>{card.title}</Text>
-      <Text style={styles.cardBody} numberOfLines={3}>{card.body}</Text>
+      <Text style={styles.cardBody} numberOfLines={3}>
+        {card.body}
+      </Text>
       {card.meta ? (
         <View style={styles.metaRow}>
           <Text style={styles.cardMeta}>{card.meta}</Text>

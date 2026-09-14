@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   Alert,
   Modal,
@@ -13,10 +13,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { getUtilitiesHome } from '@/modules/utilities/api';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { getUtilitiesHome } from '@/modules/utilities/api';
 
 const C = {
   primary: '#431ebe',
@@ -54,7 +53,8 @@ const SERVICES_DATA: ServiceItem[] = [
     category: 'Tiffin & Dabba',
     title: 'Annapurna Homestyle Tiffin',
     provider: 'Lakshmi Rao (Round Rock)',
-    description: 'Fresh rotis, South Indian dal, seasonal sabzi, sambar & curd rice. Delivered daily Mon-Fri.',
+    description:
+      'Fresh rotis, South Indian dal, seasonal sabzi, sambar & curd rice. Delivered daily Mon-Fri.',
     rating: 4.9,
     reviewCount: 78,
     badge: 'Popular',
@@ -67,7 +67,8 @@ const SERVICES_DATA: ServiceItem[] = [
     category: 'Groceries',
     title: 'Weekend Patel Brothers Shared Run',
     provider: 'Austin Telugu Student Group',
-    description: 'Carpool & shared grocery pickup for bulky items (Atta bags, Sona Masoori rice, fresh spices).',
+    description:
+      'Carpool & shared grocery pickup for bulky items (Atta bags, Sona Masoori rice, fresh spices).',
     rating: 4.8,
     reviewCount: 42,
     badge: 'Departs Sat 10 AM',
@@ -79,7 +80,8 @@ const SERVICES_DATA: ServiceItem[] = [
     category: 'Electricity & Wifi',
     title: 'Texas Power to Choose & AT&T Fiber',
     provider: 'ManaBandhu Utility Concierge',
-    description: 'Compare 12-month fixed rate electricity contracts (Gexa, TXU) + gigabit student fiber waiver.',
+    description:
+      'Compare 12-month fixed rate electricity contracts (Gexa, TXU) + gigabit student fiber waiver.',
     rating: 4.7,
     reviewCount: 35,
     badge: 'Save ~$45/mo',
@@ -91,7 +93,8 @@ const SERVICES_DATA: ServiceItem[] = [
     category: 'Puja & Temples',
     title: 'Austin Hindu Temple & Balaji Puja',
     provider: 'AHT Priest Services',
-    description: 'Griha Pravesham, Satyanarayana Vratam, vehicle blessings & temple festival schedule.',
+    description:
+      'Griha Pravesham, Satyanarayana Vratam, vehicle blessings & temple festival schedule.',
     rating: 5.0,
     reviewCount: 110,
     badge: 'Verified',
@@ -103,7 +106,8 @@ const SERVICES_DATA: ServiceItem[] = [
     category: 'Luggage & Courier',
     title: 'India Check-In Baggage Share',
     provider: 'Verified Community Travelers',
-    description: 'Share unutilized 23kg check-in allowance for non-commercial sweets, documents & apparel to HYD/BLR.',
+    description:
+      'Share unutilized 23kg check-in allowance for non-commercial sweets, documents & apparel to HYD/BLR.',
     rating: 4.8,
     reviewCount: 29,
     badge: 'ID Verified',
@@ -112,7 +116,14 @@ const SERVICES_DATA: ServiceItem[] = [
   },
 ];
 
-const CATEGORIES = ['All Services', 'Tiffin & Dabba', 'Groceries', 'Electricity & Wifi', 'Puja & Temples', 'Luggage & Courier'];
+const CATEGORIES = [
+  'All Services',
+  'Tiffin & Dabba',
+  'Groceries',
+  'Electricity & Wifi',
+  'Puja & Temples',
+  'Luggage & Courier',
+];
 
 export function UtilitiesHomeScreen() {
   const router = useRouter();
@@ -123,7 +134,11 @@ export function UtilitiesHomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
 
-  const home = useQuery({ queryKey: ['utilities', 'home'], queryFn: getUtilitiesHome, retry: false });
+  const home = useQuery({
+    queryKey: ['utilities', 'home'],
+    queryFn: getUtilitiesHome,
+    retry: false,
+  });
 
   if (home.isLoading) {
     return (
@@ -229,7 +244,8 @@ export function UtilitiesHomeScreen() {
           </View>
           <Text style={s.featuredTitle}>Moving to Texas this Fall?</Text>
           <Text style={s.featuredDesc}>
-            Setup your electricity with student deposit waivers, compare gigabit fiber providers, and order daily Telugu tiffins in minutes.
+            Setup your electricity with student deposit waivers, compare gigabit fiber providers,
+            and order daily Telugu tiffins in minutes.
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -243,7 +259,12 @@ export function UtilitiesHomeScreen() {
         </View>
 
         {/* Category Pills */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.categoriesScroll} contentContainerStyle={s.categoriesContent}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={s.categoriesScroll}
+          contentContainerStyle={s.categoriesContent}
+        >
           {CATEGORIES.map((cat) => {
             const active = activeCategory === cat;
             return (
@@ -266,7 +287,9 @@ export function UtilitiesHomeScreen() {
             <View style={s.emptyBox}>
               <AppIcon name="search" size={32} color={C.inkMuted} />
               <Text style={s.emptyTitle}>No services found</Text>
-              <Text style={s.emptySubtitle}>Try adjusting your search terms or category filter.</Text>
+              <Text style={s.emptySubtitle}>
+                Try adjusting your search terms or category filter.
+              </Text>
             </View>
           ) : (
             filtered.map((item) => (
@@ -298,10 +321,13 @@ export function UtilitiesHomeScreen() {
                   <View style={s.ratingRow}>
                     <AppIcon name="star" size={14} color="#f59e0b" />
                     <Text style={s.ratingText}>
-                      {item.rating.toFixed(1)} <Text style={s.reviewCount}>({item.reviewCount})</Text>
+                      {item.rating.toFixed(1)}{' '}
+                      <Text style={s.reviewCount}>({item.reviewCount})</Text>
                     </Text>
                     <Text style={s.locationDot}>·</Text>
-                    <Text style={s.locationSmall} numberOfLines={1}>{item.location}</Text>
+                    <Text style={s.locationSmall} numberOfLines={1}>
+                      {item.location}
+                    </Text>
                   </View>
                   {item.price && <Text style={s.priceTag}>{item.price}</Text>}
                 </View>
@@ -332,15 +358,21 @@ export function UtilitiesHomeScreen() {
               <View style={s.modalDetailsRow}>
                 <View style={s.detailCol}>
                   <Text style={s.detailLabel}>RATING</Text>
-                  <Text style={s.detailVal}>★ {selectedService.rating.toFixed(1)} ({selectedService.reviewCount})</Text>
+                  <Text style={s.detailVal}>
+                    ★ {selectedService.rating.toFixed(1)} ({selectedService.reviewCount})
+                  </Text>
                 </View>
                 <View style={s.detailCol}>
                   <Text style={s.detailLabel}>PRICE / FEE</Text>
-                  <Text style={[s.detailVal, { color: C.teal }]}>{selectedService.price ?? 'Free'}</Text>
+                  <Text style={[s.detailVal, { color: C.teal }]}>
+                    {selectedService.price ?? 'Free'}
+                  </Text>
                 </View>
                 <View style={s.detailCol}>
                   <Text style={s.detailLabel}>SERVICE AREA</Text>
-                  <Text style={s.detailVal} numberOfLines={1}>{selectedService.location}</Text>
+                  <Text style={s.detailVal} numberOfLines={1}>
+                    {selectedService.location}
+                  </Text>
                 </View>
               </View>
 
@@ -352,7 +384,10 @@ export function UtilitiesHomeScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Contact Provider"
                   onPress={() => {
-                    Alert.alert('Contact Request Sent', `The provider for ${selectedService.title} has been notified. They will message you via ManaBandhu Chat!`);
+                    Alert.alert(
+                      'Contact Request Sent',
+                      `The provider for ${selectedService.title} has been notified. They will message you via ManaBandhu Chat!`,
+                    );
                     setSelectedService(null);
                   }}
                   style={s.contactBtn}
@@ -365,7 +400,10 @@ export function UtilitiesHomeScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Save Service"
                   onPress={() => {
-                    Alert.alert('Saved', `${selectedService.title} has been saved to your diaspora essentials.`);
+                    Alert.alert(
+                      'Saved',
+                      `${selectedService.title} has been saved to your diaspora essentials.`,
+                    );
                     setSelectedService(null);
                   }}
                   style={s.saveBtn}

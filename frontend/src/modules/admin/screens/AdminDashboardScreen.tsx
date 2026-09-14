@@ -15,7 +15,6 @@ import {
   listReports,
   listUsers,
 } from '@/modules/admin/api';
-import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const adminRoutes = [
@@ -29,24 +28,29 @@ const adminRoutes = [
   { label: 'Audit Log', route: '/admin/audit-log' },
 ];
 
-const QUEUE_TABS = ['All Pending (7)', 'Suspected Broker (3)', 'ID Verification (2)', 'Reported Content (2)'];
+const QUEUE_TABS = [
+  'All Pending (7)',
+  'Suspected Broker (3)',
+  'ID Verification (2)',
+  'Reported Content (2)',
+];
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const [activeQueueTab, setActiveQueueTab] = useState(QUEUE_TABS[0]);
   const [resolvedCards, setResolvedCards] = useState<Set<string>>(new Set());
 
-  const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: listUsers });
-  const reportsQuery = useQuery({ queryKey: ['admin', 'reports'], queryFn: listReports });
-  const roomsQuery = useQuery({ queryKey: ['admin', 'rooms'], queryFn: listAdminRooms });
-  const ridesQuery = useQuery({ queryKey: ['admin', 'rides'], queryFn: listAdminRides });
-  const communityQuery = useQuery({
+  const _usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: listUsers });
+  const _reportsQuery = useQuery({ queryKey: ['admin', 'reports'], queryFn: listReports });
+  const _roomsQuery = useQuery({ queryKey: ['admin', 'rooms'], queryFn: listAdminRooms });
+  const _ridesQuery = useQuery({ queryKey: ['admin', 'rides'], queryFn: listAdminRides });
+  const _communityQuery = useQuery({
     queryKey: ['admin', 'community'],
     queryFn: listAdminCommunityPosts,
   });
-  const jobsQuery = useQuery({ queryKey: ['admin', 'jobs'], queryFn: listAdminJobs });
-  const eventsQuery = useQuery({ queryKey: ['admin', 'events'], queryFn: listAdminEvents });
-  const auditQuery = useQuery({ queryKey: ['admin', 'audit-log'], queryFn: listAuditLog });
+  const _jobsQuery = useQuery({ queryKey: ['admin', 'jobs'], queryFn: listAdminJobs });
+  const _eventsQuery = useQuery({ queryKey: ['admin', 'events'], queryFn: listAdminEvents });
+  const _auditQuery = useQuery({ queryKey: ['admin', 'audit-log'], queryFn: listAuditLog });
 
   const handleAction = (cardId: string, actionName: string) => {
     Alert.alert('Moderation Action', `${actionName} executed successfully.`);
@@ -316,7 +320,12 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
     gap: space.x2,
   },
-  alertTag: { alignSelf: 'flex-start', paddingHorizontal: space.x2, paddingVertical: 3, borderRadius: 4 },
+  alertTag: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: space.x2,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
   alertTagText: { ...typography.caption, fontWeight: '700', fontSize: 11 },
   modTitle: { ...typography.bodyStrong, color: color.ink, fontSize: 14 },
   modMeta: { ...typography.caption, color: color.muted, fontSize: 12 },

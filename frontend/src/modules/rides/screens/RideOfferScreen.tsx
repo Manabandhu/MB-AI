@@ -17,11 +17,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAuthStore } from '@/lib/authStore';
 import { createRideOffer } from '@/modules/rides/api';
+import { RideLocationPicker } from '@/modules/rides/components/RideLocationPicker';
 import {
-  type AutocompletePrediction,
-  autocompletePlacesGoogle,
   fetchGoogleRoute,
   geocodeAddress,
   type RouteInfo,
@@ -31,12 +29,6 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 const TRIP_MODES = [
   { id: 'ONE_TIME', label: 'One-Time Trip' },
   { id: 'RECURRING', label: 'Daily Commute' },
-];
-
-const _RECURRENCE_PATTERNS = [
-  { id: 'WEEKDAYS', label: 'Weekdays (Mon–Fri)' },
-  { id: 'DAILY', label: 'Every Day (7 Days)' },
-  { id: 'WEEKLY', label: 'Weekly Roundtrip' },
 ];
 
 const ALL_DAYS = [
@@ -96,7 +88,6 @@ const RECENT_TEMPLATES = [
 export function RideOfferScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const _user = useAuthStore((s) => s.user);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -114,18 +105,12 @@ export function RideOfferScreen() {
     lat: 33.1507,
     lng: -96.8236,
   });
-  const [originSuggestions, setOriginSuggestions] = useState<AutocompletePrediction[]>([]);
-  const [loadingOriginSuggestions, setLoadingOriginSuggestions] = useState(false);
 
   const [destination, setDestination] = useState('Austin - Downtown / Domain, TX');
   const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | null>({
     lat: 30.4015,
     lng: -97.7247,
   });
-  const [destinationSuggestions, setDestinationSuggestions] = useState<AutocompletePrediction[]>(
-    [],
-  );
-  const [loadingDestSuggestions, setLoadingDestSuggestions] = useState(false);
 
   // Toll Preference & Route Info
   const [tollPref, setTollPref] = useState<'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT'>(
@@ -148,7 +133,6 @@ export function RideOfferScreen() {
   // Preferences
   const [luggageCapacity, setLuggageCapacity] = useState('MEDIUM');
   const [genderPref, setGenderPref] = useState('ANY');
-  const [_vehicle, _setVehicle] = useState('2023 Tesla Model Y (Pearl White)');
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
@@ -175,46 +159,6 @@ export function RideOfferScreen() {
     }
     updateRoute();
   }, [originCoords, destinationCoords, tollPref]);
-
-  // Places autocomplete handler for Origin
-  const handleOriginChange = async (text: string) => {
-    setOrigin(text);
-    if (text.length >= 3) {
-      setLoadingOriginSuggestions(true);
-      const results = await autocompletePlacesGoogle(text);
-      setOriginSuggestions(results);
-      setLoadingOriginSuggestions(false);
-    } else {
-      setOriginSuggestions([]);
-    }
-  };
-
-  const handleSelectOrigin = async (p: AutocompletePrediction) => {
-    setOrigin(p.description);
-    setOriginSuggestions([]);
-    const coords = await geocodeAddress(p.placeId || p.description);
-    if (coords) setOriginCoords(coords);
-  };
-
-  // Places autocomplete handler for Destination
-  const handleDestinationChange = async (text: string) => {
-    setDestination(text);
-    if (text.length >= 3) {
-      setLoadingDestSuggestions(true);
-      const results = await autocompletePlacesGoogle(text);
-      setDestinationSuggestions(results);
-      setLoadingDestSuggestions(false);
-    } else {
-      setDestinationSuggestions([]);
-    }
-  };
-
-  const handleSelectDestination = async (p: AutocompletePrediction) => {
-    setDestination(p.description);
-    setDestinationSuggestions([]);
-    const coords = await geocodeAddress(p.placeId || p.description);
-    if (coords) setDestinationCoords(coords);
-  };
 
   // Apply quick re-post template
   const applyTemplate = async (template: (typeof RECENT_TEMPLATES)[0]) => {
@@ -407,99 +351,25 @@ export function RideOfferScreen() {
             </View>
 
             {/* Origin Input */}
-            <View style={s.inputContainer}>
-              <View style={s.inputHeaderRow}>
-                <Text style={s.fieldLabel}>PICKUP LOCATION</Text>
-                {origin.length > 0 && (
-                  <Pressable onPress={() => setOrigin('')}>
-                    <Text style={s.clearText}>Clear</Text>
-                  </Pressable>
-                )}
-              </View>
-              <View style={s.inputWithMarker}>
-                <View style={s.greenPin} />
-                <TextInput
-                  style={s.locationInput}
-                  value={origin}
-                  onChangeText={handleOriginChange}
-                  placeholder="Enter city, suburb, or address"
-                  placeholderTextColor={colors.muted}
-                />
-                {loadingOriginSuggestions && (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                )}
-              </View>
-
-              {/* Origin Autocomplete Suggestions */}
-              {originSuggestions.length > 0 && (
-                <View style={s.suggestionBox}>
-                  {originSuggestions.map((item, idx) => (
-                    <Pressable
-                      key={idx}
-                      style={s.suggestionRow}
-                      onPress={() => handleSelectOrigin(item)}
-                    >
-                      <AppIcon name="compass" size={14} color={colors.teal} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.suggestionMainText}>
-                          {item.mainText || item.description}
-                        </Text>
-                        {item.secondaryText && (
-                          <Text style={s.suggestionSubText}>{item.secondaryText}</Text>
-                        )}
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </View>
+            <RideLocationPicker
+              label="PICKUP LOCATION"
+              value={origin}
+              onValueChange={setOrigin}
+              onCoordsChange={setOriginCoords}
+              pinColor="#10b981"
+              placeholder="Enter city, suburb, or address"
+            />
 
             {/* Destination Input */}
-            <View style={[s.inputContainer, { marginTop: space.x3 }]}>
-              <View style={s.inputHeaderRow}>
-                <Text style={s.fieldLabel}>DROPOFF DESTINATION</Text>
-                {destination.length > 0 && (
-                  <Pressable onPress={() => setDestination('')}>
-                    <Text style={s.clearText}>Clear</Text>
-                  </Pressable>
-                )}
-              </View>
-              <View style={s.inputWithMarker}>
-                <View style={s.redPin} />
-                <TextInput
-                  style={s.locationInput}
-                  value={destination}
-                  onChangeText={handleDestinationChange}
-                  placeholder="Enter work hub, college, or city"
-                  placeholderTextColor={colors.muted}
-                />
-                {loadingDestSuggestions && (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                )}
-              </View>
-
-              {/* Destination Autocomplete Suggestions */}
-              {destinationSuggestions.length > 0 && (
-                <View style={s.suggestionBox}>
-                  {destinationSuggestions.map((item, idx) => (
-                    <Pressable
-                      key={idx}
-                      style={s.suggestionRow}
-                      onPress={() => handleSelectDestination(item)}
-                    >
-                      <AppIcon name="compass" size={14} color={colors.teal} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.suggestionMainText}>
-                          {item.mainText || item.description}
-                        </Text>
-                        {item.secondaryText && (
-                          <Text style={s.suggestionSubText}>{item.secondaryText}</Text>
-                        )}
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
+            <View style={{ marginTop: space.x3 }}>
+              <RideLocationPicker
+                label="DROPOFF DESTINATION"
+                value={destination}
+                onValueChange={setDestination}
+                onCoordsChange={setDestinationCoords}
+                pinColor="#ef4444"
+                placeholder="Enter work hub, college, or city"
+              />
             </View>
 
             {/* Route Stats & Polyline Summary */}

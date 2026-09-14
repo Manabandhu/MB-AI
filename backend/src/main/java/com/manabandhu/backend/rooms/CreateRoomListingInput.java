@@ -26,8 +26,8 @@ public record CreateRoomListingInput(
         String leaseTerm,
         Boolean isVerifiedHost,
         Boolean universityShuttleAccessible,
-        String stateCode,
-        String county) {
+        @Size(max = 50) String stateCode,
+        @Size(max = 100) String county) {
 
     public CreateRoomListingInput(String title, String description, BigDecimal price, String roomType,
                                   String broadLocation, String exactAddress, BigDecimal latitude, BigDecimal longitude) {

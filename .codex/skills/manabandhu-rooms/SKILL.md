@@ -74,8 +74,13 @@ Backend services: `RoomListingService`, `RoomAvailabilityService`, `RoomBookingS
 - Migration `V24__enhance_rooms_and_amenities.sql`:
   - Renames legacy listing-amenity junction to `room_listing_amenities`.
   - Creates dynamic master catalog `room_amenities` (`id`, `code`, `label`, `category`, `icon_name`, `is_active`, `sort_order`) seeded with 12 diaspora housing amenities.
-  - Enhances `room_listings` with diaspora & transparent pricing attributes: `dietary_preference`, `gender_preference`, `bathroom_type`, `utilities_included`, `est_utility_monthly`, `security_deposit`, `lease_term`, `is_verified_host`, `university_shuttle_accessible`, `amenity_codes`, `state_code`, `county`.
+  - Enhances `room_listings` with diaspora & transparent pricing attributes: `dietary_preference`, `gender_preference`, `bathroom_type`, `utilities_included`, `est_utility_monthly`, `security_deposit`, `lease_term`, `is_verified_host`, `university_shuttle_accessible`, `amenity_codes`, `state_code VARCHAR(10)`, `county`.
   - Creates `room_inquiries` table with RLS (`auth.uid() = sender_id OR auth.uid() = host_id`) linking inquiries directly to chat conversations.
+- Migration `V26__widen_room_listings_columns.sql`:
+  - Widens `room_type` from `VARCHAR(20)` → `VARCHAR(50)` to accommodate multi-word values (e.g. `"Entire House / Sublease"`).
+  - Widens `state_code` from `VARCHAR(10)` → `VARCHAR(50)` for full state names from address autocomplete.
+  - Drops and recreates `room_listings_status_valid` check constraint to include `'rejected'` (used by admin moderation flow): `('draft','active','paused','archived','rejected')`.
+  - **Frontend `RoomForm.tsx` Zod schema** matches: `stateCode: z.string().max(50)` (was `max(10)`).
 
 Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`. Booking/Inquiry statuses: `pending`, `accepted`, `declined`, `cancelled`, `archived`.
 
@@ -132,7 +137,7 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`.
 - Dual-pane reflow: Viewports width >= 1024px render dual-pane layout with 2-column scrollable cards on the left and sticky interactive map on the right
 - Safe Area Insets: Top navigation and bottom action bars use `useSafeAreaInsets()` (`Math.max(insets.bottom, 16)`)
 - Keyboard Avoidance: Forms wrap content with `KeyboardAvoidingView` (`behavior: Platform.OS === 'ios' ? 'padding' : 'height'`) and `keyboardShouldPersistTaps="handled"`
-- Android Hardware Back: Modal sheets, city switchers, and filter overlays implement `BackHandler` listeners
+- Android Hardware Back: Modal sheets, city switchers, and filter overlays implement `BackHandler` listeners **guarded with `if (Platform.OS !== 'android') return;`** — never call `BackHandler` on web or iOS.
 - Virtualization: FlatLists in list screens configure `initialNumToRender={6}`, `maxToRenderPerBatch={10}`, `windowSize={5}`, `removeClippedSubviews={Platform.OS === 'android'}`
 - Map screen requests location permission with education banner
 - Single column on compact, 2 columns on medium, 3 columns on expanded/wide

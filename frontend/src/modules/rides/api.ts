@@ -85,10 +85,9 @@ export async function createRideOffer(input: CreateRideOfferInput): Promise<Ride
     recurringDays: input.recurringDays ?? [],
     luggageCapacity: input.luggageCapacity || 'MEDIUM',
     genderPreference: input.genderPreference || 'ANY',
-    departureAt:
-      input.departureAt && input.departureAt.includes('T')
-        ? input.departureAt
-        : new Date(Date.now() + 86400000).toISOString(),
+    departureAt: input.departureAt?.includes('T')
+      ? input.departureAt
+      : new Date(Date.now() + 86400000).toISOString(),
     seatsTotal: input.seatsTotal,
     contribution:
       typeof input.contribution === 'number'

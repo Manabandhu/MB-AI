@@ -38,6 +38,17 @@ export function JobsSearchScreen() {
     },
   });
 
+  const jobsList = data?.jobs;
+  const filtered = useMemo(() => {
+    if (!jobsList) return [];
+    if (!query.trim()) return jobsList;
+    return jobsList.filter(
+      (j) =>
+        j.title.toLowerCase().includes(query.toLowerCase()) ||
+        j.body.toLowerCase().includes(query.toLowerCase()),
+    );
+  }, [jobsList, query]);
+
   if (isLoading) {
     return (
       <ScreenShell>
@@ -60,14 +71,6 @@ export function JobsSearchScreen() {
   }
 
   const content = data;
-  const filtered = useMemo(() => {
-    if (!query.trim()) return content.jobs;
-    return content.jobs.filter(
-      (j) =>
-        j.title.toLowerCase().includes(query.toLowerCase()) ||
-        j.body.toLowerCase().includes(query.toLowerCase()),
-    );
-  }, [content.jobs, query]);
 
   return (
     <ScreenShell>

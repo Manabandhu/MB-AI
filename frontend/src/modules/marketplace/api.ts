@@ -1,6 +1,11 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
-import type { ListingCategory, ListingImage, MarketplaceListing } from './types';
+import type {
+  CreateListingInput,
+  ListingCategory,
+  ListingImage,
+  MarketplaceListing,
+} from './types';
 
 export async function getMarketplaceScreen(screenId: string): Promise<CatalogScreenContent> {
   return parseJsonOrThrow(
@@ -10,53 +15,55 @@ export async function getMarketplaceScreen(screenId: string): Promise<CatalogScr
 }
 
 export async function listMarketplaceListings(): Promise<MarketplaceListing[]> {
-  const response = await apiFetch('/api/v1/marketplace/listings');
-  if (!response.ok) {
-    throw new Error(`Failed to load marketplace listings: ${response.status}`);
-  }
-  const data = await response.json();
-  return Array.isArray(data) ? data : data.content ?? [];
+  const data = await parseJsonOrThrow<{ content?: MarketplaceListing[] } | MarketplaceListing[]>(
+    await apiFetch('/api/v1/marketplace/listings'),
+    'Marketplace listings',
+  );
+  if (Array.isArray(data)) return data;
+  return data.content ?? [];
 }
 
 export async function getMarketplaceListing(listingId: string): Promise<MarketplaceListing> {
-  const response = await apiFetch(`/api/v1/marketplace/listings/${listingId}`);
-  if (!response.ok) {
-    throw new Error(`Failed to load marketplace listing: ${response.status}`);
-  }
-  return response.json();
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/marketplace/listings/${listingId}`),
+    'Marketplace listing detail',
+  );
 }
 
 export async function getMarketplaceListingImages(listingId: string): Promise<ListingImage[]> {
-  const response = await apiFetch(`/api/v1/marketplace/listings/${listingId}/images`);
-  if (!response.ok) {
+  try {
+    return await parseJsonOrThrow<ListingImage[]>(
+      await apiFetch(`/api/v1/marketplace/listings/${listingId}/images`),
+      'Marketplace listing images',
+    );
+  } catch {
     return [];
   }
-  return response.json();
 }
 
 export async function listMarketplaceCategories(): Promise<ListingCategory[]> {
-  const response = await apiFetch('/api/v1/marketplace/categories');
-  if (!response.ok) {
+  try {
+    return await parseJsonOrThrow<ListingCategory[]>(
+      await apiFetch('/api/v1/marketplace/categories'),
+      'Marketplace categories',
+    );
+  } catch {
     return [];
   }
-  return response.json();
 }
 
 export async function createMarketplaceListing(
-  input: import('./types').CreateListingInput,
+  input: CreateListingInput,
 ): Promise<MarketplaceListing> {
-  const response = await apiFetch('/api/v1/marketplace/listings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...input,
-      currency: input.currency ?? 'USD',
-      negotiable: input.negotiable ?? true,
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/marketplace/listings', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...input,
+        currency: input.currency ?? 'USD',
+        negotiable: input.negotiable ?? true,
+      }),
     }),
-  });
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Failed to create marketplace listing (${response.status}): ${errText}`);
-  }
-  return response.json();
+    'Create marketplace listing',
+  );
 }
