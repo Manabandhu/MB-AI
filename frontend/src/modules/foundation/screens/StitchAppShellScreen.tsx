@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -22,6 +23,11 @@ import {
   getProfileShell,
   type HomeShellData,
 } from '@/modules/foundation/homeApi';
+import {
+  ALL_APP_MODULES,
+  type ModuleItem,
+  useUserActivityStore,
+} from '@/modules/foundation/userActivityStore';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
@@ -47,9 +53,9 @@ type ShellKind = 'home' | 'chat' | 'explore' | 'community' | 'profile';
 
 const tabs = [
   { key: 'home', label: 'Home', route: '/home', icon: 'home' as AppIconName },
+  { key: 'community', label: 'Community', route: '/community', icon: 'community' as AppIconName },
   { key: 'explore', label: 'Explore', route: '/explore', icon: 'compass' as AppIconName },
   { key: 'chat', label: 'Chat', route: '/chat', icon: 'message' as AppIconName },
-  { key: 'community', label: 'Community', route: '/community', icon: 'community' as AppIconName },
   { key: 'profile', label: 'Profile', route: '/profile', icon: 'user' as AppIconName },
 ] as const;
 
@@ -183,6 +189,9 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
   const feed = data?.feed ?? [];
   const metrics = data?.metrics ?? [];
 
+  const dynamicModules = useUserActivityStore((s) => s.getDynamicModules(8));
+  const recordModuleVisit = useUserActivityStore((s) => s.recordModuleVisit);
+
   const roomItems = feed.filter((item) => item.kind === 'room');
   const postItems = feed.filter((item) => item.kind === 'post');
   const jobItems = feed.filter((item) => item.kind === 'job');
@@ -194,7 +203,10 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Explore Rooms"
-          onPress={() => router.push('/rooms' as Href)}
+          onPress={() => {
+            recordModuleVisit('rooms');
+            router.push('/rooms' as Href);
+          }}
           style={s.locationChip}
         >
           <AppIcon color={colors.appPrimary} name="map" size={12} />
@@ -206,19 +218,32 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
       <Pressable
         accessibilityRole="search"
         accessibilityLabel="Search rooms, flatmates, rides, jobs"
-        onPress={() => router.push('/rooms' as Href)}
+        onPress={() => router.push('/search' as Href)}
         style={s.searchBar}
       >
         <AppIcon color={colors.muted} name="search" size={18} />
         <Text style={s.searchPlaceholder}>Search rooms, flatmates, rides, jobs...</Text>
       </Pressable>
 
+      <View style={s.sectionHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={s.sectionTitle}>Frequently Used & Recent</Text>
+          <View style={{ backgroundColor: 'rgba(67,30,190,0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.appPrimary }}>DYNAMIC</Text>
+          </View>
+        </View>
+        <Link href="/explore" asChild>
+          <Pressable accessibilityRole="link"><Text style={s.seeAll}>All Features →</Text></Pressable>
+        </Link>
+      </View>
+
       <View style={[s.qaGrid, isDesktop && s.qaGridDesktop]}>
-        {quickActions.map((qa) => (
-          <Link key={qa.label} href={qa.route as Href} asChild>
+        {dynamicModules.map((qa) => (
+          <Link key={qa.id} href={qa.route as Href} asChild>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={qa.label}
+              onPress={() => recordModuleVisit(qa.id)}
               style={StyleSheet.flatten([s.qaTile, isDesktop && s.qaTileDesktop, { backgroundColor: qa.bg }])}
             >
               <AppIcon color={qa.iconColor} name={qa.icon} size={22} />
@@ -261,7 +286,10 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.hScroll}>
           {roomItems.map((room) => (
             <Link key={room.id} href={room.route as Href} asChild>
-              <Pressable style={s.roomCard}>
+              <Pressable
+                onPress={() => recordModuleVisit('rooms')}
+                style={s.roomCard}
+              >
                 <View style={s.roomThumb}><Text style={s.roomThumbEmoji}>🏠</Text></View>
                 <View style={s.roomInfo}>
                   <Text style={s.roomPrice}>{room.meta}</Text>
@@ -276,7 +304,7 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
           ))}
         </ScrollView>
       ) : (
-        <Pressable onPress={() => router.push('/rooms')} style={s.roomCard}>
+        <Pressable onPress={() => { recordModuleVisit('rooms'); router.push('/rooms'); }} style={s.roomCard}>
           <View style={s.roomInfo}>
             <Text style={s.roomTitle}>Find or post a room</Text>
             <Text style={s.roomLocation}>Explore verified shared rooms and apartments</Text>
@@ -291,7 +319,10 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
       {postItems.length > 0 ? (
         postItems.map((post) => (
           <Link key={post.id} href={post.route as Href} asChild>
-            <Pressable style={s.postCard}>
+            <Pressable
+              onPress={() => recordModuleVisit('community')}
+              style={s.postCard}
+            >
               <Text style={s.postName}>{post.title}</Text>
               <Text style={s.postBody} numberOfLines={2}>{post.body}</Text>
               <Text style={s.postTime}>{post.meta}</Text>
@@ -300,7 +331,10 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
         ))
       ) : (
         <Link href="/community" asChild>
-          <Pressable style={s.postCard}>
+          <Pressable
+            onPress={() => recordModuleVisit('community')}
+            style={s.postCard}
+          >
             <Text style={s.postName}>Join the conversation</Text>
             <Text style={s.postBody}>Connect with local community members, ask questions, and share advice.</Text>
           </Pressable>
@@ -314,7 +348,10 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
       {jobItems.length > 0 ? (
         jobItems.map((job) => (
           <Link key={job.id} href={job.route as Href} asChild>
-            <Pressable style={s.jobRow}>
+            <Pressable
+              onPress={() => recordModuleVisit('jobs')}
+              style={s.jobRow}
+            >
               <View style={s.jobLogo}><Text style={s.jobLogoText}>{job.title[0]}</Text></View>
               <View style={s.jobInfo}>
                 <Text style={s.jobTitle}>{job.title}</Text>
@@ -328,7 +365,10 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
         ))
       ) : (
         <Link href="/jobs" asChild>
-          <Pressable style={s.jobRow}>
+          <Pressable
+            onPress={() => recordModuleVisit('jobs')}
+            style={s.jobRow}
+          >
             <View style={s.jobLogo}><Text style={s.jobLogoText}>💼</Text></View>
             <View style={s.jobInfo}>
               <Text style={s.jobTitle}>Explore Job Referrals</Text>
@@ -341,61 +381,132 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
   );
 }
 
-// ─── EXPLORE SHELL ────────────────────────────────────────────────────────────
-const exploreCategories = ['All', 'Rooms', 'Rides', 'Jobs', 'Events', 'Community'];
+// ─── EXPLORE SHELL (Master Capabilities Hub) ──────────────────────────────────
+const exploreCategories = ['All', 'Living & Mobility', 'Career & Jobs', 'Community & Culture', 'Desi Essentials & Safety'];
 
 export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
   const [activeCategory, setActiveCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const recordModuleVisit = useUserActivityStore((s) => s.recordModuleVisit);
   const feed = data?.feed ?? [];
 
-  const filteredItems = feed.filter((item) => {
-    if (activeCategory === 'All') return true;
-    if (activeCategory === 'Rooms') return item.kind === 'room';
-    if (activeCategory === 'Rides') return item.kind === 'ride';
-    if (activeCategory === 'Jobs') return item.kind === 'job';
-    if (activeCategory === 'Events') return item.kind === 'event';
-    if (activeCategory === 'Community') return item.kind === 'post';
-    return true;
+  const filteredModules = ALL_APP_MODULES.filter((item) => {
+    const matchesCategory =
+      activeCategory === 'All' ||
+      (activeCategory === 'Living & Mobility' && item.category === 'living') ||
+      (activeCategory === 'Career & Jobs' && item.category === 'career') ||
+      (activeCategory === 'Community & Culture' && item.category === 'community') ||
+      (activeCategory === 'Desi Essentials & Safety' && (item.category === 'essentials' || item.category === 'safety'));
+
+    const matchesSearch =
+      searchQuery.trim() === '' ||
+      item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesCategory && matchesSearch;
   });
 
   return (
     <>
       <View style={s.exploreHero}>
-        <Text style={s.exploreHeroTitle}>Explore</Text>
-        <Text style={s.exploreHeroSub}>Discover verified communities and services near you</Text>
+        <Text style={s.exploreHeroTitle}>Explore Capabilities</Text>
+        <Text style={s.exploreHeroSub}>Master directory of all ManaBandhu tools, community networks, and diaspora services.</Text>
       </View>
 
-      <Pressable onPress={() => router.push('/search')} style={s.searchBar}>
+      {/* Live search input */}
+      <View style={s.searchBar}>
         <AppIcon color={colors.muted} name="search" size={18} />
-        <Text style={s.searchPlaceholder}>Explore rooms, rides, jobs, events...</Text>
-      </Pressable>
+        <TextInput
+          placeholder="Filter features, services, or modules..."
+          placeholderTextColor={colors.muted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          style={{ flex: 1, fontSize: 14, color: colors.ink, padding: 0 }}
+        />
+        {searchQuery.length > 0 ? (
+          <Pressable onPress={() => setSearchQuery('')}>
+            <Text style={{ fontSize: 15, color: colors.muted, fontWeight: '700' }}>✕</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
+      {/* Category Pills */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillRow}>
         {exploreCategories.map((cat) => (
-          <Pressable key={cat} onPress={() => setActiveCategory(cat)} style={[s.catChip, activeCategory === cat && s.catChipActive]}>
+          <Pressable
+            key={cat}
+            onPress={() => setActiveCategory(cat)}
+            style={[s.catChip, activeCategory === cat && s.catChipActive]}
+          >
             <Text style={[s.catChipText, activeCategory === cat && s.catChipTextActive]}>{cat}</Text>
           </Pressable>
         ))}
       </ScrollView>
 
-      <View style={[s.exploreGrid, isDesktop && s.exploreGridDesktop]}>
-        {filteredItems.map((item) => (
+      {/* Master Modules Directory */}
+      <View style={s.sectionHeader}>
+        <Text style={s.sectionTitle}>All Modules & Capabilities</Text>
+        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.muted }}>
+          {filteredModules.length} {filteredModules.length === 1 ? 'feature' : 'features'}
+        </Text>
+      </View>
+
+      <View style={s.exploreHubList}>
+        {filteredModules.map((item) => (
           <Link key={item.id} href={item.route as Href} asChild>
-            <Pressable style={s.exploreCard}>
-              <View style={[s.exploreCardThumb, { backgroundColor: item.kind === 'room' ? colors.indigoSoft : item.kind === 'job' ? colors.orangeSoft : colors.tealSoft }]}>
-                <Text style={s.exploreCardEmoji}>{item.kind === 'room' ? '🏠' : item.kind === 'job' ? '💼' : item.kind === 'ride' ? '🚗' : '🎉'}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              onPress={() => recordModuleVisit(item.id)}
+              style={s.exploreHubCard}
+            >
+              <View style={[s.exploreHubIcon, { backgroundColor: item.bg }]}>
+                <AppIcon color={item.iconColor} name={item.icon} size={22} />
               </View>
-              <View style={s.exploreCardBody}>
-                <Text style={s.exploreCardTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={s.exploreCardSub} numberOfLines={1}>{item.body}</Text>
-                <View style={[s.exploreBadge, { backgroundColor: colors.surfaceContainer }]}>
-                  <Text style={[s.exploreBadgeText, { color: colors.appPrimary }]}>{item.meta}</Text>
+              <View style={s.exploreHubContent}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <Text style={s.exploreHubTitle}>{item.label}</Text>
+                  <View style={[s.exploreHubBadge, { backgroundColor: item.bg }]}>
+                    <Text style={[s.exploreHubBadgeText, { color: item.iconColor }]}>{item.category.toUpperCase()}</Text>
+                  </View>
                 </View>
+                <Text style={s.exploreHubDesc} numberOfLines={2}>{item.description}</Text>
               </View>
+              <AppIcon color={colors.muted} name="chevron-right" size={16} />
             </Pressable>
           </Link>
         ))}
       </View>
+
+      {/* Community Feed / Highlights */}
+      {feed.length > 0 ? (
+        <>
+          <View style={[s.sectionHeader, { marginTop: 24 }]}>
+            <Text style={s.sectionTitle}>Trending Community Highlights</Text>
+          </View>
+          <View style={[s.exploreGrid, isDesktop && s.exploreGridDesktop]}>
+            {feed.slice(0, 4).map((item) => (
+              <Link key={item.id} href={item.route as Href} asChild>
+                <Pressable
+                  onPress={() => recordModuleVisit(item.kind === 'room' ? 'rooms' : item.kind === 'job' ? 'jobs' : 'community')}
+                  style={s.exploreCard}
+                >
+                  <View style={[s.exploreCardThumb, { backgroundColor: item.kind === 'room' ? colors.indigoSoft : item.kind === 'job' ? colors.orangeSoft : colors.tealSoft }]}>
+                    <Text style={s.exploreCardEmoji}>{item.kind === 'room' ? '🏠' : item.kind === 'job' ? '💼' : item.kind === 'ride' ? '🚗' : '🎉'}</Text>
+                  </View>
+                  <View style={s.exploreCardBody}>
+                    <Text style={s.exploreCardTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={s.exploreCardSub} numberOfLines={1}>{item.body}</Text>
+                    <View style={[s.exploreBadge, { backgroundColor: colors.surfaceContainer }]}>
+                      <Text style={[s.exploreBadgeText, { color: colors.appPrimary }]}>{item.meta}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              </Link>
+            ))}
+          </View>
+        </>
+      ) : null}
     </>
   );
 }
@@ -809,6 +920,14 @@ const s = StyleSheet.create({
   exploreCardSub: { color: colors.muted, fontSize: 11, fontWeight: '600' },
   exploreBadge: { alignSelf: 'flex-start', borderRadius: radius.pill, marginTop: 4, paddingHorizontal: 8, paddingVertical: 3 },
   exploreBadgeText: { fontSize: 10, fontWeight: '800' },
+  exploreHubList: { gap: 10 },
+  exploreHubCard: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 14 },
+  exploreHubIcon: { alignItems: 'center', borderRadius: 14, height: 46, justifyContent: 'center', width: 46 },
+  exploreHubContent: { flex: 1 },
+  exploreHubTitle: { color: colors.ink, fontSize: 15, fontWeight: '800' },
+  exploreHubBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  exploreHubBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  exploreHubDesc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   chatHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   chatTitle: { color: colors.ink, fontSize: 26, fontWeight: '900' },
   composeBtn: { alignItems: 'center', backgroundColor: colors.appPrimary, borderRadius: 14, height: 38, justifyContent: 'center', width: 38 },
