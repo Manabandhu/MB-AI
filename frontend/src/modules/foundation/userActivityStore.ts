@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
@@ -189,17 +190,37 @@ const universalStorage = {
   },
 };
 
+export function computeDynamicModules(
+  frequencyMap: Record<string, number>,
+  recentVisits: { moduleId: string; timestamp: number }[],
+  limit = 8
+): ModuleItem[] {
+  // Score each module: frequency * 3 + recency bonus + starter default priority
+  const scoredModules = ALL_APP_MODULES.map((m) => {
+    const freq = frequencyMap[m.id] ?? 0;
+    const recentIndex = recentVisits.findIndex((v) => v.moduleId === m.id);
+    const recencyScore = recentIndex >= 0 ? Math.max(0, 10 - recentIndex) : 0;
+    const defaultIndex = DEFAULT_TOP_MODULE_IDS.indexOf(m.id);
+    const defaultScore = defaultIndex >= 0 ? 8 - defaultIndex : 0;
+
+    const totalScore = freq * 3 + recencyScore * 2 + defaultScore;
+    return { module: m, score: totalScore };
+  });
+
+  scoredModules.sort((a, b) => b.score - a.score);
+  return scoredModules.slice(0, limit).map((sm) => sm.module);
+}
+
 interface UserActivityState {
   frequencyMap: Record<string, number>;
   recentVisits: { moduleId: string; timestamp: number }[];
   recordModuleVisit: (moduleId: string) => void;
-  getDynamicModules: (limit?: number) => ModuleItem[];
   resetActivity: () => void;
 }
 
 export const useUserActivityStore = create<UserActivityState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       frequencyMap: {},
       recentVisits: [],
 
@@ -220,25 +241,6 @@ export const useUserActivityStore = create<UserActivityState>()(
         });
       },
 
-      getDynamicModules: (limit = 8): ModuleItem[] => {
-        const { frequencyMap, recentVisits } = get();
-
-        // Score each module: frequency * 3 + recency bonus + starter default priority
-        const scoredModules = ALL_APP_MODULES.map((m) => {
-          const freq = frequencyMap[m.id] ?? 0;
-          const recentIndex = recentVisits.findIndex((v) => v.moduleId === m.id);
-          const recencyScore = recentIndex >= 0 ? Math.max(0, 10 - recentIndex) : 0;
-          const defaultIndex = DEFAULT_TOP_MODULE_IDS.indexOf(m.id);
-          const defaultScore = defaultIndex >= 0 ? 8 - defaultIndex : 0;
-
-          const totalScore = freq * 3 + recencyScore * 2 + defaultScore;
-          return { module: m, score: totalScore, freq, recentIndex };
-        });
-
-        scoredModules.sort((a, b) => b.score - a.score);
-        return scoredModules.slice(0, limit).map((sm) => sm.module);
-      },
-
       resetActivity: () => {
         set({ frequencyMap: {}, recentVisits: [] });
       },
@@ -249,3 +251,12 @@ export const useUserActivityStore = create<UserActivityState>()(
     }
   )
 );
+
+export function useDynamicModules(limit = 8): ModuleItem[] {
+  const frequencyMap = useUserActivityStore((s) => s.frequencyMap);
+  const recentVisits = useUserActivityStore((s) => s.recentVisits);
+
+  return useMemo(() => {
+    return computeDynamicModules(frequencyMap, recentVisits, limit);
+  }, [frequencyMap, recentVisits, limit]);
+}

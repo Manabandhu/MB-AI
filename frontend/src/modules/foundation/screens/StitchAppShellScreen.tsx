@@ -26,6 +26,7 @@ import {
 import {
   ALL_APP_MODULES,
   type ModuleItem,
+  useDynamicModules,
   useUserActivityStore,
 } from '@/modules/foundation/userActivityStore';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -189,7 +190,7 @@ export function HomeShell({ data, displayName, isDesktop }: { data: HomeShellDat
   const feed = data?.feed ?? [];
   const metrics = data?.metrics ?? [];
 
-  const dynamicModules = useUserActivityStore((s) => s.getDynamicModules(8));
+  const dynamicModules = useDynamicModules(8);
   const recordModuleVisit = useUserActivityStore((s) => s.recordModuleVisit);
 
   const roomItems = feed.filter((item) => item.kind === 'room');
