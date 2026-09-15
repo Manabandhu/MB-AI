@@ -11,6 +11,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -19,7 +20,14 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
-import { bookRideSeat, getRideOffer, provisionRideChat } from '@/modules/rides/api';
+import {
+  bookRideSeat,
+  getRideOffer,
+  getSavedRides,
+  provisionRideChat,
+  saveRide,
+  unsaveRide,
+} from '@/modules/rides/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
@@ -61,6 +69,57 @@ export function RideDetailScreen() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [joiningChat, setJoiningChat] = useState(false);
+
+  // Query saved status from backend
+  const { data: savedRides } = useQuery({
+    queryKey: ['rides', 'saved'],
+    queryFn: getSavedRides,
+    enabled: isAuthenticated,
+  });
+
+  const isRideSaved = useMemo(() => {
+    if (isSaved) return true;
+    return savedRides?.some((r) => r.id === rideId) ?? false;
+  }, [savedRides, rideId, isSaved]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!rideId) return;
+      if (isRideSaved) {
+        await unsaveRide(rideId);
+      } else {
+        await saveRide(rideId);
+      }
+    },
+    onSuccess: () => {
+      setIsSaved(!isRideSaved);
+      queryClient.invalidateQueries({ queryKey: ['rides', 'saved'] });
+    },
+    onError: (err) => {
+      Alert.alert('Bookmark', (err as Error)?.message || 'Failed to update saved rides');
+    },
+  });
+
+  function handleToggleSave() {
+    if (!isAuthenticated) {
+      router.push('/sign-in');
+      return;
+    }
+    saveMutation.mutate();
+  }
+
+  async function handleShare() {
+    try {
+      const shareTitle = `Carpool: ${detailData?.originArea || 'Origin'} to ${detailData?.destinationArea || 'Destination'}`;
+      const shareMsg = `Join carpool with ${detailData?.driverName || 'Verified Driver'} from ${detailData?.originArea || 'Origin'} to ${detailData?.destinationArea || 'Destination'} on ManaBandhu: https://manabandhu.com/rides/${rideId}`;
+      await Share.share({
+        title: shareTitle,
+        message: shareMsg,
+      });
+    } catch (e) {
+      console.log('Error sharing:', e);
+    }
+  }
 
   async function handleJoinChat() {
     if (!isAuthenticated) {
@@ -170,6 +229,14 @@ export function RideDetailScreen() {
       if (selectedSeatSlots.length === 1) return; // keep at least 1
       setSelectedSeatSlots(selectedSeatSlots.filter((s) => s !== slotNum));
     } else {
+      const maxSeats = rawOffer?.seatsAvailable ?? 3;
+      if (selectedSeatSlots.length >= maxSeats) {
+        Alert.alert(
+          'Seat Limit Reached',
+          `Only ${maxSeats} seat${maxSeats === 1 ? '' : 's'} available for this carpool.`,
+        );
+        return;
+      }
       setSelectedSeatSlots([...selectedSeatSlots, slotNum]);
     }
   }
@@ -198,13 +265,12 @@ export function RideDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.emptyContainer}>
           <AppIcon color={colors.warm} name="warning" size={40} />
-          <Text style={styles.emptyTitle}>Unable to load ride</Text>
-          <Text style={styles.emptySubtitle}>The ride might have expired or been removed.</Text>
-          <Pressable onPress={() => refetch()} style={styles.retryBtn}>
-            <Text style={styles.retryBtnText}>Retry</Text>
-          </Pressable>
+          <Text style={styles.emptyTitle}>Carpool Not Found</Text>
+          <Text style={styles.emptySubtitle}>
+            This ride offer may have departed, filled up, or been removed.
+          </Text>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>Back to Rides</Text>
+            <Text style={styles.backBtnText}>Browse Available Rides</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -251,17 +317,26 @@ export function RideDetailScreen() {
           <Pressable
             accessibilityLabel="Bookmark ride"
             accessibilityRole="button"
-            onPress={() => setIsSaved(!isSaved)}
+            disabled={saveMutation.isPending}
+            onPress={handleToggleSave}
             style={styles.iconButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <AppIcon color={isSaved ? colors.warm : colors.inkSecondary} name="star" size={22} />
+            {saveMutation.isPending ? (
+              <ActivityIndicator color={colors.warm} size="small" />
+            ) : (
+              <AppIcon
+                color={isRideSaved ? colors.warm : colors.inkSecondary}
+                name="star"
+                size={22}
+              />
+            )}
           </Pressable>
 
           <Pressable
             accessibilityLabel="Share ride"
             accessibilityRole="button"
-            onPress={() => {}}
+            onPress={handleShare}
             style={styles.iconButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >

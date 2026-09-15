@@ -12,17 +12,31 @@ public class ConversationService {
 
     private final ConversationRepository repository;
     private final ConversationParticipantRepository participantRepository;
+    private final MessageRepository messageRepository;
 
-    ConversationService(ConversationRepository repository, ConversationParticipantRepository participantRepository) {
+    ConversationService(ConversationRepository repository,
+                        ConversationParticipantRepository participantRepository,
+                        MessageRepository messageRepository) {
         this.repository = repository;
         this.participantRepository = participantRepository;
+        this.messageRepository = messageRepository;
     }
 
     @Transactional(readOnly = true)
     public List<Conversation> findByParticipant(UUID userId) {
         var participants = participantRepository.findByUserIdAndLeftAtIsNull(userId);
+        if (participants.isEmpty()) {
+            return List.of();
+        }
         var ids = participants.stream().map(ConversationParticipant::getConversationId).toList();
-        return repository.findByIdInOrderByLastMessageAtDesc(ids);
+        var list = repository.findByIdInOrderByLastMessageAtDesc(ids);
+        for (var conv : list) {
+            var msgs = messageRepository.findByConversationIdOrderByCreatedAtDesc(conv.getId());
+            if (!msgs.isEmpty()) {
+                conv.setLastMessage(msgs.get(0).getBody());
+            }
+        }
+        return list;
     }
 
     @Transactional(readOnly = true)

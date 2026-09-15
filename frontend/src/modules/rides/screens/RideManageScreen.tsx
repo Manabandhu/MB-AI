@@ -124,6 +124,29 @@ export function RideManageScreen() {
     );
   }
 
+  // Deactivate / Re-activate trip
+  async function handleToggleDeactivate() {
+    const isCurrentlyActive =
+      (data?.status as string) === 'ACTIVE' || (data?.status as string) === 'OPEN';
+    const nextStatus = isCurrentlyActive ? 'CANCELLED' : 'ACTIVE';
+    try {
+      setActionLoading('toggle');
+      await updateRideStatus(rideId, nextStatus);
+      queryClient.invalidateQueries({ queryKey: ['rides', 'owner', rideId] });
+      queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
+      Alert.alert(
+        isCurrentlyActive ? 'Ride Deactivated ⏸️' : 'Ride Re-activated 🟢',
+        isCurrentlyActive
+          ? 'Ride has been deactivated and paused from search.'
+          : 'Ride has been activated and is live in discovery.',
+      );
+    } catch (e: unknown) {
+      Alert.alert('Error', (e as Error)?.message || 'Failed to change status.');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   // 1-Click action: Repeat this trip tomorrow
   async function handleRepeatTrip() {
     try {
@@ -270,6 +293,47 @@ export function RideManageScreen() {
                   )}
                 </Pressable>
               )}
+
+              {/* 1-Tap Toggle Active / Deactivate */}
+              {!isCompleted &&
+                (() => {
+                  const isActive =
+                    (data.status as string) === 'ACTIVE' || (data.status as string) === 'OPEN';
+                  return (
+                    <Pressable
+                      style={[
+                        styles.toggleDeactivateBtn,
+                        isActive
+                          ? styles.toggleDeactivateBtnActive
+                          : styles.toggleDeactivateBtnInactive,
+                      ]}
+                      disabled={actionLoading !== null}
+                      onPress={handleToggleDeactivate}
+                    >
+                      {actionLoading === 'toggle' ? (
+                        <ActivityIndicator color="#431ebe" size="small" />
+                      ) : (
+                        <>
+                          <AppIcon
+                            name={isActive ? 'warning' : 'check'}
+                            size={16}
+                            color={isActive ? '#ba1a1a' : '#16a34a'}
+                          />
+                          <Text
+                            style={[
+                              styles.toggleDeactivateText,
+                              isActive
+                                ? styles.toggleDeactivateTextDanger
+                                : styles.toggleDeactivateTextSuccess,
+                            ]}
+                          >
+                            {isActive ? 'Pause / Deactivate Ride' : 'Re-activate Ride in Discovery'}
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
+                  );
+                })()}
 
               {/* 1-Click Repeat Trip Tomorrow */}
               <Pressable
@@ -421,6 +485,33 @@ const styles = StyleSheet.create({
     borderRadius: radius.control,
   },
   completeTripBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 14 },
+  toggleDeactivateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.x2,
+    paddingVertical: space.x3,
+    borderRadius: radius.control,
+    borderWidth: 1,
+  },
+  toggleDeactivateBtnActive: {
+    backgroundColor: 'rgba(186,26,26,0.06)',
+    borderColor: '#ba1a1a',
+  },
+  toggleDeactivateBtnInactive: {
+    backgroundColor: 'rgba(22,163,74,0.08)',
+    borderColor: '#16a34a',
+  },
+  toggleDeactivateText: {
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  toggleDeactivateTextDanger: {
+    color: '#ba1a1a',
+  },
+  toggleDeactivateTextSuccess: {
+    color: '#16a34a',
+  },
 
   repeatTripBtn: {
     flexDirection: 'row',

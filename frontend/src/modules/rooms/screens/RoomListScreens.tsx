@@ -18,6 +18,8 @@ import {
   deleteRoomListing,
   getFavorites,
   getMyListings,
+  pauseRoomListing,
+  publishRoomListing,
   updateRoomListing,
 } from '@/modules/rooms/api';
 import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
@@ -249,6 +251,21 @@ export function RoomMyListingsScreen() {
     },
   });
 
+  const toggleStatus = useMutation({
+    mutationFn: async ({ id, currentStatus }: { id: string; currentStatus: string }) => {
+      if (currentStatus === 'ACTIVE' || currentStatus === 'PUBLISHED') {
+        return pauseRoomListing(id);
+      } else {
+        return publishRoomListing(id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms', 'listings'] });
+      setActiveMenuId(null);
+    },
+  });
+
   const deleteListing = useMutation({
     mutationFn: (id: string) => deleteRoomListing(id),
     onSuccess: () => {
@@ -413,6 +430,59 @@ export function RoomMyListingsScreen() {
                 </View>
 
                 <Text style={styles.locationText}>{listing.broadLocation}</Text>
+              </View>
+
+              {/* 1-Tap Active / Deactivate Toggle Row */}
+              <View style={styles.statusToggleRow}>
+                <View style={styles.statusPillWrap}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
+                        ? styles.statusDotActive
+                        : styles.statusDotPaused,
+                    ]}
+                  />
+                  <Text style={styles.statusPillText}>
+                    {listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
+                      ? '🟢 Visible in search'
+                      : '⏸️ Deactivated'}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityLabel={
+                    listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
+                      ? 'Deactivate listing'
+                      : 'Activate listing'
+                  }
+                  accessibilityRole="button"
+                  disabled={toggleStatus.isPending}
+                  onPress={() =>
+                    toggleStatus.mutate({
+                      id: listing.id,
+                      currentStatus: listing.status,
+                    })
+                  }
+                  style={[
+                    styles.toggleStatusBtn,
+                    listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
+                      ? styles.toggleStatusBtnDeactivate
+                      : styles.toggleStatusBtnActivate,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.toggleStatusBtnText,
+                      listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
+                        ? styles.toggleStatusBtnTextDeactivate
+                        : styles.toggleStatusBtnTextActivate,
+                    ]}
+                  >
+                    {listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
+                      ? '⏸️ Deactivate'
+                      : '🟢 Activate'}
+                  </Text>
+                </Pressable>
               </View>
 
               <View style={styles.actionButtonGroup}>
@@ -835,6 +905,64 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 4,
     alignSelf: 'flex-start',
+  },
+  statusToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#faf8ff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: '#eaedff',
+  },
+  statusPillWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusDotActive: {
+    backgroundColor: '#16a34a',
+  },
+  statusDotPaused: {
+    backgroundColor: '#9ca3af',
+  },
+  statusPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  toggleStatusBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+  },
+  toggleStatusBtnActivate: {
+    backgroundColor: 'rgba(22,163,74,0.12)',
+    borderWidth: 1,
+    borderColor: '#16a34a',
+  },
+  toggleStatusBtnDeactivate: {
+    backgroundColor: 'rgba(156,163,175,0.15)',
+    borderWidth: 1,
+    borderColor: '#9ca3af',
+  },
+  toggleStatusBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  toggleStatusBtnTextActivate: {
+    color: '#16a34a',
+  },
+  toggleStatusBtnTextDeactivate: {
+    color: '#4b5563',
   },
   actionButtonGroup: {
     flexDirection: 'row',

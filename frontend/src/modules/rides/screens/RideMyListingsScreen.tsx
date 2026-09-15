@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getMyRides, reactivateRideOffer } from '@/modules/rides/api';
+import { getMyRides, reactivateRideOffer, updateRideStatus } from '@/modules/rides/api';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
@@ -52,6 +52,30 @@ export function RideMyListingsScreen() {
     queryKey: ['rides', 'mine'],
     queryFn: getMyRides,
   });
+
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+
+  const handleToggleStatus = async (rideId: string, currentStatus: string) => {
+    try {
+      setStatusUpdatingId(rideId);
+      const isCurrentlyActive =
+        currentStatus === 'ACTIVE' || currentStatus === 'OPEN' || currentStatus === 'IN_PROGRESS';
+      const nextStatus = isCurrentlyActive ? 'CANCELLED' : 'ACTIVE';
+      await updateRideStatus(rideId, nextStatus);
+      queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
+      queryClient.invalidateQueries({ queryKey: ['rides'] });
+      Alert.alert(
+        isCurrentlyActive ? 'Ride Deactivated ⏸️' : 'Ride Activated 🟢',
+        isCurrentlyActive
+          ? 'Ride has been deactivated and removed from discovery feeds.'
+          : 'Ride is now active and searchable for seat bookings.',
+      );
+    } catch (e: unknown) {
+      Alert.alert('Status Update Failed', (e as Error)?.message || 'Unable to update ride status.');
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
 
   const handleReactivate = async (rideId: string) => {
     try {
@@ -201,6 +225,60 @@ export function RideMyListingsScreen() {
                   </Text>
                 </View>
 
+                {/* 1-Tap Activate / Deactivate Toggle Row */}
+                {(() => {
+                  const isRideActive =
+                    (ride.status as string) === 'ACTIVE' || (ride.status as string) === 'OPEN';
+                  return (
+                    <View style={styles.statusToggleRow}>
+                      <View style={styles.statusPillWrap}>
+                        <View
+                          style={[
+                            styles.statusDot,
+                            isRideActive ? styles.statusDotActive : styles.statusDotPaused,
+                          ]}
+                        />
+                        <Text style={styles.statusPillText}>
+                          {isRideActive
+                            ? '🟢 Active & Searchable'
+                            : ride.status === 'IN_PROGRESS'
+                              ? '🚗 Trip in Progress'
+                              : '⏸️ Deactivated'}
+                        </Text>
+                      </View>
+                      <Pressable
+                        accessibilityLabel={
+                          isRideActive ? 'Deactivate carpool' : 'Activate carpool'
+                        }
+                        accessibilityRole="button"
+                        disabled={statusUpdatingId === ride.id}
+                        onPress={() => handleToggleStatus(ride.id, ride.status)}
+                        style={[
+                          styles.toggleStatusBtn,
+                          isRideActive
+                            ? styles.toggleStatusBtnDeactivate
+                            : styles.toggleStatusBtnActivate,
+                        ]}
+                      >
+                        {statusUpdatingId === ride.id ? (
+                          <ActivityIndicator size="small" color="#431ebe" />
+                        ) : (
+                          <Text
+                            style={[
+                              styles.toggleStatusBtnText,
+                              isRideActive
+                                ? styles.toggleStatusBtnTextDeactivate
+                                : styles.toggleStatusBtnTextActivate,
+                            ]}
+                          >
+                            {isRideActive ? '⏸️ Deactivate' : '🟢 Activate'}
+                          </Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  );
+                })()}
+
                 {/* Card Action Buttons */}
                 <View style={styles.cardActions}>
                   <Pressable
@@ -328,6 +406,66 @@ const styles = StyleSheet.create({
   tollFreeText: { color: '#059669' },
   tollIncludedText: { color: colors.warm },
   metaText: { fontSize: 12, color: colors.muted, fontWeight: '600' },
+
+  statusToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#faf8ff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginTop: 4,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#eaedff',
+  },
+  statusPillWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusDotActive: {
+    backgroundColor: '#16a34a',
+  },
+  statusDotPaused: {
+    backgroundColor: '#9ca3af',
+  },
+  statusPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  toggleStatusBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+  },
+  toggleStatusBtnActivate: {
+    backgroundColor: 'rgba(22,163,74,0.12)',
+    borderWidth: 1,
+    borderColor: '#16a34a',
+  },
+  toggleStatusBtnDeactivate: {
+    backgroundColor: 'rgba(156,163,175,0.15)',
+    borderWidth: 1,
+    borderColor: '#9ca3af',
+  },
+  toggleStatusBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  toggleStatusBtnTextActivate: {
+    color: '#16a34a',
+  },
+  toggleStatusBtnTextDeactivate: {
+    color: '#4b5563',
+  },
 
   cardActions: {
     flexDirection: 'row',

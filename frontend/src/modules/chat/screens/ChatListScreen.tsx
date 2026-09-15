@@ -91,15 +91,50 @@ export default function ChatListScreen() {
 
   // Combine live data with sample inquiries for zero-state demonstration
   const allConversations: EnrichedConversation[] = useMemo(() => {
-    const liveList = (data ?? []).map((c, idx) => ({
-      ...c,
-      moduleCategory: (['Marketplace', 'Rooms', 'Rides'] as const)[idx % 3],
-      avatarInitial: (c.title ?? 'MB').slice(0, 2).toUpperCase(),
-      isOnline: idx % 2 === 0,
-      isVerified: true,
-    }));
+    const liveList: EnrichedConversation[] = (data ?? []).map((c, idx) => {
+      let moduleCategory: 'Marketplace' | 'Rooms' | 'Rides' | 'General' = 'General';
+      let inquiryContext: string | undefined;
 
-    if (liveList.length > 0) return liveList;
+      const titleLower = (c.title ?? '').toLowerCase();
+      if (
+        c.type === 'ROOM_INQUIRY' ||
+        titleLower.includes('room inquiry') ||
+        titleLower.includes('room')
+      ) {
+        moduleCategory = 'Rooms';
+        inquiryContext = c.title?.replace(/^(Room Inquiry:\s*|Room:\s*)/i, '') || 'Room Inquiry';
+      } else if (
+        c.type === 'RIDE_TEMP' ||
+        titleLower.includes('ride') ||
+        titleLower.includes('carpool')
+      ) {
+        moduleCategory = 'Rides';
+        inquiryContext = c.title?.replace(/^(Ride:\s*|Carpool:\s*)/i, '') || 'Ride Coordination';
+      } else if (
+        titleLower.includes('offer') ||
+        titleLower.includes('item') ||
+        titleLower.includes('mixer')
+      ) {
+        moduleCategory = 'Marketplace';
+        inquiryContext = c.title;
+      }
+
+      return {
+        ...c,
+        moduleCategory,
+        inquiryContext,
+        avatarInitial: (c.title ?? 'MB').slice(0, 2).toUpperCase(),
+        isOnline: idx % 2 === 0,
+        isVerified: true,
+      };
+    });
+
+    if (liveList.length > 0) {
+      // Prioritize live conversations; append samples that don't collide
+      const liveIds = new Set(liveList.map((l) => l.id));
+      const remainingSamples = SAMPLE_INQUIRIES.filter((s) => !liveIds.has(s.id));
+      return [...liveList, ...remainingSamples];
+    }
     return SAMPLE_INQUIRIES;
   }, [data]);
 
@@ -131,13 +166,13 @@ export default function ChatListScreen() {
   const getModuleBadge = (cat?: string) => {
     switch (cat) {
       case 'Marketplace':
-        return { label: 'Marketplace', bg: 'rgba(255,126,51,0.12)', text: '#ff7e33' };
+        return { label: '🛍️ Marketplace', bg: 'rgba(255,126,51,0.12)', text: '#ff7e33' };
       case 'Rooms':
-        return { label: 'Room Finding', bg: 'rgba(67,30,190,0.10)', text: '#431ebe' };
+        return { label: '🏠 Room Inquiry', bg: 'rgba(67,30,190,0.10)', text: '#431ebe' };
       case 'Rides':
-        return { label: 'Carpool', bg: 'rgba(0,105,107,0.10)', text: '#00696b' };
+        return { label: '🚗 Ride Coordination', bg: 'rgba(0,105,107,0.10)', text: '#00696b' };
       default:
-        return { label: 'General', bg: '#f1f3f9', text: '#625f6e' };
+        return { label: '💬 General', bg: '#f1f3f9', text: '#625f6e' };
     }
   };
 

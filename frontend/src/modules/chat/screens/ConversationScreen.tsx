@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/lib/authStore';
 import { getConversation, listMessages, sendMessage } from '@/modules/chat/api';
 import { Banner } from '@/modules/shared/components/Banner';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
@@ -18,6 +19,7 @@ import { useAdaptiveLayout } from '@/platform/adaptive';
 export default function ConversationScreen() {
   const layout = useAdaptiveLayout();
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore((state) => state.user);
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const [message, setMessage] = useState('');
   const [offline, setOffline] = useState(false);
@@ -96,6 +98,14 @@ export default function ConversationScreen() {
         <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
           <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
             <SectionHeader title={title} subtitle={participantNames ?? 'Active conversation'} />
+            {conversation?.type === 'RIDE_TEMP' ||
+            (conversation?.title ?? '').toLowerCase().includes('ride') ? (
+              <Banner
+                title="🔒 Temporary Chat"
+                body="This conversation will self-delete 2 hours after trip arrival."
+                variant="info"
+              />
+            ) : null}
             {offline ? (
               <Banner
                 title="Offline"
@@ -122,7 +132,7 @@ export default function ConversationScreen() {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
-                    sent={m.sent ?? false}
+                    sent={m.sent ?? (currentUser?.id ? m.senderId === currentUser.id : false)}
                   />
                 ))}
               </View>

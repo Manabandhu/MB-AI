@@ -2,7 +2,7 @@ import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/apiClient';
 
 export type Conversation = {
   id: string;
-  type: 'DIRECT' | 'GROUP';
+  type: 'DIRECT' | 'GROUP' | 'ROOM_INQUIRY' | 'RIDE_TEMP';
   title?: string;
   lastMessage?: string;
   lastMessageAt?: string;

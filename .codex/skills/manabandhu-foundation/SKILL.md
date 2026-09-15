@@ -136,4 +136,6 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 - Screen Catalog Rooms Update: Added Room Inquiry screen (`/rooms/[roomId]/inquiry`) to `screen-catalog.ts` completing the 10-screen rooms route inventory.
 - Foundation Content DB Metrics: `FoundationContentService.java` upgraded from hardcoded static metrics to live PostgreSQL database counts using Spring Data `JdbcTemplate` with safe fallback for active rooms, active rides, conversations, community posts, and saved favorites.
 - Repo-Wide Defect Remediation: Standardized SearchScreen and SavedScreen category queries and filter interactions, enforced `keyboardShouldPersistTaps="handled"` on Search bar inputs, and aligned screen count exports.
+- ChatShell Cross-Module Avatars: Updated `StitchAppShellScreen.tsx` `ChatShell` to display dedicated 🏠 Room Inquiry and 🚗 Ride Coordination icons for `ROOM_INQUIRY` and `RIDE_TEMP` conversations.
+
 

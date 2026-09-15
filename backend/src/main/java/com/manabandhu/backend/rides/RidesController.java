@@ -181,13 +181,11 @@ public class RidesController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
 
         var bookings = bookingService.findByRideId(offerId);
-        boolean isPassenger = bookings.stream().anyMatch(b -> b.getUserId().equals(actorId));
-        boolean isDriver = offer.getDriverId().equals(actorId);
-        if (!isDriver && !isPassenger && !isAdmin(authentication)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only ride driver or confirmed passengers can access ride chat");
-        }
 
         if (offer.getConversationId() != null) {
+            if (!chatParticipantService.isParticipant(offer.getConversationId(), actorId)) {
+                chatParticipantService.add(offer.getConversationId(), actorId, ConversationParticipant.ParticipantRole.MEMBER);
+            }
             return ResponseEntity.ok(new RideChatResponse(
                     offer.getConversationId(),
                     offerId,
@@ -199,9 +197,13 @@ public class RidesController {
         var title = "Ride: " + offer.getOriginArea() + " → " + offer.getDestinationArea();
         var conversation = conversationService.create(offer.getDriverId(), Conversation.ConversationType.RIDE_TEMP, title);
 
+        if (!actorId.equals(offer.getDriverId())) {
+            chatParticipantService.add(conversation.getId(), actorId, ConversationParticipant.ParticipantRole.MEMBER);
+        }
+
         for (var booking : bookings) {
             if ("CONFIRMED".equalsIgnoreCase(booking.getStatus()) || "ACCEPTED".equalsIgnoreCase(booking.getStatus())) {
-                if (!booking.getUserId().equals(offer.getDriverId())) {
+                if (!booking.getUserId().equals(offer.getDriverId()) && !booking.getUserId().equals(actorId)) {
                     chatParticipantService.add(conversation.getId(), booking.getUserId(), ConversationParticipant.ParticipantRole.MEMBER);
                 }
             }

@@ -674,7 +674,15 @@ export function ChatShell({ isDesktop }: { data: HomeShellData; isDesktop: boole
               <Pressable accessibilityRole="button" style={s.convRow}>
                 <View style={s.convAvatarWrap}>
                   <View style={s.convAvatar}>
-                    <Text style={s.convAvatarText}>{(conv.title ?? 'C')[0].toUpperCase()}</Text>
+                    <Text style={s.convAvatarText}>
+                      {conv.type === 'ROOM_INQUIRY' ||
+                      (conv.title ?? '').toLowerCase().includes('room')
+                        ? '🏠'
+                        : conv.type === 'RIDE_TEMP' ||
+                            (conv.title ?? '').toLowerCase().includes('ride')
+                          ? '🚗'
+                          : (conv.title ?? 'C')[0].toUpperCase()}
+                    </Text>
                   </View>
                 </View>
                 <View style={s.convBody}>

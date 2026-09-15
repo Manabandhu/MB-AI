@@ -82,6 +82,17 @@ export function PhoneLoginScreen() {
         <Text style={styles.helperText}>
           We will send an SMS with a one-time verification code. Standard carrier rates may apply.
         </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            setSelectedCountry(supportedCountries[0]);
+            setPhoneDigits('4695550100');
+            if (error) setLocalError(null);
+          }}
+          style={styles.testBadge}
+        >
+          <Text style={styles.testBadgeText}>🧪 Test Phone: +1 (469) 555-0100 (Tap to fill)</Text>
+        </Pressable>
       </View>
 
       {/* Inline Error Banner with exact AppIcon */}
@@ -141,6 +152,21 @@ const styles = StyleSheet.create({
     color: color.muted,
     fontSize: 12,
     lineHeight: 17,
+  },
+  testBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(67, 30, 190, 0.08)',
+    borderColor: 'rgba(67, 30, 190, 0.25)',
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 4,
+  },
+  testBadgeText: {
+    color: color.primary,
+    fontSize: 12,
+    fontWeight: '700',
   },
   errorBanner: {
     alignItems: 'center',

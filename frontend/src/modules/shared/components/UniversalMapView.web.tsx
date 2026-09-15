@@ -225,6 +225,7 @@ export function UniversalMapView({
     if (!mapInstanceRef.current || !window.mapkit || !mapkitReady) return;
 
     const map = mapInstanceRef.current;
+    const mapkit = window.mapkit;
 
     if (map.annotations) {
       map.removeAnnotations(map.annotations);
@@ -233,10 +234,10 @@ export function UniversalMapView({
     const annotations = markers
       .filter((m) => m.latitude && m.longitude)
       .map((m) => {
-        const coord = new window.mapkit.Coordinate(m.latitude, m.longitude);
+        const coord = new mapkit.Coordinate(m.latitude, m.longitude);
         const isSelected = selectedMarkerId === m.id;
 
-        const annotation = new window.mapkit.MarkerAnnotation(coord, {
+        const annotation = new mapkit.MarkerAnnotation(coord, {
           title: m.title,
           subtitle: m.subtitle || (m.price ? `$${m.price}/mo` : ''),
           color: isSelected ? colors.primary : '#0D5C75',
@@ -273,24 +274,18 @@ export function UniversalMapView({
       map.removeOverlays(map.overlays);
     }
 
-    if (
-      drawnPolygon &&
-      drawnPolygon.length >= 3 &&
-      window.mapkit.PolygonOverlay &&
-      map.addOverlay
-    ) {
-      const points = drawnPolygon.map(
-        (pt) => new window.mapkit.Coordinate(pt.latitude, pt.longitude),
-      );
-      const style = window.mapkit.Style
-        ? new window.mapkit.Style({
+    const mapkit = window.mapkit;
+    if (drawnPolygon && drawnPolygon.length >= 3 && mapkit?.PolygonOverlay && map.addOverlay) {
+      const points = drawnPolygon.map((pt) => new mapkit.Coordinate(pt.latitude, pt.longitude));
+      const style = mapkit.Style
+        ? new mapkit.Style({
             fillColor: 'rgba(13, 92, 117, 0.22)',
             strokeColor: colors.primary,
             lineWidth: 2.5,
           })
         : undefined;
 
-      const overlay = new window.mapkit.PolygonOverlay(points, {
+      const overlay = new mapkit.PolygonOverlay(points, {
         style,
       });
       map.addOverlay(overlay);
@@ -591,7 +586,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tokenPromptContainer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,

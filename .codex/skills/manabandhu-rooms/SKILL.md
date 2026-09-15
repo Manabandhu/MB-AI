@@ -149,6 +149,11 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`.
 - **Complete**: End-to-end vertical slice across database (V16 & V24), backend (controllers/services/repositories/DTOs/authorization/chat handshake), REST contracts (openapi.yaml), and frontend (list, detail, create, edit, favorites, my-listings, inquiry).
 - **Zero Hardcoding**: All dynamic amenities, lifestyles, preferences, and locations fetched from Supabase / REST backend.
 - **Free Geocoding**: Integrated `country-state-city`, OpenStreetMap Photon autocomplete, and Zippopotam.us ZIP auto-fill.
-- **Chat Handshake**: Direct 1-click transition from room inquiry into `/chat/[conversationId]`.
+- **Chat Handshake & Integration**: Direct 1-click transition from room inquiry into `/chat/[conversationId]`, with conversations categorized into "Rooms" in chat inboxes with room badges.
+- **Owner Listing Management**: Prominent top header "My Rooms" button with home icon in `RoomsScreen` navigating to `/rooms/my-listings`, featuring 1-tap **[🟢 Active / ⏸️ Deactivate]** toggle switch on each listing card calling `publishRoomListing` and `pauseRoomListing`.
+- **Image Carousel**: Rich swipeable carousel in `RoomDetailScreen` with slide counter (`1 / 5`), category tag, active indicator dots, left/right chevrons, and interactive thumbnail gallery strip.
+- **Cultural Badges**: High-contrast dietary and comfort badges on listing cards and detail view (`🥦 Pure Veg`, `🚿 Private Bath`, `🛏️ Furnished`) meeting WCAG 2.1 AA accessibility ratios.
+- **1-Click Landlord Chat**: Direct "Chat with Landlord" CTA on `RoomDetailScreen` that triggers `inquireRoom` handshake and navigates directly to `/chat/[conversationId]`, with fallback to the full inquiry screen.
 - **Code Consolidation**: Unified `RoomForm.tsx` eliminates duplication across create and edit screens.
 - **Modern Vibrant Design**: Applied ManaBandhu design tokens (`#431ebe` primary, `#00696b` teal, `#131b2e` ink, `#faf8ff` background).
+

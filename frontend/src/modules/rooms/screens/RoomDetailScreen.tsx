@@ -2,9 +2,11 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   BackHandler,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -17,7 +19,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
-import { getRoomDetail, saveRoom, unsaveRoom } from '@/modules/rooms/api';
+import { getRoomDetail, inquireRoom, saveRoom, unsaveRoom } from '@/modules/rooms/api';
 import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
 import type { RoomListing } from '@/modules/rooms/types';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -38,6 +40,40 @@ const colors = {
   orangeSoft: 'rgba(255,126,51,0.10)',
 };
 
+type GalleryPhoto = {
+  url: string;
+  label: string;
+  tag: string;
+};
+
+const DEFAULT_ROOM_PHOTOS: GalleryPhoto[] = [
+  {
+    url: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1200&q=80',
+    label: 'Master Bedroom with Ample Natural Light',
+    tag: 'Master Bed',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80',
+    label: 'Attached Private Bath & Modern Vanity',
+    tag: 'Private Bath',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
+    label: 'Modular Kitchen with Modern Appliances',
+    tag: 'Kitchen',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80',
+    label: 'Shared Living Hall & Dining Space',
+    tag: 'Living Area',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=1200&q=80',
+    label: 'Community Pool & Recreation Club',
+    tag: 'Amenities',
+  },
+];
+
 export function RoomDetailScreen() {
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const queryClient = useQueryClient();
@@ -46,6 +82,9 @@ export function RoomDetailScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const insets = useSafeAreaInsets();
+
+  const carouselScrollRef = useRef<ScrollView>(null);
+  const [carouselWidth, setCarouselWidth] = useState(width - 32);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -58,6 +97,18 @@ export function RoomDetailScreen() {
 
   const [isSavedLocal, setIsSavedLocal] = useState<boolean | null>(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+
+  const galleryPhotos: GalleryPhoto[] = useMemo(() => {
+    return DEFAULT_ROOM_PHOTOS;
+  }, []);
+
+  const scrollToPhoto = (index: number) => {
+    const nextIdx = Math.max(0, Math.min(galleryPhotos.length - 1, index));
+    setActivePhotoIndex(nextIdx);
+    carouselScrollRef.current?.scrollTo({ x: nextIdx * carouselWidth, animated: true });
+  };
+
+  const [chatStarting, setChatStarting] = useState(false);
 
   const { data: apiRoom, isLoading } = useQuery({
     queryKey: ['rooms', 'detail', roomId],
@@ -130,6 +181,32 @@ export function RoomDetailScreen() {
       return;
     }
     toggleSaveMutation.mutate();
+  };
+
+  const handleChatWithLandlord = async () => {
+    if (!isAuthenticated) {
+      router.push('/sign-in' as Href);
+      return;
+    }
+    if (!room || !roomId) return;
+    try {
+      setChatStarting(true);
+      const res = await inquireRoom(roomId, {
+        moveInDate: new Date().toISOString().split('T')[0],
+        stayDurationMonths: 6,
+        dietaryLifestyle: room.dietaryPreference || 'Flexible',
+        introMessage: `Hello, I'm interested in your room listing "${room.title}" ($${room.price}/mo). Is it currently available for move-in?`,
+      });
+      if (res?.conversationId) {
+        router.push(`/chat/${res.conversationId}` as Href);
+      } else {
+        router.push(`/rooms/${roomId}/inquiry` as Href);
+      }
+    } catch {
+      router.push(`/rooms/${roomId}/inquiry` as Href);
+    } finally {
+      setChatStarting(false);
+    }
   };
 
   const handleShare = async () => {
@@ -225,29 +302,108 @@ export function RoomDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Photo Gallery Carousel */}
-        <View style={s.galleryContainer}>
-          <View style={s.gallerySlide}>
-            <Text style={s.galleryEmoji}>{samplePhotos[activePhotoIndex].split(' ')[0]}</Text>
-            <Text style={s.galleryCaption}>
-              {samplePhotos[activePhotoIndex].split(' ').slice(1).join(' ')}
+        <View
+          style={s.galleryContainer}
+          onLayout={(e) => {
+            const w = e.nativeEvent.layout.width;
+            if (w > 0) setCarouselWidth(w);
+          }}
+        >
+          {/* Horizontal Scrollable Carousel */}
+          <ScrollView
+            ref={carouselScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const offsetX = e.nativeEvent.contentOffset.x;
+              const idx = Math.round(offsetX / (carouselWidth || 1));
+              setActivePhotoIndex(idx);
+            }}
+            style={{ width: carouselWidth }}
+          >
+            {galleryPhotos.map((photo) => (
+              <View key={photo.url} style={[s.gallerySlide, { width: carouselWidth }]}>
+                <Image
+                  source={{ uri: photo.url }}
+                  style={[s.slideImage, { width: carouselWidth }]}
+                  resizeMode="cover"
+                />
+                <View style={s.slideGradientOverlay}>
+                  <Text style={s.galleryCaption} numberOfLines={1}>
+                    {photo.label}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Floating Category Tag */}
+          <View style={s.photoCategoryPill}>
+            <Text style={s.photoCategoryText}>
+              {galleryPhotos[activePhotoIndex]?.tag ?? 'Room Photo'}
             </Text>
           </View>
+
+          {/* Floating Slide Counter */}
           <View style={s.photoCounterPill}>
             <Text style={s.photoCounterText}>
-              {activePhotoIndex + 1} / {samplePhotos.length}
+              {activePhotoIndex + 1} / {galleryPhotos.length}
             </Text>
           </View>
-          <View style={s.photoThumbnailRow}>
-            {samplePhotos.map((photo, i) => (
+
+          {/* Previous / Next Chevron Buttons */}
+          {activePhotoIndex > 0 && (
+            <Pressable
+              accessibilityLabel="Previous image"
+              accessibilityRole="button"
+              onPress={() => scrollToPhoto(activePhotoIndex - 1)}
+              style={[s.carouselNavBtn, s.carouselNavBtnLeft]}
+            >
+              <Text style={s.carouselNavBtnText}>‹</Text>
+            </Pressable>
+          )}
+
+          {activePhotoIndex < galleryPhotos.length - 1 && (
+            <Pressable
+              accessibilityLabel="Next image"
+              accessibilityRole="button"
+              onPress={() => scrollToPhoto(activePhotoIndex + 1)}
+              style={[s.carouselNavBtn, s.carouselNavBtnRight]}
+            >
+              <Text style={s.carouselNavBtnText}>›</Text>
+            </Pressable>
+          )}
+
+          {/* Pagination Dots */}
+          <View style={s.dotsRow}>
+            {galleryPhotos.map((photo, i) => (
               <Pressable
-                key={photo}
-                onPress={() => setActivePhotoIndex(i)}
-                style={[s.photoThumbItem, activePhotoIndex === i && s.photoThumbItemActive]}
-              >
-                <Text style={s.photoThumbEmoji}>{photo.split(' ')[0]}</Text>
-              </Pressable>
+                key={photo.url}
+                onPress={() => scrollToPhoto(i)}
+                style={[s.dot, activePhotoIndex === i && s.dotActive]}
+              />
             ))}
           </View>
+
+          {/* Thumbnail Gallery Strip */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.photoThumbnailRow}
+          >
+            {galleryPhotos.map((photo, i) => (
+              <Pressable
+                key={photo.url}
+                onPress={() => scrollToPhoto(i)}
+                style={[s.photoThumbItem, activePhotoIndex === i && s.photoThumbItemActive]}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${photo.tag}`}
+              >
+                <Image source={{ uri: photo.url }} style={s.photoThumbImage} resizeMode="cover" />
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
 
         {/* Title, Badges & Zero-Brokerage Banner */}
@@ -432,15 +588,22 @@ export function RoomDetailScreen() {
         </View>
 
         <View style={s.bottomActions}>
-          <Link href={`/rooms/${roomId}/inquiry` as Href} asChild>
-            <Pressable
-              style={StyleSheet.flatten(s.inquireCtaBtn)}
-              accessibilityLabel="Chat with Host"
-            >
-              <AppIcon color="#fff" name="message" size={16} />
-              <Text style={s.inquireCtaBtnText}>Chat with Host</Text>
-            </Pressable>
-          </Link>
+          <Pressable
+            style={StyleSheet.flatten(s.inquireCtaBtn)}
+            accessibilityLabel="Chat with Landlord"
+            accessibilityRole="button"
+            disabled={chatStarting}
+            onPress={handleChatWithLandlord}
+          >
+            {chatStarting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <AppIcon color="#fff" name="message" size={16} />
+                <Text style={s.inquireCtaBtnText}>Chat with Landlord</Text>
+              </>
+            )}
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>
@@ -500,24 +663,51 @@ const s = StyleSheet.create({
   galleryContainer: {
     borderRadius: 22,
     overflow: 'hidden',
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: '#0f172a',
     position: 'relative',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#eaedff',
   },
   gallerySlide: {
-    height: 200,
+    height: 240,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    position: 'relative',
+    backgroundColor: '#0f172a',
   },
-  galleryEmoji: {
-    fontSize: 64,
+  slideImage: {
+    height: 240,
+    width: '100%',
+  },
+  slideGradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
   galleryCaption: {
-    color: colors.ink,
-    fontSize: 14,
+    color: '#ffffff',
+    fontSize: 13,
     fontWeight: '700',
+  },
+  photoCategoryPill: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(67,30,190,0.85)',
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    zIndex: 10,
+  },
+  photoCategoryText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   photoCounterPill: {
     position: 'absolute',
@@ -527,37 +717,81 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    zIndex: 10,
   },
   photoCounterText: {
     color: '#fff',
     fontSize: 11,
     fontWeight: '700',
   },
+  carouselNavBtn: {
+    position: 'absolute',
+    top: 95,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  carouselNavBtnLeft: {
+    left: 10,
+  },
+  carouselNavBtnRight: {
+    right: 10,
+  },
+  carouselNavBtnText: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 24,
+    marginTop: -2,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    backgroundColor: '#ffffff',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#d1d5db',
+  },
+  dotActive: {
+    width: 18,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.appPrimary,
+  },
   photoThumbnailRow: {
     flexDirection: 'row',
     gap: 8,
     padding: 10,
-    backgroundColor: 'rgba(255,255,255,0.75)',
+    backgroundColor: '#ffffff',
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#f1f3f9',
     justifyContent: 'center',
   },
   photoThumbItem: {
-    width: 44,
-    height: 44,
+    width: 50,
+    height: 50,
     borderRadius: 10,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
   },
   photoThumbItemActive: {
     borderColor: colors.appPrimary,
-    backgroundColor: colors.surfaceContainer,
   },
-  photoThumbEmoji: {
-    fontSize: 20,
+  photoThumbImage: {
+    width: '100%',
+    height: '100%',
   },
   mainHeaderSection: {
     gap: space.x2,

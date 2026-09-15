@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { listRideOffers } from '@/modules/rides/api';
+import { listRideOffers, provisionRideChat } from '@/modules/rides/api';
 import type { RideOffer } from '@/modules/rides/types';
 import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
@@ -190,6 +190,45 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
   const [filterEvOnly, setFilterEvOnly] = useState(false);
   const [filterDailyOnly, setFilterDailyOnly] = useState(false);
   const [filterNoTolls, _setFilterNoTolls] = useState(false);
+
+  // Interactive pill state & chat loading
+  const [chatLoadingRideId, setChatLoadingRideId] = useState<string | null>(null);
+  const [whenIndex, setWhenIndex] = useState(0);
+  const [commuteModeIndex, setCommuteModeIndex] = useState(0);
+
+  const WHEN_OPTIONS = ['Today, 8:15 AM', 'Today, 5:30 PM', 'Tomorrow, 8:30 AM', 'Flexible'];
+  const COMMUTE_OPTIONS = [
+    { label: 'All Modes 🚙', dailyOnly: false },
+    { label: 'Daily Commute 🔁', dailyOnly: true },
+    { label: 'One-time Trip 🚗', dailyOnly: false },
+  ];
+
+  const handleCycleWhen = () => {
+    setWhenIndex((prev) => (prev + 1) % WHEN_OPTIONS.length);
+  };
+
+  const handleCycleCommuteMode = () => {
+    const nextIdx = (commuteModeIndex + 1) % COMMUTE_OPTIONS.length;
+    setCommuteModeIndex(nextIdx);
+    setFilterDailyOnly(COMMUTE_OPTIONS[nextIdx].dailyOnly);
+  };
+
+  const handleCardChat = async (rideId: string, driverName: string) => {
+    try {
+      setChatLoadingRideId(rideId);
+      const conv = await provisionRideChat(rideId);
+      if (conv?.conversationId) {
+        router.push(`/chat/${conv.conversationId}` as Href);
+      } else {
+        router.push(`/chat?recipient=${encodeURIComponent(driverName)}` as Href);
+      }
+    } catch (e) {
+      console.error('Failed to provision ride chat:', e);
+      router.push(`/chat?recipient=${encodeURIComponent(driverName)}` as Href);
+    } finally {
+      setChatLoadingRideId(null);
+    }
+  };
 
   // Active highlighted ride on map
   const [selectedMapRideId, setSelectedMapRideId] = useState<string | null>(null);
@@ -370,6 +409,16 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
         </View>
 
         <View style={styles.topBarRight}>
+          <Link asChild href={'/rides/mine' as Href}>
+            <Pressable
+              accessibilityLabel="My Created Rides"
+              accessibilityRole="button"
+              style={styles.myRidesBtn}
+            >
+              <AppIcon color={colors.appPrimary} name="car" size={16} />
+              <Text style={styles.myRidesBtnText}>My Rides</Text>
+            </Pressable>
+          </Link>
           <Link asChild href={'/rides/saved' as Href}>
             <Pressable
               accessibilityLabel="Saved Rides"
@@ -389,7 +438,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
               style={styles.offerRideBtn}
             >
               <AppIcon color={colors.surfaceContainerLowest} name="plus" size={18} />
-              <Text style={styles.offerRideBtnText}>Offer Ride</Text>
+              <Text style={styles.offerRideBtnText}>Offer</Text>
             </Pressable>
           </Link>
         </View>
@@ -473,22 +522,38 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
 
             {/* Date/Time & Frequency Settings */}
             <View style={styles.searchDetailsRow}>
-              <View style={styles.searchDetailPill}>
+              <Pressable
+                accessibilityLabel={`Departure time: ${WHEN_OPTIONS[whenIndex]}. Tap to cycle.`}
+                accessibilityRole="button"
+                onPress={handleCycleWhen}
+                style={({ pressed }) => [
+                  styles.searchDetailPill,
+                  pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
+                ]}
+              >
                 <AppIcon color={colors.appPrimary} name="calendar" size={16} />
                 <View>
-                  <Text style={styles.detailPillSmall}>When</Text>
-                  <Text style={styles.detailPillVal}>Today, 8:15 AM</Text>
+                  <Text style={styles.detailPillSmall}>When (Tap to change)</Text>
+                  <Text style={styles.detailPillVal}>{WHEN_OPTIONS[whenIndex]}</Text>
                 </View>
-              </View>
-              <View style={styles.searchDetailPill}>
+              </Pressable>
+              <Pressable
+                accessibilityLabel={`Commute mode: ${COMMUTE_OPTIONS[commuteModeIndex].label}. Tap to cycle.`}
+                accessibilityRole="button"
+                onPress={handleCycleCommuteMode}
+                style={({ pressed }) => [
+                  styles.searchDetailPill,
+                  pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
+                ]}
+              >
                 <Text style={{ fontSize: 14 }}>🔁</Text>
                 <View>
                   <Text style={styles.detailPillSmall}>Commute Mode</Text>
                   <Text style={[styles.detailPillVal, { color: colors.teal }]}>
-                    Daily Commute 🔁
+                    {COMMUTE_OPTIONS[commuteModeIndex].label}
                   </Text>
                 </View>
-              </View>
+              </Pressable>
             </View>
 
             {/* Find Rides Button */}
@@ -967,14 +1032,15 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                       <Pressable
                         accessibilityLabel={`Chat with ${ride.driverName}`}
                         accessibilityRole="button"
-                        onPress={() =>
-                          router.push(
-                            `/chat?recipient=${encodeURIComponent(ride.driverName)}` as Href,
-                          )
-                        }
+                        disabled={chatLoadingRideId === ride.id}
+                        onPress={() => handleCardChat(ride.id, ride.driverName)}
                         style={styles.chatBtn}
                       >
-                        <AppIcon color={colors.appPrimary} name="message" size={18} />
+                        {chatLoadingRideId === ride.id ? (
+                          <ActivityIndicator color={colors.appPrimary} size="small" />
+                        ) : (
+                          <AppIcon color={colors.appPrimary} name="message" size={18} />
+                        )}
                       </Pressable>
                     </View>
                   </View>
@@ -1273,6 +1339,22 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 9,
     fontWeight: '800',
+  },
+  myRidesBtn: {
+    alignItems: 'center',
+    backgroundColor: '#f2f3ff',
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#eaedff',
+  },
+  myRidesBtnText: {
+    color: colors.appPrimary,
+    fontSize: 12,
+    fontWeight: '700',
   },
   offerRideBtn: {
     alignItems: 'center',

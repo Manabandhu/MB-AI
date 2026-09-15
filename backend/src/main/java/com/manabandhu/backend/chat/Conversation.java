@@ -45,9 +45,21 @@ public class Conversation {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getLastMessageAt() { return lastMessageAt; }
 
+    @jakarta.persistence.Transient
+    private String lastMessage;
+
+    @jakarta.persistence.Transient
+    private Integer unreadCount;
+
     public void updateLastMessageAt(Instant at) {
         this.lastMessageAt = at;
     }
+
+    public String getLastMessage() { return lastMessage; }
+    public void setLastMessage(String lastMessage) { this.lastMessage = lastMessage; }
+
+    public Integer getUnreadCount() { return unreadCount; }
+    public void setUnreadCount(Integer unreadCount) { this.unreadCount = unreadCount; }
 
     public enum ConversationType {
         DIRECT, GROUP, ROOM_INQUIRY, RIDE_TEMP

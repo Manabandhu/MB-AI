@@ -2,7 +2,7 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
@@ -452,6 +452,15 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           </Pressable>
 
           <View style={s.headerActions}>
+            <Link href="/rooms/my-listings" asChild>
+              <Pressable
+                accessibilityLabel="My Created Rooms"
+                style={StyleSheet.flatten(s.myRoomsBtn)}
+              >
+                <AppIcon color="#ffffff" name="home" size={14} />
+                <Text style={s.myRoomsBtnText}>My Rooms</Text>
+              </Pressable>
+            </Link>
             <Link href="/rooms/saved" asChild>
               <Pressable accessibilityLabel="Saved Rooms" style={StyleSheet.flatten(s.iconBtn)}>
                 <AppIcon color={colors.appPrimary} name="star" size={18} />
@@ -729,6 +738,53 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                           <Text style={s.roomCardTitle} numberOfLines={2}>
                             {room.title}
                           </Text>
+
+                          {/* Cultural, Dietary, and Housing Badges */}
+                          {(() => {
+                            const isPureVeg =
+                              room.title.toLowerCase().includes('pure veg') ||
+                              (room.amenities ?? []).some((a) =>
+                                a.toLowerCase().includes('pure veg'),
+                              ) ||
+                              (room.preferences ?? []).some((p) =>
+                                p.toLowerCase().includes('pure veg'),
+                              );
+                            const isPrivateBath =
+                              room.title.toLowerCase().includes('attached') ||
+                              room.title.toLowerCase().includes('private bath') ||
+                              (room.amenities ?? []).some(
+                                (a) =>
+                                  a.toLowerCase().includes('private') ||
+                                  a.toLowerCase().includes('attached'),
+                              );
+                            const isFurnished =
+                              room.title.toLowerCase().includes('furnish') ||
+                              (room.amenities ?? []).some((a) =>
+                                a.toLowerCase().includes('furnish'),
+                              );
+
+                            if (!isPureVeg && !isPrivateBath && !isFurnished) return null;
+
+                            return (
+                              <View style={s.culturalBadgesRow}>
+                                {isPureVeg ? (
+                                  <View style={s.badgePureVeg}>
+                                    <Text style={s.badgeTextPureVeg}>🥦 Pure Veg</Text>
+                                  </View>
+                                ) : null}
+                                {isPrivateBath ? (
+                                  <View style={s.badgePrivateBath}>
+                                    <Text style={s.badgeTextPrivateBath}>🚿 Private Bath</Text>
+                                  </View>
+                                ) : null}
+                                {isFurnished ? (
+                                  <View style={s.badgeFurnished}>
+                                    <Text style={s.badgeTextFurnished}>🛏️ Furnished</Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            );
+                          })()}
 
                           <View style={s.roomCardLocationRow}>
                             <AppIcon color={colors.muted} name="map" size={12} />
@@ -1242,6 +1298,20 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  myRoomsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#431ebe',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+  },
+  myRoomsBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   iconBtn: {
     width: 36,
     height: 36,
@@ -1544,6 +1614,45 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: '#1a1c28',
     lineHeight: 20,
+  },
+  culturalBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginVertical: 4,
+  },
+  badgePureVeg: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  badgeTextPureVeg: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  badgePrivateBath: {
+    backgroundColor: '#00696b',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  badgeTextPrivateBath: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  badgeFurnished: {
+    backgroundColor: '#431ebe',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  badgeTextFurnished: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
   },
   roomCardLocationRow: {
     flexDirection: 'row',
