@@ -33,4 +33,9 @@ public class NotificationsController {
     ResponseEntity<NotificationSettings> settings() {
         return ResponseEntity.ok(service.settings());
     }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/settings")
+    ResponseEntity<NotificationSettings> updateSettings(@org.springframework.web.bind.annotation.RequestBody NotificationSettings update) {
+        return ResponseEntity.ok(service.updateSettings(update));
+    }
 }

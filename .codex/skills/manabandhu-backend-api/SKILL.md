@@ -43,6 +43,7 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 
 - Rides Module Overhaul: Added Flyway migration `V25__enhance_rides_recurrence_tolls_ephemeral_chat.sql` adding GPS coordinates, polyline, toll preferences, recurrence rules, and ephemeral chat timestamps. Added `purge_expired_ride_chats()` stored function. Enhanced `RideOffer` entity and repository with active upcoming departure query (`searchActive`) filtering out completed or past rides. Added `RideChatPurgeScheduler` with `@EnableScheduling`. Updated `RidesController` with enhanced discovery filters (`avoidTolls`, `genderPreference`, `isRecurring`), 1-click re-activation `POST /offers/{offerId}/re-activate`, trip lifecycle `PATCH /offers/{offerId}/status` (initiating 2-hour chat expiration countdown on `COMPLETED`), and ephemeral chat provisioning `POST /offers/{offerId}/chat` linking `RIDE_TEMP` conversations.
 - PostgreSQL query parameter cast in `RideOfferRepository`: `searchActive` JPQL query uses explicit `cast(:param as String)` for nullable text parameters (`:origin`, `:destination`, `:genderPreference`) to prevent PostgreSQL type inference as bytea when evaluating `LOWER()` in Spring Data JPA queries.
+- Notifications settings endpoints: added dynamic preferences map and `PATCH /api/v1/notifications/settings` in `NotificationsController` and `NotificationsContentService`, permitted in `SecurityConfig.java`.
 
 
 

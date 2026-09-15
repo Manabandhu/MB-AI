@@ -33,12 +33,26 @@ class NotificationsContentService {
         };
     }
 
+    private final Map<String, Boolean> currentSettings = new java.util.concurrent.ConcurrentHashMap<>(Map.of(
+            "allNotifications", true,
+            "inApp", true,
+            "push", true,
+            "email", true,
+            "sms", false,
+            "housingAlerts", true,
+            "rideAlerts", true,
+            "jobAlerts", true,
+            "communityEvents", true,
+            "safetyAlerts", true));
+
     NotificationSettings settings() {
-        return new NotificationSettings(Map.of(
-                "inApp", true,
-                "push", true,
-                "email", false,
-                "sms", false,
-                "safetyAlerts", true));
+        return new NotificationSettings(Map.copyOf(currentSettings));
+    }
+
+    NotificationSettings updateSettings(NotificationSettings update) {
+        if (update != null && update.preferences() != null) {
+            currentSettings.putAll(update.preferences());
+        }
+        return new NotificationSettings(Map.copyOf(currentSettings));
     }
 }

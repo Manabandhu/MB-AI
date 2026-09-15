@@ -77,7 +77,7 @@ public class SecurityConfig {
                 "/api/v1/immigration/**",
                 "/api/v1/expenses/screens/**",
                 "/api/v1/safety/**",
-                "/api/v1/notifications/screens/**",
+                "/api/v1/notifications/**",
                 "/actuator/health/**"
         };
 
@@ -87,6 +87,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, publicGetEndpoints).permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/notifications/settings").permitAll()
                         .requestMatchers("/api/v1/onboarding/**").permitAll()
                         .requestMatchers("/actuator/info").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")

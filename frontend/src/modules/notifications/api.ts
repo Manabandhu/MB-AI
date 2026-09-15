@@ -25,3 +25,15 @@ export async function getNotificationSettings(): Promise<{ preferences: Record<s
     'Notification settings',
   );
 }
+
+export async function updateNotificationSettings(
+  preferences: Record<string, boolean>,
+): Promise<{ preferences: Record<string, boolean> }> {
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/notifications/settings', {
+      method: 'PATCH',
+      body: JSON.stringify({ preferences }),
+    }),
+    'Update notification settings',
+  );
+}
