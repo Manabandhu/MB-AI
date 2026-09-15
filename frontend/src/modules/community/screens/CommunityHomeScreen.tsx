@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -52,7 +52,7 @@ export function CommunityHomeScreen() {
   const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(new Set());
 
   // Fetch communities
-  const { data: communities = [], isLoading: loadingCommunities } = useQuery({
+  const { data: communities = [] } = useQuery({
     queryKey: ['communities', 'all'],
     queryFn: listCommunities,
   });
@@ -243,7 +243,7 @@ export function CommunityHomeScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Read post: ${post.title}`}
                   style={s.postCard}
-                  onPress={() => router.push(`/community/posts/${post.id}` as any)}
+                  onPress={() => router.push(`/community/posts/${post.id}` as Href)}
                 >
                   {/* Author & Community Info */}
                   <View style={s.postMetaRow}>

@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -63,7 +65,23 @@ export function CreatePostScreen() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const pickImage = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        setImageUri(res.assets[0].uri);
+      }
+    } catch (e) {
+      console.warn('Image pick error:', e);
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -73,6 +91,8 @@ export function CreatePostScreen() {
         communityId: communityId ?? 'c1',
         title: `[${selectedCategory}] ${title.trim()}`,
         body: finalBody,
+        tags: selectedTags,
+        imageUrl: imageUri ?? undefined,
       });
     },
     onSuccess: () => {
@@ -80,7 +100,7 @@ export function CreatePostScreen() {
       queryClient.invalidateQueries({ queryKey: ['foundation', 'shell', 'community'] });
       router.back();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       setError(err?.message ?? 'Failed to publish post. Please try again.');
     },
   });
@@ -205,6 +225,33 @@ export function CreatePostScreen() {
                 onChangeText={setBody}
                 style={[s.input, s.textarea]}
               />
+            </View>
+
+            {/* Media Attachment */}
+            <View style={s.fieldGroup}>
+              <Text style={s.fieldLabel}>ATTACH MEDIA (OPTIONAL)</Text>
+              {imageUri ? (
+                <View style={s.imagePreviewWrap}>
+                  <Image source={{ uri: imageUri }} style={s.imagePreview} resizeMode="cover" />
+                  <Pressable
+                    style={s.removeImageBtn}
+                    onPress={() => setImageUri(null)}
+                    accessibilityLabel="Remove attached image"
+                  >
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>✕</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  style={s.uploadBtn}
+                  onPress={pickImage}
+                  accessibilityRole="button"
+                  accessibilityLabel="Attach photo"
+                >
+                  <AppIcon color={C.primary} name="plus" size={20} />
+                  <Text style={s.uploadBtnText}>Add Photo from Gallery</Text>
+                </Pressable>
+              )}
             </View>
 
             {/* Suggested Tags */}
@@ -446,5 +493,44 @@ const s = StyleSheet.create({
     color: C.inkMuted,
     fontSize: 14,
     fontWeight: '700',
+  },
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: C.primarySoft,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(67,30,190,0.15)',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+  },
+  uploadBtnText: {
+    color: C.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  imagePreviewWrap: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

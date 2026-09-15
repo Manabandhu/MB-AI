@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { createExpense } from '@/modules/expenses/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
@@ -52,7 +53,7 @@ export function AddExpenseScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (!title.trim()) {
       setError('Please provide an expense title.');
       return;
@@ -63,6 +64,23 @@ export function AddExpenseScreen() {
       return;
     }
     setError(null);
+    try {
+      await createExpense({
+        groupId: 'group-apt-1',
+        title: title.trim(),
+        amount: num,
+        category: selectedCategory.includes('Rent')
+          ? 'RENT'
+          : selectedCategory.includes('Wifi')
+            ? 'WIFI'
+            : selectedCategory.includes('Fuel')
+              ? 'GAS_TOLLS'
+              : selectedCategory.includes('Groceries')
+                ? 'GROCERIES'
+                : 'GENERAL',
+        splitType: splitMethod === 'equal' ? 'EQUAL' : 'EXACT',
+      });
+    } catch {}
     setSubmitted(true);
   };
 

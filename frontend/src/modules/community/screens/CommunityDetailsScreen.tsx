@@ -1,15 +1,16 @@
-import { color as colors, contentWidth, radius, space } from '@manabandhu/design-system';
+import { color as colors, contentWidth } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getCommunity, listPosts } from '@/modules/community/api';
+import { getCommunity, joinCommunity, leaveCommunity, listPosts } from '@/modules/community/api';
 import { DetailScreen } from '@/modules/shared/components/DetailScreen';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
+import { AppButton } from '@/modules/shared/ui/AppButton';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function CommunityDetailsScreen() {
@@ -17,7 +18,8 @@ export function CommunityDetailsScreen() {
   const layout = useAdaptiveLayout();
   const maxWidth = layout.windowClass === 'compact' ? contentWidth.compact : layout.maxContentWidth;
   const { communityId } = useLocalSearchParams<{ communityId: string }>();
-  const [_postComment, _setPostComment] = useState('');
+  const [joined, setJoined] = useState(false);
+
   const {
     data: community,
     isLoading,
@@ -28,11 +30,28 @@ export function CommunityDetailsScreen() {
     queryFn: () => getCommunity(communityId),
     enabled: !!communityId,
   });
+
   const { data: posts, isLoading: postsLoading } = useQuery({
     queryKey: ['communities', communityId, 'posts'],
     queryFn: () => listPosts(communityId),
     enabled: !!communityId,
   });
+
+  const handleToggleJoin = async () => {
+    try {
+      if (joined) {
+        await leaveCommunity(communityId);
+        setJoined(false);
+        Alert.alert('Left Community', `You left ${community?.name ?? 'the community'}.`);
+      } else {
+        await joinCommunity(communityId);
+        setJoined(true);
+        Alert.alert('Joined!', `Welcome to ${community?.name ?? 'the community'}!`);
+      }
+    } catch {
+      setJoined((prev) => !prev);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -46,59 +65,89 @@ export function CommunityDetailsScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState
-          title="Unable to load community"
           body="Please check your connection and try again."
-          retryLabel="Retry"
           onRetry={refetch}
+          retryLabel="Retry"
+          title="Unable to load community"
         />
       </SafeAreaView>
     );
   }
 
   const postList = posts ?? [];
+  const memberCount = (community.memberCount || 0) + (joined ? 1 : 0);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.container, { maxWidth }]}>
+          {/* Header */}
           <DetailScreen
-            eyebrow="Community"
-            title={community.name}
-            subtitle={community.description}
-            sections={[]}
             actions={[
               {
                 label: 'Create Post',
-                onPress: () => router.push(`/community/${communityId}/create-post`),
+                onPress: () =>
+                  router.push(`/community/create-post?communityId=${communityId}` as Href),
               },
-              { label: 'Join', onPress: () => {}, variant: 'secondary' },
+              {
+                label: joined ? '✓ Joined' : '+ Join Community',
+                onPress: handleToggleJoin,
+                variant: joined ? 'secondary' : 'primary',
+              },
             ]}
+            eyebrow={`${community.category || 'City'} Space • 👥 ${memberCount} Members`}
+            sections={[]}
+            subtitle={community.description}
+            title={community.name}
           />
-          <SectionHeader title="Posts" subtitle={`${postList.length} posts`} />
+
+          <SectionHeader
+            subtitle={`${postList.length} active discussions`}
+            title="Community Feed"
+          />
           {postsLoading ? (
             <LoadingState />
           ) : postList.length === 0 ? (
             <EmptyState
-              title="No posts yet"
-              body="Be the first to post in this community."
               actionLabel="Create Post"
-              onAction={() => router.push(`/community/${communityId}/create-post`)}
+              body="Be the first to share an update, sublease, or question in this space."
+              onAction={() =>
+                router.push(`/community/create-post?communityId=${communityId}` as Href)
+              }
+              title="No posts yet"
             />
           ) : (
             <View style={styles.list}>
               {postList.map((post) => (
-                <View key={post.id} style={styles.item}>
+                <Pressable
+                  accessibilityLabel={post.title}
+                  accessibilityRole="button"
+                  key={post.id}
+                  onPress={() => router.push(`/community/post/${post.id}` as Href)}
+                  style={styles.item}
+                >
                   <Text style={styles.itemTitle}>{post.title}</Text>
-                  <Text style={styles.itemBody} numberOfLines={2}>
+                  <Text numberOfLines={3} style={styles.itemBody}>
                     {post.body}
                   </Text>
-                  <Text style={styles.itemMeta}>
-                    {post.authorName} · {post.commentCount} comments
-                  </Text>
-                </View>
+                  <View style={styles.itemFooter}>
+                    <Text style={styles.itemMeta}>
+                      {post.authorName || 'Member'} · {post.commentCount ?? 0} comments
+                    </Text>
+                    <Text style={styles.likeCount}>❤️ {post.likeCount ?? 0}</Text>
+                  </View>
+                </Pressable>
               ))}
             </View>
           )}
+
+          <View style={styles.actions}>
+            <AppButton
+              label="Explore All Communities"
+              onPress={() => router.push('/community')}
+              variant="secondary"
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -107,18 +156,26 @@ export function CommunityDetailsScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
+  page: { flexGrow: 1, padding: 16 },
+  container: { gap: 16, width: '100%', alignSelf: 'center' },
+  list: { gap: 12 },
   item: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
+    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+    borderRadius: 16,
     borderWidth: 1,
-    padding: space.x4,
-    gap: space.x2,
+    padding: 16,
+    gap: 8,
   },
-  itemTitle: { color: colors.ink, fontSize: 16, fontWeight: '800', lineHeight: 22 },
-  itemBody: { color: colors.muted, fontSize: 14, lineHeight: 20 },
-  itemMeta: { color: colors.primary, fontSize: 12, fontWeight: '700', marginTop: space.x1 },
+  itemTitle: { fontSize: 16, fontWeight: '700', color: colors.ink },
+  itemBody: { fontSize: 14, color: '#4b5563', lineHeight: 20 },
+  itemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  itemMeta: { fontSize: 12, color: '#6b7280' },
+  likeCount: { fontSize: 12, color: '#6b7280' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
 });

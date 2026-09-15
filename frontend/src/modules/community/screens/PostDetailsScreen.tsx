@@ -52,12 +52,12 @@ export function PostDetailsScreen() {
     error,
   } = useQuery({
     queryKey: ['community', 'post', postId],
-    queryFn: () => getPost(postId!),
+    queryFn: () => getPost(String(postId || '')),
     enabled: !!postId,
   });
 
   const commentMutation = useMutation({
-    mutationFn: (text: string) => addComment(postId!, text),
+    mutationFn: (text: string) => addComment(String(postId || ''), text),
     onSuccess: () => {
       setCommentText('');
       queryClient.invalidateQueries({ queryKey: ['community', 'post', postId] });

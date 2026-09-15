@@ -13,7 +13,7 @@ import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
-type CategoryFilter = 'All' | 'Marketplace' | 'Rooms' | 'Rides';
+type CategoryFilter = 'All' | 'Direct Messages' | 'Temporary Carpools' | 'Rooms' | 'Marketplace';
 
 interface EnrichedConversation extends Conversation {
   moduleCategory?: 'Marketplace' | 'Rooms' | 'Rides' | 'General';
@@ -146,7 +146,14 @@ export default function ChatListScreen() {
         (c.lastMessage ?? '').toLowerCase().includes(query.toLowerCase()) ||
         (c.inquiryContext ?? '').toLowerCase().includes(query.toLowerCase());
 
-      const matchesTab = activeTab === 'All' || c.moduleCategory === activeTab;
+      let matchesTab = true;
+      if (activeTab === 'Direct Messages') {
+        matchesTab = c.type === 'DIRECT' && c.moduleCategory !== 'Rides';
+      } else if (activeTab === 'Temporary Carpools') {
+        matchesTab = c.type === 'RIDE_TEMP' || c.moduleCategory === 'Rides';
+      } else if (activeTab !== 'All') {
+        matchesTab = c.moduleCategory === activeTab;
+      }
 
       return matchesSearch && matchesTab;
     });
@@ -221,11 +228,24 @@ export default function ChatListScreen() {
 
           {/* Module Filter Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll}>
-            {(['All', 'Marketplace', 'Rooms', 'Rides'] as CategoryFilter[]).map((tab) => {
+            {(
+              [
+                'All',
+                'Direct Messages',
+                'Temporary Carpools',
+                'Rooms',
+                'Marketplace',
+              ] as CategoryFilter[]
+            ).map((tab) => {
               const isActive = activeTab === tab;
-              const count = allConversations.filter(
-                (c) => tab === 'All' || c.moduleCategory === tab,
-              ).length;
+              const count = allConversations.filter((c) => {
+                if (tab === 'All') return true;
+                if (tab === 'Direct Messages')
+                  return c.type === 'DIRECT' && c.moduleCategory !== 'Rides';
+                if (tab === 'Temporary Carpools')
+                  return c.type === 'RIDE_TEMP' || c.moduleCategory === 'Rides';
+                return c.moduleCategory === tab;
+              }).length;
               return (
                 <Pressable
                   key={tab}

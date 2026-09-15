@@ -43,11 +43,15 @@ export async function listMessages(conversationId: string): Promise<Message[]> {
   );
 }
 
-export async function sendMessage(conversationId: string, body: string): Promise<Message> {
+export async function sendMessage(
+  conversationId: string,
+  body: string,
+  messageType: 'TEXT' | 'IMAGE' | 'SYSTEM' = 'TEXT',
+): Promise<Message> {
   return parseJsonOrThrow(
     await apiFetch(`/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ body, messageType: 'TEXT' }),
+      body: JSON.stringify({ body, messageType }),
     }),
     'SendMessage',
   );
