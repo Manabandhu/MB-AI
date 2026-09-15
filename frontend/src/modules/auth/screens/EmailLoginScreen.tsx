@@ -24,10 +24,12 @@ export function EmailLoginScreen() {
   const storeError = useAuthStore((s) => s.error);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !localError && !storeError && user) {
       setShowCelebration(true);
+    } else {
+      setShowCelebration(false);
     }
-  }, [status]);
+  }, [status, localError, storeError, user]);
 
   async function handleEmailSignIn() {
     const trimmedEmail = email.trim();
@@ -37,10 +39,17 @@ export function EmailLoginScreen() {
     }
     setLoading(true);
     setLocalError(null);
+    setShowCelebration(false);
     try {
       await useAuthStore.getState().signIn(trimmedEmail, password);
-      setShowCelebration(true);
+      const state = useAuthStore.getState();
+      if (state.status === 'authenticated' && !state.error && state.user) {
+        setShowCelebration(true);
+      } else {
+        setShowCelebration(false);
+      }
     } catch (err) {
+      setShowCelebration(false);
       const msg = err instanceof Error ? err.message : 'Sign in failed';
       setLocalError(msg);
     } finally {
@@ -51,10 +60,17 @@ export function EmailLoginScreen() {
   async function handleSocialSignIn(provider: 'apple' | 'google') {
     setLoading(true);
     setLocalError(null);
+    setShowCelebration(false);
     try {
       await useAuthStore.getState().signInWithOAuth(provider);
-      setShowCelebration(true);
+      const state = useAuthStore.getState();
+      if (state.status === 'authenticated' && !state.error && state.user) {
+        setShowCelebration(true);
+      } else {
+        setShowCelebration(false);
+      }
     } catch (err) {
+      setShowCelebration(false);
       const msg = err instanceof Error ? err.message : `${provider} sign-in failed`;
       setLocalError(msg);
     } finally {

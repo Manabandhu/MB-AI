@@ -105,19 +105,22 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
           user: data.user,
           status: 'authenticated',
           isLoading: false,
+          error: null,
         });
-        router.replace('/home');
       } else {
         set({
           session: data.session ?? null,
           user: data.user ?? null,
           status: 'unauthenticated',
           isLoading: false,
+          error: 'Sign in failed: invalid credentials or session',
         });
+        throw new Error('Sign in failed: invalid credentials or session');
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign in failed';
       set({ error: message, status: 'unauthenticated', isLoading: false });
+      throw err;
     }
   },
 
@@ -138,8 +141,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
           status: 'authenticated',
           needsEmailConfirmation: false,
           isLoading: false,
+          error: null,
         });
-        router.replace('/home');
       } else {
         set({
           session: null,
@@ -154,6 +157,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign up failed';
       set({ error: message, status: 'unauthenticated', isLoading: false });
+      throw err;
     }
   },
 
@@ -167,6 +171,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'SMS sending failed';
       set({ error: message, isLoading: false });
+      throw err;
     }
   },
 
@@ -180,6 +185,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Magic link sending failed';
       set({ error: message, isLoading: false });
+      throw err;
     }
   },
 
@@ -200,6 +206,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     } catch (err) {
       const message = err instanceof Error ? err.message : `${provider} sign-in failed`;
       set({ error: message, isLoading: false });
+      throw err;
     }
   },
 
@@ -223,12 +230,10 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
         otpIdentifier: null,
         otpType: null,
       });
-      if (data.session) {
-        router.replace('/home');
-      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'OTP verification failed';
       set({ error: message, isLoading: false });
+      throw err;
     }
   },
 

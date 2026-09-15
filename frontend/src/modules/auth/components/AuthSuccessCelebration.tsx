@@ -1,6 +1,6 @@
 import { color, radius, space } from '@manabandhu/design-system';
 import { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 interface AuthSuccessCelebrationProps {
@@ -79,64 +79,69 @@ export function AuthSuccessCelebration({
   });
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-      <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
-        {/* Glowing Badge Ring */}
-        <View style={styles.badgeContainer}>
-          <Animated.View style={[styles.glowRing, { transform: [{ scale: pulseAnim }] }]} />
-          <View style={styles.iconCircle}>
-            <AppIcon name="check" size={32} color="#ffffff" strokeWidth={3} />
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onComplete}
+    >
+      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
+          {/* Glowing Badge Ring */}
+          <View style={styles.badgeContainer}>
+            <Animated.View style={[styles.glowRing, { transform: [{ scale: pulseAnim }] }]} />
+            <View style={styles.iconCircle}>
+              <AppIcon name="check" size={32} color="#ffffff" strokeWidth={3} />
+            </View>
+            <View style={styles.sparkleTop}>
+              <AppIcon name="sparks" size={20} color={color.warm} />
+            </View>
+            <View style={styles.sparkleBottom}>
+              <AppIcon name="star" size={16} color={color.teal} />
+            </View>
           </View>
-          <View style={styles.sparkleTop}>
-            <AppIcon name="sparks" size={20} color={color.warm} />
+
+          {/* Member Trust Pill */}
+          <View style={styles.trustPill}>
+            <AppIcon name="shield" size={14} color={color.teal} />
+            <Text style={styles.trustPillText}>Verified Desi Community Member</Text>
           </View>
-          <View style={styles.sparkleBottom}>
-            <AppIcon name="star" size={16} color={color.teal} />
+
+          {/* Headline */}
+          <Text style={styles.title}>{title}</Text>
+          {userName ? <Text style={styles.greeting}>Hello, {userName}!</Text> : null}
+          <Text style={styles.subtitle}>{subtitle}</Text>
+
+          {/* Animated Progress Bar */}
+          <View style={styles.progressTrack}>
+            <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
           </View>
-        </View>
 
-        {/* Member Trust Pill */}
-        <View style={styles.trustPill}>
-          <AppIcon name="shield" size={14} color={color.teal} />
-          <Text style={styles.trustPillText}>Verified Desi Community Member</Text>
-        </View>
-
-        {/* Headline */}
-        <Text style={styles.title}>{title}</Text>
-        {userName ? <Text style={styles.greeting}>Hello, {userName}!</Text> : null}
-        <Text style={styles.subtitle}>{subtitle}</Text>
-
-        {/* Animated Progress Bar */}
-        <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
-        </View>
-
-        {/* Instant Skip Button */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Continue to home"
-          onPress={onComplete}
-          style={styles.ctaButton}
-        >
-          <Text style={styles.ctaButtonText}>Enter Dashboard Now →</Text>
-        </Pressable>
+          {/* Instant Skip Button */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Continue to home"
+            onPress={onComplete}
+            style={styles.ctaButton}
+          >
+            <Text style={styles.ctaButtonText}>Enter Dashboard Now →</Text>
+          </Pressable>
+        </Animated.View>
       </Animated.View>
-    </Animated.View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
-    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    flex: 1,
+    height: '100%',
     justifyContent: 'center',
-    left: 0,
     padding: space.x4,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    zIndex: 1000,
+    width: '100%',
   },
   card: {
     alignItems: 'center',

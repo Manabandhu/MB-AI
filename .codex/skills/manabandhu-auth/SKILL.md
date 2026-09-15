@@ -43,8 +43,8 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 
 - **Loading**: spinner while auth action is in flight
 - **Empty**: not applicable
-- **Error**: inline error message with retry
-- **Success**: auto-navigate to `/home` (or `/auth/callback` for confirmation)
+- **Success**: full-screen animated `AuthSuccessCelebration` takeover (via native/web `Modal`) showing verified badge, user greeting, and auto-countdown to `/home` (or immediate "Enter Dashboard Now →" skip); strictly rendered only when credentials and session verification succeed without errors
+- **Error**: inline error banner with error message and retry; celebration modal is strictly suppressed on failure
 - **Waiting**: needs-email-confirmation state shows "check your email" prompt
 - **Offline**: disable submit, show offline banner
 - **Permission**: not applicable

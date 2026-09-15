@@ -23,10 +23,12 @@ export function PhoneLoginScreen() {
   const storeError = useAuthStore((s) => s.error);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !localError && !storeError && user) {
       setShowCelebration(true);
+    } else {
+      setShowCelebration(false);
     }
-  }, [status]);
+  }, [status, localError, storeError, user]);
 
   async function handleSendCode() {
     const trimmed = phoneDigits.trim();

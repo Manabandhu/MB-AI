@@ -98,6 +98,7 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 - Route files in `frontend/src/app/rides/` are thin wrappers
 - `RidesScreen` uses `useQuery` with backend API data
 - `FeatureScreen` provides adaptive catalog/list layout
+- In `RideOfferRepository`, `searchActive` JPQL query uses explicit `cast(:param as String)` for nullable text parameters (`:origin`, `:destination`, `:genderPreference`) to prevent PostgreSQL type inference as bytea when evaluating `LOWER()`
 - Ride offer, request, manage, and rate screens are placeholders pending backend forms
 - Map view is a placeholder pending real map integration
 

@@ -27,10 +27,10 @@ interface RideOfferRepository extends JpaRepository<RideOffer, UUID> {
     Page<RideOffer> findByStatusOrderByDepartureAtAsc(String status, Pageable pageable);
 
     @Query("SELECT r FROM RideOffer r WHERE LOWER(r.status) = 'active' AND r.departureAt > :now " +
-           "AND (:origin IS NULL OR LOWER(r.originArea) LIKE LOWER(CONCAT('%', :origin, '%'))) " +
-           "AND (:destination IS NULL OR LOWER(r.destinationArea) LIKE LOWER(CONCAT('%', :destination, '%'))) " +
+           "AND (cast(:origin as String) IS NULL OR LOWER(r.originArea) LIKE LOWER(CONCAT('%', cast(:origin as String), '%'))) " +
+           "AND (cast(:destination as String) IS NULL OR LOWER(r.destinationArea) LIKE LOWER(CONCAT('%', cast(:destination as String), '%'))) " +
            "AND (:avoidTolls IS NULL OR (:avoidTolls = true AND (r.tollPreference = 'AVOID_TOLLS' OR r.tollPreference IS NULL)) OR (:avoidTolls = false)) " +
-           "AND (:genderPreference IS NULL OR r.genderPreference = :genderPreference OR r.genderPreference = 'ANY' OR r.genderPreference IS NULL) " +
+           "AND (cast(:genderPreference as String) IS NULL OR r.genderPreference = :genderPreference OR r.genderPreference = 'ANY' OR r.genderPreference IS NULL) " +
            "AND (:isRecurring IS NULL OR r.isRecurring = :isRecurring) " +
            "ORDER BY r.departureAt ASC")
     Page<RideOffer> searchActive(

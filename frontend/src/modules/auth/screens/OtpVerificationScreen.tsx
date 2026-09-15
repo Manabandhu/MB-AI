@@ -27,10 +27,12 @@ export function OtpVerificationScreen() {
   const storeError = useAuthStore((s) => s.error);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !localError && !storeError && user) {
       setShowCelebration(true);
+    } else {
+      setShowCelebration(false);
     }
-  }, [status]);
+  }, [status, localError, storeError, user]);
 
   useEffect(() => {
     if (countdown <= 0) {
@@ -53,10 +55,17 @@ export function OtpVerificationScreen() {
     }
     setLoading(true);
     setLocalError(null);
+    setShowCelebration(false);
     try {
       await useAuthStore.getState().verifyOtp(otpIdentifier, trimmed, otpType);
-      setShowCelebration(true);
+      const state = useAuthStore.getState();
+      if (state.status === 'authenticated' && !state.error && state.user) {
+        setShowCelebration(true);
+      } else {
+        setShowCelebration(false);
+      }
     } catch (err) {
+      setShowCelebration(false);
       const msg = err instanceof Error ? err.message : 'Invalid or expired code';
       setLocalError(msg);
     } finally {

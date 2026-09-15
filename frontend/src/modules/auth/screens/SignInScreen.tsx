@@ -64,20 +64,29 @@ export function SignInScreen() {
     };
   }, [otpSent, timerCount]);
 
-  // Trigger celebration on authenticated state
+  // Trigger celebration ONLY on verified authenticated state without any errors
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !error && !storeError && user) {
       setShowCelebration(true);
+    } else {
+      setShowCelebration(false);
     }
-  }, [status]);
+  }, [status, error, storeError, user]);
 
   async function handleEmailSignIn(data: EmailSignInValues) {
     setLoading(true);
     setError(null);
+    setShowCelebration(false);
     try {
       await useAuthStore.getState().signIn(data.email, data.password);
-      setShowCelebration(true);
+      const state = useAuthStore.getState();
+      if (state.status === 'authenticated' && !state.error && state.user) {
+        setShowCelebration(true);
+      } else {
+        setShowCelebration(false);
+      }
     } catch (err) {
+      setShowCelebration(false);
       setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
       setLoading(false);
@@ -92,12 +101,14 @@ export function SignInScreen() {
     }
     setLoading(true);
     setError(null);
+    setShowCelebration(false);
     try {
       const fullPhone = `${selectedCountry.code}${trimmed.replace(/\D/g, '')}`;
       await useAuthStore.getState().signInWithPhone(fullPhone);
       setOtpSent(true);
       setTimerCount(60);
     } catch (err) {
+      setShowCelebration(false);
       setError(err instanceof Error ? err.message : 'Failed to send verification code');
     } finally {
       setLoading(false);
@@ -112,11 +123,18 @@ export function SignInScreen() {
     }
     setLoading(true);
     setError(null);
+    setShowCelebration(false);
     try {
       const fullPhone = `${selectedCountry.code}${phoneDigits.trim().replace(/\D/g, '')}`;
       await useAuthStore.getState().verifyOtp(fullPhone, trimmedOtp, 'sms');
-      setShowCelebration(true);
+      const state = useAuthStore.getState();
+      if (state.status === 'authenticated' && !state.error && state.user) {
+        setShowCelebration(true);
+      } else {
+        setShowCelebration(false);
+      }
     } catch (err) {
+      setShowCelebration(false);
       setError(err instanceof Error ? err.message : 'Invalid code. Please try again.');
     } finally {
       setLoading(false);
@@ -126,10 +144,17 @@ export function SignInScreen() {
   async function handleSocial(provider: 'apple' | 'google') {
     setLoading(true);
     setError(null);
+    setShowCelebration(false);
     try {
       await useAuthStore.getState().signInWithOAuth(provider);
-      setShowCelebration(true);
+      const state = useAuthStore.getState();
+      if (state.status === 'authenticated' && !state.error && state.user) {
+        setShowCelebration(true);
+      } else {
+        setShowCelebration(false);
+      }
     } catch (err) {
+      setShowCelebration(false);
       setError(err instanceof Error ? err.message : `${provider} sign-in failed`);
     } finally {
       setLoading(false);
