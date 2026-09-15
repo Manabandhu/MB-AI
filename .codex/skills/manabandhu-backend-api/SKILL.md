@@ -45,6 +45,8 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 - PostgreSQL query parameter cast in `RideOfferRepository`: `searchActive` JPQL query uses explicit `cast(:param as String)` for nullable text parameters (`:origin`, `:destination`, `:genderPreference`) to prevent PostgreSQL type inference as bytea when evaluating `LOWER()` in Spring Data JPA queries.
 - Notifications settings endpoints: added dynamic preferences map and `PATCH /api/v1/notifications/settings` in `NotificationsController` and `NotificationsContentService`, permitted in `SecurityConfig.java`.
 - Chat integration and transient fields: added `@Transient private String lastMessage;` and `@Transient private Integer unreadCount;` to `Conversation.java`. Updated `ConversationService` to inject `MessageRepository` and dynamically populate `lastMessage` with the latest message content when listing conversations. Updated `RidesController.provisionRideChat` to register prospective riders in `conversation_participants` so carpool coordination chats appear in both driver and rider inboxes.
+- Unified Migration V27: Added Flyway migration `V27__unify_onboarding_rooms_rides.sql` capturing the unified dynamic onboarding tables, room amenities and listings enhancements, ride offers recurrence, toll preferences, route polylines, and automated 2-hour ephemeral chat purge.
+
 
 
 
