@@ -5,5 +5,5 @@ import { GroupDetailsScreen } from '@/modules/expenses/screens/GroupDetailsScree
 export default function GroupDetailsRoute() {
   useRequireAuth('/sign-in');
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  return <GroupDetailsScreen groupId={groupId!} />;
+  return <GroupDetailsScreen groupId={groupId ?? ''} />;
 }
