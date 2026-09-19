@@ -44,7 +44,7 @@ Owns the app shell, public onboarding journey, home/explore/search/saved/profile
 - `StitchAppShellScreen` - adaptive shell with tab bar, header, and module shells
 - `SearchScreen` - global search with filter chips
 - `SavedScreen` - cross-module saved aggregation
-- `SettingsScreen` - app preferences and account settings
+- `SettingsScreen` - app preferences, notifications, safety links, account settings, and Map Provider selector (Google Maps vs Apple Maps persisted in `useMapPreferencesStore`)
 - `CatalogContentScreen` - generic catalog screen driven by `screenId`
 - `ScreenChrome` - auth/onboarding shell wrapper
 - `Button` / `MiniAction` - primary/secondary action controls

@@ -30,7 +30,7 @@ Owns ride discovery, offers, requests, seats, participants, history, ratings, lo
 
 ## Component Inventory
 
-- `RidesScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` for real route and corridor map view with freehand draw-to-filter corridor search and point-in-polygon filtering
+- `RidesScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` for real route and corridor map view with freehand draw-to-filter corridor search, point-in-polygon filtering, and Zillow-style floating switch-to-list-view button when an area boundary is drawn
 - `RideDetailScreen` - placeholder for ride detail with route, timeline, seat state, and safety controls
 - `RideManageScreen` - placeholder for ride management form
 - `RideOfferScreen` - placeholder for ride offer creation form

@@ -2,7 +2,8 @@ import { color as colors } from '@manabandhu/design-system';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useMapPreferencesStore } from '../stores/mapPreferencesStore';
 import type { Coordinate } from '../utils/geoPolygon';
 import { downsamplePoints } from '../utils/geoPolygon';
 
@@ -115,11 +116,21 @@ interface MapKitNamespace {
   };
 }
 
-// Global declaration for Apple MapKit JS
+// Global declaration for Google Maps, Apple MapKit JS, and Leaflet
 declare global {
   interface Window {
     mapkit?: MapKitNamespace;
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic script loader for Leaflet
+    L?: any;
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic script loader for Google Maps
+    google?: any;
   }
+}
+
+function zoomFromDelta(delta: number): number {
+  if (!delta || delta <= 0) return 13;
+  const zoom = Math.round(Math.log(360 / delta) / Math.LN2);
+  return Math.min(Math.max(zoom, 3), 18);
 }
 
 export function UniversalMapView({
@@ -139,9 +150,29 @@ export function UniversalMapView({
   onClearPolygon,
 }: UniversalMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<MapKitMap | null>(null);
-  const [mapkitReady, setMapkitReady] = useState(false);
-  const [mapkitError, setMapkitError] = useState<string | null>(null);
+  const [mapEngine, setMapEngine] = useState<'google' | 'mapkit' | 'leaflet' | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  // Google Maps refs
+  // biome-ignore lint/suspicious/noExplicitAny: Google Maps instance
+  const googleMapRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Google Maps custom overlays
+  const googleOverlaysRef = useRef<any[]>([]);
+  // biome-ignore lint/suspicious/noExplicitAny: Google Maps polygon
+  const googlePolygonRef = useRef<any>(null);
+
+  // Apple MapKit refs
+  const mapkitInstanceRef = useRef<MapKitMap | null>(null);
+
+  // Leaflet refs
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet map instance
+  const leafletMapRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet layer group
+  const leafletMarkersLayerRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet polygon
+  const leafletPolygonRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet tile layer
+  const leafletTileLayerRef = useRef<any>(null);
 
   // Drawing state
   const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -150,42 +181,71 @@ export function UniversalMapView({
     [],
   );
 
-  // Read the Apple Maps token from Expo public env
+  // Read environment keys and user map preference
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || '';
   const appleMapsToken = process.env.EXPO_PUBLIC_APPLE_MAPS_TOKEN?.trim() || '';
+  const preferredProvider = useMapPreferencesStore((s) => s.provider);
 
-  // 1. Initialize Apple MapKit JS when token is present
+  // --------------------------------------------------------------------------
+  // 1. Initialize Map: Google Maps (priority) > Apple MapKit > Leaflet/OSM
+  // --------------------------------------------------------------------------
   useEffect(() => {
-    if (!appleMapsToken) return;
-
     let isMounted = true;
 
-    const loadMapKit = () => {
-      if (window.mapkit) {
-        setupMapKit();
+    // --- GOOGLE MAPS SETUP ---
+    const setupGoogleMaps = () => {
+      if (!isMounted || !containerRef.current || !window.google?.maps) return;
+
+      if (googleMapRef.current) return;
+
+      const map = new window.google.maps.Map(containerRef.current, {
+        center: { lat: initialRegion.latitude, lng: initialRegion.longitude },
+        zoom: zoomFromDelta(initialRegion.latitudeDelta),
+        mapTypeId:
+          mapType === 'satellite' || mapType === 'hybrid'
+            ? window.google.maps.MapTypeId.HYBRID
+            : window.google.maps.MapTypeId.ROADMAP,
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
+
+      googleMapRef.current = map;
+      setMapEngine('google');
+      setMapReady(true);
+    };
+
+    const loadGoogleMaps = () => {
+      if (window.google?.maps) {
+        setupGoogleMaps();
         return;
       }
 
-      const existingScript = document.getElementById('apple-mapkit-script');
+      const existingScript = document.getElementById('google-maps-js-script');
       if (!existingScript) {
         const script = document.createElement('script');
-        script.id = 'apple-mapkit-script';
-        script.src = 'https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js';
+        script.id = 'google-maps-js-script';
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=geometry,places`;
         script.async = true;
-        script.crossOrigin = 'anonymous';
         script.onload = () => {
-          if (isMounted) setupMapKit();
+          if (isMounted) setupGoogleMaps();
         };
         script.onerror = () => {
-          if (isMounted) setMapkitError('Failed to load Apple MapKit JS library.');
+          console.warn('Google Maps script failed to load, trying next fallback.');
+          if (appleMapsToken) loadMapKit();
+          else loadLeaflet();
         };
         document.head.appendChild(script);
       } else {
         existingScript.addEventListener('load', () => {
-          if (isMounted) setupMapKit();
+          if (isMounted) setupGoogleMaps();
         });
       }
     };
 
+    // --- APPLE MAPKIT SETUP ---
     const setupMapKit = () => {
       if (!window.mapkit || !containerRef.current) return;
 
@@ -219,112 +279,488 @@ export function UniversalMapView({
           showsScale: window.mapkit.FeatureVisibility.Adaptive,
         });
 
-        map.showsUserLocation = true;
-        map.showsUserLocationControl = true;
-        map.showsZoomControl = true;
-        map.showsMapTypeControl = true;
-        map.showsCompass = window.mapkit.FeatureVisibility.Adaptive;
-        map.showsScale = window.mapkit.FeatureVisibility.Adaptive;
-        if (window.mapkit.Padding) {
-          map.padding = new window.mapkit.Padding(12, 12, 12, 12);
-        }
-
-        mapInstanceRef.current = map;
-        setMapkitReady(true);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Error initializing Apple MapKit.';
-        setMapkitError(msg);
+        mapkitInstanceRef.current = map;
+        setMapEngine('mapkit');
+        setMapReady(true);
+      } catch (err) {
+        console.warn('MapKit initialization error, falling back to Leaflet:', err);
+        loadLeaflet();
       }
     };
 
-    loadMapKit();
+    const loadMapKit = () => {
+      if (window.mapkit) {
+        setupMapKit();
+        return;
+      }
+
+      const existingScript = document.getElementById('apple-mapkit-script');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.id = 'apple-mapkit-script';
+        script.src = 'https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js';
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        script.onload = () => {
+          if (isMounted) setupMapKit();
+        };
+        script.onerror = () => {
+          if (isMounted) loadLeaflet();
+        };
+        document.head.appendChild(script);
+      } else {
+        existingScript.addEventListener('load', () => {
+          if (isMounted) setupMapKit();
+        });
+      }
+    };
+
+    // --- LEAFLET / OSM SETUP ---
+    const setupLeaflet = () => {
+      if (!isMounted || !containerRef.current) return;
+      const L = window.L;
+      if (!L) return;
+
+      if (leafletMapRef.current) {
+        try {
+          leafletMapRef.current.remove();
+        } catch {
+          // ignore
+        }
+        leafletMapRef.current = null;
+      }
+
+      const initialZoom = zoomFromDelta(initialRegion.latitudeDelta);
+      const map = L.map(containerRef.current, {
+        center: [initialRegion.latitude, initialRegion.longitude],
+        zoom: initialZoom,
+        zoomControl: true,
+      });
+
+      const tileUrl =
+        mapType === 'satellite' || mapType === 'hybrid'
+          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+          : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+      const tileLayer = L.tileLayer(tileUrl, {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution:
+          mapType === 'satellite'
+            ? 'Tiles &copy; Esri'
+            : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }).addTo(map);
+
+      leafletTileLayerRef.current = tileLayer;
+      const markersLayer = L.layerGroup().addTo(map);
+      leafletMarkersLayerRef.current = markersLayer;
+
+      leafletMapRef.current = map;
+      setMapEngine('leaflet');
+      setMapReady(true);
+
+      setTimeout(() => {
+        if (isMounted && map) map.invalidateSize();
+      }, 100);
+    };
+
+    const loadLeaflet = () => {
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.crossOrigin = '';
+        document.head.appendChild(link);
+      }
+
+      if (!document.getElementById('leaflet-custom-marker-css')) {
+        const style = document.createElement('style');
+        style.id = 'leaflet-custom-marker-css';
+        style.textContent = `
+          .custom-mb-map-marker {
+            background: transparent !important;
+            border: none !important;
+          }
+          .leaflet-container {
+            font-family: inherit;
+            width: 100%;
+            height: 100%;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      if (window.L) {
+        setupLeaflet();
+        return;
+      }
+
+      const existingScript = document.getElementById('leaflet-script');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.id = 'leaflet-script';
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.async = true;
+        script.onload = () => {
+          if (isMounted) setupLeaflet();
+        };
+        document.head.appendChild(script);
+      } else {
+        existingScript.addEventListener('load', () => {
+          if (isMounted) setupLeaflet();
+        });
+      }
+    };
+
+    // Priority Selection: User Preference ('google' vs 'apple') > Key availability > Leaflet
+    if (preferredProvider === 'apple' && appleMapsToken) {
+      loadMapKit();
+    } else if (preferredProvider === 'google' && googleMapsApiKey) {
+      loadGoogleMaps();
+    } else if (googleMapsApiKey) {
+      loadGoogleMaps();
+    } else if (appleMapsToken) {
+      loadMapKit();
+    } else {
+      loadLeaflet();
+    }
 
     return () => {
       isMounted = false;
-      if (mapInstanceRef.current) {
+      if (googleMapRef.current) {
+        googleMapRef.current = null;
+      }
+      if (mapkitInstanceRef.current) {
         try {
-          mapInstanceRef.current.destroy();
+          mapkitInstanceRef.current.destroy();
         } catch {
-          // ignore cleanup errors
+          // ignore
         }
-        mapInstanceRef.current = null;
+        mapkitInstanceRef.current = null;
+      }
+      if (leafletMapRef.current) {
+        try {
+          leafletMapRef.current.remove();
+        } catch {
+          // ignore
+        }
+        leafletMapRef.current = null;
       }
     };
   }, [
+    preferredProvider,
+    googleMapsApiKey,
     appleMapsToken,
     initialRegion.latitude,
     initialRegion.longitude,
     initialRegion.latitudeDelta,
     initialRegion.longitudeDelta,
+    mapType,
   ]);
 
-  // 2. Sync markers with MapKit instance
+  // --------------------------------------------------------------------------
+  // 2. Sync Markers: Google Maps, MapKit, or Leaflet
+  // --------------------------------------------------------------------------
   useEffect(() => {
-    if (!mapInstanceRef.current || !window.mapkit || !mapkitReady) return;
+    if (!mapReady) return;
 
-    const map = mapInstanceRef.current;
-    const mapkit = window.mapkit;
+    if (mapEngine === 'google' && googleMapRef.current && window.google?.maps) {
+      const google = window.google;
 
-    if (map.annotations) {
-      map.removeAnnotations(map.annotations);
-    }
+      // Clear previous overlays
+      for (const ov of googleOverlaysRef.current) {
+        ov.setMap(null);
+      }
+      googleOverlaysRef.current = [];
 
-    const annotations = markers
-      .filter((m) => m.latitude && m.longitude)
-      .map((m) => {
-        const coord = new mapkit.Coordinate(m.latitude, m.longitude);
-        const isSelected = selectedMarkerId === m.id;
+      class PricePillOverlay extends google.maps.OverlayView {
+        private markerItem: MapMarkerItem;
+        private isSelected: boolean;
+        private onSelect: (id: string) => void;
+        private div: HTMLDivElement | null = null;
+        // biome-ignore lint/suspicious/noExplicitAny: Google Maps LatLng
+        private latLng: any;
 
-        const annotation = new mapkit.MarkerAnnotation(coord, {
-          title: m.title,
-          subtitle: m.subtitle || (m.price ? `$${m.price}/mo` : ''),
-          color: isSelected ? colors.primary : '#0D5C75',
-          glyphText: m.price ? `$${m.price}` : '📍',
-          selected: isSelected,
+        constructor(
+          markerItem: MapMarkerItem,
+          isSelected: boolean,
+          onSelect: (id: string) => void,
+        ) {
+          super();
+          this.markerItem = markerItem;
+          this.isSelected = isSelected;
+          this.onSelect = onSelect;
+          this.latLng = new google.maps.LatLng(markerItem.latitude, markerItem.longitude);
+        }
+
+        onAdd() {
+          const div = document.createElement('div');
+          div.style.position = 'absolute';
+          div.style.cursor = 'pointer';
+          div.style.userSelect = 'none';
+          div.style.zIndex = this.isSelected ? '999' : '100';
+
+          const priceDisplay = this.markerItem.price ? `$${this.markerItem.price}` : '📍';
+          const titleSnippet =
+            this.markerItem.title.length > 18
+              ? `${this.markerItem.title.slice(0, 18)}...`
+              : this.markerItem.title;
+
+          div.innerHTML = `
+            <div style="
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              padding: 6px 12px;
+              background-color: ${this.isSelected ? colors.primary : '#FFFFFF'};
+              color: ${this.isSelected ? '#FFFFFF' : '#0F172A'};
+              border: 1.5px solid ${this.isSelected ? colors.primary : '#CBD5E1'};
+              border-radius: 22px;
+              box-shadow: 0 4px 14px rgba(0,0,0,${this.isSelected ? '0.28' : '0.14'});
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              font-size: 12px;
+              font-weight: 700;
+              white-space: nowrap;
+              transform: translate(-50%, -100%) ${this.isSelected ? 'scale(1.12)' : 'scale(1)'};
+              transition: transform 0.15s ease, background-color 0.15s ease;
+            ">
+              <span style="color: ${this.isSelected ? '#FFFFFF' : colors.primary}; font-weight: 800;">${priceDisplay}</span>
+              <span style="max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${titleSnippet}</span>
+            </div>
+          `;
+
+          div.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.onSelect(this.markerItem.id);
+          });
+
+          this.div = div;
+          const panes = this.getPanes();
+          panes?.overlayMouseTarget.appendChild(div);
+        }
+
+        draw() {
+          const projection = this.getProjection();
+          if (!projection || !this.div) return;
+          const point = projection.fromLatLngToDivPixel(this.latLng);
+          if (point) {
+            this.div.style.left = `${point.x}px`;
+            this.div.style.top = `${point.y}px`;
+          }
+        }
+
+        onRemove() {
+          if (this.div?.parentNode) {
+            this.div.parentNode.removeChild(this.div);
+            this.div = null;
+          }
+        }
+      }
+
+      const overlays = markers
+        .filter((m) => m.latitude && m.longitude)
+        .map((m) => {
+          const isSelected = selectedMarkerId === m.id;
+          const overlay = new PricePillOverlay(m, isSelected, (id) => onSelectMarker?.(id));
+          overlay.setMap(googleMapRef.current);
+          return overlay;
         });
 
-        annotation.addEventListener('select', () => {
+      googleOverlaysRef.current = overlays;
+    } else if (
+      mapEngine === 'leaflet' &&
+      leafletMapRef.current &&
+      window.L &&
+      leafletMarkersLayerRef.current
+    ) {
+      const L = window.L;
+      const layer = leafletMarkersLayerRef.current;
+      layer.clearLayers();
+
+      for (const m of markers) {
+        if (!m.latitude || !m.longitude) continue;
+        const isSelected = selectedMarkerId === m.id;
+        const priceDisplay = m.price ? `$${m.price}` : '📍';
+        const titleSnippet = m.title.length > 18 ? `${m.title.slice(0, 18)}...` : m.title;
+
+        const html = `
+          <div style="
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background-color: ${isSelected ? colors.primary : '#FFFFFF'};
+            color: ${isSelected ? '#FFFFFF' : '#0F172A'};
+            border: 1.5px solid ${isSelected ? colors.primary : '#CBD5E1'};
+            border-radius: 22px;
+            box-shadow: 0 4px 14px rgba(0,0,0,${isSelected ? '0.28' : '0.14'});
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            cursor: pointer;
+            transform: ${isSelected ? 'scale(1.12)' : 'scale(1)'};
+            transition: transform 0.15s ease, background-color 0.15s ease;
+            user-select: none;
+          ">
+            <span style="color: ${isSelected ? '#FFFFFF' : colors.primary}; font-weight: 800;">${priceDisplay}</span>
+            <span style="max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${titleSnippet}</span>
+          </div>
+        `;
+
+        const icon = L.divIcon({
+          className: 'custom-mb-map-marker',
+          html,
+          iconSize: [0, 0],
+          iconAnchor: [45, 18],
+        });
+
+        const marker = L.marker([m.latitude, m.longitude], {
+          icon,
+          zIndexOffset: isSelected ? 1000 : 0,
+        });
+
+        marker.on('click', () => {
           onSelectMarker?.(m.id);
         });
 
-        return annotation;
-      });
+        layer.addLayer(marker);
+      }
+    } else if (mapEngine === 'mapkit' && mapkitInstanceRef.current && window.mapkit) {
+      const map = mapkitInstanceRef.current;
+      const mapkit = window.mapkit;
 
-    map.addAnnotations(annotations);
-  }, [markers, selectedMarkerId, mapkitReady, onSelectMarker]);
+      if (map.annotations) {
+        map.removeAnnotations(map.annotations);
+      }
 
+      const annotations = markers
+        .filter((m) => m.latitude && m.longitude)
+        .map((m) => {
+          const coord = new mapkit.Coordinate(m.latitude, m.longitude);
+          const isSelected = selectedMarkerId === m.id;
+
+          const annotation = new mapkit.MarkerAnnotation(coord, {
+            title: m.title,
+            subtitle: m.subtitle || (m.price ? `$${m.price}/mo` : ''),
+            color: isSelected ? colors.primary : '#0D5C75',
+            glyphText: m.price ? `$${m.price}` : '📍',
+            selected: isSelected,
+          });
+
+          annotation.addEventListener('select', () => {
+            onSelectMarker?.(m.id);
+          });
+
+          return annotation;
+        });
+
+      map.addAnnotations(annotations);
+    }
+  }, [markers, selectedMarkerId, mapReady, mapEngine, onSelectMarker]);
+
+  // --------------------------------------------------------------------------
   // 3. Pan to selected marker
+  // --------------------------------------------------------------------------
   useEffect(() => {
-    if (!mapInstanceRef.current || !window.mapkit || !selectedMarkerId) return;
+    if (!mapReady || !selectedMarkerId) return;
     const selected = markers.find((m) => m.id === selectedMarkerId);
-    if (selected?.latitude && selected.longitude) {
+    if (!selected?.latitude || !selected.longitude) return;
+
+    if (mapEngine === 'google' && googleMapRef.current) {
+      googleMapRef.current.panTo({
+        lat: selected.latitude,
+        lng: selected.longitude,
+      });
+    } else if (mapEngine === 'leaflet' && leafletMapRef.current) {
+      leafletMapRef.current.panTo([selected.latitude, selected.longitude], { animate: true });
+    } else if (mapEngine === 'mapkit' && mapkitInstanceRef.current && window.mapkit) {
       const center = new window.mapkit.Coordinate(selected.latitude, selected.longitude);
       const span = new window.mapkit.CoordinateSpan(0.04, 0.04);
       const region = new window.mapkit.CoordinateRegion(center, span);
-      const map = mapInstanceRef.current;
+      const map = mapkitInstanceRef.current;
       if (typeof map.setRegionAnimated === 'function') {
         map.setRegionAnimated(region);
       }
     }
-  }, [selectedMarkerId, markers]);
+  }, [selectedMarkerId, markers, mapReady, mapEngine]);
 
-  // Sync mapType with MapKit instance
+  // --------------------------------------------------------------------------
+  // 4. Center coordinate updates (Recenter / GPS / City change)
+  // --------------------------------------------------------------------------
   useEffect(() => {
-    if (!mapInstanceRef.current || !window.mapkit || !mapkitReady) return;
-    const map = mapInstanceRef.current;
-    const mapkit = window.mapkit;
-    if (mapkit?.Map?.MapTypes) {
-      if (mapType === 'satellite') {
-        map.mapType = mapkit.Map.MapTypes.Satellite;
-      } else if (mapType === 'hybrid') {
-        map.mapType = mapkit.Map.MapTypes.Hybrid;
-      } else {
-        map.mapType = mapkit.Map.MapTypes.Standard;
+    if (!centerCoordinate || !mapReady) return;
+
+    if (mapEngine === 'google' && googleMapRef.current) {
+      googleMapRef.current.panTo({
+        lat: centerCoordinate.latitude,
+        lng: centerCoordinate.longitude,
+      });
+    } else if (mapEngine === 'leaflet' && leafletMapRef.current) {
+      leafletMapRef.current.setView(
+        [centerCoordinate.latitude, centerCoordinate.longitude],
+        leafletMapRef.current.getZoom(),
+        { animate: true },
+      );
+    } else if (mapEngine === 'mapkit' && mapkitInstanceRef.current && window.mapkit) {
+      const map = mapkitInstanceRef.current;
+      const mapkit = window.mapkit;
+      if (mapkit.Coordinate) {
+        const coord = new mapkit.Coordinate(centerCoordinate.latitude, centerCoordinate.longitude);
+        if (typeof map.setCenterAnimated === 'function') {
+          map.setCenterAnimated(coord, true);
+        } else if (
+          typeof map.setRegionAnimated === 'function' &&
+          mapkit.CoordinateRegion &&
+          mapkit.CoordinateSpan
+        ) {
+          const span = new mapkit.CoordinateSpan(0.08, 0.08);
+          map.setRegionAnimated(new mapkit.CoordinateRegion(coord, span), true);
+        }
       }
     }
-  }, [mapType, mapkitReady]);
+  }, [centerCoordinate, mapReady, mapEngine]);
 
-  // Adjust camera pitch for 3D/2D toggle
+  // --------------------------------------------------------------------------
+  // 5. Sync mapType changes
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (!mapReady) return;
+
+    if (mapEngine === 'google' && googleMapRef.current && window.google?.maps) {
+      const map = googleMapRef.current;
+      map.setMapTypeId(
+        mapType === 'satellite' || mapType === 'hybrid'
+          ? window.google.maps.MapTypeId.HYBRID
+          : window.google.maps.MapTypeId.ROADMAP,
+      );
+    } else if (mapEngine === 'leaflet' && leafletMapRef.current && leafletTileLayerRef.current) {
+      const tileUrl =
+        mapType === 'satellite' || mapType === 'hybrid'
+          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+          : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+      leafletTileLayerRef.current.setUrl(tileUrl);
+    } else if (
+      mapEngine === 'mapkit' &&
+      mapkitInstanceRef.current &&
+      window.mapkit?.Map?.MapTypes
+    ) {
+      const map = mapkitInstanceRef.current;
+      const mapTypes = window.mapkit.Map.MapTypes;
+      if (mapType === 'satellite') {
+        map.mapType = mapTypes.Satellite;
+      } else if (mapType === 'hybrid') {
+        map.mapType = mapTypes.Hybrid;
+      } else {
+        map.mapType = mapTypes.Standard;
+      }
+    }
+  }, [mapType, mapReady, mapEngine]);
+
+  // --------------------------------------------------------------------------
+  // 6. 3D Perspective Tilt
+  // --------------------------------------------------------------------------
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.style.transition = 'transform 0.45s ease, filter 0.45s ease';
@@ -334,70 +770,98 @@ export function UniversalMapView({
       containerRef.current.style.transformOrigin = '50% 80%';
     }
 
-    if (!mapInstanceRef.current || !mapkitReady) return;
-    const map = mapInstanceRef.current;
-    try {
-      if (map.camera) {
-        map.camera.pitch = is3D ? 55 : 0;
-      } else if ('cameraPitch' in map) {
-        (map as unknown as { cameraPitch: number }).cameraPitch = is3D ? 55 : 0;
-      }
-    } catch {
-      // ignore if unsupported
-    }
-  }, [is3D, mapkitReady]);
-
-  // Animate to centerCoordinate when GPS or recenter is requested
-  useEffect(() => {
-    if (!centerCoordinate || !mapInstanceRef.current || !window.mapkit || !mapkitReady) return;
-    const map = mapInstanceRef.current;
-    const mapkit = window.mapkit;
-    if (mapkit.Coordinate) {
-      const coord = new window.mapkit.Coordinate(
-        centerCoordinate.latitude,
-        centerCoordinate.longitude,
-      );
-      if (typeof map.setCenterAnimated === 'function') {
-        map.setCenterAnimated(coord, true);
-      } else if (
-        typeof map.setRegionAnimated === 'function' &&
-        mapkit.CoordinateRegion &&
-        mapkit.CoordinateSpan
-      ) {
-        const span = new window.mapkit.CoordinateSpan(0.08, 0.08);
-        map.setRegionAnimated(new mapkit.CoordinateRegion(coord, span), true);
+    if (mapEngine === 'mapkit' && mapkitInstanceRef.current && mapReady) {
+      const map = mapkitInstanceRef.current;
+      try {
+        if (map.camera) {
+          map.camera.pitch = is3D ? 55 : 0;
+        } else if ('cameraPitch' in map) {
+          (map as unknown as { cameraPitch: number }).cameraPitch = is3D ? 55 : 0;
+        }
+      } catch {
+        // ignore
       }
     }
-  }, [centerCoordinate, mapkitReady]);
+  }, [is3D, mapReady, mapEngine]);
 
-  // 4. Sync drawnPolygon with Apple MapKit Overlays
+  // --------------------------------------------------------------------------
+  // 7. Sync drawnPolygon
+  // --------------------------------------------------------------------------
   useEffect(() => {
-    if (!mapInstanceRef.current || !window.mapkit || !mapkitReady) return;
-    const map = mapInstanceRef.current;
+    if (!mapReady) return;
 
-    if (map.overlays && map.removeOverlays) {
-      map.removeOverlays(map.overlays);
+    if (mapEngine === 'google' && googleMapRef.current && window.google?.maps) {
+      if (googlePolygonRef.current) {
+        googlePolygonRef.current.setMap(null);
+        googlePolygonRef.current = null;
+      }
+
+      if (drawnPolygon && drawnPolygon.length >= 3) {
+        const paths = drawnPolygon.map((p) => ({ lat: p.latitude, lng: p.longitude }));
+        const poly = new window.google.maps.Polygon({
+          paths,
+          strokeColor: colors.primary,
+          strokeOpacity: 0.9,
+          strokeWeight: 2.5,
+          fillColor: colors.primary,
+          fillOpacity: 0.18,
+          map: googleMapRef.current,
+        });
+        googlePolygonRef.current = poly;
+      }
+    } else if (mapEngine === 'leaflet' && leafletMapRef.current && window.L) {
+      const L = window.L;
+      const map = leafletMapRef.current;
+
+      if (leafletPolygonRef.current) {
+        try {
+          map.removeLayer(leafletPolygonRef.current);
+        } catch {
+          // ignore
+        }
+        leafletPolygonRef.current = null;
+      }
+
+      if (drawnPolygon && drawnPolygon.length >= 3) {
+        const latLngs = drawnPolygon.map((pt) => [pt.latitude, pt.longitude]);
+        const poly = L.polygon(latLngs, {
+          color: colors.primary,
+          fillColor: colors.primary,
+          fillOpacity: 0.18,
+          weight: 2.5,
+          dashArray: '6, 4',
+        }).addTo(map);
+        leafletPolygonRef.current = poly;
+      }
+    } else if (mapEngine === 'mapkit' && mapkitInstanceRef.current && window.mapkit) {
+      const map = mapkitInstanceRef.current;
+      const mapkit = window.mapkit;
+
+      if (map.overlays && map.removeOverlays) {
+        map.removeOverlays(map.overlays);
+      }
+
+      if (drawnPolygon && drawnPolygon.length >= 3 && mapkit?.PolygonOverlay && map.addOverlay) {
+        const points = drawnPolygon.map((pt) => new mapkit.Coordinate(pt.latitude, pt.longitude));
+        const styleObj = mapkit.Style
+          ? new mapkit.Style({
+              fillColor: 'rgba(13, 92, 117, 0.22)',
+              strokeColor: colors.primary,
+              lineWidth: 2.5,
+            })
+          : undefined;
+
+        const overlay = new mapkit.PolygonOverlay(points, {
+          style: styleObj,
+        });
+        map.addOverlay(overlay);
+      }
     }
+  }, [drawnPolygon, mapReady, mapEngine]);
 
-    const mapkit = window.mapkit;
-    if (drawnPolygon && drawnPolygon.length >= 3 && mapkit?.PolygonOverlay && map.addOverlay) {
-      const points = drawnPolygon.map((pt) => new mapkit.Coordinate(pt.latitude, pt.longitude));
-      const style = mapkit.Style
-        ? new mapkit.Style({
-            fillColor: 'rgba(13, 92, 117, 0.22)',
-            strokeColor: colors.primary,
-            lineWidth: 2.5,
-          })
-        : undefined;
-
-      const overlay = new mapkit.PolygonOverlay(points, {
-        style,
-      });
-      map.addOverlay(overlay);
-    }
-  }, [drawnPolygon, mapkitReady]);
-
-  // Web Drawing Handlers
+  // --------------------------------------------------------------------------
+  // 8. Draw to Filter Pointer Handlers
+  // --------------------------------------------------------------------------
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDrawingMode) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -425,19 +889,45 @@ export function UniversalMapView({
     }
 
     const rect = containerRef.current.getBoundingClientRect();
-    const map = mapInstanceRef.current;
-
-    // Use current active map region or fallback to initial region
-    const centerLat = map?.region?.center.latitude ?? initialRegion.latitude;
-    const centerLng = map?.region?.center.longitude ?? initialRegion.longitude;
-    const spanLat = map?.region?.span.latitudeDelta ?? initialRegion.latitudeDelta;
-    const spanLng = map?.region?.span.longitudeDelta ?? initialRegion.longitudeDelta;
-
     const sampled = downsamplePoints(currentScreenPoints, 30);
-    const coords: Coordinate[] = sampled.map((p) => ({
-      latitude: centerLat + (0.5 - p.y / rect.height) * spanLat,
-      longitude: centerLng + (p.x / rect.width - 0.5) * spanLng,
-    }));
+
+    let coords: Coordinate[] = [];
+
+    if (mapEngine === 'google' && googleMapRef.current && window.google?.maps) {
+      const map = googleMapRef.current;
+      const bounds = map.getBounds();
+      if (bounds) {
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        const latSpan = ne.lat() - sw.lat();
+        const lngSpan = ne.lng() - sw.lng();
+        coords = sampled.map((p) => ({
+          latitude: ne.lat() - (p.y / rect.height) * latSpan,
+          longitude: sw.lng() + (p.x / rect.width) * lngSpan,
+        }));
+      }
+    } else if (mapEngine === 'leaflet' && leafletMapRef.current && window.L) {
+      const map = leafletMapRef.current;
+      const L = window.L;
+      coords = sampled.map((p) => {
+        const latLng = map.containerPointToLatLng(L.point(p.x, p.y));
+        return {
+          latitude: latLng.lat,
+          longitude: latLng.lng,
+        };
+      });
+    } else {
+      const map = mapkitInstanceRef.current;
+      const centerLat = map?.region?.center.latitude ?? initialRegion.latitude;
+      const centerLng = map?.region?.center.longitude ?? initialRegion.longitude;
+      const spanLat = map?.region?.span.latitudeDelta ?? initialRegion.latitudeDelta;
+      const spanLng = map?.region?.span.longitudeDelta ?? initialRegion.longitudeDelta;
+
+      coords = sampled.map((p) => ({
+        latitude: centerLat + (0.5 - p.y / rect.height) * spanLat,
+        longitude: centerLng + (p.x / rect.width - 0.5) * spanLng,
+      }));
+    }
 
     if (coords.length >= 3) {
       coords.push({ ...coords[0] });
@@ -446,7 +936,17 @@ export function UniversalMapView({
 
     setCurrentScreenPoints([]);
     setIsDrawingMode(false);
-  }, [isDrawingMode, isPointerDown, currentScreenPoints, initialRegion, onPolygonComplete]);
+  }, [
+    isDrawingMode,
+    isPointerDown,
+    currentScreenPoints,
+    mapEngine,
+    initialRegion.latitude,
+    initialRegion.longitude,
+    initialRegion.latitudeDelta,
+    initialRegion.longitudeDelta,
+    onPolygonComplete,
+  ]);
 
   const polylineSvgString = useMemo(() => {
     if (currentScreenPoints.length === 0) return '';
@@ -455,7 +955,7 @@ export function UniversalMapView({
 
   return (
     <View style={[styles.container, style]}>
-      {/* Real Apple Map Container (Used when token is present) */}
+      {/* Interactive Map Container */}
       <div
         ref={containerRef}
         style={{
@@ -466,54 +966,8 @@ export function UniversalMapView({
           left: 0,
           right: 0,
           bottom: 0,
-          display: appleMapsToken && !mapkitError ? 'block' : 'none',
         }}
       />
-
-      {/* Fallback View (Used on Web when token is not yet configured) */}
-      {(!appleMapsToken || mapkitError) && (
-        <View style={styles.tokenPromptContainer}>
-          <View style={styles.tokenPromptCard}>
-            <Text style={styles.tokenPromptIcon}>🗺️</Text>
-            <Text style={styles.tokenPromptTitle}>Apple Maps Ready</Text>
-            <Text style={styles.tokenPromptSubtitle}>
-              Native iOS devices render Apple Maps automatically with zero configuration.
-            </Text>
-            <Text style={styles.tokenPromptDetail}>
-              To render Apple MapKit JS in the web browser, add your token to:
-            </Text>
-            <View style={styles.codePill}>
-              <Text style={styles.codeText}>frontend/.env → EXPO_PUBLIC_APPLE_MAPS_TOKEN</Text>
-            </View>
-
-            {/* Interactive Pins Preview on Web Canvas */}
-            <View style={styles.pinsPreviewRow}>
-              {markers.slice(0, 4).map((m) => {
-                const isSelected = selectedMarkerId === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => onSelectMarker?.(m.id)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '20px',
-                      border: `1.5px solid ${isSelected ? colors.primary : '#cbd5e1'}`,
-                      backgroundColor: isSelected ? colors.primary : '#ffffff',
-                      color: isSelected ? '#ffffff' : '#0f172a',
-                      fontWeight: 700,
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {m.price ? `$${m.price}` : '📍'} {m.title.slice(0, 16)}...
-                  </button>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-      )}
 
       {/* Real-time Drawing Overlay Layer for Web */}
       {isDrawingMode && (
@@ -527,7 +981,7 @@ export function UniversalMapView({
             left: 0,
             right: 0,
             bottom: 0,
-            zIndex: 30,
+            zIndex: 1000,
             cursor: 'crosshair',
             userSelect: 'none',
             touchAction: 'none',
@@ -563,7 +1017,7 @@ export function UniversalMapView({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            zIndex: 40,
+            zIndex: 1010,
             boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
           }}
         >
@@ -605,7 +1059,7 @@ export function UniversalMapView({
             position: 'absolute',
             top: '14px',
             left: '14px',
-            zIndex: 20,
+            zIndex: 500,
             display: 'flex',
             gap: '8px',
           }}
@@ -689,77 +1143,5 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
     position: 'relative',
-  },
-  tokenPromptContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#F8FAFC',
-  },
-  tokenPromptCard: {
-    maxWidth: 440,
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  tokenPromptIcon: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  tokenPromptTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 8,
-  },
-  tokenPromptSubtitle: {
-    fontSize: 13,
-    color: '#475569',
-    textAlign: 'center',
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  tokenPromptDetail: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  codePill: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  codeText: {
-    fontFamily: 'Courier',
-    fontSize: 11,
-    color: '#0D5C75',
-    fontWeight: '600',
-  },
-  pinsPreviewRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'center',
-    marginTop: 8,
   },
 });

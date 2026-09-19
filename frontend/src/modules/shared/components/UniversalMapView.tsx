@@ -1,10 +1,12 @@
 import { color as colors } from '@manabandhu/design-system';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker, Polygon, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, Polygon, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import Svg, { Polyline as SvgPolyline } from 'react-native-svg';
+import { useMapPreferencesStore } from '../stores/mapPreferencesStore';
 import type { Coordinate } from '../utils/geoPolygon';
 import { downsamplePoints } from '../utils/geoPolygon';
 
@@ -65,6 +67,19 @@ export function UniversalMapView({
   onClearPolygon,
 }: UniversalMapViewProps) {
   const mapRef = useRef<MapView>(null);
+  const preferredProvider = useMapPreferencesStore((s) => s.provider);
+
+  // On iOS, Google Maps native SDK is not bundled in Expo Go.
+  // When running on iOS under Expo Go (StoreClient), we fall back to PROVIDER_DEFAULT (Apple Maps)
+  // so the map renders immediately and never displays a blank screen.
+  const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+  const activeProvider =
+    Platform.OS === 'ios' && isExpoGo
+      ? PROVIDER_DEFAULT
+      : preferredProvider === 'google'
+        ? PROVIDER_GOOGLE
+        : PROVIDER_DEFAULT;
+
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [currentScreenPoints, setCurrentScreenPoints] = useState<Array<{ x: number; y: number }>>(
     [],
@@ -171,7 +186,7 @@ export function UniversalMapView({
     <View style={[styles.container, style]}>
       <MapView
         ref={mapRef}
-        provider={PROVIDER_DEFAULT} // Apple Maps on iOS, Google Maps on Android
+        provider={activeProvider}
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
         showsUserLocation={showsUserLocation}

@@ -1,5 +1,6 @@
 import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,6 +28,7 @@ import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
 import type { RoomListing } from '@/modules/rooms/types';
 import { searchAllUSCities } from '@/modules/rooms/utils/locationService';
 import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
+import { useMapPreferencesStore } from '@/modules/shared/stores/mapPreferencesStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import type { Coordinate } from '@/modules/shared/utils/geoPolygon';
 import { isPointInPolygon } from '@/modules/shared/utils/geoPolygon';
@@ -299,6 +301,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   // State (Global Location sync)
   const globalLocation = useLocationStore((s) => s.currentLocation);
   const setGlobalLocation = useLocationStore((s) => s.setLocation);
+  const mapProvider = useMapPreferencesStore((s) => s.provider);
+  const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+  const isAppleMapsActive = (Platform.OS === 'ios' && isExpoGo) || mapProvider === 'apple';
 
   const selectedCity: CityOption = useMemo(
     () => ({
@@ -952,42 +957,44 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 onClearPolygon={() => setDrawnBoundary(null)}
               />
 
-              {/* Apple Maps Floating Controls: Map Mode, 3D, and GPS */}
-              <View style={s.appleMapsControlCluster}>
-                {/* 1. Map Mode (Layers) Button */}
-                <Pressable
-                  onPress={() => setIsMapStyleSheetOpen(!isMapStyleSheetOpen)}
-                  style={[s.appleMapBtn, isMapStyleSheetOpen && s.appleMapBtnActive]}
-                  accessibilityLabel="Choose Map Mode"
-                >
-                  <Text style={s.appleMapIcon}>🗺️</Text>
-                </Pressable>
+              {/* Apple Maps Floating Controls: Map Mode, 3D, and GPS (Hidden when Google Maps is active) */}
+              {isAppleMapsActive && (
+                <View style={s.appleMapsControlCluster}>
+                  {/* 1. Map Mode (Layers) Button */}
+                  <Pressable
+                    onPress={() => setIsMapStyleSheetOpen(!isMapStyleSheetOpen)}
+                    style={[s.appleMapBtn, isMapStyleSheetOpen && s.appleMapBtnActive]}
+                    accessibilityLabel="Choose Map Mode"
+                  >
+                    <Text style={s.appleMapIcon}>🗺️</Text>
+                  </Pressable>
 
-                {/* 2. 3D / 2D Perspective Toggle Button */}
-                <Pressable
-                  onPress={() => setIs3D(!is3D)}
-                  style={[s.appleMapBtn, is3D && s.appleMapBtnActive]}
-                  accessibilityLabel={is3D ? 'Switch to 2D view' : 'Switch to 3D perspective'}
-                >
-                  <Text style={[s.appleMap3DText, is3D && s.appleMap3DTextActive]}>
-                    {is3D ? '2D' : '3D'}
-                  </Text>
-                </Pressable>
+                  {/* 2. 3D / 2D Perspective Toggle Button */}
+                  <Pressable
+                    onPress={() => setIs3D(!is3D)}
+                    style={[s.appleMapBtn, is3D && s.appleMapBtnActive]}
+                    accessibilityLabel={is3D ? 'Switch to 2D view' : 'Switch to 3D perspective'}
+                  >
+                    <Text style={[s.appleMap3DText, is3D && s.appleMap3DTextActive]}>
+                      {is3D ? '2D' : '3D'}
+                    </Text>
+                  </Pressable>
 
-                {/* 3. GPS Current Location Button */}
-                <Pressable
-                  onPress={handleGpsPress}
-                  style={[s.appleMapBtn, s.appleMapBtnLast, isGpsActive && s.appleMapBtnActive]}
-                  accessibilityLabel="Center Current GPS Location"
-                >
-                  <Text style={[s.appleMapGpsIcon, isGpsActive && s.appleMapGpsIconActive]}>
-                    {isGpsActive ? '➤' : '⌖'}
-                  </Text>
-                </Pressable>
-              </View>
+                  {/* 3. GPS Current Location Button */}
+                  <Pressable
+                    onPress={handleGpsPress}
+                    style={[s.appleMapBtn, s.appleMapBtnLast, isGpsActive && s.appleMapBtnActive]}
+                    accessibilityLabel="Center Current GPS Location"
+                  >
+                    <Text style={[s.appleMapGpsIcon, isGpsActive && s.appleMapGpsIconActive]}>
+                      {isGpsActive ? '➤' : '⌖'}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
 
               {/* Apple Maps Mode Selector Popover */}
-              {isMapStyleSheetOpen && (
+              {isAppleMapsActive && isMapStyleSheetOpen && (
                 <View style={s.appleMapStyleMenu}>
                   <Text style={s.appleMapStyleTitle}>MAP MODE</Text>
                   {(['standard', 'satellite', 'hybrid'] as const).map((type) => {
@@ -1111,6 +1118,36 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   </View>
                 </Animated.View>
               ) : null}
+
+              {/* Zillow-style Floating Switch to List View Button (Visible only when area is drawn) */}
+              {drawnBoundary && drawnBoundary.length >= 3 && (
+                <View
+                  style={[
+                    s.zillowFloatingSwitchWrapper,
+                    isRoomPreviewExpanded && activePinRoom
+                      ? s.zillowFloatingSwitchWrapperTop
+                      : s.zillowFloatingSwitchWrapperBottom,
+                  ]}
+                  pointerEvents="box-none"
+                >
+                  <Pressable
+                    onPress={() => setViewMode('list')}
+                    style={({ pressed }) => [
+                      s.zillowFloatingSwitchBtn,
+                      pressed && s.zillowFloatingSwitchBtnPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${filteredRooms.length} listings in drawn area`}
+                  >
+                    <Text style={s.zillowFloatingSwitchIcon}>📋</Text>
+                    <Text style={s.zillowFloatingSwitchText}>
+                      View {filteredRooms.length} {filteredRooms.length === 1 ? 'Room' : 'Rooms'} in
+                      Area
+                    </Text>
+                    <Text style={s.zillowFloatingSwitchArrow}>➔</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           );
         };
@@ -1373,12 +1410,25 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             {drawnBoundary && drawnBoundary.length >= 3 && (
               <View style={s.drawnBoundaryFilterChip}>
                 <Text style={s.drawnBoundaryFilterText}>
-                  ✏️ Filtered to hand-drawn area ({filteredRooms.length}{' '}
-                  {filteredRooms.length === 1 ? 'room' : 'rooms'})
+                  ✏️ Showing {filteredRooms.length} {filteredRooms.length === 1 ? 'room' : 'rooms'}{' '}
+                  inside drawn boundary
                 </Text>
-                <Pressable onPress={() => setDrawnBoundary(null)} style={s.drawnBoundaryClearBtn}>
-                  <Text style={s.drawnBoundaryClearText}>✕ Clear Area</Text>
-                </Pressable>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Pressable
+                    onPress={() => setViewMode('map')}
+                    style={s.drawnBoundaryMapBtn}
+                    accessibilityLabel="Return to map view"
+                  >
+                    <Text style={s.drawnBoundaryMapText}>🗺️ Map</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setDrawnBoundary(null)}
+                    style={s.drawnBoundaryClearBtn}
+                    accessibilityLabel="Clear drawn area filter"
+                  >
+                    <Text style={s.drawnBoundaryClearText}>✕ Clear</Text>
+                  </Pressable>
+                </View>
               </View>
             )}
 
@@ -2219,6 +2269,64 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#1e40af',
+  },
+  drawnBoundaryMapBtn: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  drawnBoundaryMapText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  zillowFloatingSwitchWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  zillowFloatingSwitchWrapperBottom: {
+    bottom: 24,
+  },
+  zillowFloatingSwitchWrapperTop: {
+    top: 14,
+  },
+  zillowFloatingSwitchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  zillowFloatingSwitchBtnPressed: {
+    transform: [{ scale: 0.96 }],
+    opacity: 0.92,
+  },
+  zillowFloatingSwitchIcon: {
+    fontSize: 14,
+  },
+  zillowFloatingSwitchText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  zillowFloatingSwitchArrow: {
+    color: '#38bdf8',
+    fontSize: 12,
+    fontWeight: '800',
   },
   sectionTitle: {
     fontSize: 17,

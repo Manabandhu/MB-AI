@@ -758,6 +758,36 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                 );
               })()}
 
+              {/* Zillow-style Floating Switch to List View Button (Visible only when area is drawn) */}
+              {drawnBoundary && drawnBoundary.length >= 3 && (
+                <View
+                  style={[
+                    styles.zillowFloatingSwitchWrapper,
+                    selectedMapRideId
+                      ? styles.zillowFloatingSwitchWrapperTop
+                      : styles.zillowFloatingSwitchWrapperBottom,
+                  ]}
+                  pointerEvents="box-none"
+                >
+                  <Pressable
+                    onPress={() => setViewMode('list')}
+                    style={({ pressed }) => [
+                      styles.zillowFloatingSwitchBtn,
+                      pressed && styles.zillowFloatingSwitchBtnPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${filteredRides.length} carpools in drawn area`}
+                  >
+                    <Text style={styles.zillowFloatingSwitchIcon}>🚗</Text>
+                    <Text style={styles.zillowFloatingSwitchText}>
+                      View {filteredRides.length}{' '}
+                      {filteredRides.length === 1 ? 'Carpool' : 'Carpools'} in Area
+                    </Text>
+                    <Text style={styles.zillowFloatingSwitchArrow}>➔</Text>
+                  </Pressable>
+                </View>
+              )}
+
               {/* Selected Ride Quick Preview Sheet in Map */}
               {selectedMapRideId ? (
                 <View style={styles.mapPreviewSheet}>
@@ -2410,5 +2440,52 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
+  },
+  zillowFloatingSwitchWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  zillowFloatingSwitchWrapperBottom: {
+    bottom: 24,
+  },
+  zillowFloatingSwitchWrapperTop: {
+    top: 14,
+  },
+  zillowFloatingSwitchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  zillowFloatingSwitchBtnPressed: {
+    transform: [{ scale: 0.96 }],
+    opacity: 0.92,
+  },
+  zillowFloatingSwitchIcon: {
+    fontSize: 14,
+  },
+  zillowFloatingSwitchText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  zillowFloatingSwitchArrow: {
+    color: '#38bdf8',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

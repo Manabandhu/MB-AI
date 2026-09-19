@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
+import { useMapPreferencesStore } from '@/modules/shared/stores/mapPreferencesStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const C = {
@@ -33,6 +34,7 @@ export function SettingsScreen() {
 
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const { provider: mapProvider, setProvider: setMapProvider } = useMapPreferencesStore();
 
   const [pushNotifs, setPushNotifs] = useState(true);
   const [rideAlerts, setRideAlerts] = useState(true);
@@ -130,6 +132,71 @@ export function SettingsScreen() {
                   thumbColor="#FFF"
                 />
               </View>
+            </View>
+          </View>
+
+          {/* Section: Map Provider */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Map Provider</Text>
+            <View style={s.cardGroup}>
+              <View style={s.settingRow}>
+                <View style={s.settingLabelGroup}>
+                  <Text style={s.settingLabel}>Preferred Map Service</Text>
+                  <Text style={s.settingSub}>
+                    Select whether to use Google Maps or Apple Maps across Web & Mobile
+                  </Text>
+                </View>
+              </View>
+
+              <View style={s.divider} />
+
+              {/* Google Maps Option */}
+              <Pressable
+                onPress={() => setMapProvider('google')}
+                style={[s.mapProviderOption, mapProvider === 'google' && s.mapProviderOptionActive]}
+              >
+                <Text style={s.mapProviderIcon}>🗺️</Text>
+                <View style={s.mapProviderDetails}>
+                  <Text
+                    style={[s.mapProviderName, mapProvider === 'google' && s.mapProviderNameActive]}
+                  >
+                    Google Maps
+                  </Text>
+                  <Text style={s.mapProviderDesc}>
+                    Roadmaps & Satellite via Google Maps JS SDK on Web & Android
+                  </Text>
+                </View>
+                {mapProvider === 'google' && (
+                  <View style={s.checkCircle}>
+                    <Text style={s.checkIcon}>✓</Text>
+                  </View>
+                )}
+              </Pressable>
+
+              <View style={s.divider} />
+
+              {/* Apple Maps Option */}
+              <Pressable
+                onPress={() => setMapProvider('apple')}
+                style={[s.mapProviderOption, mapProvider === 'apple' && s.mapProviderOptionActive]}
+              >
+                <Text style={s.mapProviderIcon}>🍏</Text>
+                <View style={s.mapProviderDetails}>
+                  <Text
+                    style={[s.mapProviderName, mapProvider === 'apple' && s.mapProviderNameActive]}
+                  >
+                    Apple Maps
+                  </Text>
+                  <Text style={s.mapProviderDesc}>
+                    Native iOS vector maps with 3D perspective terrain
+                  </Text>
+                </View>
+                {mapProvider === 'apple' && (
+                  <View style={s.checkCircle}>
+                    <Text style={s.checkIcon}>✓</Text>
+                  </View>
+                )}
+              </Pressable>
             </View>
           </View>
 
@@ -390,5 +457,48 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: C.danger,
+  },
+  mapProviderOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 14,
+    backgroundColor: C.cardBg,
+  },
+  mapProviderOptionActive: {
+    backgroundColor: '#F3F0FF',
+  },
+  mapProviderIcon: {
+    fontSize: 24,
+  },
+  mapProviderDetails: {
+    flex: 1,
+    gap: 2,
+  },
+  mapProviderName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.ink,
+  },
+  mapProviderNameActive: {
+    color: C.primary,
+  },
+  mapProviderDesc: {
+    fontSize: 12,
+    color: C.inkMuted,
+    lineHeight: 16,
+  },
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkIcon: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });
