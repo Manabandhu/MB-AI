@@ -432,11 +432,31 @@ const filterCategories = [
 
 type SortOption = 'recommended' | 'price_low' | 'price_high' | 'newest';
 
-const SORT_OPTIONS: { id: SortOption; label: string; icon: string }[] = [
-  { id: 'recommended', label: 'Recommended', icon: '✦' },
-  { id: 'price_low', label: 'Price: Low to High', icon: '↑' },
-  { id: 'price_high', label: 'Price: High to Low', icon: '↓' },
-  { id: 'newest', label: 'Newest First', icon: '⚡' },
+const SORT_OPTIONS: { id: SortOption; label: string; icon: string; description: string }[] = [
+  {
+    id: 'recommended',
+    label: 'Recommended',
+    icon: '✦',
+    description: 'Best balance of reviews, verified hosts, and relevance',
+  },
+  {
+    id: 'price_low',
+    label: 'Price: Low to High',
+    icon: '↑',
+    description: 'Most affordable rent and shared rooms first',
+  },
+  {
+    id: 'price_high',
+    label: 'Price: High to Low',
+    icon: '↓',
+    description: 'Master bedrooms and luxury suites first',
+  },
+  {
+    id: 'newest',
+    label: 'Newest First',
+    icon: '⚡',
+    description: 'Freshly posted rooms and recent updates',
+  },
 ];
 
 export function RoomsScreen({ screenId }: RoomsScreenProps) {
@@ -475,6 +495,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   );
   const [isCityModalVisible, setIsCityModalVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(screenId === 'filters');
+  const [isSortModalVisible, setIsSortModalVisible] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'card' | 'map'>(
     screenId === 'map' ? 'map' : 'card',
   );
@@ -573,6 +594,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isSortModalVisible) {
+        setIsSortModalVisible(false);
+        return true;
+      }
       if (isFilterModalVisible) {
         setIsFilterModalVisible(false);
         return true;
@@ -589,7 +614,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
       return true;
     });
     return () => sub.remove();
-  }, [isFilterModalVisible, isCityModalVisible, viewMode, screenId]);
+  }, [isSortModalVisible, isFilterModalVisible, isCityModalVisible, viewMode, screenId]);
 
   const createDismissPanResponder = useCallback(
     (onDismiss: () => void) =>
@@ -612,6 +637,11 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
 
   const filterSheetPanResponder = useMemo(
     () => createDismissPanResponder(() => setIsFilterModalVisible(false)),
+    [createDismissPanResponder],
+  );
+
+  const sortSheetPanResponder = useMemo(
+    () => createDismissPanResponder(() => setIsSortModalVisible(false)),
     [createDismissPanResponder],
   );
 
@@ -971,7 +1001,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             accessibilityLabel="Open filters and sorting"
           >
             <AppIcon color={colors.appPrimary} name="wrench" size={14} />
-            <Text style={s.filterPillBtnText}>Filters</Text>
+            <Text style={s.filterPillBtnText}>
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </Text>
           </Pressable>
         </View>
 
@@ -1005,42 +1037,18 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             </Pressable>
           </View>
 
-          {/* Filter button beside the tabs that opens the filter bottom sheet */}
+          {/* Sort button beside the tabs that opens the dedicated Sort bottom sheet */}
           <Pressable
-            onPress={() => setIsFilterModalVisible(true)}
-            style={[s.toolbarFilterBtn, activeFilterCount > 0 && s.toolbarFilterBtnActive]}
-            accessibilityLabel="Open filters bottom sheet"
+            onPress={() => setIsSortModalVisible(true)}
+            style={s.toolbarSortBtn}
+            accessibilityLabel="Open sort bottom sheet"
           >
-            <AppIcon
-              color={activeFilterCount > 0 ? '#ffffff' : colors.appPrimary}
-              name="filter"
-              size={16}
-            />
-            {activeFilterCount > 0 ? (
-              <View style={s.toolbarFilterBadge}>
-                <Text style={s.toolbarFilterBadgeText}>{activeFilterCount}</Text>
-              </View>
-            ) : null}
+            <AppIcon color={colors.appPrimary} name="filter-list" size={15} />
+            <Text style={s.toolbarSortBtnText}>
+              {SORT_OPTIONS.find((o) => o.id === sortBy)?.label || 'Sort'}
+            </Text>
+            <AppIcon color={colors.muted} name="chevron-down" size={12} />
           </Pressable>
-
-          {/* Quick Sort Options with Icons */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.sortScroll}
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <Pressable
-                key={opt.id}
-                onPress={() => setSortBy(opt.id)}
-                style={[s.sortChip, sortBy === opt.id && s.sortChipActive]}
-              >
-                <Text style={[s.sortChipText, sortBy === opt.id && s.sortChipTextActive]}>
-                  {opt.icon} {opt.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
         </View>
 
         {/* Category Pill Filters with Icons */}
@@ -1746,6 +1754,75 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         </Pressable>
       </Modal>
 
+      {/* ─── DEDICATED SORT BOTTOM SHEET (Mobile bottom-up, Web centered) ──────── */}
+      <Modal
+        visible={isSortModalVisible}
+        transparent
+        animationType={isDesktop ? 'fade' : 'slide'}
+        onRequestClose={() => setIsSortModalVisible(false)}
+      >
+        <Pressable
+          onPress={() => setIsSortModalVisible(false)}
+          style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={[s.sortModalCard, !isDesktop && s.sortModalCardMobile]}
+          >
+            {!isDesktop ? (
+              <View {...sortSheetPanResponder.panHandlers} style={s.bottomSheetHandleArea}>
+                <View style={s.bottomSheetHandle} />
+              </View>
+            ) : null}
+
+            <View style={s.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <AppIcon color={colors.appPrimary} name="filter-list" size={18} />
+                <Text style={s.modalTitle}>Sort Listings By</Text>
+              </View>
+              <Pressable
+                onPress={() => setIsSortModalVisible(false)}
+                style={s.modalCloseBtn}
+                accessibilityLabel="Close sort bottom sheet"
+              >
+                <Text style={s.modalCloseText}>✕</Text>
+              </Pressable>
+            </View>
+
+            <View style={s.sortOptionsList}>
+              {SORT_OPTIONS.map((opt) => {
+                const isSelected = sortBy === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => {
+                      setSortBy(opt.id);
+                      setIsSortModalVisible(false);
+                    }}
+                    style={[s.sortOptionRow, isSelected && s.sortOptionRowActive]}
+                  >
+                    <View style={s.sortOptionIconBox}>
+                      <Text style={s.sortOptionEmoji}>{opt.icon}</Text>
+                    </View>
+                    <View style={s.sortOptionContent}>
+                      <Text style={[s.sortOptionLabel, isSelected && s.sortOptionLabelActive]}>
+                        {opt.label}
+                      </Text>
+                      {opt.description ? (
+                        <Text style={s.sortOptionDesc}>{opt.description}</Text>
+                      ) : null}
+                    </View>
+                    <View style={[s.sortRadioCircle, isSelected && s.sortRadioCircleActive]}>
+                      {isSelected ? <View style={s.sortRadioDot} /> : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* ─── RESPONSIVE FILTERS & SORTING MODAL (Bottom-up on Mobile, Centered on Web) ── */}
       <Modal
         visible={isFilterModalVisible}
@@ -2134,64 +2211,111 @@ const s = StyleSheet.create({
   segmentBtnTextActive: {
     color: colors.appPrimary,
   },
-  toolbarFilterBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  toolbarSortBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: '#f0f2fa',
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderWidth: 1,
     borderColor: '#eaedff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
     flexShrink: 0,
   },
-  toolbarFilterBtnActive: {
-    backgroundColor: colors.appPrimary,
+  toolbarSortBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1a1c28',
+  },
+  sortModalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: space.x5,
+    maxWidth: 440,
+    width: '92%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  sortModalCardMobile: {
+    width: '100%',
+    maxWidth: '100%',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingBottom: 34,
+  },
+  sortOptionsList: {
+    gap: 8,
+    marginTop: space.x3,
+  },
+  sortOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: '#f8f9fe',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    gap: 12,
+  },
+  sortOptionRowActive: {
+    backgroundColor: 'rgba(67,30,190,0.06)',
     borderColor: colors.appPrimary,
   },
-  toolbarFilterBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#ff7e33',
+  sortOptionIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  toolbarFilterBadgeText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  sortScroll: {
-    gap: 6,
-    paddingRight: space.x2,
-  },
-  sortChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: radius.pill,
-    backgroundColor: '#f6f7fb',
-    borderWidth: 1,
-    borderColor: '#eaedff',
-  },
-  sortChipActive: {
-    backgroundColor: 'rgba(67,30,190,0.08)',
-    borderColor: colors.appPrimary,
-  },
-  sortChipText: {
-    fontSize: 11,
+  sortOptionEmoji: {
+    fontSize: 16,
     fontWeight: '700',
+    color: colors.appPrimary,
+  },
+  sortOptionContent: {
+    flex: 1,
+    gap: 2,
+  },
+  sortOptionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a1c28',
+  },
+  sortOptionLabelActive: {
+    color: colors.appPrimary,
+  },
+  sortOptionDesc: {
+    fontSize: 11,
     color: colors.muted,
   },
-  sortChipTextActive: {
-    color: colors.appPrimary,
+  sortRadioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sortRadioCircleActive: {
+    borderColor: colors.appPrimary,
+  },
+  sortRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.appPrimary,
   },
   categoryScroll: {
     gap: 6,
