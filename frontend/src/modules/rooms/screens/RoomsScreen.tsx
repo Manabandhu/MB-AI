@@ -187,233 +187,64 @@ export function matchesRoomLocation(
   const roomDescLower = (room.description ?? '').toLowerCase();
   const roomStateUpper = (room.stateCode ?? '').toUpperCase().trim();
 
-  // 1. Dallas / DFW Metro Match
-  const isDfw =
-    selCityLower.includes('dallas') ||
-    selCityLower.includes('dfw') ||
-    selectedCity.id === 'dfw' ||
-    selectedCity.id === 'dallas-tx';
-  if (isDfw) {
-    const dfwKeywords = [
-      'dallas',
-      'dfw',
-      'irving',
-      'plano',
-      'frisco',
-      'richardson',
-      'carrollton',
-      'mckinney',
-      'fort worth',
-      'arlington',
-      'coppell',
-      'garland',
-      'las colinas',
-      'valley ranch',
-      'legacy west',
-      'waterview',
-      'ut dallas',
-      'uta',
-    ];
-    return (
-      roomStateUpper === 'TX' &&
-      dfwKeywords.some(
-        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
-      )
-    );
+  // 1. State match: If state is specified and room has a stateCode, ensure state matches
+  if (selStateUpper && roomStateUpper && selStateUpper !== 'ALL' && selStateUpper !== 'US') {
+    const isMultiStateMetro =
+      selectedCity.id === 'jersey' ||
+      selectedCity.name.includes('NYC') ||
+      selectedCity.name.includes('NY') ||
+      selectedCity.name.includes('NJ');
+
+    if (isMultiStateMetro) {
+      if (roomStateUpper !== 'NY' && roomStateUpper !== 'NJ') return false;
+    } else if (roomStateUpper !== selStateUpper) {
+      return false;
+    }
   }
 
-  // 2. Ohio Match (Columbus, Dublin, Cleveland, Cincinnati, Mason, Dayton, Akron, Toledo)
-  const isOhio =
-    selStateUpper === 'OH' ||
-    selCityLower.includes('ohio') ||
-    selectedCity.id === 'columbus' ||
-    selectedCity.id === 'columbus-oh' ||
-    ['columbus', 'dublin', 'cleveland', 'cincinnati', 'mason', 'dayton', 'akron', 'toledo'].some(
-      (c) => selCityLower.includes(c),
-    );
-  if (isOhio) {
-    if (roomStateUpper !== 'OH') return false;
-    if (selCityLower.includes('dublin')) {
-      return roomLocLower.includes('dublin') || roomTitleLower.includes('dublin');
+  // 2. Coordinate proximity match: if both city and room have lat/lng, match within ~45 miles (~0.65 degrees)
+  if (selectedCity.latitude && selectedCity.longitude && room.latitude && room.longitude) {
+    const dLat = Math.abs(selectedCity.latitude - room.latitude);
+    const dLng = Math.abs(selectedCity.longitude - room.longitude);
+    if (dLat <= 0.65 && dLng <= 0.65) {
+      return true;
     }
-    if (selCityLower.includes('cleveland')) {
-      return roomLocLower.includes('cleveland') || roomTitleLower.includes('cleveland');
-    }
-    if (selCityLower.includes('cincinnati') || selCityLower.includes('mason')) {
+  }
+
+  // 3. City token & landmark text match
+  const cityTokens = selCityLower
+    .split(/[\s\-/,+]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 2 && t !== 'area' && t !== 'metro');
+
+  if (
+    cityTokens.some(
+      (tok) =>
+        roomLocLower.includes(tok) || roomTitleLower.includes(tok) || roomDescLower.includes(tok),
+    )
+  ) {
+    return true;
+  }
+
+  // 4. City landmarks match (from selectedCity or CITIES presets)
+  const landmarks =
+    selectedCity.landmarks?.length > 0
+      ? selectedCity.landmarks
+      : (CITIES.find((c) => c.id === selectedCity.id)?.landmarks ?? []);
+
+  if (landmarks.length > 0) {
+    const matchesLandmark = landmarks.some((lm) => {
+      const lmLower = lm.toLowerCase();
       return (
-        roomLocLower.includes('cincinnati') ||
-        roomLocLower.includes('mason') ||
-        roomTitleLower.includes('cincinnati') ||
-        roomTitleLower.includes('mason')
+        roomLocLower.includes(lmLower) ||
+        roomTitleLower.includes(lmLower) ||
+        roomDescLower.includes(lmLower)
       );
-    }
-    return true; // All OH listings
+    });
+    if (matchesLandmark) return true;
   }
 
-  // 3. Austin Metro Match
-  const isAustin =
-    selCityLower.includes('austin') ||
-    selectedCity.id === 'austin' ||
-    selectedCity.id === 'austin-tx';
-  if (isAustin) {
-    const austinKeywords = [
-      'austin',
-      'round rock',
-      'cedar park',
-      'domain',
-      'pflugerville',
-      'seaholm',
-      'rainey',
-      'brushy creek',
-      'lakeline',
-      'ut austin',
-    ];
-    return (
-      roomStateUpper === 'TX' &&
-      austinKeywords.some(
-        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
-      )
-    );
-  }
-
-  // 4. Houston Metro Match
-  const isHouston =
-    selCityLower.includes('houston') ||
-    selectedCity.id === 'houston' ||
-    selectedCity.id === 'houston-tx';
-  if (isHouston) {
-    const houstonKeywords = [
-      'houston',
-      'sugar land',
-      'katy',
-      'pearland',
-      'galleria',
-      'energy corridor',
-      'medical center',
-      'cinco ranch',
-    ];
-    return (
-      roomStateUpper === 'TX' &&
-      houstonKeywords.some(
-        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
-      )
-    );
-  }
-
-  // 5. Bay Area Match
-  const isBayArea =
-    selCityLower.includes('bay area') ||
-    selCityLower.includes('san jose') ||
-    selectedCity.id === 'bayarea' ||
-    selectedCity.id === 'san-jose-ca' ||
-    ['sunnyvale', 'santa clara', 'fremont', 'cupertino', 'mountain view'].some((c) =>
-      selCityLower.includes(c),
-    );
-  if (isBayArea) {
-    const bayKeywords = [
-      'bay area',
-      'sunnyvale',
-      'san jose',
-      'santa clara',
-      'fremont',
-      'cupertino',
-      'mountain view',
-      'palo alto',
-      'milpitas',
-      'silicon valley',
-    ];
-    return (
-      roomStateUpper === 'CA' &&
-      bayKeywords.some(
-        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
-      )
-    );
-  }
-
-  // 6. Seattle Match
-  const isSeattle =
-    selCityLower.includes('seattle') ||
-    selectedCity.id === 'seattle' ||
-    selectedCity.id === 'seattle-wa' ||
-    ['bellevue', 'redmond', 'kirkland'].some((c) => selCityLower.includes(c));
-  if (isSeattle) {
-    const seattleKeywords = [
-      'seattle',
-      'bellevue',
-      'redmond',
-      'kirkland',
-      'south lake union',
-      'overlake',
-    ];
-    return (
-      roomStateUpper === 'WA' &&
-      seattleKeywords.some(
-        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
-      )
-    );
-  }
-
-  // 7. Chicago Match
-  const isChicago =
-    selCityLower.includes('chicago') ||
-    selectedCity.id === 'chicago' ||
-    selectedCity.id === 'chicago-il' ||
-    ['naperville', 'schaumburg'].some((c) => selCityLower.includes(c));
-  if (isChicago) {
-    const chicagoKeywords = ['chicago', 'naperville', 'schaumburg', 'west loop', 'loop', 'uic'];
-    return (
-      roomStateUpper === 'IL' &&
-      chicagoKeywords.some(
-        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
-      )
-    );
-  }
-
-  // 8. Atlanta Match
-  const isAtlanta =
-    selCityLower.includes('atlanta') ||
-    selectedCity.id === 'atlanta' ||
-    selectedCity.id === 'atlanta-ga' ||
-    ['alpharetta', 'duluth'].some((c) => selCityLower.includes(c));
-  if (isAtlanta) {
-    const atlantaKeywords = ['atlanta', 'alpharetta', 'midtown', 'duluth', 'georgia tech'];
-    return (
-      roomStateUpper === 'GA' &&
-      atlantaKeywords.some(
-        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
-      )
-    );
-  }
-
-  // 9. New York / New Jersey Match
-  const isNyNj =
-    selCityLower.includes('new york') ||
-    selCityLower.includes('jersey') ||
-    selectedCity.id === 'jersey' ||
-    selectedCity.id === 'new-york-ny' ||
-    ['edison', 'iselin', 'manhattan', 'newport', 'journal square'].some((c) =>
-      selCityLower.includes(c),
-    );
-  if (isNyNj) {
-    const nynjKeywords = [
-      'jersey city',
-      'newport',
-      'journal square',
-      'edison',
-      'iselin',
-      'new york',
-      'manhattan',
-      'hoboken',
-    ];
-    return (
-      (roomStateUpper === 'NJ' || roomStateUpper === 'NY') &&
-      nynjKeywords.some(
-        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
-      )
-    );
-  }
-
-  // Default: check if state and/or city name matches
+  // 5. Default fallback: state match + city name match
   const stateMatch = selStateUpper ? roomStateUpper === selStateUpper : true;
   const cityMatch = selCityLower
     ? roomLocLower.includes(selCityLower) || roomTitleLower.includes(selCityLower)
