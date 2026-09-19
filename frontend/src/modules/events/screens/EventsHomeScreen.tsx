@@ -1,9 +1,10 @@
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -66,6 +67,16 @@ export default function EventsHomeScreen() {
     queryFn: listEvents,
     staleTime: 1000 * 60 * 2,
   });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
   const toggleSaveEvent = (id: string) => {
     setSavedEvents((prev) => {
@@ -199,7 +210,18 @@ export default function EventsHomeScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={s.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accentBrand}
+            colors={[colors.accentBrand]}
+          />
+        }
+      >
         {/* Search Input Bar */}
         <View style={s.searchBarContainer}>
           <Text style={s.searchIconEmoji}>🔍</Text>

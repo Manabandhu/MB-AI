@@ -127,7 +127,15 @@ public class RoomsController {
         } else {
             listings = listingService.search(location, roomType, pageable);
         }
-        return listings.map(l -> toResponse(l, viewerId));
+        List<UUID> listingIds = listings.getContent().stream().map(RoomListing::getId).toList();
+        var amenitiesMap = listingService.amenitiesForListings(listingIds);
+        var preferencesMap = listingService.preferencesForListings(listingIds);
+        var savedSet = viewerId == null ? java.util.Set.<UUID>of() : favoriteService.findSavedListingIds(viewerId, listingIds);
+
+        return listings.map(l -> RoomListingResponse.from(l,
+                amenitiesMap.getOrDefault(l.getId(), List.of()),
+                preferencesMap.getOrDefault(l.getId(), List.of()),
+                savedSet.contains(l.getId())));
     }
 
     @PostMapping("/listings")

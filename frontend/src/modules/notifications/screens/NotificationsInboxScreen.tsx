@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -90,11 +91,21 @@ export function NotificationsInboxScreen() {
   const [query, setQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread'>('all');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['notifications', 'inbox'],
     queryFn: getNotificationsInbox,
     retry: false,
   });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
   const rawItems = data?.items ?? [];
   const items = rawItems.length > 0 ? rawItems : DEFAULT_NOTIFICATIONS;
@@ -113,7 +124,18 @@ export function NotificationsInboxScreen() {
 
   return (
     <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}>
+      <ScrollView
+        contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={C.primary}
+            colors={[C.primary]}
+          />
+        }
+      >
         {/* Header Bar */}
         <View style={s.headerRow}>
           <Pressable

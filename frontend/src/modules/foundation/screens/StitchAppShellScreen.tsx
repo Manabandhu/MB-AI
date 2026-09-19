@@ -2,9 +2,10 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,9 +13,11 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
+import { useLocationStore } from '@/lib/locationStore';
+import { LocationSelectorModal } from '@/modules/foundation/components/LocationSelectorModal';
 import {
   getChatShell,
   getCommunityShell,
@@ -71,6 +74,7 @@ const shellApi: Record<ShellKind, () => Promise<HomeShellData>> = {
 export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const insets = useSafeAreaInsets();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['foundation', 'shell', kind],
@@ -81,18 +85,28 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
   const displayName = user?.user_metadata?.full_name ?? data?.greetingName ?? 'friend';
   const avatarInitial = (displayName?.[0] ?? 'U').toUpperCase();
 
-  return (
-    <SafeAreaView style={s.safe}>
-      {/* Sticky header */}
-      <View style={[s.header, isDesktop && s.headerDesktop]}>
-        <View style={s.headerLeft}>
-          <View style={s.logoMark}>
-            <Text style={s.logoText}>M</Text>
-          </View>
-          {isDesktop ? <Text style={s.brandName}>ManaBandhu</Text> : null}
-        </View>
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
-        {isDesktop ? (
+  return (
+    <View style={s.safe}>
+      {/* Top bar header - strictly on desktop */}
+      {isDesktop && (
+        <View style={[s.header, s.headerDesktop]}>
+          <View style={s.headerLeft}>
+            <View style={s.logoMark}>
+              <Text style={s.logoText}>M</Text>
+            </View>
+            <Text style={s.brandName}>ManaBandhu</Text>
+          </View>
+
           <View style={s.desktopNav}>
             {tabs.map((tab) => (
               <Link key={tab.key} href={tab.route as Href} asChild>
@@ -104,25 +118,31 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
               </Link>
             ))}
           </View>
-        ) : null}
 
-        <View style={s.headerRight}>
-          <Pressable
-            accessibilityLabel="Open notifications"
-            accessibilityRole="button"
-            onPress={() => router.push('/notifications')}
-            style={s.headerIconBtn}
-          >
-            <AppIcon color={colors.appPrimary} name="bell" size={18} />
-            <View style={s.notifDot} />
-          </Pressable>
-          <Avatar className="h-9 w-9 bg-primary">
-            <AvatarFallbackText className="text-primary-foreground text-sm font-bold">
-              {avatarInitial}
-            </AvatarFallbackText>
-          </Avatar>
+          <View style={s.headerRight}>
+            <Pressable
+              accessibilityLabel="Open notifications"
+              accessibilityRole="button"
+              onPress={() => router.push('/notifications')}
+              style={s.headerIconBtn}
+            >
+              <AppIcon color={colors.appPrimary} name="bell" size={18} />
+              <View style={s.notifDot} />
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Go to profile"
+              accessibilityRole="button"
+              onPress={() => router.push('/profile' as Href)}
+            >
+              <Avatar className="h-9 w-9 bg-primary">
+                <AvatarFallbackText className="text-primary-foreground text-sm font-bold">
+                  {avatarInitial}
+                </AvatarFallbackText>
+              </Avatar>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Scrollable content */}
       {isLoading ? (
@@ -140,11 +160,31 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+          contentContainerStyle={[
+            s.content,
+            {
+              paddingTop: !isDesktop ? Math.max(insets.top, 12) + 6 : space.x6,
+              paddingBottom: !isDesktop ? (insets.bottom > 0 ? insets.bottom : 8) + 60 : 40,
+            },
+            isDesktop && s.contentDesktop,
+          ]}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.appPrimary}
+              colors={[colors.appPrimary]}
+            />
+          }
         >
           {kind === 'home' && (
-            <HomeShell data={data} displayName={displayName} isDesktop={isDesktop} />
+            <HomeShell
+              data={data}
+              displayName={displayName}
+              avatarInitial={avatarInitial}
+              isDesktop={isDesktop}
+            />
           )}
           {kind === 'explore' && <ExploreShell data={data} isDesktop={isDesktop} />}
           {kind === 'chat' && <ChatShell data={data} isDesktop={isDesktop} />}
@@ -155,9 +195,16 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
         </ScrollView>
       )}
 
-      {/* Bottom tab bar - mobile only */}
+      {/* Bottom tab bar - touches the whole screen edge-to-edge without gaps */}
       {!isDesktop ? (
-        <View style={s.tabBar}>
+        <View
+          style={[
+            s.tabBarEdgeToEdge,
+            {
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+            },
+          ]}
+        >
           {tabs.map((tab) => {
             const active = tab.key === kind;
             return (
@@ -180,7 +227,7 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
           })}
         </View>
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -218,12 +265,16 @@ const _quickActions: {
 export function HomeShell({
   data,
   displayName,
+  avatarInitial,
   isDesktop,
 }: {
   data: HomeShellData;
   displayName: string;
+  avatarInitial: string;
   isDesktop: boolean;
 }) {
+  const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
+  const currentLocation = useLocationStore((s) => s.currentLocation);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const feed = data?.feed ?? [];
@@ -238,23 +289,49 @@ export function HomeShell({
 
   return (
     <>
-      <View style={s.greetRow}>
-        <Text style={s.greetText}>
-          {greeting}, {displayName.split(' ')[0]} 👋
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Explore Rooms"
-          onPress={() => {
-            recordModuleVisit('rooms');
-            router.push('/rooms' as Href);
-          }}
-          style={s.locationChip}
-        >
-          <AppIcon color={colors.appPrimary} name="map" size={12} />
-          <Text style={s.locationText}>Austin & Central TX</Text>
-          <AppIcon color={colors.appPrimary} name="chevron-right" size={10} />
-        </Pressable>
+      <View style={[s.greetRow, !isDesktop && s.greetRowMobile]}>
+        <View style={s.greetLeft}>
+          <Text style={s.greetText}>
+            {greeting}, {displayName.split(' ')[0]} 👋
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Select location"
+            onPress={() => setIsLocationModalVisible(true)}
+            style={s.locationChip}
+          >
+            <AppIcon color={colors.appPrimary} name="map" size={12} />
+            <Text style={s.locationText} numberOfLines={1}>
+              {currentLocation.name}
+            </Text>
+            <AppIcon color={colors.appPrimary} name="chevron-down" size={10} />
+          </Pressable>
+        </View>
+
+        {!isDesktop ? (
+          <View style={s.greetRight}>
+            <Pressable
+              accessibilityLabel="Open notifications"
+              accessibilityRole="button"
+              onPress={() => router.push('/notifications')}
+              style={s.headerIconBtn}
+            >
+              <AppIcon color={colors.appPrimary} name="bell" size={18} />
+              <View style={s.notifDot} />
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Go to profile"
+              accessibilityRole="button"
+              onPress={() => router.push('/profile' as Href)}
+            >
+              <Avatar className="h-10 w-10 bg-primary">
+                <AvatarFallbackText className="text-primary-foreground text-sm font-bold">
+                  {avatarInitial}
+                </AvatarFallbackText>
+              </Avatar>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       <Pressable
@@ -452,6 +529,11 @@ export function HomeShell({
           </Pressable>
         </Link>
       )}
+
+      <LocationSelectorModal
+        visible={isLocationModalVisible}
+        onClose={() => setIsLocationModalVisible(false)}
+      />
     </>
   );
 }
@@ -468,6 +550,7 @@ const exploreCategories = [
 export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const recordModuleVisit = useUserActivityStore((s) => s.recordModuleVisit);
   const feed = data?.feed ?? [];
 
@@ -531,44 +614,112 @@ export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDeskt
 
       {/* Master Modules Directory */}
       <View style={s.sectionHeader}>
-        <Text style={s.sectionTitle}>All Modules & Capabilities</Text>
-        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.muted }}>
-          {filteredModules.length} {filteredModules.length === 1 ? 'feature' : 'features'}
-        </Text>
+        <View>
+          <Text style={s.sectionTitle}>All Modules & Capabilities</Text>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: colors.muted }}>
+            {filteredModules.length} {filteredModules.length === 1 ? 'feature' : 'features'}
+          </Text>
+        </View>
+
+        <View style={s.viewToggleContainer}>
+          <Pressable
+            accessibilityLabel="Switch to Grid view"
+            accessibilityRole="button"
+            onPress={() => setViewMode('grid')}
+            style={[s.viewTogglePill, viewMode === 'grid' && s.viewTogglePillActive]}
+          >
+            <Text style={[s.viewToggleLabel, viewMode === 'grid' && s.viewToggleLabelActive]}>
+              Grid
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Switch to List view"
+            accessibilityRole="button"
+            onPress={() => setViewMode('list')}
+            style={[s.viewTogglePill, viewMode === 'list' && s.viewTogglePillActive]}
+          >
+            <Text style={[s.viewToggleLabel, viewMode === 'list' && s.viewToggleLabelActive]}>
+              List
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
-      <View style={s.exploreHubList}>
-        {filteredModules.map((item) => (
-          <Link key={item.id} href={item.route as Href} asChild>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={item.label}
-              onPress={() => recordModuleVisit(item.id)}
-              style={s.exploreHubCard}
-            >
-              <View style={[s.exploreHubIcon, { backgroundColor: item.bg }]}>
-                <AppIcon color={item.iconColor} name={item.icon} size={22} />
-              </View>
-              <View style={s.exploreHubContent}>
-                <View
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}
-                >
-                  <Text style={s.exploreHubTitle}>{item.label}</Text>
-                  <View style={[s.exploreHubBadge, { backgroundColor: item.bg }]}>
-                    <Text style={[s.exploreHubBadgeText, { color: item.iconColor }]}>
+      {viewMode === 'grid' ? (
+        <View style={s.exploreTileGrid}>
+          {filteredModules.map((item) => (
+            <Link key={item.id} href={item.route as Href} asChild>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+                onPress={() => recordModuleVisit(item.id)}
+                style={StyleSheet.flatten([
+                  s.exploreTileCard,
+                  isDesktop && s.exploreTileCardDesktop,
+                ])}
+              >
+                <View style={s.exploreTileHeader}>
+                  <View style={[s.exploreTileIconWrap, { backgroundColor: item.bg }]}>
+                    <AppIcon color={item.iconColor} name={item.icon} size={20} />
+                  </View>
+                  <View style={[s.exploreTileBadge, { backgroundColor: item.bg }]}>
+                    <Text style={[s.exploreTileBadgeText, { color: item.iconColor }]}>
                       {item.category.toUpperCase()}
                     </Text>
                   </View>
                 </View>
-                <Text style={s.exploreHubDesc} numberOfLines={2}>
-                  {item.description}
-                </Text>
-              </View>
-              <AppIcon color={colors.muted} name="chevron-right" size={16} />
-            </Pressable>
-          </Link>
-        ))}
-      </View>
+
+                <View style={s.exploreTileBody}>
+                  <Text style={s.exploreTileTitle} numberOfLines={1}>
+                    {item.label}
+                  </Text>
+                  <Text style={s.exploreTileDesc} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                </View>
+
+                <View style={s.exploreTileFooter}>
+                  <Text style={s.exploreTileAction}>Explore</Text>
+                  <AppIcon color={colors.appPrimary} name="chevron-right" size={11} />
+                </View>
+              </Pressable>
+            </Link>
+          ))}
+        </View>
+      ) : (
+        <View style={s.exploreHubList}>
+          {filteredModules.map((item) => (
+            <Link key={item.id} href={item.route as Href} asChild>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+                onPress={() => recordModuleVisit(item.id)}
+                style={s.exploreHubCard}
+              >
+                <View style={[s.exploreHubIcon, { backgroundColor: item.bg }]}>
+                  <AppIcon color={item.iconColor} name={item.icon} size={22} />
+                </View>
+                <View style={s.exploreHubContent}>
+                  <View
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}
+                  >
+                    <Text style={s.exploreHubTitle}>{item.label}</Text>
+                    <View style={[s.exploreHubBadge, { backgroundColor: item.bg }]}>
+                      <Text style={[s.exploreHubBadgeText, { color: item.iconColor }]}>
+                        {item.category.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={s.exploreHubDesc} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                </View>
+                <AppIcon color={colors.muted} name="chevron-right" size={16} />
+              </Pressable>
+            </Link>
+          ))}
+        </View>
+      )}
 
       {/* Community Feed / Highlights */}
       {feed.length > 0 ? (
@@ -634,7 +785,7 @@ export function ExploreShell({ data, isDesktop }: { data: HomeShellData; isDeskt
 }
 
 // ─── CHAT SHELL ───────────────────────────────────────────────────────────────
-export function ChatShell({ isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
+export function ChatShell({ isDesktop: _isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['chat', 'conversations'],
     queryFn: async () => {
@@ -725,7 +876,13 @@ export function ChatShell({ isDesktop }: { data: HomeShellData; isDesktop: boole
 // ─── COMMUNITY SHELL ──────────────────────────────────────────────────────────
 const communityTabs = ['Feed', 'Groups', 'Events'];
 
-export function CommunityShell({ data, isDesktop }: { data: HomeShellData; isDesktop: boolean }) {
+export function CommunityShell({
+  data,
+  isDesktop: _isDesktop,
+}: {
+  data: HomeShellData;
+  isDesktop: boolean;
+}) {
   const [activeTab, setActiveTab] = useState('Feed');
   const feedPosts = (data?.feed ?? []).filter((item) => item.kind === 'post');
 
@@ -1168,7 +1325,7 @@ const s = StyleSheet.create({
     right: 5,
     width: 9,
   },
-  content: { gap: space.x4, padding: space.x4, paddingBottom: 100 },
+  content: { gap: space.x4, paddingHorizontal: space.x4 },
   contentDesktop: { paddingHorizontal: space.x8, paddingTop: space.x6 },
   searchBar: {
     alignItems: 'center',
@@ -1198,10 +1355,32 @@ const s = StyleSheet.create({
   },
   sectionTitle: { color: colors.ink, fontSize: 18, fontWeight: '800' },
   seeAll: { color: colors.appPrimary, fontSize: 13, fontWeight: '800' },
-  greetRow: { gap: 4 },
+  greetRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: space.x3,
+    marginBottom: space.x1,
+  },
+  greetRowMobile: {
+    paddingTop: space.x1,
+  },
+  greetLeft: { flex: 1, gap: 4 },
+  greetRight: { alignItems: 'center', flexDirection: 'row', gap: space.x3 },
   greetText: { color: colors.ink, fontSize: 22, fontWeight: '800' },
-  locationChip: { alignItems: 'center', flexDirection: 'row', gap: 4 },
-  locationText: { color: colors.muted, fontSize: 13, fontWeight: '600' },
+  locationChip: {
+    alignSelf: 'flex-start',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: colors.surfaceContainerLow,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHigh,
+  },
+  locationText: { color: colors.appPrimary, fontSize: 12, fontWeight: '700', maxWidth: 200 },
   qaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
   qaGridDesktop: { gap: 14, justifyContent: 'flex-start' },
   qaTile: {
@@ -1363,6 +1542,99 @@ const s = StyleSheet.create({
     paddingVertical: 3,
   },
   exploreBadgeText: { fontSize: 10, fontWeight: '800' },
+  viewToggleContainer: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHigh,
+  },
+  viewTogglePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+  },
+  viewTogglePillActive: {
+    backgroundColor: colors.appPrimary,
+  },
+  viewToggleLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.muted,
+  },
+  viewToggleLabelActive: {
+    color: '#ffffff',
+  },
+  exploreTileGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  exploreTileCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 12,
+    width: '48.3%',
+    minHeight: 148,
+    justifyContent: 'space-between',
+  },
+  exploreTileCardDesktop: {
+    width: '31.8%',
+    padding: 16,
+    minHeight: 160,
+  },
+  exploreTileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  exploreTileIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exploreTileBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  exploreTileBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  exploreTileBody: {
+    flex: 1,
+    gap: 3,
+  },
+  exploreTileTitle: {
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  exploreTileDesc: {
+    color: colors.muted,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  exploreTileFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 8,
+  },
+  exploreTileAction: {
+    color: colors.appPrimary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
   exploreHubList: { gap: 10 },
   exploreHubCard: {
     alignItems: 'center',
@@ -1642,15 +1914,22 @@ const s = StyleSheet.create({
   settingsLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
   signOutRow: {},
   signOutLabel: { color: '#ba1a1a', fontSize: 14, fontWeight: '700' },
-  tabBar: {
-    backgroundColor: 'rgba(250,248,255,0.97)',
+  tabBarEdgeToEdge: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
     borderTopColor: colors.border,
     borderTopWidth: 1,
     flexDirection: 'row',
-    height: 70,
-    paddingHorizontal: space.x2,
+    justifyContent: 'space-around',
+    paddingTop: 8,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  tab: { alignItems: 'center', flex: 1, gap: 3, justifyContent: 'center', paddingTop: 6 },
+  tab: { alignItems: 'center', flex: 1, gap: 3, justifyContent: 'center' },
   tabPill: {
     backgroundColor: colors.appPrimary,
     borderRadius: 3,

@@ -1,10 +1,11 @@
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
+import { useLocationStore } from '@/lib/locationStore';
 import { listJobPostings } from '@/modules/jobs/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
@@ -76,7 +78,19 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [cityModalVisible, setCityModalVisible] = useState(false);
-  const [selectedCity, setSelectedCity] = useState('Austin & Bay Area');
+  const globalLocation = useLocationStore((s) => s.currentLocation);
+  const setGlobalLocation = useLocationStore((s) => s.setLocation);
+  const selectedCity = globalLocation.name;
+  const setSelectedCity = (cityName: string) => {
+    setGlobalLocation({
+      id: cityName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      name: cityName,
+      cityName: cityName.split(',')[0]?.trim() || cityName,
+      stateCode: cityName.split(',')[1]?.trim() || 'US',
+      latitude: 30.2672,
+      longitude: -97.7431,
+    });
+  };
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
 
   // Fetch live jobs from Supabase via Spring Boot API
@@ -89,6 +103,16 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
     queryFn: () => listJobPostings(0, 50),
     staleTime: 1000 * 60 * 2,
   });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
   const toggleSaveJob = (id: string) => {
     setSavedJobs((prev) => {
@@ -212,7 +236,18 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={s.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accentBrand}
+            colors={[colors.accentBrand]}
+          />
+        }
+      >
         {/* Search Card */}
         <View style={s.searchCard}>
           <View style={s.searchInputRow}>

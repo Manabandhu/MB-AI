@@ -31,6 +31,8 @@ export interface UniversalMapViewProps {
   style?: StyleProp<ViewStyle>;
   showsUserLocation?: boolean;
   mapType?: 'standard' | 'satellite' | 'hybrid';
+  is3D?: boolean;
+  centerCoordinate?: { latitude: number; longitude: number; timestamp?: number } | null;
   children?: React.ReactNode;
   // Draw-to-filter props
   enableDrawing?: boolean;
@@ -54,6 +56,8 @@ export function UniversalMapView({
   style,
   showsUserLocation = false,
   mapType = 'standard',
+  is3D = false,
+  centerCoordinate,
   children,
   enableDrawing = true,
   drawnPolygon = null,
@@ -65,6 +69,19 @@ export function UniversalMapView({
   const [currentScreenPoints, setCurrentScreenPoints] = useState<Array<{ x: number; y: number }>>(
     [],
   );
+
+  // Tilt camera to 3D perspective or flat 2D
+  useEffect(() => {
+    if (!mapRef.current) return;
+    mapRef.current
+      .getCamera()
+      .then((cam) => {
+        mapRef.current?.animateCamera({ ...cam, pitch: is3D ? 55 : 0 }, { duration: 400 });
+      })
+      .catch(() => {
+        mapRef.current?.animateCamera({ pitch: is3D ? 55 : 0 }, { duration: 400 });
+      });
+  }, [is3D]);
 
   // Smoothly center the map on the selected marker when it changes
   useEffect(() => {
@@ -82,6 +99,20 @@ export function UniversalMapView({
       );
     }
   }, [selectedMarkerId, markers]);
+
+  // Animate to centerCoordinate when GPS or recenter is requested
+  useEffect(() => {
+    if (!centerCoordinate) return;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: centerCoordinate.latitude,
+        longitude: centerCoordinate.longitude,
+        latitudeDelta: 0.08,
+        longitudeDelta: 0.08,
+      },
+      600,
+    );
+  }, [centerCoordinate]);
 
   // PanResponder to track finger drawing gestures when drawing mode is active
   const panResponder = useMemo(
@@ -144,6 +175,7 @@ export function UniversalMapView({
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
         showsUserLocation={showsUserLocation}
+        showsMyLocationButton={true}
         showsCompass={true}
         showsScale={true}
         mapType={mapType}

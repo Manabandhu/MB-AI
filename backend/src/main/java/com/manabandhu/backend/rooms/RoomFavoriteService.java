@@ -31,6 +31,14 @@ public class RoomFavoriteService {
     }
 
     @Transactional(readOnly = true)
+    public java.util.Set<UUID> findSavedListingIds(UUID userId, java.util.Collection<UUID> listingIds) {
+        if (userId == null || listingIds == null || listingIds.isEmpty()) return java.util.Set.of();
+        return repository.findByUserIdAndListingIdIn(userId, listingIds).stream()
+                .map(RoomFavorite::getListingId)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    @Transactional(readOnly = true)
     public List<RoomListing> findSavedListings(UUID userId) {
         return listingRepository.findSavedListingsByUserId(userId);
     }

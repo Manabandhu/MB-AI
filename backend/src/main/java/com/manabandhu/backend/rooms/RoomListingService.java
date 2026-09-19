@@ -194,9 +194,25 @@ public class RoomListingService {
     }
 
     @Transactional(readOnly = true)
+    public java.util.Map<UUID, List<String>> amenitiesForListings(java.util.Collection<UUID> listingIds) {
+        if (listingIds == null || listingIds.isEmpty()) return java.util.Map.of();
+        return amenityRepository.findByListingIdInOrderByCreatedAtAsc(listingIds).stream()
+                .collect(java.util.stream.Collectors.groupingBy(RoomAmenity::getListingId,
+                        java.util.stream.Collectors.mapping(RoomAmenity::getAmenity, java.util.stream.Collectors.toList())));
+    }
+
+    @Transactional(readOnly = true)
     public List<String> preferencesFor(UUID listingId) {
         return preferenceRepository.findByListingIdOrderByCreatedAtAsc(listingId).stream()
                 .map(RoomPreference::getPreference).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<UUID, List<String>> preferencesForListings(java.util.Collection<UUID> listingIds) {
+        if (listingIds == null || listingIds.isEmpty()) return java.util.Map.of();
+        return preferenceRepository.findByListingIdInOrderByCreatedAtAsc(listingIds).stream()
+                .collect(java.util.stream.Collectors.groupingBy(RoomPreference::getListingId,
+                        java.util.stream.Collectors.mapping(RoomPreference::getPreference, java.util.stream.Collectors.toList())));
     }
 
     public void validateTransition(String from, String to, boolean isAdmin) {

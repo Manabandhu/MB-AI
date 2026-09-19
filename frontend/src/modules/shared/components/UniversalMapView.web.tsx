@@ -29,6 +29,8 @@ export interface UniversalMapViewProps {
   style?: StyleProp<ViewStyle>;
   showsUserLocation?: boolean;
   mapType?: 'standard' | 'satellite' | 'hybrid';
+  is3D?: boolean;
+  centerCoordinate?: { latitude: number; longitude: number; timestamp?: number } | null;
   children?: React.ReactNode;
   // Draw-to-filter props
   enableDrawing?: boolean;
@@ -63,6 +65,15 @@ interface MapKitMap {
     center: MapKitCoordinate;
     span: { latitudeDelta: number; longitudeDelta: number };
   };
+  mapType?: string;
+  showsMapTypeControl?: boolean;
+  showsUserLocationControl?: boolean;
+  showsUserLocation?: boolean;
+  showsZoomControl?: boolean;
+  showsCompass?: unknown;
+  showsScale?: unknown;
+  padding?: unknown;
+  camera?: { pitch?: number };
   annotations?: MapKitAnnotation[];
   overlays?: MapKitOverlay[];
   removeAnnotations: (annotations: MapKitAnnotation[]) => void;
@@ -70,6 +81,7 @@ interface MapKitMap {
   removeOverlays?: (overlays: MapKitOverlay[]) => void;
   addOverlay?: (overlay: MapKitOverlay) => void;
   setCenterAnimated: (coord: MapKitCoordinate, animated: boolean) => void;
+  setRegionAnimated?: (region: unknown, animated?: boolean) => void;
 }
 
 interface MapKitNamespace {
@@ -78,7 +90,15 @@ interface MapKitNamespace {
   Coordinate: new (lat: number, lng: number) => MapKitCoordinate;
   CoordinateSpan: new (latDelta: number, lngDelta: number) => unknown;
   CoordinateRegion: new (center: MapKitCoordinate, span: unknown) => unknown;
-  Map: new (container: HTMLElement, options: Record<string, unknown>) => MapKitMap;
+  Padding?: new (top: number, right: number, bottom: number, left: number) => unknown;
+  Map: {
+    new (container: HTMLElement, options: Record<string, unknown>): MapKitMap;
+    MapTypes?: {
+      Standard: string;
+      Satellite: string;
+      Hybrid: string;
+    };
+  };
   MarkerAnnotation: new (
     coord: MapKitCoordinate,
     options: Record<string, unknown>,
@@ -90,6 +110,8 @@ interface MapKitNamespace {
   Style?: new (options: Record<string, unknown>) => unknown;
   FeatureVisibility: {
     Adaptive: unknown;
+    Visible?: unknown;
+    Hidden?: unknown;
   };
 }
 
@@ -106,6 +128,10 @@ export function UniversalMapView({
   selectedMarkerId,
   onSelectMarker,
   style,
+  showsUserLocation: _showsUserLocation = false,
+  mapType = 'standard',
+  is3D = false,
+  centerCoordinate,
   children,
   enableDrawing = true,
   drawnPolygon = null,
@@ -185,11 +211,23 @@ export function UniversalMapView({
 
         const map = new window.mapkit.Map(containerRef.current, {
           region,
+          showsUserLocation: true,
           showsUserLocationControl: true,
           showsCompass: window.mapkit.FeatureVisibility.Adaptive,
           showsZoomControl: true,
           showsMapTypeControl: true,
+          showsScale: window.mapkit.FeatureVisibility.Adaptive,
         });
+
+        map.showsUserLocation = true;
+        map.showsUserLocationControl = true;
+        map.showsZoomControl = true;
+        map.showsMapTypeControl = true;
+        map.showsCompass = window.mapkit.FeatureVisibility.Adaptive;
+        map.showsScale = window.mapkit.FeatureVisibility.Adaptive;
+        if (window.mapkit.Padding) {
+          map.padding = new window.mapkit.Padding(12, 12, 12, 12);
+        }
 
         mapInstanceRef.current = map;
         setMapkitReady(true);
@@ -260,10 +298,77 @@ export function UniversalMapView({
     if (!mapInstanceRef.current || !window.mapkit || !selectedMarkerId) return;
     const selected = markers.find((m) => m.id === selectedMarkerId);
     if (selected?.latitude && selected.longitude) {
-      const coord = new window.mapkit.Coordinate(selected.latitude, selected.longitude);
-      mapInstanceRef.current.setCenterAnimated(coord, true);
+      const center = new window.mapkit.Coordinate(selected.latitude, selected.longitude);
+      const span = new window.mapkit.CoordinateSpan(0.04, 0.04);
+      const region = new window.mapkit.CoordinateRegion(center, span);
+      const map = mapInstanceRef.current;
+      if (typeof map.setRegionAnimated === 'function') {
+        map.setRegionAnimated(region);
+      }
     }
   }, [selectedMarkerId, markers]);
+
+  // Sync mapType with MapKit instance
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.mapkit || !mapkitReady) return;
+    const map = mapInstanceRef.current;
+    const mapkit = window.mapkit;
+    if (mapkit?.Map?.MapTypes) {
+      if (mapType === 'satellite') {
+        map.mapType = mapkit.Map.MapTypes.Satellite;
+      } else if (mapType === 'hybrid') {
+        map.mapType = mapkit.Map.MapTypes.Hybrid;
+      } else {
+        map.mapType = mapkit.Map.MapTypes.Standard;
+      }
+    }
+  }, [mapType, mapkitReady]);
+
+  // Adjust camera pitch for 3D/2D toggle
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.45s ease, filter 0.45s ease';
+      containerRef.current.style.transform = is3D
+        ? 'perspective(900px) rotateX(28deg) scale(1.04)'
+        : 'none';
+      containerRef.current.style.transformOrigin = '50% 80%';
+    }
+
+    if (!mapInstanceRef.current || !mapkitReady) return;
+    const map = mapInstanceRef.current;
+    try {
+      if (map.camera) {
+        map.camera.pitch = is3D ? 55 : 0;
+      } else if ('cameraPitch' in map) {
+        (map as unknown as { cameraPitch: number }).cameraPitch = is3D ? 55 : 0;
+      }
+    } catch {
+      // ignore if unsupported
+    }
+  }, [is3D, mapkitReady]);
+
+  // Animate to centerCoordinate when GPS or recenter is requested
+  useEffect(() => {
+    if (!centerCoordinate || !mapInstanceRef.current || !window.mapkit || !mapkitReady) return;
+    const map = mapInstanceRef.current;
+    const mapkit = window.mapkit;
+    if (mapkit.Coordinate) {
+      const coord = new window.mapkit.Coordinate(
+        centerCoordinate.latitude,
+        centerCoordinate.longitude,
+      );
+      if (typeof map.setCenterAnimated === 'function') {
+        map.setCenterAnimated(coord, true);
+      } else if (
+        typeof map.setRegionAnimated === 'function' &&
+        mapkit.CoordinateRegion &&
+        mapkit.CoordinateSpan
+      ) {
+        const span = new window.mapkit.CoordinateSpan(0.08, 0.08);
+        map.setRegionAnimated(new mapkit.CoordinateRegion(coord, span), true);
+      }
+    }
+  }, [centerCoordinate, mapkitReady]);
 
   // 4. Sync drawnPolygon with Apple MapKit Overlays
   useEffect(() => {
@@ -499,7 +604,7 @@ export function UniversalMapView({
           style={{
             position: 'absolute',
             top: '14px',
-            right: '14px',
+            left: '14px',
             zIndex: 20,
             display: 'flex',
             gap: '8px',

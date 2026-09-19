@@ -40,9 +40,11 @@ export async function listRoomListings(
     lat?: number;
     lng?: number;
     radiusMiles?: number;
+    size?: number;
   } = {},
 ): Promise<RoomListing[]> {
   const query = new URLSearchParams();
+  query.set('size', String(params.size ?? 500));
   if (params.location) query.set('location', params.location);
   if (params.roomType) query.set('roomType', params.roomType);
   if (params.city) query.set('city', params.city);

@@ -2,7 +2,7 @@ import { radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BackHandler,
   FlatList,
@@ -44,11 +44,21 @@ export function RoomFavoritesScreen() {
     return () => sub.remove();
   }, [router]);
 
-  const { data: backendFavorites } = useQuery({
+  const { data: backendFavorites, refetch } = useQuery({
     queryKey: ['rooms', 'favorites'],
     queryFn: getFavorites,
     retry: false,
   });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
   useEffect(() => {
     if (backendFavorites && backendFavorites.length > 0) {
@@ -102,6 +112,8 @@ export function RoomFavoritesScreen() {
         renderItem={({ item: room }) => (
           <SavedRoomCard room={room} onUnsave={() => handleUnsave(room.id)} />
         )}
+        refreshing={isRefreshing}
+        onRefresh={onRefresh}
         contentContainerStyle={[styles.scrollContent, styles.listGrid]}
         ItemSeparatorComponent={() => <View style={{ height: space.x3 }} />}
         initialNumToRender={6}
@@ -234,11 +246,21 @@ export function RoomMyListingsScreen() {
     return () => sub.remove();
   }, [router]);
 
-  const { data } = useQuery({
+  const { data, refetch } = useQuery({
     queryKey: ['rooms', 'my-listings'],
     queryFn: getMyListings,
     retry: false,
   });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
   const listings = data ?? [];
 
@@ -515,6 +537,8 @@ export function RoomMyListingsScreen() {
             </View>
           );
         }}
+        refreshing={isRefreshing}
+        onRefresh={onRefresh}
         contentContainerStyle={[styles.scrollContent, styles.listGrid]}
         ItemSeparatorComponent={() => <View style={{ height: space.x3 }} />}
         initialNumToRender={6}

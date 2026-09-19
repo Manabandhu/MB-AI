@@ -1,4 +1,4 @@
-import { City, State } from 'country-state-city';
+import { US_CITIES, US_STATES } from './usLocationData';
 
 export type USState = {
   code: string;
@@ -27,15 +27,13 @@ export type ZipLookupResult = {
 
 // 1. Free Country/State/City lookup (100% offline, zero API key)
 export function getUSStates(): USState[] {
-  return State.getStatesOfCountry('US').map((s) => ({
-    code: s.isoCode,
-    name: s.name,
-  }));
+  return US_STATES;
 }
 
 export function getCitiesByState(stateCode: string): USCity[] {
   if (!stateCode) return [];
-  return City.getCitiesOfState('US', stateCode).map((c) => ({
+  const upper = stateCode.toUpperCase();
+  return US_CITIES.filter((c) => c.state === upper).map((c) => ({
     name: c.name,
   }));
 }
@@ -119,14 +117,13 @@ let cachedUSCities: SearchCityResult[] | null = null;
 
 export function searchAllUSCities(query: string, maxResults = 30): SearchCityResult[] {
   if (!cachedUSCities) {
-    const raw = City.getCitiesOfCountry('US') || [];
-    cachedUSCities = raw.map((c) => ({
-      id: `${c.name.toLowerCase()}-${c.stateCode.toLowerCase()}`,
-      name: `${c.name}, ${c.stateCode}`,
+    cachedUSCities = US_CITIES.map((c) => ({
+      id: `${c.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${c.state.toLowerCase()}`,
+      name: `${c.name}, ${c.state}`,
       cityName: c.name,
-      stateCode: c.stateCode,
-      latitude: Number(c.latitude) || 0,
-      longitude: Number(c.longitude) || 0,
+      stateCode: c.state,
+      latitude: c.lat,
+      longitude: c.lng,
     }));
   }
 

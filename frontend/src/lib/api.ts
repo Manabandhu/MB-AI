@@ -13,7 +13,13 @@ export function getResolvedApiUrl(): string {
     if (currentHost && currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
       try {
         const u = new URL(configured);
-        if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+        const isLocalOrLan =
+          u.hostname === 'localhost' ||
+          u.hostname === '127.0.0.1' ||
+          /^192\.168\./.test(u.hostname) ||
+          /^10\./.test(u.hostname) ||
+          /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(u.hostname);
+        if (isLocalOrLan) {
           u.hostname = currentHost;
           return u.toString().replace(/\/$/, '');
         }
@@ -25,19 +31,29 @@ export function getResolvedApiUrl(): string {
   if (Platform.OS !== 'web') {
     try {
       const u = new URL(configured);
-      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
-        const hostUri = Constants.expoConfig?.hostUri;
-        if (hostUri) {
-          const metroHost = hostUri.split(':')[0];
-          if (metroHost) {
+      const hostUri =
+        Constants.expoConfig?.hostUri ??
+        (Constants as unknown as { manifest2?: { extra?: { expoClient?: { hostUri?: string } } } })
+          ?.manifest2?.extra?.expoClient?.hostUri;
+
+      if (hostUri) {
+        const metroHost = String(hostUri).split(':')[0];
+        if (metroHost) {
+          const isLocalOrLan =
+            u.hostname === 'localhost' ||
+            u.hostname === '127.0.0.1' ||
+            /^192\.168\./.test(u.hostname) ||
+            /^10\./.test(u.hostname) ||
+            /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(u.hostname);
+          if (isLocalOrLan) {
             u.hostname = metroHost;
             return u.toString().replace(/\/$/, '');
           }
         }
-        if (Platform.OS === 'android') {
-          u.hostname = '10.0.2.2';
-          return u.toString().replace(/\/$/, '');
-        }
+      }
+      if (Platform.OS === 'android' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1')) {
+        u.hostname = '10.0.2.2';
+        return u.toString().replace(/\/$/, '');
       }
     } catch {}
   }
@@ -108,15 +124,26 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   headers.set('Content-Type', 'application/json');
   for (const [name, value] of Object.entries(auth)) headers.set(name, value);
 
-  const response = await fetch(`${getResolvedApiUrl()}${path}`, {
-    ...init,
-    headers,
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    const text = await response.text().catch(() => '');
-    throw new AuthError(text || `Authentication required (${response.status})`, response.status);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  if (init.signal) {
+    init.signal.addEventListener('abort', () => controller.abort());
   }
 
-  return response;
+  try {
+    const response = await fetch(`${getResolvedApiUrl()}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      const text = await response.text().catch(() => '');
+      throw new AuthError(text || `Authentication required (${response.status})`, response.status);
+    }
+
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

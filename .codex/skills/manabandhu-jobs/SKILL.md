@@ -78,4 +78,4 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - Fallback cleanup: deleted `jobsFallbacks.ts` and removed inline fallbacks from `JobsSearchScreen` and `SavedJobsScreen` in favor of backend API endpoints and empty/error states.
 - Hardcoded data cleanup: removed `getReferrerForJob` and `getCompanyDetails` containing hardcoded personas ("Sneha Murthy", "Vikram Patel", "Karthik Raman", "Ananya Rao", "Rajesh Verma") and static quotes from `JobsHomeScreen` and `JobDetailsScreen` in favor of dynamic community referral support.
 - Repo-Wide Code Review & Defect Remediation: Fixed `PostJobScreen.tsx` dead mutation by adding `createJobPosting()` API call with TanStack `useMutation` and `queryClient.invalidateQueries({ queryKey: ['jobs'] })`; added defensive parameter guard and empty/error states in `JobDetailsScreen.tsx`; fixed React hook order violation (`useHookAtTopLevel`) in `JobsSearchScreen.tsx`.
-
+- Global Location Store Sync: Integrated `JobsHomeScreen.tsx` with `useLocationStore` (`frontend/src/lib/locationStore.ts`), ensuring selected tech hub reactively reflects the global app location chosen on the Home screen.

@@ -2,13 +2,14 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useLocationStore } from '@/lib/locationStore';
 import { listRideOffers, provisionRideChat } from '@/modules/rides/api';
 import type { RideOffer } from '@/modules/rides/types';
 import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
@@ -154,8 +156,38 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
   const isLargeDesktop = width >= 1024;
   const insets = useSafeAreaInsets();
 
-  // Search & Filter State
-  const [selectedCity, setSelectedCity] = useState<CityOption>(CITIES[0]);
+  // Search & Filter State (Global Location sync)
+  const globalLocation = useLocationStore((s) => s.currentLocation);
+  const setGlobalLocation = useLocationStore((s) => s.setLocation);
+
+  const selectedCity: CityOption = useMemo(() => {
+    const matched = CITIES.find(
+      (c) =>
+        c.name.toLowerCase().includes(globalLocation.cityName.toLowerCase()) ||
+        globalLocation.name.toLowerCase().includes(c.name.toLowerCase()),
+    );
+    if (matched) return matched;
+    return {
+      id: globalLocation.id,
+      name: globalLocation.name,
+      count: 50,
+      corridors: [
+        `${globalLocation.cityName} Tech Hubs`,
+        `${globalLocation.cityName} Airport Express`,
+      ],
+    };
+  }, [globalLocation]);
+
+  const setSelectedCity = (city: CityOption) => {
+    setGlobalLocation({
+      id: city.id,
+      name: city.name,
+      cityName: city.name.split(',')[0]?.trim() || city.name,
+      stateCode: city.name.split(',')[1]?.trim() || 'US',
+      latitude: 30.2672,
+      longitude: -97.7431,
+    });
+  };
   const [showCityModal, setShowCityModal] = useState(false);
   const [pickupQuery, setPickupQuery] = useState('');
   const [dropoffQuery, setDropoffQuery] = useState('');
@@ -249,6 +281,16 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
         avoidTolls: activeCategory === 'notolls' || filterNoTolls ? true : undefined,
       }),
   });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
   // Enrich raw rides with driver and presentation data
   const enrichedRides: EnrichedRide[] = useMemo(() => {
@@ -444,7 +486,18 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.appPrimary}
+            colors={[colors.appPrimary]}
+          />
+        }
+      >
         <View style={[styles.mainContainer, isDesktop && styles.mainContainerDesktop]}>
           {/* ── Route Search Card ───────────────────────────────────────────── */}
           <View style={styles.searchCard}>

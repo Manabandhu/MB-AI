@@ -8,5 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface RoomPreferenceRepository extends JpaRepository<RoomPreference, UUID> {
     List<RoomPreference> findByListingIdOrderByCreatedAtAsc(UUID listingId);
 
+    List<RoomPreference> findByListingIdInOrderByCreatedAtAsc(java.util.Collection<UUID> listingIds);
+
     void deleteByListingId(UUID listingId);
 }

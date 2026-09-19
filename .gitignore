@@ -12,5 +12,6 @@ target/
 org/
 *.iml
 .idea/
+scratch/
 
 

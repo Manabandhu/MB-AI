@@ -2,14 +2,16 @@ import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   BackHandler,
   Modal,
   PanResponder,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useLocationStore } from '@/lib/locationStore';
 import { listRoomListings } from '@/modules/rooms/api';
 import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
 import type { RoomListing } from '@/modules/rooms/types';
@@ -137,6 +140,20 @@ const CITIES: CityOption[] = [
     latitude: 35.2271,
     longitude: -80.8431,
   },
+  {
+    id: 'columbus',
+    name: 'Columbus, OH',
+    landmarks: ['Dublin', 'Polaris', 'OSU Campus', 'Cleveland', 'Cincinnati'],
+    latitude: 40.0992,
+    longitude: -83.1141,
+  },
+  {
+    id: 'all',
+    name: 'All Cities (USA)',
+    landmarks: ['Nationwide', 'Texas', 'Ohio', 'California', 'Washington'],
+    latitude: 39.8283,
+    longitude: -98.5795,
+  },
 ];
 
 type ExtendedRoom = RoomListing & {
@@ -144,6 +161,265 @@ type ExtendedRoom = RoomListing & {
   mapY: number; // percentage down map
   verifiedHost: boolean;
 };
+
+export function matchesRoomLocation(
+  room: ExtendedRoom,
+  selectedCity: CityOption,
+  globalLocation: { name: string; cityName?: string; stateCode?: string },
+): boolean {
+  if (
+    !globalLocation.name ||
+    selectedCity.id === 'all' ||
+    selectedCity.id === 'all-usa' ||
+    selectedCity.name.toLowerCase().includes('all cities')
+  ) {
+    return true;
+  }
+
+  const selCityLower = (globalLocation.cityName || selectedCity.name.split(',')[0] || '')
+    .toLowerCase()
+    .trim();
+  const selStateUpper = (globalLocation.stateCode || selectedCity.name.split(',')[1] || '')
+    .toUpperCase()
+    .trim();
+  const roomLocLower = (room.broadLocation ?? '').toLowerCase();
+  const roomTitleLower = room.title.toLowerCase();
+  const roomDescLower = (room.description ?? '').toLowerCase();
+  const roomStateUpper = (room.stateCode ?? '').toUpperCase().trim();
+
+  // 1. Dallas / DFW Metro Match
+  const isDfw =
+    selCityLower.includes('dallas') ||
+    selCityLower.includes('dfw') ||
+    selectedCity.id === 'dfw' ||
+    selectedCity.id === 'dallas-tx';
+  if (isDfw) {
+    const dfwKeywords = [
+      'dallas',
+      'dfw',
+      'irving',
+      'plano',
+      'frisco',
+      'richardson',
+      'carrollton',
+      'mckinney',
+      'fort worth',
+      'arlington',
+      'coppell',
+      'garland',
+      'las colinas',
+      'valley ranch',
+      'legacy west',
+      'waterview',
+      'ut dallas',
+      'uta',
+    ];
+    return (
+      roomStateUpper === 'TX' &&
+      dfwKeywords.some(
+        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
+      )
+    );
+  }
+
+  // 2. Ohio Match (Columbus, Dublin, Cleveland, Cincinnati, Mason, Dayton, Akron, Toledo)
+  const isOhio =
+    selStateUpper === 'OH' ||
+    selCityLower.includes('ohio') ||
+    selectedCity.id === 'columbus' ||
+    selectedCity.id === 'columbus-oh' ||
+    ['columbus', 'dublin', 'cleveland', 'cincinnati', 'mason', 'dayton', 'akron', 'toledo'].some(
+      (c) => selCityLower.includes(c),
+    );
+  if (isOhio) {
+    if (roomStateUpper !== 'OH') return false;
+    if (selCityLower.includes('dublin')) {
+      return roomLocLower.includes('dublin') || roomTitleLower.includes('dublin');
+    }
+    if (selCityLower.includes('cleveland')) {
+      return roomLocLower.includes('cleveland') || roomTitleLower.includes('cleveland');
+    }
+    if (selCityLower.includes('cincinnati') || selCityLower.includes('mason')) {
+      return (
+        roomLocLower.includes('cincinnati') ||
+        roomLocLower.includes('mason') ||
+        roomTitleLower.includes('cincinnati') ||
+        roomTitleLower.includes('mason')
+      );
+    }
+    return true; // All OH listings
+  }
+
+  // 3. Austin Metro Match
+  const isAustin =
+    selCityLower.includes('austin') ||
+    selectedCity.id === 'austin' ||
+    selectedCity.id === 'austin-tx';
+  if (isAustin) {
+    const austinKeywords = [
+      'austin',
+      'round rock',
+      'cedar park',
+      'domain',
+      'pflugerville',
+      'seaholm',
+      'rainey',
+      'brushy creek',
+      'lakeline',
+      'ut austin',
+    ];
+    return (
+      roomStateUpper === 'TX' &&
+      austinKeywords.some(
+        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
+      )
+    );
+  }
+
+  // 4. Houston Metro Match
+  const isHouston =
+    selCityLower.includes('houston') ||
+    selectedCity.id === 'houston' ||
+    selectedCity.id === 'houston-tx';
+  if (isHouston) {
+    const houstonKeywords = [
+      'houston',
+      'sugar land',
+      'katy',
+      'pearland',
+      'galleria',
+      'energy corridor',
+      'medical center',
+      'cinco ranch',
+    ];
+    return (
+      roomStateUpper === 'TX' &&
+      houstonKeywords.some(
+        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
+      )
+    );
+  }
+
+  // 5. Bay Area Match
+  const isBayArea =
+    selCityLower.includes('bay area') ||
+    selCityLower.includes('san jose') ||
+    selectedCity.id === 'bayarea' ||
+    selectedCity.id === 'san-jose-ca' ||
+    ['sunnyvale', 'santa clara', 'fremont', 'cupertino', 'mountain view'].some((c) =>
+      selCityLower.includes(c),
+    );
+  if (isBayArea) {
+    const bayKeywords = [
+      'bay area',
+      'sunnyvale',
+      'san jose',
+      'santa clara',
+      'fremont',
+      'cupertino',
+      'mountain view',
+      'palo alto',
+      'milpitas',
+      'silicon valley',
+    ];
+    return (
+      roomStateUpper === 'CA' &&
+      bayKeywords.some(
+        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
+      )
+    );
+  }
+
+  // 6. Seattle Match
+  const isSeattle =
+    selCityLower.includes('seattle') ||
+    selectedCity.id === 'seattle' ||
+    selectedCity.id === 'seattle-wa' ||
+    ['bellevue', 'redmond', 'kirkland'].some((c) => selCityLower.includes(c));
+  if (isSeattle) {
+    const seattleKeywords = [
+      'seattle',
+      'bellevue',
+      'redmond',
+      'kirkland',
+      'south lake union',
+      'overlake',
+    ];
+    return (
+      roomStateUpper === 'WA' &&
+      seattleKeywords.some(
+        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
+      )
+    );
+  }
+
+  // 7. Chicago Match
+  const isChicago =
+    selCityLower.includes('chicago') ||
+    selectedCity.id === 'chicago' ||
+    selectedCity.id === 'chicago-il' ||
+    ['naperville', 'schaumburg'].some((c) => selCityLower.includes(c));
+  if (isChicago) {
+    const chicagoKeywords = ['chicago', 'naperville', 'schaumburg', 'west loop', 'loop', 'uic'];
+    return (
+      roomStateUpper === 'IL' &&
+      chicagoKeywords.some(
+        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
+      )
+    );
+  }
+
+  // 8. Atlanta Match
+  const isAtlanta =
+    selCityLower.includes('atlanta') ||
+    selectedCity.id === 'atlanta' ||
+    selectedCity.id === 'atlanta-ga' ||
+    ['alpharetta', 'duluth'].some((c) => selCityLower.includes(c));
+  if (isAtlanta) {
+    const atlantaKeywords = ['atlanta', 'alpharetta', 'midtown', 'duluth', 'georgia tech'];
+    return (
+      roomStateUpper === 'GA' &&
+      atlantaKeywords.some(
+        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
+      )
+    );
+  }
+
+  // 9. New York / New Jersey Match
+  const isNyNj =
+    selCityLower.includes('new york') ||
+    selCityLower.includes('jersey') ||
+    selectedCity.id === 'jersey' ||
+    selectedCity.id === 'new-york-ny' ||
+    ['edison', 'iselin', 'manhattan', 'newport', 'journal square'].some((c) =>
+      selCityLower.includes(c),
+    );
+  if (isNyNj) {
+    const nynjKeywords = [
+      'jersey city',
+      'newport',
+      'journal square',
+      'edison',
+      'iselin',
+      'new york',
+      'manhattan',
+      'hoboken',
+    ];
+    return (
+      (roomStateUpper === 'NJ' || roomStateUpper === 'NY') &&
+      nynjKeywords.some(
+        (k) => roomLocLower.includes(k) || roomTitleLower.includes(k) || roomDescLower.includes(k),
+      )
+    );
+  }
+
+  // Default: check if state and/or city name matches
+  const stateMatch = selStateUpper ? roomStateUpper === selStateUpper : true;
+  const cityMatch = selCityLower
+    ? roomLocLower.includes(selCityLower) || roomTitleLower.includes(selCityLower)
+    : true;
+  return stateMatch && cityMatch;
+}
 
 const filterCategories = [
   { id: 'all', label: 'All' },
@@ -169,12 +445,130 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const isDualPane = width >= 1024;
   const insets = useSafeAreaInsets();
 
-  // State
-  const [selectedCity, setSelectedCity] = useState<CityOption>(CITIES[0]);
+  // State (Global Location sync)
+  const globalLocation = useLocationStore((s) => s.currentLocation);
+  const setGlobalLocation = useLocationStore((s) => s.setLocation);
+
+  const selectedCity: CityOption = useMemo(
+    () => ({
+      id: globalLocation.id,
+      name: globalLocation.name,
+      landmarks: [globalLocation.stateCode],
+      latitude: globalLocation.latitude,
+      longitude: globalLocation.longitude,
+    }),
+    [globalLocation],
+  );
+
+  const setSelectedCity = useCallback(
+    (city: CityOption) => {
+      setGlobalLocation({
+        id: city.id,
+        name: city.name,
+        cityName: city.name.split(',')[0]?.trim() || city.name,
+        stateCode: city.name.split(',')[1]?.trim() || 'US',
+        latitude: city.latitude ?? 30.2672,
+        longitude: city.longitude ?? -97.7431,
+      });
+    },
+    [setGlobalLocation],
+  );
   const [isCityModalVisible, setIsCityModalVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(screenId === 'filters');
-  const [viewMode, setViewMode] = useState<'list' | 'map'>(screenId === 'map' ? 'map' : 'list');
+  const [viewMode, setViewMode] = useState<'list' | 'card' | 'map'>(
+    screenId === 'map' ? 'map' : 'card',
+  );
   const [selectedPinRoomId, setSelectedPinRoomId] = useState<string | null>(null);
+  const [isRoomPreviewExpanded, setIsRoomPreviewExpanded] = useState(false);
+
+  // Draggable position for the collapsed badge and expanded room preview card
+  const badgePan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const cardPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+
+  const badgePanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4,
+        onPanResponderGrant: () => {
+          badgePan.extractOffset();
+        },
+        onPanResponderMove: Animated.event([null, { dx: badgePan.x, dy: badgePan.y }], {
+          useNativeDriver: false,
+        }),
+        onPanResponderRelease: () => {
+          badgePan.flattenOffset();
+        },
+      }),
+    [badgePan],
+  );
+
+  const cardPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4,
+        onPanResponderGrant: () => {
+          cardPan.extractOffset();
+        },
+        onPanResponderMove: Animated.event([null, { dx: cardPan.x, dy: cardPan.y }], {
+          useNativeDriver: false,
+        }),
+        onPanResponderRelease: () => {
+          cardPan.flattenOffset();
+        },
+      }),
+    [cardPan],
+  );
+
+  // Apple Maps native-style controls state: 3D toggle, map mode, GPS centering
+  const [is3D, setIs3D] = useState(false);
+  const [mapType, setMapType] = useState<'standard' | 'satellite' | 'hybrid'>('standard');
+  const [isMapStyleSheetOpen, setIsMapStyleSheetOpen] = useState(false);
+  const [isGpsActive, setIsGpsActive] = useState(false);
+  const [mapCenterTarget, setMapCenterTarget] = useState<{
+    latitude: number;
+    longitude: number;
+    timestamp?: number;
+  } | null>(null);
+
+  const handleGpsPress = useCallback(() => {
+    setIsGpsActive(true);
+    setTimeout(() => setIsGpsActive(false), 2500);
+
+    const applyCoords = (lat: number, lng: number) => {
+      setMapCenterTarget({
+        latitude: lat,
+        longitude: lng,
+        timestamp: Date.now(),
+      });
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          applyCoords(pos.coords.latitude, pos.coords.longitude);
+        },
+        (err) => {
+          console.warn('Geolocation high accuracy failed, falling back:', err?.message);
+          navigator.geolocation.getCurrentPosition(
+            (pos2) => {
+              applyCoords(pos2.coords.latitude, pos2.coords.longitude);
+            },
+            () => {
+              applyCoords(selectedCity.latitude || 30.2672, selectedCity.longitude || -97.7431);
+            },
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+          );
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+      );
+    } else {
+      applyCoords(selectedCity.latitude || 30.2672, selectedCity.longitude || -97.7431);
+    }
+  }, [selectedCity]);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -188,7 +582,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         return true;
       }
       if (viewMode === 'map' && screenId !== 'map') {
-        setViewMode('list');
+        setViewMode('card');
         return true;
       }
       router.back();
@@ -244,11 +638,25 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const [drawnBoundary, setDrawnBoundary] = useState<Coordinate[] | null>(null);
 
   // Query real API listings directly from backend / Supabase
-  const { data: listings, isLoading } = useQuery({
-    queryKey: ['rooms', 'listings'],
-    queryFn: () => listRoomListings(),
+  const {
+    data: listings,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ['rooms', 'listings', globalLocation.name],
+    queryFn: () => listRoomListings({ size: 500 }),
     retry: 1,
   });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
   // Transform backend listings into map-enabled extended listings
   const rawListings: ExtendedRoom[] = useMemo(() => {
@@ -256,8 +664,20 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     return list.map((l, i) => {
       let mapX = 50;
       let mapY = 50;
-      if (l.latitude && l.longitude) {
-        // Austin bounds: lat 30.20 to 30.55, lng -97.85 to -97.65
+      if (l.latitude && l.longitude && selectedCity.latitude && selectedCity.longitude) {
+        const minLng = selectedCity.longitude - 0.2;
+        const maxLng = selectedCity.longitude + 0.2;
+        const minLat = selectedCity.latitude - 0.2;
+        const maxLat = selectedCity.latitude + 0.2;
+        mapX = Math.min(
+          85,
+          Math.max(15, Math.round(((l.longitude - minLng) / (maxLng - minLng)) * 100)),
+        );
+        mapY = Math.min(
+          85,
+          Math.max(15, Math.round(((maxLat - l.latitude) / (maxLat - minLat)) * 100)),
+        );
+      } else if (l.latitude && l.longitude) {
         mapX = Math.min(
           85,
           Math.max(15, Math.round(((l.longitude - -97.85) / (-97.65 - -97.85)) * 100)),
@@ -277,19 +697,35 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         verifiedHost: true,
       };
     });
-  }, [listings]);
+  }, [listings, selectedCity]);
+
+  // Step 1: Filter rawListings by active location
+  const locationRooms = useMemo(() => {
+    const matched = rawListings.filter((room) =>
+      matchesRoomLocation(room, selectedCity, globalLocation),
+    );
+    // If user selected an area where no rooms exist yet, fall back to all rooms so user is not blocked
+    return matched.length > 0 ? matched : rawListings;
+  }, [rawListings, selectedCity, globalLocation]);
+
+  const hasLocationFallback =
+    selectedCity.id !== 'all' &&
+    selectedCity.id !== 'all-usa' &&
+    !selectedCity.name.toLowerCase().includes('all cities') &&
+    rawListings.filter((room) => matchesRoomLocation(room, selectedCity, globalLocation)).length ===
+      0;
 
   // Active pin selection defaults to first listing once loaded
   const activePinRoom = useMemo(() => {
     if (selectedPinRoomId) {
-      const found = rawListings.find((r) => r.id === selectedPinRoomId);
+      const found = locationRooms.find((r) => r.id === selectedPinRoomId);
       if (found) return found;
     }
-    return rawListings[0] ?? null;
-  }, [selectedPinRoomId, rawListings]);
+    return locationRooms[0] ?? null;
+  }, [selectedPinRoomId, locationRooms]);
 
   // Filter and sort listings
-  let filteredRooms = rawListings.filter((room, idx) => {
+  let filteredRooms = locationRooms.filter((room, idx) => {
     // Hand-drawn boundary filter (Zillow / Apartments.com style)
     if (drawnBoundary && drawnBoundary.length >= 3) {
       const lat = Number(room.latitude) || 30.2672 + (((idx * 17) % 30) - 15) * 0.005;
@@ -424,9 +860,47 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     return '🤝 ';
   };
 
+  const getRoomHeroEmoji = (roomType: string) => {
+    const t = (roomType || '').toLowerCase();
+    if (
+      t.includes('entire') ||
+      t.includes('house') ||
+      t.includes('villa') ||
+      t.includes('townhouse')
+    )
+      return '🏡';
+    if (
+      t.includes('studio') ||
+      t.includes('apartment') ||
+      t.includes('1 bhk') ||
+      t.includes('2 bhk')
+    )
+      return '🏢';
+    if (t.includes('master') || t.includes('private')) return '🛏️';
+    if (t.includes('shared')) return '👥';
+    return '🛋️';
+  };
+
+  const getRoomCulturalFlags = (room: ExtendedRoom) => {
+    const isPureVeg =
+      room.title.toLowerCase().includes('pure veg') ||
+      (room.amenities ?? []).some((a) => a.toLowerCase().includes('pure veg')) ||
+      (room.preferences ?? []).some((p) => p.toLowerCase().includes('pure veg'));
+    const isPrivateBath =
+      room.title.toLowerCase().includes('attached') ||
+      room.title.toLowerCase().includes('private bath') ||
+      (room.amenities ?? []).some(
+        (a) => a.toLowerCase().includes('private') || a.toLowerCase().includes('attached'),
+      );
+    const isFurnished =
+      room.title.toLowerCase().includes('furnish') ||
+      (room.amenities ?? []).some((a) => a.toLowerCase().includes('furnish'));
+    return { isPureVeg, isPrivateBath, isFurnished };
+  };
+
   return (
-    <SafeAreaView style={[s.safeArea, { paddingBottom: Math.max(insets.bottom, 0) }]}>
-      {/* ─── Top Header ───────────────────────────────────────────────────────── */}
+    <SafeAreaView edges={['top', 'left', 'right']} style={s.safeArea}>
+      {/* ─── Top Header ──────────────────────────────────────────────────────── */}
       <View style={[s.header, isDesktop && s.headerDesktop]}>
         <View style={s.headerTop}>
           <Pressable
@@ -444,9 +918,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             accessibilityLabel="Select city"
           >
             <AppIcon color={colors.appPrimary} name="map" size={14} />
-            <Text style={s.locationTitle}>
-              {selectedCity.name} ·{' '}
-              {rawListings.length > 0 ? `${rawListings.length} Active` : 'Active Hub'}
+            <Text style={s.locationTitle} numberOfLines={1} ellipsizeMode="tail">
+              {selectedCity.name}
             </Text>
             <AppIcon color={colors.muted} name="chevron-down" size={14} />
           </Pressable>
@@ -496,7 +969,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
 
         {/* View Mode (List vs Map) & Sort Bar */}
         <View style={s.toolbarRow}>
-          {/* Segmented control: List vs Map */}
+          {/* Segmented control: List vs Card vs Map */}
           <View style={s.segmentedControl}>
             <Pressable
               onPress={() => setViewMode('list')}
@@ -507,11 +980,19 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               </Text>
             </Pressable>
             <Pressable
+              onPress={() => setViewMode('card')}
+              style={[s.segmentBtn, viewMode === 'card' && s.segmentBtnActive]}
+            >
+              <Text style={[s.segmentBtnText, viewMode === 'card' && s.segmentBtnTextActive]}>
+                🃏 Card
+              </Text>
+            </Pressable>
+            <Pressable
               onPress={() => setViewMode('map')}
               style={[s.segmentBtn, viewMode === 'map' && s.segmentBtnActive]}
             >
               <Text style={[s.segmentBtnText, viewMode === 'map' && s.segmentBtnTextActive]}>
-                🗺️ Map View
+                🗺️ Map
               </Text>
             </Pressable>
           </View>
@@ -589,9 +1070,16 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   latitudeDelta: 0.14,
                   longitudeDelta: 0.14,
                 }}
+                showsUserLocation={true}
+                mapType={mapType}
+                is3D={is3D}
+                centerCoordinate={mapCenterTarget}
                 markers={mapMarkers}
                 selectedMarkerId={activePinRoom?.id}
-                onSelectMarker={(id) => setSelectedPinRoomId(id)}
+                onSelectMarker={(id) => {
+                  setSelectedPinRoomId(id);
+                  setIsRoomPreviewExpanded(true);
+                }}
                 style={StyleSheet.absoluteFill}
                 enableDrawing={true}
                 drawnPolygon={drawnBoundary}
@@ -599,44 +1087,390 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 onClearPolygon={() => setDrawnBoundary(null)}
               />
 
-              {/* Floating Selected Room Card at bottom of map */}
-              {activePinRoom ? (
-                <View style={s.floatingMapCardContainer}>
+              {/* Apple Maps Floating Controls: Map Mode, 3D, and GPS */}
+              <View style={s.appleMapsControlCluster}>
+                {/* 1. Map Mode (Layers) Button */}
+                <Pressable
+                  onPress={() => setIsMapStyleSheetOpen(!isMapStyleSheetOpen)}
+                  style={[s.appleMapBtn, isMapStyleSheetOpen && s.appleMapBtnActive]}
+                  accessibilityLabel="Choose Map Mode"
+                >
+                  <Text style={s.appleMapIcon}>🗺️</Text>
+                </Pressable>
+
+                {/* 2. 3D / 2D Perspective Toggle Button */}
+                <Pressable
+                  onPress={() => setIs3D(!is3D)}
+                  style={[s.appleMapBtn, is3D && s.appleMapBtnActive]}
+                  accessibilityLabel={is3D ? 'Switch to 2D view' : 'Switch to 3D perspective'}
+                >
+                  <Text style={[s.appleMap3DText, is3D && s.appleMap3DTextActive]}>
+                    {is3D ? '2D' : '3D'}
+                  </Text>
+                </Pressable>
+
+                {/* 3. GPS Current Location Button */}
+                <Pressable
+                  onPress={handleGpsPress}
+                  style={[s.appleMapBtn, s.appleMapBtnLast, isGpsActive && s.appleMapBtnActive]}
+                  accessibilityLabel="Center Current GPS Location"
+                >
+                  <Text style={[s.appleMapGpsIcon, isGpsActive && s.appleMapGpsIconActive]}>
+                    {isGpsActive ? '➤' : '⌖'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Apple Maps Mode Selector Popover */}
+              {isMapStyleSheetOpen && (
+                <View style={s.appleMapStyleMenu}>
+                  <Text style={s.appleMapStyleTitle}>MAP MODE</Text>
+                  {(['standard', 'satellite', 'hybrid'] as const).map((type) => {
+                    const isSelected = mapType === type;
+                    const meta: Record<string, { label: string; icon: string; desc: string }> = {
+                      standard: { label: 'Explore', icon: '🗺️', desc: 'Roads & transit' },
+                      satellite: { label: 'Satellite', icon: '🛰️', desc: 'Aerial photography' },
+                      hybrid: { label: 'Hybrid', icon: '🌐', desc: 'Satellite + streets' },
+                    };
+                    return (
+                      <Pressable
+                        key={type}
+                        onPress={() => {
+                          setMapType(type);
+                          setIsMapStyleSheetOpen(false);
+                        }}
+                        style={[s.appleMapStyleOption, isSelected && s.appleMapStyleOptionSelected]}
+                      >
+                        <Text style={s.appleMapStyleIcon}>{meta[type].icon}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[s.appleMapStyleText, isSelected && s.appleMapStyleTextSelected]}
+                          >
+                            {meta[type].label}
+                          </Text>
+                          <Text style={s.appleMapStyleDesc}>{meta[type].desc}</Text>
+                        </View>
+                        {isSelected ? <Text style={s.appleMapStyleCheck}>✓</Text> : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Draggable Collapsed Room Preview Trigger Icon (draggable to any position on map) */}
+              {!isRoomPreviewExpanded && activePinRoom ? (
+                <Animated.View
+                  {...badgePanResponder.panHandlers}
+                  style={[
+                    s.collapsedCardTriggerBtn,
+                    {
+                      transform: badgePan.getTranslateTransform(),
+                    },
+                  ]}
+                >
                   <Pressable
-                    onPress={() => router.push(`/rooms/${activePinRoom.id}` as Href)}
-                    style={s.floatingMapCard}
+                    onPress={() => setIsRoomPreviewExpanded(true)}
+                    style={s.collapsedCardInner}
+                    accessibilityLabel="Show room preview (drag to move)"
                   >
-                    <View style={s.floatingThumb}>
-                      <Text style={s.floatingEmoji}>🏢</Text>
-                      <View style={s.floatingPriceTag}>
-                        <Text style={s.floatingPriceVal}>${activePinRoom.price}/mo</Text>
-                      </View>
+                    <Text style={s.cardDragGrip}>⠿</Text>
+                    <Text style={s.collapsedCardIcon}>🏢</Text>
+                    <Text style={s.collapsedCardText}>${activePinRoom.price}/mo</Text>
+                    <Text style={s.collapsedCardChevron}>▴</Text>
+                  </Pressable>
+                </Animated.View>
+              ) : null}
+
+              {/* Draggable Floating Selected Room Card (draggable to any position on map) */}
+              {isRoomPreviewExpanded && activePinRoom ? (
+                <Animated.View
+                  {...cardPanResponder.panHandlers}
+                  style={[
+                    s.floatingMapCardContainer,
+                    {
+                      transform: cardPan.getTranslateTransform(),
+                    },
+                  ]}
+                >
+                  <View style={s.floatingMapCard}>
+                    {/* Subtle Drag Handle Bar */}
+                    <View style={s.cardDragBarContainer}>
+                      <View style={s.cardDragBar} />
                     </View>
-                    <View style={s.floatingInfo}>
-                      <View style={s.floatingTypeRow}>
-                        <Text style={s.floatingType}>🚪 {activePinRoom.roomType}</Text>
-                        <Text style={s.floatingBath}>
-                          {activePinRoom.bathroomType === 'PRIVATE_ATTACHED'
-                            ? '• 🚿 Private Bath'
-                            : '• 🚪 Shared Bath'}
-                        </Text>
-                      </View>
-                      <Text style={s.floatingTitle} numberOfLines={1}>
-                        {activePinRoom.title}
-                      </Text>
-                      <Text style={s.floatingLocation} numberOfLines={1}>
-                        📍 {activePinRoom.broadLocation}
-                      </Text>
-                      <View style={s.floatingCtaRow}>
-                        <View style={s.floatingDetailsBtn}>
-                          <Text style={s.floatingDetailsLink}>View Details →</Text>
+
+                    {/* Minimize / Close button */}
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setIsRoomPreviewExpanded(false);
+                      }}
+                      style={s.cardCloseBtn}
+                      accessibilityLabel="Hide room preview"
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={s.cardCloseText}>✕</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => router.push(`/rooms/${activePinRoom.id}` as Href)}
+                      style={s.floatingMapCardInner}
+                    >
+                      <View style={s.floatingThumb}>
+                        <Text style={s.floatingEmoji}>🏢</Text>
+                        <View style={s.floatingPriceTag}>
+                          <Text style={s.floatingPriceVal}>${activePinRoom.price}/mo</Text>
                         </View>
                       </View>
-                    </View>
-                  </Pressable>
-                </View>
+                      <View style={s.floatingInfo}>
+                        <View style={s.floatingTypeRow}>
+                          <Text style={s.floatingType}>🚪 {activePinRoom.roomType}</Text>
+                          <Text style={s.floatingBath}>
+                            {activePinRoom.bathroomType === 'PRIVATE_ATTACHED'
+                              ? '• 🚿 Private Bath'
+                              : '• 🚪 Shared Bath'}
+                          </Text>
+                        </View>
+                        <Text style={s.floatingTitle} numberOfLines={1}>
+                          {activePinRoom.title}
+                        </Text>
+                        <Text style={s.floatingLocation} numberOfLines={1}>
+                          📍 {activePinRoom.broadLocation}
+                        </Text>
+                        <View style={s.floatingCtaRow}>
+                          <View style={s.floatingDetailsBtn}>
+                            <Text style={s.floatingDetailsLink}>View Details →</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </Pressable>
+                  </View>
+                </Animated.View>
               ) : null}
             </View>
+          );
+        };
+
+        const renderCardItem = (room: ExtendedRoom) => {
+          const isSaved = Boolean(savedRoomsMap[room.id] || room.savedByViewer);
+          const { isPureVeg, isPrivateBath, isFurnished } = getRoomCulturalFlags(room);
+
+          return (
+            <Pressable
+              key={room.id}
+              onPress={() => {
+                if (isDualPane) {
+                  setSelectedPinRoomId(room.id);
+                }
+                router.push(`/rooms/${room.id}` as Href);
+              }}
+              style={[s.roomCardContainer, isDualPane && s.roomFeedCardDualPane]}
+            >
+              {/* Visual Hero Banner */}
+              <View style={s.roomCardHero}>
+                <View style={s.roomCardHeroGraphic}>
+                  <Text style={s.roomCardHeroEmoji}>{getRoomHeroEmoji(room.roomType)}</Text>
+                </View>
+
+                {/* Room Type badge floating top-left */}
+                <View style={s.roomCardHeroTypeBadge}>
+                  <Text style={s.roomCardHeroTypeBadgeText}>🚪 {room.roomType}</Text>
+                </View>
+
+                {/* Favorite save button floating top-right */}
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    toggleSave(room);
+                  }}
+                  style={s.roomCardHeroSaveBtn}
+                  accessibilityLabel={isSaved ? 'Unsave room' : 'Save room'}
+                >
+                  <AppIcon color={isSaved ? '#e02424' : '#1a1c28'} name="star" size={17} />
+                </Pressable>
+
+                {/* Price tag badge floating bottom-left */}
+                <View style={s.roomCardHeroPriceBadge}>
+                  <Text style={s.roomCardHeroPriceVal}>${room.price}</Text>
+                  <Text style={s.roomCardHeroPricePeriod}>/mo</Text>
+                </View>
+
+                {/* Verified Host pill floating bottom-right */}
+                <View style={s.roomCardHeroVerifiedBadge}>
+                  <Text style={s.roomCardHeroVerifiedText}>✓ Verified Host</Text>
+                </View>
+              </View>
+
+              {/* Card Body */}
+              <View style={s.roomCardBody}>
+                <Text style={s.roomCardTitle} numberOfLines={2}>
+                  {room.title}
+                </Text>
+
+                <View style={s.roomCardLocationRow}>
+                  <AppIcon color={colors.appPrimary} name="map" size={13} />
+                  <Text style={s.roomCardLocationText} numberOfLines={1}>
+                    {room.broadLocation}
+                  </Text>
+                </View>
+
+                {/* Cultural, Dietary, and Housing Badges */}
+                {(isPureVeg || isPrivateBath || isFurnished) && (
+                  <View style={s.culturalBadgesRow}>
+                    {isPureVeg && (
+                      <View style={s.badgePureVeg}>
+                        <Text style={s.badgeTextPureVeg}>🥦 Pure Veg</Text>
+                      </View>
+                    )}
+                    {isPrivateBath && (
+                      <View style={s.badgePrivateBath}>
+                        <Text style={s.badgeTextPrivateBath}>🚿 Private Bath</Text>
+                      </View>
+                    )}
+                    {isFurnished && (
+                      <View style={s.badgeFurnished}>
+                        <Text style={s.badgeTextFurnished}>🛏️ Furnished</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Highlights & Amenities with Icons */}
+                <View style={s.amenitiesRow}>
+                  {(room.preferences ?? []).slice(0, 2).map((pref) => (
+                    <View key={pref} style={s.amenityChip}>
+                      <Text style={s.amenityChipText}>
+                        {getPreferenceIcon(pref)}
+                        {pref}
+                      </Text>
+                    </View>
+                  ))}
+                  {(room.amenities ?? []).slice(0, 3).map((amenity) => (
+                    <View key={amenity} style={s.featureChip}>
+                      <Text style={s.featureChipText}>
+                        {getAmenityIcon(amenity)}
+                        {amenity}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Footer with Host Info & CTAs */}
+                <View style={s.roomCardFooter}>
+                  <View style={s.hostInfo}>
+                    <View style={s.hostAvatar}>
+                      <Text style={s.hostAvatarText}>{room.title[0] || 'M'}</Text>
+                    </View>
+                    <View>
+                      <Text style={s.hostName}>Verified Landlord</Text>
+                      <Text style={s.hostMeta}>Direct Contact · Quick Response</Text>
+                    </View>
+                  </View>
+
+                  <View style={s.cardActions}>
+                    <Link href={`/rooms/${room.id}/inquiry` as Href} asChild>
+                      <Pressable
+                        onPress={(e) => e.stopPropagation()}
+                        style={StyleSheet.flatten(s.inquireBtn)}
+                      >
+                        <Text style={s.inquireBtnText}>Inquire</Text>
+                      </Pressable>
+                    </Link>
+                    <Link href={`/rooms/${room.id}` as Href} asChild>
+                      <Pressable
+                        onPress={(e) => e.stopPropagation()}
+                        style={StyleSheet.flatten(s.viewDetailsBtn)}
+                      >
+                        <Text style={s.viewDetailsBtnText}>Details →</Text>
+                      </Pressable>
+                    </Link>
+                  </View>
+                </View>
+              </View>
+            </Pressable>
+          );
+        };
+
+        const renderListItem = (room: ExtendedRoom) => {
+          const isSaved = Boolean(savedRoomsMap[room.id] || room.savedByViewer);
+          const { isPureVeg, isPrivateBath, isFurnished } = getRoomCulturalFlags(room);
+
+          return (
+            <Pressable
+              key={room.id}
+              onPress={() => {
+                if (isDualPane) {
+                  setSelectedPinRoomId(room.id);
+                }
+                router.push(`/rooms/${room.id}` as Href);
+              }}
+              style={[s.roomListItem, isDualPane && s.roomFeedCardDualPane]}
+            >
+              {/* Left: Compact thumbnail with price */}
+              <View style={s.roomListThumb}>
+                <Text style={s.roomListEmoji}>{getRoomHeroEmoji(room.roomType)}</Text>
+                <View style={s.roomListPriceBadge}>
+                  <Text style={s.roomListPriceVal}>${room.price}</Text>
+                  <Text style={s.roomListPricePeriod}>/mo</Text>
+                </View>
+              </View>
+
+              {/* Middle: Details */}
+              <View style={s.roomListMain}>
+                <View style={s.roomListTopRow}>
+                  <View style={s.roomTypeTag}>
+                    <Text style={s.roomTypeTagText}>🚪 {room.roomType}</Text>
+                  </View>
+                  <Text style={s.roomListLocationText} numberOfLines={1}>
+                    📍 {room.broadLocation}
+                  </Text>
+                </View>
+
+                <Text style={s.roomListTitle} numberOfLines={1}>
+                  {room.title}
+                </Text>
+
+                {/* Compact Badges Row */}
+                <View style={s.roomListBadgesRow}>
+                  {isPureVeg && (
+                    <View style={s.badgePureVegSmall}>
+                      <Text style={s.badgeTextPureVegSmall}>🥦 Veg</Text>
+                    </View>
+                  )}
+                  {isPrivateBath && (
+                    <View style={s.badgePrivateBathSmall}>
+                      <Text style={s.badgeTextPrivateBathSmall}>🚿 Bath</Text>
+                    </View>
+                  )}
+                  {isFurnished && (
+                    <View style={s.badgeFurnishedSmall}>
+                      <Text style={s.badgeTextFurnishedSmall}>🛏️ Furnished</Text>
+                    </View>
+                  )}
+                  {(room.amenities ?? []).slice(0, 2).map((a) => (
+                    <View key={a} style={s.featureChipSmall}>
+                      <Text style={s.featureChipTextSmall}>{a}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Right: Save & Arrow */}
+              <View style={s.roomListRightCol}>
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    toggleSave(room);
+                  }}
+                  style={s.roomListSaveBtn}
+                  accessibilityLabel={isSaved ? 'Unsave room' : 'Save room'}
+                >
+                  <AppIcon color={isSaved ? '#e02424' : colors.muted} name="star" size={17} />
+                </Pressable>
+                <View style={s.roomListViewArrow}>
+                  <AppIcon color={colors.appPrimary} name="chevron-right" size={16} />
+                </View>
+              </View>
+            </Pressable>
           );
         };
 
@@ -644,21 +1478,30 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           <ScrollView
             contentContainerStyle={[
               s.content,
+              { paddingBottom: Math.max(insets.bottom, 16) + 80 },
               isDesktop && !isDualPane && s.contentDesktop,
               isDualPane && s.contentDualPane,
             ]}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.appPrimary}
+                colors={[colors.appPrimary]}
+              />
+            }
           >
             {/* Header Section info */}
             <View style={s.sectionHeader}>
               <View>
                 <Text style={s.sectionTitle}>Available Rooms ({filteredRooms.length})</Text>
-                <Text style={s.sectionSub}>Live listings from Supabase in {selectedCity.name}</Text>
+                <Text style={s.sectionSub}>
+                  {hasLocationFallback
+                    ? `Showing all available rooms (no listings in ${selectedCity.name} yet)`
+                    : `Verified housing & shared rooms in ${selectedCity.name}`}
+                </Text>
               </View>
-              <Pressable onPress={() => setIsFilterModalVisible(true)} style={s.filterLinkBtn}>
-                <AppIcon color={colors.appPrimary} name="wrench" size={13} />
-                <Text style={s.filterLinkText}>All Filters</Text>
-              </Pressable>
             </View>
 
             {/* Hand-drawn area active banner */}
@@ -678,7 +1521,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             {isLoading ? (
               <View style={s.loadingBox}>
                 <ActivityIndicator size="large" color={colors.appPrimary} />
-                <Text style={s.loadingText}>Fetching live room listings from Supabase...</Text>
+                <Text style={s.loadingText}>Finding available rooms in {selectedCity.name}...</Text>
               </View>
             ) : filteredRooms.length === 0 ? (
               <View style={s.emptyBox}>
@@ -692,163 +1535,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 </Pressable>
               </View>
             ) : (
-              <View style={isDualPane ? s.dualPaneCardGrid : undefined}>
-                {filteredRooms.map((room) => {
-                  const isSaved = Boolean(savedRoomsMap[room.id] || room.savedByViewer);
-                  return (
-                    <Pressable
-                      key={room.id}
-                      onPress={() => {
-                        if (isDualPane) {
-                          setSelectedPinRoomId(room.id);
-                        }
-                        router.push(`/rooms/${room.id}` as Href);
-                      }}
-                      style={[s.roomFeedCard, isDualPane && s.roomFeedCardDualPane]}
-                    >
-                      <View style={s.roomCardHeader}>
-                        <View style={s.roomCardThumb}>
-                          <Text style={s.roomCardEmoji}>🛏️</Text>
-                          <View style={s.roomCardPriceBadge}>
-                            <Text style={s.roomCardPriceVal}>${room.price}</Text>
-                            <Text style={s.roomCardPricePeriod}>/mo</Text>
-                          </View>
-                        </View>
-                        <View style={s.roomCardMain}>
-                          <View style={s.roomCardTopRow}>
-                            <View style={s.roomTypeTag}>
-                              <Text style={s.roomTypeTagText}>🚪 {room.roomType}</Text>
-                            </View>
-                            <Pressable
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                toggleSave(room);
-                              }}
-                              style={s.saveBtn}
-                              accessibilityLabel={isSaved ? 'Unsave room' : 'Save room'}
-                            >
-                              <AppIcon
-                                color={isSaved ? '#e02424' : colors.muted}
-                                name="star"
-                                size={18}
-                              />
-                            </Pressable>
-                          </View>
-
-                          <Text style={s.roomCardTitle} numberOfLines={2}>
-                            {room.title}
-                          </Text>
-
-                          {/* Cultural, Dietary, and Housing Badges */}
-                          {(() => {
-                            const isPureVeg =
-                              room.title.toLowerCase().includes('pure veg') ||
-                              (room.amenities ?? []).some((a) =>
-                                a.toLowerCase().includes('pure veg'),
-                              ) ||
-                              (room.preferences ?? []).some((p) =>
-                                p.toLowerCase().includes('pure veg'),
-                              );
-                            const isPrivateBath =
-                              room.title.toLowerCase().includes('attached') ||
-                              room.title.toLowerCase().includes('private bath') ||
-                              (room.amenities ?? []).some(
-                                (a) =>
-                                  a.toLowerCase().includes('private') ||
-                                  a.toLowerCase().includes('attached'),
-                              );
-                            const isFurnished =
-                              room.title.toLowerCase().includes('furnish') ||
-                              (room.amenities ?? []).some((a) =>
-                                a.toLowerCase().includes('furnish'),
-                              );
-
-                            if (!isPureVeg && !isPrivateBath && !isFurnished) return null;
-
-                            return (
-                              <View style={s.culturalBadgesRow}>
-                                {isPureVeg ? (
-                                  <View style={s.badgePureVeg}>
-                                    <Text style={s.badgeTextPureVeg}>🥦 Pure Veg</Text>
-                                  </View>
-                                ) : null}
-                                {isPrivateBath ? (
-                                  <View style={s.badgePrivateBath}>
-                                    <Text style={s.badgeTextPrivateBath}>🚿 Private Bath</Text>
-                                  </View>
-                                ) : null}
-                                {isFurnished ? (
-                                  <View style={s.badgeFurnished}>
-                                    <Text style={s.badgeTextFurnished}>🛏️ Furnished</Text>
-                                  </View>
-                                ) : null}
-                              </View>
-                            );
-                          })()}
-
-                          <View style={s.roomCardLocationRow}>
-                            <AppIcon color={colors.muted} name="map" size={12} />
-                            <Text style={s.roomCardLocationText} numberOfLines={1}>
-                              {room.broadLocation}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      {/* Highlights & Amenities with Icons */}
-                      <View style={s.amenitiesRow}>
-                        {(room.preferences ?? []).slice(0, 2).map((pref) => (
-                          <View key={pref} style={s.amenityChip}>
-                            <Text style={s.amenityChipText}>
-                              {getPreferenceIcon(pref)}
-                              {pref}
-                            </Text>
-                          </View>
-                        ))}
-                        {(room.amenities ?? []).slice(0, 3).map((amenity) => (
-                          <View key={amenity} style={s.featureChip}>
-                            <Text style={s.featureChipText}>
-                              {getAmenityIcon(amenity)}
-                              {amenity}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-
-                      {/* Footer with Host Info & CTAs */}
-                      <View style={s.roomCardFooter}>
-                        <View style={s.hostInfo}>
-                          <View style={s.hostAvatar}>
-                            <Text style={s.hostAvatarText}>{room.title[0] || 'M'}</Text>
-                          </View>
-                          <View>
-                            <Text style={s.hostName}>Verified Landlord</Text>
-                            <Text style={s.hostMeta}>Direct Contact · Quick Response</Text>
-                          </View>
-                        </View>
-
-                        <View style={s.cardActions}>
-                          <Link href={`/rooms/${room.id}/inquiry` as Href} asChild>
-                            <Pressable
-                              onPress={(e) => e.stopPropagation()}
-                              style={StyleSheet.flatten(s.inquireBtn)}
-                            >
-                              <Text style={s.inquireBtnText}>Inquire</Text>
-                            </Pressable>
-                          </Link>
-                          <Link href={`/rooms/${room.id}` as Href} asChild>
-                            <Pressable
-                              onPress={(e) => e.stopPropagation()}
-                              style={StyleSheet.flatten(s.viewDetailsBtn)}
-                            >
-                              <Text style={s.viewDetailsBtnText}>Details →</Text>
-                            </Pressable>
-                          </Link>
-                        </View>
-                      </View>
-                    </Pressable>
-                  );
-                })}
+              <View style={isDualPane && viewMode === 'card' ? s.dualPaneCardGrid : undefined}>
+                {filteredRooms.map((room) =>
+                  viewMode === 'list' ? renderListItem(room) : renderCardItem(room),
+                )}
               </View>
             )}
           </ScrollView>
@@ -866,17 +1556,19 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         return viewMode === 'map' ? renderMapView() : renderListView();
       })()}
 
-      {/* ─── Floating Action Button: Post a Room ──────────────────────────────── */}
-      <Link href="/rooms/create-listing" asChild>
-        <Pressable
-          accessibilityLabel="Post a room"
-          accessibilityRole="button"
-          style={StyleSheet.flatten(s.fab)}
-        >
-          <AppIcon color="#fff" name="plus" size={20} />
-          <Text style={s.fabText}>Post a Room</Text>
-        </Pressable>
-      </Link>
+      {/* ─── Floating Action Button: Post a Room (Hidden in Map View) ───────────── */}
+      {viewMode !== 'map' && (
+        <Link href="/rooms/create-listing" asChild>
+          <Pressable
+            accessibilityLabel="Post a room"
+            accessibilityRole="button"
+            style={StyleSheet.flatten([s.fab, { bottom: Math.max(insets.bottom, 16) + 12 }])}
+          >
+            <AppIcon color="#fff" name="plus" size={20} />
+            <Text style={s.fabText}>Post a Room</Text>
+          </Pressable>
+        </Link>
+      )}
 
       {/* ─── City Selector Modal ──────────────────────────────────────────────── */}
       <Modal
@@ -1007,9 +1699,12 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                         <View style={[s.cityCountPill, isSelected && s.cityCountPillActive]}>
                           <Text style={[s.cityCountText, isSelected && s.cityCountTextActive]}>
                             {(() => {
-                              const cityNamePrefix = city.name.split(',')[0].toLowerCase();
                               const count = rawListings.filter((r) =>
-                                r.broadLocation?.toLowerCase().includes(cityNamePrefix),
+                                matchesRoomLocation(r, city, {
+                                  name: city.name,
+                                  cityName: city.name.split(',')[0],
+                                  stateCode: city.name.split(',')[1]?.trim(),
+                                }),
                               ).length;
                               return count > 0 ? `${count} active` : 'Active Hub';
                             })()}
@@ -1276,27 +1971,33 @@ const s = StyleSheet.create({
     backgroundColor: '#f2f3ff',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   locationSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#f2f3ff',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: '#eaedff',
+    flexShrink: 1,
+    minWidth: 0,
+    overflow: 'hidden',
   },
   locationTitle: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1a1c28',
+    flexShrink: 1,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    flexShrink: 0,
   },
   myRoomsBtn: {
     flexDirection: 'row',
@@ -1306,6 +2007,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: radius.pill,
+    flexShrink: 0,
   },
   myRoomsBtnText: {
     color: '#ffffff',
@@ -1319,6 +2021,7 @@ const s = StyleSheet.create({
     backgroundColor: '#f2f3ff',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   postRoomBtnSmall: {
     flexDirection: 'row',
@@ -1818,6 +2521,113 @@ const s = StyleSheet.create({
     position: 'relative',
     backgroundColor: '#e6ebf5',
   },
+  appleMapsControlCluster: {
+    position: 'absolute',
+    bottom: 20,
+    right: 14,
+    zIndex: 30,
+    flexDirection: 'column',
+    alignItems: 'center',
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+  appleMapBtn: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(226, 232, 240, 0.85)',
+  },
+  appleMapBtnLast: {
+    borderBottomWidth: 0,
+  },
+  appleMapBtnActive: {
+    backgroundColor: 'rgba(238, 242, 255, 0.95)',
+  },
+  appleMapIcon: {
+    fontSize: 16,
+  },
+  appleMap3DText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  appleMap3DTextActive: {
+    color: '#007aff',
+  },
+  appleMapGpsIcon: {
+    fontSize: 18,
+    color: '#0f172a',
+  },
+  appleMapGpsIconActive: {
+    color: '#007aff',
+  },
+  appleMapStyleMenu: {
+    position: 'absolute',
+    bottom: 20,
+    right: 64,
+    zIndex: 35,
+    width: 220,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 16,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 8,
+    gap: 4,
+  },
+  appleMapStyleTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.muted,
+    letterSpacing: 0.8,
+    marginBottom: 2,
+    paddingHorizontal: 6,
+  },
+  appleMapStyleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
+  appleMapStyleOptionSelected: {
+    backgroundColor: '#f2f3ff',
+  },
+  appleMapStyleIcon: {
+    fontSize: 16,
+  },
+  appleMapStyleText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  appleMapStyleTextSelected: {
+    color: '#007aff',
+  },
+  appleMapStyleDesc: {
+    fontSize: 10,
+    color: colors.muted,
+  },
+  appleMapStyleCheck: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#007aff',
+  },
   mapCanvas: {
     flex: 1,
     position: 'relative',
@@ -1895,18 +2705,77 @@ const s = StyleSheet.create({
     borderColor: colors.appPrimary,
     opacity: 0.5,
   },
+  cardCloseBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  cardCloseText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  collapsedCardTriggerBtn: {
+    position: 'absolute',
+    bottom: 20,
+    left: 14,
+    zIndex: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  collapsedCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  cardDragGrip: {
+    fontSize: 12,
+    color: '#94a3b8',
+    letterSpacing: -1,
+  },
+  collapsedCardIcon: {
+    fontSize: 16,
+  },
+  collapsedCardText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.appPrimary,
+  },
+  collapsedCardChevron: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.muted,
+  },
   floatingMapCardContainer: {
     position: 'absolute',
     bottom: 24,
     left: 16,
     right: 16,
     alignItems: 'center',
+    zIndex: 25,
   },
   floatingMapCard: {
-    flexDirection: 'row',
+    position: 'relative',
     backgroundColor: '#fff',
     borderRadius: 18,
     padding: space.x3,
+    paddingTop: space.x4,
     maxWidth: 520,
     width: '100%',
     shadowColor: '#000',
@@ -1916,6 +2785,24 @@ const s = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: '#eaedff',
+  },
+  cardDragBarContainer: {
+    position: 'absolute',
+    top: 6,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardDragBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#cbd5e1',
+  },
+  floatingMapCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: space.x3,
   },
   floatingThumb: {
@@ -2344,5 +3231,252 @@ const s = StyleSheet.create({
   roomFeedCardDualPane: {
     flex: 1,
     minWidth: 260,
+  },
+  // ─── CARD VIEW STYLES ────────────────────────────────────────────────────────
+  roomCardContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#eaedff',
+    overflow: 'hidden',
+    shadowColor: '#431ebe',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: space.x3,
+  },
+  roomCardHero: {
+    height: 140,
+    backgroundColor: '#f2f4ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaedff',
+  },
+  roomCardHeroGraphic: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roomCardHeroEmoji: {
+    fontSize: 52,
+  },
+  roomCardHeroTypeBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(26,28,40,0.72)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+  },
+  roomCardHeroTypeBadgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  roomCardHeroSaveBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  roomCardHeroPriceBadge: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: colors.appPrimary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  roomCardHeroPriceVal: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  roomCardHeroPricePeriod: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 10,
+    fontWeight: '600',
+    marginLeft: 1,
+  },
+  roomCardHeroVerifiedBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#dcfce7',
+  },
+  roomCardHeroVerifiedText: {
+    color: '#15803d',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  roomCardBody: {
+    padding: space.x4,
+    gap: space.x3,
+  },
+
+  // ─── LIST VIEW STYLES ────────────────────────────────────────────────────────
+  roomListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#eaedff',
+    gap: 10,
+    shadowColor: '#431ebe',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+    marginBottom: 8,
+  },
+  roomListThumb: {
+    width: 66,
+    height: 66,
+    borderRadius: 12,
+    backgroundColor: '#f2f3ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    flexShrink: 0,
+  },
+  roomListEmoji: {
+    fontSize: 28,
+  },
+  roomListPriceBadge: {
+    position: 'absolute',
+    bottom: 2,
+    backgroundColor: colors.appPrimary,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  roomListPriceVal: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  roomListPricePeriod: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 8,
+    fontWeight: '600',
+  },
+  roomListMain: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
+  },
+  roomListTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  roomListLocationText: {
+    fontSize: 11,
+    color: colors.muted,
+    flex: 1,
+  },
+  roomListTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a1c28',
+    lineHeight: 18,
+  },
+  roomListBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexWrap: 'wrap',
+    marginTop: 2,
+  },
+  badgePureVegSmall: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  badgeTextPureVegSmall: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  badgePrivateBathSmall: {
+    backgroundColor: '#0284c7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  badgeTextPrivateBathSmall: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  badgeFurnishedSmall: {
+    backgroundColor: '#d97706',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  badgeTextFurnishedSmall: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  featureChipSmall: {
+    backgroundColor: '#f2f3ff',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  featureChipTextSmall: {
+    fontSize: 9,
+    color: '#431ebe',
+    fontWeight: '600',
+  },
+  roomListRightCol: {
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 4,
+    flexShrink: 0,
+  },
+  roomListSaveBtn: {
+    padding: 4,
+  },
+  roomListViewArrow: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#f2f3ff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

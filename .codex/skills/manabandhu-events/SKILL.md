@@ -22,7 +22,7 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 
 ## Component Inventory
 
-- `EventsHomeScreen` - discover events catalog with search
+- `EventsHomeScreen` - discover events catalog with search, category filtering, and pull-to-refresh
 - `EventsSearchScreen` - search events list
 - `EventDetailsScreen` - event detail view with timeline and map preview
 - `CreateEventScreen` - create new event form

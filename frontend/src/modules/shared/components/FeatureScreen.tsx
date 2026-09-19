@@ -1,7 +1,8 @@
 import { contentWidth, space } from '@manabandhu/design-system';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -36,6 +37,7 @@ type FeatureScreenProps = {
   cards?: readonly FeatureCard[];
   actions?: readonly FeatureAction[];
   children?: React.ReactNode;
+  onRefresh?: () => Promise<void> | void;
 };
 
 const C = {
@@ -58,15 +60,42 @@ export function FeatureScreen({
   cards = [],
   actions = [],
   children,
+  onRefresh,
 }: FeatureScreenProps) {
   const router = useRouter();
   const layout = useAdaptiveLayout();
   const isDesktop = layout.windowClass !== 'compact';
   const maxWidth = isDesktop ? layout.maxContentWidth : contentWidth.compact;
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    if (!onRefresh) {
+      setIsRefreshing(true);
+      setTimeout(() => setIsRefreshing(false), 600);
+      return;
+    }
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [onRefresh]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.page}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={C.primary}
+            colors={[C.primary]}
+          />
+        }
+      >
         <View style={[styles.container, { maxWidth }]}>
           {/* Header */}
           <View style={styles.header}>
