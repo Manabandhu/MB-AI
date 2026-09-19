@@ -637,6 +637,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const [filterSelectedAmenities, setFilterSelectedAmenities] = useState<string[]>([]);
   const [drawnBoundary, setDrawnBoundary] = useState<Coordinate[] | null>(null);
 
+  const activeFilterCount =
+    (filterPriceMax !== null ? 1 : 0) +
+    (filterRoomType !== 'All' ? 1 : 0) +
+    (filterDiet !== 'All' ? 1 : 0) +
+    (filterGender !== 'All' ? 1 : 0) +
+    (filterVerifiedOnly ? 1 : 0) +
+    filterSelectedAmenities.length;
+
   // Query real API listings directly from backend / Supabase
   const {
     data: listings,
@@ -996,6 +1004,24 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               </Text>
             </Pressable>
           </View>
+
+          {/* Filter button beside the tabs that opens the filter bottom sheet */}
+          <Pressable
+            onPress={() => setIsFilterModalVisible(true)}
+            style={[s.toolbarFilterBtn, activeFilterCount > 0 && s.toolbarFilterBtnActive]}
+            accessibilityLabel="Open filters bottom sheet"
+          >
+            <AppIcon
+              color={activeFilterCount > 0 ? '#ffffff' : colors.appPrimary}
+              name="filter"
+              size={16}
+            />
+            {activeFilterCount > 0 ? (
+              <View style={s.toolbarFilterBadge}>
+                <Text style={s.toolbarFilterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
 
           {/* Quick Sort Options with Icons */}
           <ScrollView
@@ -2107,6 +2133,41 @@ const s = StyleSheet.create({
   },
   segmentBtnTextActive: {
     color: colors.appPrimary,
+  },
+  toolbarFilterBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#f0f2fa',
+    borderWidth: 1,
+    borderColor: '#eaedff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    flexShrink: 0,
+  },
+  toolbarFilterBtnActive: {
+    backgroundColor: colors.appPrimary,
+    borderColor: colors.appPrimary,
+  },
+  toolbarFilterBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#ff7e33',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  toolbarFilterBadgeText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '800',
   },
   sortScroll: {
     gap: 6,

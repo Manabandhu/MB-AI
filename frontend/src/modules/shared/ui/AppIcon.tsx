@@ -12,6 +12,8 @@ import {
   DeliveryTruck,
   Eye,
   EyeClosed,
+  Filter,
+  FilterList,
   Globe,
   HelpCircle,
   Home,
@@ -58,6 +60,8 @@ export type AppIconName =
   | 'delivery'
   | 'eye'
   | 'eye-closed'
+  | 'filter'
+  | 'filter-list'
   | 'globe'
   | 'google'
   | 'help'
@@ -139,6 +143,8 @@ const iconMap = {
   delivery: DeliveryTruck,
   eye: Eye,
   'eye-closed': EyeClosed,
+  filter: Filter,
+  'filter-list': FilterList,
   globe: Globe,
   help: HelpCircle,
   home: Home,
