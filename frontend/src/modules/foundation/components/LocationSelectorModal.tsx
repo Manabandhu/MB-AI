@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -13,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { type AppLocation, POPULAR_METROS, useLocationStore } from '@/lib/locationStore';
+import { ALL_USA_LOCATION, type AppLocation, useLocationStore } from '@/lib/locationStore';
 import { type SearchCityResult, searchAllUSCities } from '@/modules/rooms/utils/locationService';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
@@ -33,6 +34,10 @@ export function LocationSelectorModal({ visible, onClose }: LocationSelectorModa
   const insets = useSafeAreaInsets();
   const [searchInput, setSearchInput] = useState('');
   const currentLocation = useLocationStore((s) => s.currentLocation);
+  const detectedLocation = useLocationStore((s) => s.detectedLocation);
+  const nearbyCities = useLocationStore((s) => s.nearbyCities);
+  const isDetecting = useLocationStore((s) => s.isDetecting);
+  const detectDeviceLocation = useLocationStore((s) => s.detectDeviceLocation);
   const setLocation = useLocationStore((s) => s.setLocation);
 
   const queryTrimmed = searchInput.trim();
@@ -61,7 +66,7 @@ export function LocationSelectorModal({ visible, onClose }: LocationSelectorModa
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.backdrop}
       >
-        <Pressable style={styles.backdropPressable} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
         <View
           style={[
@@ -101,7 +106,7 @@ export function LocationSelectorModal({ visible, onClose }: LocationSelectorModa
               autoFocus
               clearButtonMode="while-editing"
               onChangeText={setSearchInput}
-              placeholder="Type 3 letters (e.g. Austin, Dallas, Frisco)..."
+              placeholder="Search any US city (e.g. Coppell, Frisco, Jonesboro)..."
               placeholderTextColor={colors.muted}
               style={styles.searchInput}
               value={searchInput}
@@ -190,56 +195,191 @@ export function LocationSelectorModal({ visible, onClose }: LocationSelectorModa
                   </View>
                 ) : null}
 
-                <Text style={styles.popularHeading}>Popular Community Metros</Text>
-                <FlatList
-                  data={POPULAR_METROS}
+                <ScrollView
                   keyboardShouldPersistTaps="handled"
-                  keyExtractor={(item) => item.id}
-                  renderItem={({ item }) => {
-                    const isSelected = currentLocation.id === item.id;
-                    return (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Select ${item.name}`}
-                        onPress={() => handleSelect(item)}
-                        style={[styles.cityRow, isSelected && styles.cityRowSelected]}
-                      >
-                        <View style={styles.cityRowLeft}>
-                          <View
-                            style={[
-                              styles.cityPin,
-                              isSelected && { backgroundColor: 'rgba(67,30,190,0.12)' },
-                            ]}
-                          >
-                            <AppIcon
-                              color={isSelected ? colors.appPrimary : colors.muted}
-                              name="map"
-                              size={15}
-                            />
-                          </View>
-                          <View>
-                            <Text
-                              style={[
-                                styles.cityName,
-                                isSelected && { color: colors.appPrimary, fontWeight: '800' },
-                              ]}
-                            >
-                              {item.name}
-                            </Text>
-                            <Text style={styles.stateName}>Active diaspora network</Text>
-                          </View>
-                        </View>
-                        {isSelected && (
-                          <View style={styles.checkBadge}>
-                            <AppIcon color="#ffffff" name="check" size={12} />
-                          </View>
-                        )}
-                      </Pressable>
-                    );
-                  }}
                   showsVerticalScrollIndicator={false}
                   style={styles.list}
-                />
+                >
+                  {/* Current Location */}
+                  <Text style={styles.popularHeading}>📍 Current Location</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      detectedLocation
+                        ? `Select ${detectedLocation.name}`
+                        : 'Detect current location'
+                    }
+                    onPress={() => {
+                      if (detectedLocation) {
+                        handleSelect(detectedLocation);
+                      } else {
+                        detectDeviceLocation();
+                      }
+                    }}
+                    style={[
+                      styles.cityRow,
+                      detectedLocation &&
+                        currentLocation.id === detectedLocation.id &&
+                        styles.cityRowSelected,
+                    ]}
+                  >
+                    <View style={styles.cityRowLeft}>
+                      <View
+                        style={[
+                          styles.cityPin,
+                          detectedLocation &&
+                            currentLocation.id === detectedLocation.id && {
+                              backgroundColor: 'rgba(67,30,190,0.12)',
+                            },
+                        ]}
+                      >
+                        <AppIcon
+                          color={
+                            detectedLocation && currentLocation.id === detectedLocation.id
+                              ? colors.appPrimary
+                              : colors.muted
+                          }
+                          name="compass"
+                          size={15}
+                        />
+                      </View>
+                      <View>
+                        <Text
+                          style={[
+                            styles.cityName,
+                            detectedLocation &&
+                              currentLocation.id === detectedLocation.id && {
+                                color: colors.appPrimary,
+                                fontWeight: '800',
+                              },
+                          ]}
+                        >
+                          {detectedLocation ? detectedLocation.name : 'Detect Current City'}
+                        </Text>
+                        <Text style={styles.stateName}>
+                          {isDetecting
+                            ? 'Detecting via GPS / Network...'
+                            : detectedLocation
+                              ? 'Device GPS / Local Network'
+                              : 'Tap to auto-detect location'}
+                        </Text>
+                      </View>
+                    </View>
+                    {detectedLocation && currentLocation.id === detectedLocation.id && (
+                      <View style={styles.checkBadge}>
+                        <AppIcon color="#ffffff" name="check" size={12} />
+                      </View>
+                    )}
+                  </Pressable>
+
+                  {/* Nearby Cities */}
+                  {nearbyCities.length > 0 && (
+                    <>
+                      <Text style={[styles.popularHeading, { marginTop: 16 }]}>
+                        🚗 Nearby Cities (~5–30 mi)
+                      </Text>
+                      {nearbyCities.map((item) => {
+                        const isSelected = currentLocation.id === item.id;
+                        return (
+                          <Pressable
+                            key={item.id}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Select ${item.name}`}
+                            onPress={() => handleSelect(item)}
+                            style={[styles.cityRow, isSelected && styles.cityRowSelected]}
+                          >
+                            <View style={styles.cityRowLeft}>
+                              <View
+                                style={[
+                                  styles.cityPin,
+                                  isSelected && { backgroundColor: 'rgba(67,30,190,0.12)' },
+                                ]}
+                              >
+                                <AppIcon
+                                  color={isSelected ? colors.appPrimary : colors.muted}
+                                  name="map"
+                                  size={15}
+                                />
+                              </View>
+                              <View>
+                                <Text
+                                  style={[
+                                    styles.cityName,
+                                    isSelected && { color: colors.appPrimary, fontWeight: '800' },
+                                  ]}
+                                >
+                                  {item.name}
+                                </Text>
+                                <Text style={styles.stateName}>
+                                  {item.distanceMiles
+                                    ? `${item.distanceMiles} mi away`
+                                    : `${item.stateCode}, United States`}
+                                </Text>
+                              </View>
+                            </View>
+                            {isSelected && (
+                              <View style={styles.checkBadge}>
+                                <AppIcon color="#ffffff" name="check" size={12} />
+                              </View>
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* All Cities (USA) */}
+                  <Text style={[styles.popularHeading, { marginTop: 16 }]}>🇺🇸 All Locations</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Select All Cities (USA)"
+                    onPress={() => handleSelect(ALL_USA_LOCATION)}
+                    style={[
+                      styles.cityRow,
+                      currentLocation.id === ALL_USA_LOCATION.id && styles.cityRowSelected,
+                    ]}
+                  >
+                    <View style={styles.cityRowLeft}>
+                      <View
+                        style={[
+                          styles.cityPin,
+                          currentLocation.id === ALL_USA_LOCATION.id && {
+                            backgroundColor: 'rgba(67,30,190,0.12)',
+                          },
+                        ]}
+                      >
+                        <AppIcon
+                          color={
+                            currentLocation.id === ALL_USA_LOCATION.id
+                              ? colors.appPrimary
+                              : colors.muted
+                          }
+                          name="globe"
+                          size={15}
+                        />
+                      </View>
+                      <View>
+                        <Text
+                          style={[
+                            styles.cityName,
+                            currentLocation.id === ALL_USA_LOCATION.id && {
+                              color: colors.appPrimary,
+                              fontWeight: '800',
+                            },
+                          ]}
+                        >
+                          All Cities (USA)
+                        </Text>
+                        <Text style={styles.stateName}>Search nationwide across all 50 states</Text>
+                      </View>
+                    </View>
+                    {currentLocation.id === ALL_USA_LOCATION.id && (
+                      <View style={styles.checkBadge}>
+                        <AppIcon color="#ffffff" name="check" size={12} />
+                      </View>
+                    )}
+                  </Pressable>
+                </ScrollView>
               </View>
             )}
           </View>
@@ -262,8 +402,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: '80%',
-    minHeight: 420,
+    maxHeight: '85%',
+    minHeight: 460,
     paddingHorizontal: space.x4,
     paddingTop: space.x4,
     shadowColor: '#000',
@@ -332,6 +472,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    minHeight: 240,
   },
   list: {
     flex: 1,

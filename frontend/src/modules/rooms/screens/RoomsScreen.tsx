@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Animated,
   BackHandler,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
   Platform,
@@ -22,7 +23,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useLocationStore } from '@/lib/locationStore';
+import { ALL_USA_LOCATION, useLocationStore } from '@/lib/locationStore';
 import { listRoomListings } from '@/modules/rooms/api';
 import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
 import type { RoomListing } from '@/modules/rooms/types';
@@ -66,97 +67,10 @@ type RoomsScreenProps = {
 type CityOption = {
   id: string;
   name: string;
-  landmarks: string[];
+  landmarks?: string[];
   latitude?: number;
   longitude?: number;
 };
-
-const CITIES: CityOption[] = [
-  {
-    id: 'austin',
-    name: 'Austin, TX',
-    landmarks: ['Domain Northside', 'Apple Riata', 'UT Austin', 'Round Rock'],
-    latitude: 30.2672,
-    longitude: -97.7431,
-  },
-  {
-    id: 'dfw',
-    name: 'Dallas-Fort Worth, TX',
-    landmarks: ['Irving', 'Plano', 'Frisco', 'Richardson'],
-    latitude: 32.7767,
-    longitude: -96.797,
-  },
-  {
-    id: 'houston',
-    name: 'Houston, TX',
-    landmarks: ['Sugar Land', 'Katy', 'Medical Center', 'Galleria'],
-    latitude: 29.7604,
-    longitude: -95.3698,
-  },
-  {
-    id: 'bayarea',
-    name: 'Bay Area, CA',
-    landmarks: ['Sunnyvale', 'Fremont', 'Santa Clara', 'San Jose'],
-    latitude: 37.3382,
-    longitude: -121.8863,
-  },
-  {
-    id: 'seattle',
-    name: 'Seattle, WA',
-    landmarks: ['Bellevue', 'Redmond', 'South Lake Union'],
-    latitude: 47.6062,
-    longitude: -122.3321,
-  },
-  {
-    id: 'jersey',
-    name: 'Jersey City / NYC',
-    landmarks: ['Journal Square', 'Newport', 'Edison, NJ'],
-    latitude: 40.7178,
-    longitude: -74.0431,
-  },
-  {
-    id: 'chicago',
-    name: 'Chicago, IL',
-    landmarks: ['Loop', 'Naperville', 'Schaumburg'],
-    latitude: 41.8781,
-    longitude: -87.6298,
-  },
-  {
-    id: 'atlanta',
-    name: 'Atlanta, GA',
-    landmarks: ['Midtown', 'Alpharetta', 'Buckhead', 'Duluth'],
-    latitude: 33.749,
-    longitude: -84.388,
-  },
-  {
-    id: 'boston',
-    name: 'Boston, MA',
-    landmarks: ['Cambridge', 'Quincy', 'Waltham'],
-    latitude: 42.3601,
-    longitude: -71.0589,
-  },
-  {
-    id: 'charlotte',
-    name: 'Charlotte, NC',
-    landmarks: ['Uptown', 'Ballantyne', 'University City'],
-    latitude: 35.2271,
-    longitude: -80.8431,
-  },
-  {
-    id: 'columbus',
-    name: 'Columbus, OH',
-    landmarks: ['Dublin', 'Polaris', 'OSU Campus', 'Cleveland', 'Cincinnati'],
-    latitude: 40.0992,
-    longitude: -83.1141,
-  },
-  {
-    id: 'all',
-    name: 'All Cities (USA)',
-    landmarks: ['Nationwide', 'Texas', 'Ohio', 'California', 'Washington'],
-    latitude: 39.8283,
-    longitude: -98.5795,
-  },
-];
 
 type ExtendedRoom = RoomListing & {
   mapX: number; // percentage across map
@@ -186,7 +100,6 @@ export function matchesRoomLocation(
     .trim();
   const roomLocLower = (room.broadLocation ?? '').toLowerCase();
   const roomTitleLower = room.title.toLowerCase();
-  const roomDescLower = (room.description ?? '').toLowerCase();
   const roomStateUpper = (room.stateCode ?? '').toUpperCase().trim();
 
   // 1. State match: If state is specified and room has a stateCode, ensure state matches
@@ -204,54 +117,50 @@ export function matchesRoomLocation(
     }
   }
 
-  // 2. Coordinate proximity match: if both city and room have lat/lng, match within ~45 miles (~0.65 degrees)
+  // 2. Direct exact city name match (e.g. "Frisco" in "Main St & Teel Pkwy, Frisco, TX")
+  if (
+    selCityLower.length > 2 &&
+    (roomLocLower.includes(selCityLower) || roomTitleLower.includes(selCityLower))
+  ) {
+    return true;
+  }
+
+  // 3. City landmarks match (if provided) - NEVER match 2-letter state codes
+  const candidateLandmarks = selectedCity.landmarks ?? [];
+  const validLandmarks = candidateLandmarks.filter(
+    (lm) => lm && lm.trim().length > 2 && lm.trim().toUpperCase() !== selStateUpper,
+  );
+
+  if (validLandmarks.length > 0) {
+    const matchesLandmark = validLandmarks.some((lm) => {
+      const lmLower = lm.toLowerCase().trim();
+      return roomLocLower.includes(lmLower) || roomTitleLower.includes(lmLower);
+    });
+    if (matchesLandmark) return true;
+  }
+
+  // 4. Coordinate proximity match: for every city, match nearby listings within ~14 miles (0.20°)
   if (selectedCity.latitude && selectedCity.longitude && room.latitude && room.longitude) {
     const dLat = Math.abs(selectedCity.latitude - room.latitude);
     const dLng = Math.abs(selectedCity.longitude - room.longitude);
-    if (dLat <= 0.65 && dLng <= 0.65) {
+    if (dLat <= 0.2 && dLng <= 0.2) {
       return true;
     }
+    // If coordinates are known and beyond range (e.g. Austin vs Frisco/Coppell is 200mi / 2.88°), reject
+    return false;
   }
 
-  // 3. City token & landmark text match
+  // 5. Fallback for listings without coordinates: token match
   const cityTokens = selCityLower
     .split(/[\s\-/,+]+/)
     .map((t) => t.trim())
     .filter((t) => t.length > 2 && t !== 'area' && t !== 'metro');
 
-  if (
-    cityTokens.some(
-      (tok) =>
-        roomLocLower.includes(tok) || roomTitleLower.includes(tok) || roomDescLower.includes(tok),
-    )
-  ) {
+  if (cityTokens.some((tok) => roomLocLower.includes(tok) || roomTitleLower.includes(tok))) {
     return true;
   }
 
-  // 4. City landmarks match (from selectedCity or CITIES presets)
-  const landmarks =
-    selectedCity.landmarks?.length > 0
-      ? selectedCity.landmarks
-      : (CITIES.find((c) => c.id === selectedCity.id)?.landmarks ?? []);
-
-  if (landmarks.length > 0) {
-    const matchesLandmark = landmarks.some((lm) => {
-      const lmLower = lm.toLowerCase();
-      return (
-        roomLocLower.includes(lmLower) ||
-        roomTitleLower.includes(lmLower) ||
-        roomDescLower.includes(lmLower)
-      );
-    });
-    if (matchesLandmark) return true;
-  }
-
-  // 5. Default fallback: state match + city name match
-  const stateMatch = selStateUpper ? roomStateUpper === selStateUpper : true;
-  const cityMatch = selCityLower
-    ? roomLocLower.includes(selCityLower) || roomTitleLower.includes(selCityLower)
-    : true;
-  return stateMatch && cityMatch;
+  return false;
 }
 
 const filterCategories = [
@@ -305,16 +214,26 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
   const isAppleMapsActive = (Platform.OS === 'ios' && isExpoGo) || mapProvider === 'apple';
 
-  const selectedCity: CityOption = useMemo(
-    () => ({
+  const detectedLocation = useLocationStore((s) => s.detectedLocation);
+  const nearbyCities = useLocationStore((s) => s.nearbyCities);
+  const isDetecting = useLocationStore((s) => s.isDetecting);
+  const detectDeviceLocation = useLocationStore((s) => s.detectDeviceLocation);
+
+  // Auto-detect device location on initial load if not yet detected
+  useEffect(() => {
+    if (!detectedLocation) {
+      detectDeviceLocation();
+    }
+  }, [detectedLocation, detectDeviceLocation]);
+
+  const selectedCity: CityOption = useMemo(() => {
+    return {
       id: globalLocation.id,
       name: globalLocation.name,
-      landmarks: [globalLocation.stateCode],
       latitude: globalLocation.latitude,
       longitude: globalLocation.longitude,
-    }),
-    [globalLocation],
-  );
+    };
+  }, [globalLocation]);
 
   const setSelectedCity = useCallback(
     (city: CityOption) => {
@@ -323,8 +242,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         name: city.name,
         cityName: city.name.split(',')[0]?.trim() || city.name,
         stateCode: city.name.split(',')[1]?.trim() || 'US',
-        latitude: city.latitude ?? 30.2672,
-        longitude: city.longitude ?? -97.7431,
+        latitude: city.latitude ?? ALL_USA_LOCATION.latitude,
+        longitude: city.longitude ?? ALL_USA_LOCATION.longitude,
       });
     },
     [setGlobalLocation],
@@ -415,7 +334,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               applyCoords(pos2.coords.latitude, pos2.coords.longitude);
             },
             () => {
-              applyCoords(selectedCity.latitude || 30.2672, selectedCity.longitude || -97.7431);
+              applyCoords(
+                selectedCity.latitude || ALL_USA_LOCATION.latitude,
+                selectedCity.longitude || ALL_USA_LOCATION.longitude,
+              );
             },
             { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
           );
@@ -423,7 +345,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
       );
     } else {
-      applyCoords(selectedCity.latitude || 30.2672, selectedCity.longitude || -97.7431);
+      applyCoords(
+        selectedCity.latitude || ALL_USA_LOCATION.latitude,
+        selectedCity.longitude || ALL_USA_LOCATION.longitude,
+      );
     }
   }, [selectedCity]);
 
@@ -578,16 +503,24 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     const matched = rawListings.filter((room) =>
       matchesRoomLocation(room, selectedCity, globalLocation),
     );
-    // If user selected an area where no rooms exist yet, fall back to all rooms so user is not blocked
-    return matched.length > 0 ? matched : rawListings;
-  }, [rawListings, selectedCity, globalLocation]);
+    const selCityLower = (globalLocation.cityName || selectedCity.name.split(',')[0] || '')
+      .toLowerCase()
+      .trim();
 
-  const hasLocationFallback =
-    selectedCity.id !== 'all' &&
-    selectedCity.id !== 'all-usa' &&
-    !selectedCity.name.toLowerCase().includes('all cities') &&
-    rawListings.filter((room) => matchesRoomLocation(room, selectedCity, globalLocation)).length ===
-      0;
+    return matched.sort((a, b) => {
+      const aExact =
+        a.broadLocation?.toLowerCase().includes(selCityLower) ||
+        a.title.toLowerCase().includes(selCityLower)
+          ? 1
+          : 0;
+      const bExact =
+        b.broadLocation?.toLowerCase().includes(selCityLower) ||
+        b.title.toLowerCase().includes(selCityLower)
+          ? 1
+          : 0;
+      return bExact - aExact;
+    });
+  }, [rawListings, selectedCity, globalLocation]);
 
   // Active pin selection defaults to first listing once loaded
   const activePinRoom = useMemo(() => {
@@ -1399,9 +1332,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               <View>
                 <Text style={s.sectionTitle}>Available Rooms ({filteredRooms.length})</Text>
                 <Text style={s.sectionSub}>
-                  {hasLocationFallback
-                    ? `Showing all available rooms (no listings in ${selectedCity.name} yet)`
-                    : `Verified housing & shared rooms in ${selectedCity.name}`}
+                  {`Verified housing & shared rooms in ${selectedCity.name}`}
                 </Text>
               </View>
             </View>
@@ -1440,14 +1371,46 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               </View>
             ) : filteredRooms.length === 0 ? (
               <View style={s.emptyBox}>
-                <Text style={s.emptyEmoji}>🔍</Text>
-                <Text style={s.emptyTitle}>No rooms match your filters</Text>
-                <Text style={s.emptySub}>
-                  Try selecting a different filter or reset all filters to view all available rooms.
+                <Text style={s.emptyEmoji}>{locationRooms.length === 0 ? '📍' : '🔍'}</Text>
+                <Text style={s.emptyTitle}>
+                  {locationRooms.length === 0
+                    ? `No rooms in ${selectedCity.name} yet`
+                    : 'No rooms match your filters'}
                 </Text>
-                <Pressable onPress={resetFilters} style={s.resetFilterBtn}>
-                  <Text style={s.resetFilterBtnText}>Reset All Filters</Text>
-                </Pressable>
+                <Text style={s.emptySub}>
+                  {locationRooms.length === 0
+                    ? `Be the first to list a room in ${selectedCity.name}, or explore all available cities nationwide.`
+                    : 'Try selecting a different filter or reset all filters to view all available rooms.'}
+                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    gap: 10,
+                    marginTop: 12,
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {locationRooms.length === 0 ? (
+                    <>
+                      <Pressable
+                        onPress={() => setSelectedCity(ALL_USA_LOCATION)}
+                        style={s.resetFilterBtn}
+                      >
+                        <Text style={s.resetFilterBtnText}>Browse All Cities (USA)</Text>
+                      </Pressable>
+                      <Link href="/rooms/create-listing" asChild>
+                        <Pressable style={s.resetFilterBtn}>
+                          <Text style={s.resetFilterBtnText}>+ Post a Room</Text>
+                        </Pressable>
+                      </Link>
+                    </>
+                  ) : (
+                    <Pressable onPress={resetFilters} style={s.resetFilterBtn}>
+                      <Text style={s.resetFilterBtnText}>Reset All Filters</Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
             ) : (
               <View style={isDualPane && viewMode === 'card' ? s.dualPaneCardGrid : undefined}>
@@ -1492,10 +1455,11 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         animationType={isDesktop ? 'fade' : 'slide'}
         onRequestClose={() => setIsCityModalVisible(false)}
       >
-        <Pressable
-          onPress={() => setIsCityModalVisible(false)}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}
         >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsCityModalVisible(false)} />
           <Pressable
             onPress={(e) => e.stopPropagation()}
             style={[s.cityModalCard, !isDesktop && s.cityModalCardMobile]}
@@ -1506,16 +1470,16 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               </View>
             ) : null}
             <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Choose Metro Area</Text>
+              <Text style={s.modalTitle}>Select City</Text>
             </View>
-            <Text style={s.modalSubtitle}>Discover verified flatmates & housing in your metro</Text>
+            <Text style={s.modalSubtitle}>Search or select any US city</Text>
 
             <View style={s.citySearchBox}>
               <AppIcon color={colors.muted} name="search" size={16} />
               <TextInput
                 value={citySearchInput}
                 onChangeText={setCitySearchInput}
-                placeholder="Search all US cities (e.g. Frisco, Edison, Sunnyvale)..."
+                placeholder="Search all 19,000+ US cities (e.g. Coppell, Frisco, Jonesboro)..."
                 placeholderTextColor={colors.muted}
                 style={s.citySearchInput}
                 autoCorrect={false}
@@ -1528,7 +1492,11 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               )}
             </View>
 
-            <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              style={s.cityModalScrollView}
+              contentContainerStyle={{ flexGrow: 1 }}
+              keyboardShouldPersistTaps="handled"
+            >
               {citySearchInput.trim().length > 0 ? (
                 <>
                   <Text style={s.citySectionLabel}>SEARCH RESULTS ({searchedCities.length})</Text>
@@ -1548,7 +1516,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                             setSelectedCity({
                               id: city.id,
                               name: city.name,
-                              landmarks: [city.stateCode],
+                              landmarks: [],
                               latitude: city.latitude,
                               longitude: city.longitude,
                             });
@@ -1586,53 +1554,179 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 </>
               ) : (
                 <>
-                  <Text style={s.citySectionLabel}>🌟 POPULAR TECH METROS</Text>
-                  {CITIES.map((city) => {
-                    const isSelected = selectedCity.id === city.id;
-                    return (
-                      <Pressable
-                        key={city.id}
-                        onPress={() => {
-                          setSelectedCity(city);
-                          setIsCityModalVisible(false);
-                        }}
-                        style={[s.cityOptionRow, isSelected && s.cityOptionRowActive]}
+                  {/* 1. Detected / Current Location */}
+                  <Text style={s.citySectionLabel}>📍 CURRENT LOCATION</Text>
+                  <Pressable
+                    onPress={() => {
+                      if (detectedLocation) {
+                        setSelectedCity(detectedLocation);
+                        setIsCityModalVisible(false);
+                      } else {
+                        detectDeviceLocation();
+                      }
+                    }}
+                    style={[
+                      s.cityOptionRow,
+                      detectedLocation &&
+                        selectedCity.id === detectedLocation.id &&
+                        s.cityOptionRowActive,
+                    ]}
+                  >
+                    <View style={s.cityOptionLeft}>
+                      <AppIcon
+                        color={
+                          detectedLocation && selectedCity.id === detectedLocation.id
+                            ? colors.appPrimary
+                            : colors.muted
+                        }
+                        name="compass"
+                        size={16}
+                      />
+                      <View>
+                        <Text
+                          style={[
+                            s.cityOptionName,
+                            detectedLocation &&
+                              selectedCity.id === detectedLocation.id &&
+                              s.cityOptionNameActive,
+                          ]}
+                        >
+                          {detectedLocation ? detectedLocation.name : 'Detect My Location'}
+                        </Text>
+                        <Text style={s.cityOptionLandmarks}>
+                          {isDetecting
+                            ? 'Detecting via GPS / Network...'
+                            : detectedLocation
+                              ? 'Device GPS / Local Network'
+                              : 'Tap to locate nearest US city'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      style={[
+                        s.cityCountPill,
+                        detectedLocation &&
+                          selectedCity.id === detectedLocation.id &&
+                          s.cityCountPillActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          s.cityCountText,
+                          detectedLocation &&
+                            selectedCity.id === detectedLocation.id &&
+                            s.cityCountTextActive,
+                        ]}
                       >
-                        <View style={s.cityOptionLeft}>
-                          <AppIcon
-                            color={isSelected ? colors.appPrimary : colors.muted}
-                            name="map"
-                            size={16}
-                          />
-                          <View>
-                            <Text style={[s.cityOptionName, isSelected && s.cityOptionNameActive]}>
-                              {city.name}
-                            </Text>
-                            <Text style={s.cityOptionLandmarks}>{city.landmarks.join(' • ')}</Text>
-                          </View>
-                        </View>
-                        <View style={[s.cityCountPill, isSelected && s.cityCountPillActive]}>
-                          <Text style={[s.cityCountText, isSelected && s.cityCountTextActive]}>
-                            {(() => {
-                              const count = rawListings.filter((r) =>
-                                matchesRoomLocation(r, city, {
-                                  name: city.name,
-                                  cityName: city.name.split(',')[0],
-                                  stateCode: city.name.split(',')[1]?.trim(),
-                                }),
-                              ).length;
-                              return count > 0 ? `${count} active` : 'Active Hub';
-                            })()}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
+                        {isDetecting
+                          ? 'Locating...'
+                          : detectedLocation && selectedCity.id === detectedLocation.id
+                            ? 'Active'
+                            : 'Detect'}
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  {/* 2. Nearby Cities (4 to 5 nearby cities based on distance) */}
+                  {nearbyCities.length > 0 && (
+                    <>
+                      <Text style={s.citySectionLabel}>🚗 NEARBY CITIES</Text>
+                      {nearbyCities.map((city) => {
+                        const isSelected = selectedCity.id === city.id;
+                        return (
+                          <Pressable
+                            key={city.id}
+                            onPress={() => {
+                              setSelectedCity(city);
+                              setIsCityModalVisible(false);
+                            }}
+                            style={[s.cityOptionRow, isSelected && s.cityOptionRowActive]}
+                          >
+                            <View style={s.cityOptionLeft}>
+                              <AppIcon
+                                color={isSelected ? colors.appPrimary : colors.muted}
+                                name="map"
+                                size={16}
+                              />
+                              <View>
+                                <Text
+                                  style={[s.cityOptionName, isSelected && s.cityOptionNameActive]}
+                                >
+                                  {city.name}
+                                </Text>
+                                <Text style={s.cityOptionLandmarks}>
+                                  {city.distanceMiles
+                                    ? `${city.distanceMiles} mi away`
+                                    : `${city.stateCode}, USA`}
+                                </Text>
+                              </View>
+                            </View>
+                            <View style={[s.cityCountPill, isSelected && s.cityCountPillActive]}>
+                              <Text style={[s.cityCountText, isSelected && s.cityCountTextActive]}>
+                                {isSelected ? 'Active' : `${city.distanceMiles ?? ''} mi`}
+                              </Text>
+                            </View>
+                          </Pressable>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* 3. All Cities (USA) */}
+                  <Text style={s.citySectionLabel}>🇺🇸 ALL LOCATIONS</Text>
+                  <Pressable
+                    onPress={() => {
+                      setSelectedCity(ALL_USA_LOCATION);
+                      setIsCityModalVisible(false);
+                    }}
+                    style={[
+                      s.cityOptionRow,
+                      selectedCity.id === ALL_USA_LOCATION.id && s.cityOptionRowActive,
+                    ]}
+                  >
+                    <View style={s.cityOptionLeft}>
+                      <AppIcon
+                        color={
+                          selectedCity.id === ALL_USA_LOCATION.id ? colors.appPrimary : colors.muted
+                        }
+                        name="globe"
+                        size={16}
+                      />
+                      <View>
+                        <Text
+                          style={[
+                            s.cityOptionName,
+                            selectedCity.id === ALL_USA_LOCATION.id && s.cityOptionNameActive,
+                          ]}
+                        >
+                          All Cities (USA)
+                        </Text>
+                        <Text style={s.cityOptionLandmarks}>
+                          View listings across all 50 states
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      style={[
+                        s.cityCountPill,
+                        selectedCity.id === ALL_USA_LOCATION.id && s.cityCountPillActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          s.cityCountText,
+                          selectedCity.id === ALL_USA_LOCATION.id && s.cityCountTextActive,
+                        ]}
+                      >
+                        {rawListings.length} total
+                      </Text>
+                    </View>
+                  </Pressable>
                 </>
               )}
             </ScrollView>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ─── DEDICATED SORT BOTTOM SHEET (Mobile bottom-up, Web centered) ──────── */}
@@ -3113,6 +3207,13 @@ const s = StyleSheet.create({
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
     paddingBottom: 32,
+    minHeight: 460,
+    maxHeight: '85%',
+  },
+  cityModalScrollView: {
+    flex: 1,
+    minHeight: 240,
+    maxHeight: 380,
   },
   modalHeader: {
     flexDirection: 'row',

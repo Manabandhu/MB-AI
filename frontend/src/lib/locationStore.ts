@@ -2,94 +2,22 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { SearchCityResult } from '@/modules/rooms/utils/locationService';
+import {
+  ALL_USA_CITY,
+  detectCurrentLocation,
+  getNearbyUSCities,
+  type NearbyCityResult,
+  type SearchCityResult,
+} from '@/modules/rooms/utils/locationService';
 
 export type AppLocation = SearchCityResult;
+export type { NearbyCityResult };
 
-export const POPULAR_METROS: AppLocation[] = [
-  {
-    id: 'austin-tx',
-    name: 'Austin, TX',
-    cityName: 'Austin',
-    stateCode: 'TX',
-    latitude: 30.2672,
-    longitude: -97.7431,
-  },
-  {
-    id: 'dallas-tx',
-    name: 'Dallas-Fort Worth, TX',
-    cityName: 'Dallas',
-    stateCode: 'TX',
-    latitude: 32.7767,
-    longitude: -96.797,
-  },
-  {
-    id: 'houston-tx',
-    name: 'Houston, TX',
-    cityName: 'Houston',
-    stateCode: 'TX',
-    latitude: 29.7604,
-    longitude: -95.3698,
-  },
-  {
-    id: 'san-jose-ca',
-    name: 'San Jose / Bay Area, CA',
-    cityName: 'San Jose',
-    stateCode: 'CA',
-    latitude: 37.3382,
-    longitude: -121.8863,
-  },
-  {
-    id: 'seattle-wa',
-    name: 'Seattle, WA',
-    cityName: 'Seattle',
-    stateCode: 'WA',
-    latitude: 47.6062,
-    longitude: -122.3321,
-  },
-  {
-    id: 'chicago-il',
-    name: 'Chicago, IL',
-    cityName: 'Chicago',
-    stateCode: 'IL',
-    latitude: 41.8781,
-    longitude: -87.6298,
-  },
-  {
-    id: 'new-york-ny',
-    name: 'New York, NY',
-    cityName: 'New York',
-    stateCode: 'NY',
-    latitude: 40.7128,
-    longitude: -74.006,
-  },
-  {
-    id: 'atlanta-ga',
-    name: 'Atlanta, GA',
-    cityName: 'Atlanta',
-    stateCode: 'GA',
-    latitude: 33.749,
-    longitude: -84.388,
-  },
-  {
-    id: 'columbus-oh',
-    name: 'Columbus, OH',
-    cityName: 'Columbus',
-    stateCode: 'OH',
-    latitude: 40.0992,
-    longitude: -83.1141,
-  },
-  {
-    id: 'all-usa',
-    name: 'All Cities (USA)',
-    cityName: 'All Cities',
-    stateCode: 'USA',
-    latitude: 39.8283,
-    longitude: -98.5795,
-  },
-];
+export const ALL_USA_LOCATION: AppLocation = ALL_USA_CITY;
+export const DEFAULT_LOCATION: AppLocation = ALL_USA_LOCATION;
 
-export const DEFAULT_LOCATION: AppLocation = POPULAR_METROS[0];
+export const POPULAR_CITIES: AppLocation[] = [ALL_USA_LOCATION];
+export const POPULAR_METROS = POPULAR_CITIES;
 
 const memoryStore = new Map<string, string>();
 
@@ -141,7 +69,11 @@ const universalStorage = {
 
 interface LocationStoreState {
   currentLocation: AppLocation;
+  detectedLocation: AppLocation | null;
+  nearbyCities: NearbyCityResult[];
+  isDetecting: boolean;
   setLocation: (location: AppLocation) => void;
+  detectDeviceLocation: () => Promise<AppLocation | null>;
   resetLocation: () => void;
 }
 
@@ -149,11 +81,48 @@ export const useLocationStore = create<LocationStoreState>()(
   persist(
     (set) => ({
       currentLocation: DEFAULT_LOCATION,
-      setLocation: (location: AppLocation) => set({ currentLocation: location }),
-      resetLocation: () => set({ currentLocation: DEFAULT_LOCATION }),
+      detectedLocation: null,
+      nearbyCities: [],
+      isDetecting: false,
+      setLocation: (location: AppLocation) => {
+        const nearby =
+          location.id === ALL_USA_LOCATION.id
+            ? []
+            : getNearbyUSCities(location.latitude, location.longitude, 5);
+        set({
+          currentLocation: location,
+          nearbyCities: nearby,
+        });
+      },
+      detectDeviceLocation: async () => {
+        set({ isDetecting: true });
+        try {
+          const detected = await detectCurrentLocation();
+          if (detected) {
+            const nearby = getNearbyUSCities(detected.latitude, detected.longitude, 5);
+            set({
+              detectedLocation: detected,
+              currentLocation: detected,
+              nearbyCities: nearby,
+              isDetecting: false,
+            });
+            return detected;
+          }
+          set({ isDetecting: false });
+          return null;
+        } catch {
+          set({ isDetecting: false });
+          return null;
+        }
+      },
+      resetLocation: () =>
+        set({
+          currentLocation: DEFAULT_LOCATION,
+          nearbyCities: [],
+        }),
     }),
     {
-      name: 'manabandhu_active_location_v1',
+      name: 'manabandhu_active_location_v3',
       storage: createJSONStorage(() => universalStorage),
     },
   ),
