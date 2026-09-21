@@ -339,16 +339,16 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
   return (
     <SafeAreaView style={s.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         {/* Header */}
-        <View style={[s.header, { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) }]}>
+        <View style={[s.header, { paddingTop: Math.max(insets.top, 16) }]}>
           <Pressable
             onPress={() => router.back()}
             style={s.backBtn}
             accessibilityLabel="Back"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <AppIcon color={colors.ink} name="chevron-left" size={20} />
           </Pressable>

@@ -1,7 +1,7 @@
 import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
-import { Link, router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -221,13 +221,6 @@ export function RoomDetailScreen() {
     }
   };
 
-  const samplePhotos = [
-    '🛏️ Master Bed',
-    '🚿 Attached Bath',
-    '🍳 Modular Kitchen',
-    '🏊 Community Pool',
-  ];
-
   const dietaryLabel =
     room.dietaryPreference === 'PURE_VEG'
       ? '🥦 Pure Veg Only'
@@ -255,21 +248,17 @@ export function RoomDetailScreen() {
     <SafeAreaView style={s.safeArea}>
       {/* ─── Top Bar ───────────────────────────────────────────────────────────── */}
       <View
-        style={[
-          s.navBar,
-          isDesktop && s.navBarDesktop,
-          { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) },
-        ]}
+        style={[s.navBar, isDesktop && s.navBarDesktop, { paddingTop: Math.max(insets.top, 16) }]}
       >
         <Pressable
           onPress={() => router.back()}
           style={s.navBtn}
           accessibilityLabel="Back"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <AppIcon color={colors.ink} name="chevron-left" size={20} />
         </Pressable>
-        <Text style={s.navTitle} numberOfLines={1}>
+        <Text style={s.navTitle} numberOfLines={1} ellipsizeMode="tail">
           Room Details
         </Text>
         <View style={s.navActions}>
@@ -277,7 +266,7 @@ export function RoomDetailScreen() {
             onPress={handleSaveToggle}
             style={s.navBtn}
             accessibilityLabel="Save Room"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <AppIcon color={isSaved ? '#ba1a1a' : colors.muted} name="star" size={18} />
           </Pressable>
@@ -285,7 +274,7 @@ export function RoomDetailScreen() {
             onPress={handleShare}
             style={s.navBtn}
             accessibilityLabel="Share"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <AppIcon color={colors.ink} name="globe" size={18} />
           </Pressable>
@@ -555,6 +544,20 @@ export function RoomDetailScreen() {
             <Text style={s.descriptionText}>{room.description}</Text>
           </View>
         ) : null}
+
+        {/* Anti-Scam Security Notice */}
+        <View style={s.scamWarningCard}>
+          <View style={s.scamWarningIconContainer}>
+            <AppIcon color="#b45309" name="shield" size={20} strokeWidth={2.5} />
+          </View>
+          <View style={s.scamWarningContent}>
+            <Text style={s.scamWarningTitle}>Community Anti-Scam Protection</Text>
+            <Text style={s.scamWarningBody}>
+              Never wire money or transfer via Zelle/Venmo before viewing the room and verifying the
+              host. ManaBandhu never asks for off-platform cash deposits or wire transfers.
+            </Text>
+          </View>
+        </View>
 
         {/* Privacy & Location Notice */}
         <View style={s.privacyNoticeCard}>
@@ -1039,6 +1042,38 @@ const s = StyleSheet.create({
     color: colors.ink,
     fontSize: 14,
     lineHeight: 22,
+  },
+  scamWarningCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.x3,
+    backgroundColor: '#fffbeb',
+    borderColor: '#fef3c7',
+    borderWidth: 1.5,
+    borderRadius: 18,
+    padding: space.x4,
+  },
+  scamWarningIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fef3c7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scamWarningContent: {
+    flex: 1,
+    gap: 4,
+  },
+  scamWarningTitle: {
+    color: '#92400e',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  scamWarningBody: {
+    color: '#b45309',
+    fontSize: 12,
+    lineHeight: 17,
   },
   privacyNoticeCard: {
     flexDirection: 'row',

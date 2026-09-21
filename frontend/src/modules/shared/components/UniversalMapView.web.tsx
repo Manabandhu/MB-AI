@@ -38,6 +38,12 @@ export interface UniversalMapViewProps {
   drawnPolygon?: Coordinate[] | null;
   onPolygonComplete?: (polygon: Coordinate[]) => void;
   onClearPolygon?: () => void;
+  onRegionChangeComplete?: (region: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  }) => void;
 }
 
 const DEFAULT_REGION = {
@@ -148,6 +154,7 @@ export function UniversalMapView({
   drawnPolygon = null,
   onPolygonComplete,
   onClearPolygon,
+  onRegionChangeComplete,
 }: UniversalMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapEngine, setMapEngine] = useState<'google' | 'mapkit' | 'leaflet' | null>(null);
@@ -186,6 +193,11 @@ export function UniversalMapView({
   const appleMapsToken = process.env.EXPO_PUBLIC_APPLE_MAPS_TOKEN?.trim() || '';
   const preferredProvider = useMapPreferencesStore((s) => s.provider);
 
+  const onRegionChangeCompleteRef = useRef(onRegionChangeComplete);
+  useEffect(() => {
+    onRegionChangeCompleteRef.current = onRegionChangeComplete;
+  }, [onRegionChangeComplete]);
+
   // --------------------------------------------------------------------------
   // 1. Initialize Map: Google Maps (priority) > Apple MapKit > Leaflet/OSM
   // --------------------------------------------------------------------------
@@ -210,6 +222,22 @@ export function UniversalMapView({
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
+      });
+
+      map.addListener('idle', () => {
+        if (!onRegionChangeCompleteRef.current) return;
+        const center = map.getCenter();
+        const bounds = map.getBounds();
+        if (center && bounds) {
+          const ne = bounds.getNorthEast();
+          const sw = bounds.getSouthWest();
+          onRegionChangeCompleteRef.current({
+            latitude: center.lat(),
+            longitude: center.lng(),
+            latitudeDelta: Math.abs(ne.lat() - sw.lat()),
+            longitudeDelta: Math.abs(ne.lng() - sw.lng()),
+          });
+        }
       });
 
       googleMapRef.current = map;
@@ -279,6 +307,18 @@ export function UniversalMapView({
           showsScale: window.mapkit.FeatureVisibility.Adaptive,
         });
 
+        // biome-ignore lint/suspicious/noExplicitAny: MapKitMap event listener
+        (map as any).addEventListener?.('region-change-end', () => {
+          if (!onRegionChangeCompleteRef.current || !map.region) return;
+          const reg = map.region;
+          onRegionChangeCompleteRef.current({
+            latitude: reg.center.latitude,
+            longitude: reg.center.longitude,
+            latitudeDelta: reg.span.latitudeDelta,
+            longitudeDelta: reg.span.longitudeDelta,
+          });
+        });
+
         mapkitInstanceRef.current = map;
         setMapEngine('mapkit');
         setMapReady(true);
@@ -321,20 +361,13 @@ export function UniversalMapView({
       const L = window.L;
       if (!L) return;
 
-      if (leafletMapRef.current) {
-        try {
-          leafletMapRef.current.remove();
-        } catch {
-          // ignore
-        }
-        leafletMapRef.current = null;
-      }
+      if (leafletMapRef.current) return;
 
-      const initialZoom = zoomFromDelta(initialRegion.latitudeDelta);
       const map = L.map(containerRef.current, {
         center: [initialRegion.latitude, initialRegion.longitude],
-        zoom: initialZoom,
+        zoom: zoomFromDelta(initialRegion.latitudeDelta),
         zoomControl: true,
+        attributionControl: true,
       });
 
       const tileUrl =
@@ -354,6 +387,20 @@ export function UniversalMapView({
       leafletTileLayerRef.current = tileLayer;
       const markersLayer = L.layerGroup().addTo(map);
       leafletMarkersLayerRef.current = markersLayer;
+
+      map.on('moveend', () => {
+        if (!onRegionChangeCompleteRef.current) return;
+        const center = map.getCenter();
+        const bounds = map.getBounds();
+        const latDelta = Math.abs(bounds.getNorth() - bounds.getSouth());
+        const lngDelta = Math.abs(bounds.getEast() - bounds.getWest());
+        onRegionChangeCompleteRef.current({
+          latitude: center.lat,
+          longitude: center.lng,
+          latitudeDelta: latDelta,
+          longitudeDelta: lngDelta,
+        });
+      });
 
       leafletMapRef.current = map;
       setMapEngine('leaflet');

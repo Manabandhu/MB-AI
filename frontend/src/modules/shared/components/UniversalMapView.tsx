@@ -41,6 +41,12 @@ export interface UniversalMapViewProps {
   drawnPolygon?: Coordinate[] | null;
   onPolygonComplete?: (polygon: Coordinate[]) => void;
   onClearPolygon?: () => void;
+  onRegionChangeComplete?: (region: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  }) => void;
 }
 
 const DEFAULT_REGION = {
@@ -65,6 +71,7 @@ export function UniversalMapView({
   drawnPolygon = null,
   onPolygonComplete,
   onClearPolygon,
+  onRegionChangeComplete,
 }: UniversalMapViewProps) {
   const mapRef = useRef<MapView>(null);
   const preferredProvider = useMapPreferencesStore((s) => s.provider);
@@ -198,6 +205,7 @@ export function UniversalMapView({
         zoomEnabled={!isDrawingMode}
         rotateEnabled={!isDrawingMode}
         pitchEnabled={!isDrawingMode}
+        onRegionChangeComplete={onRegionChangeComplete}
       >
         {/* Render persistent drawn search polygon */}
         {drawnPolygon && drawnPolygon.length >= 3 && (

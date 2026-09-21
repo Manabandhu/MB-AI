@@ -88,9 +88,31 @@ public class RoomListingService {
             BigDecimal minRent,
             BigDecimal maxRent,
             String bathroomType,
+            Double lat,
+            Double lng,
+            Double radiusMiles,
+            Double minLat,
+            Double maxLat,
+            Double minLng,
+            Double maxLng,
             Pageable pageable) {
-        return repository.searchListings("active", city, stateCode, dietaryPreference, genderPreference,
-                minRent, maxRent, bathroomType, pageable);
+        Double radiusMeters = radiusMiles != null ? radiusMiles * 1609.344 : null;
+        return repository.searchListingsWithGeo("active", city, stateCode, dietaryPreference, genderPreference,
+                minRent, maxRent, bathroomType, lat, lng, radiusMeters, minLat, maxLat, minLng, maxLng, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<RoomListing> search(
+            String city,
+            String stateCode,
+            String dietaryPreference,
+            String genderPreference,
+            BigDecimal minRent,
+            BigDecimal maxRent,
+            String bathroomType,
+            Pageable pageable) {
+        return search(city, stateCode, dietaryPreference, genderPreference,
+                minRent, maxRent, bathroomType, null, null, null, null, null, null, null, pageable);
     }
 
     @Transactional
