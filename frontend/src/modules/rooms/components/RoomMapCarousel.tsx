@@ -89,7 +89,6 @@ export function RoomMapCarousel({
             onSelectListing(item);
             onListingSnap?.(item);
           }}
-          accessibilityRole="button"
           accessibilityLabel={`${item.title}, $${item.price} per month`}
           style={[styles.card, { width: cardWidth }, isSelected && styles.cardSelected]}
         >

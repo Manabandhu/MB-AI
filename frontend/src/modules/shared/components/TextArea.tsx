@@ -9,6 +9,7 @@ export type TextAreaProps = {
   error?: string;
   maxLength?: number;
   accessibilityLabel?: string;
+  testID?: string;
 };
 
 export function TextArea({
@@ -19,6 +20,7 @@ export function TextArea({
   error,
   maxLength = 500,
   accessibilityLabel,
+  testID,
 }: TextAreaProps) {
   const colorScheme = useColorScheme();
 
@@ -36,6 +38,7 @@ export function TextArea({
         ]}
       >
         <TextInput
+          testID={testID}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}

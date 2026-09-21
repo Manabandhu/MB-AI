@@ -224,6 +224,24 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       const isTestPhone =
         (normalized === '14695550100' || normalized === '4695550100') && token.trim() === '123456';
       if (isTestPhone) {
+        try {
+          const { data, error: sbError } = await supabase.auth.signInWithPassword({
+            email: 'synthetic_seed_user_1@manabandhu.test',
+            password: 'Password123!',
+          });
+          if (!sbError && data?.session) {
+            _get().setSession(data.session);
+            set({
+              otpIdentifier: null,
+              otpType: null,
+              error: null,
+            });
+            return;
+          }
+        } catch (err) {
+          console.warn('Test phone Supabase fallback:', err);
+        }
+
         const testUser = {
           id: '00000000-0000-0000-0000-000000000001',
           aud: 'authenticated',

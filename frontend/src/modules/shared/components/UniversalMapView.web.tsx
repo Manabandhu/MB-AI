@@ -555,7 +555,7 @@ export function UniversalMapView({
               : this.markerItem.title;
 
           div.innerHTML = `
-            <div style="
+            <div data-testid="room-price-marker" style="
               display: inline-flex;
               align-items: center;
               gap: 6px;
@@ -632,7 +632,7 @@ export function UniversalMapView({
         const titleSnippet = m.title.length > 18 ? `${m.title.slice(0, 18)}...` : m.title;
 
         const html = `
-          <div style="
+          <div data-testid="room-price-marker" style="
             display: inline-flex;
             align-items: center;
             gap: 6px;

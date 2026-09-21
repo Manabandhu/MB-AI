@@ -12,6 +12,7 @@ export function RoomPriceMarker({ price, isSelected = false, onPress }: RoomPric
 
   return (
     <Pressable
+      testID="room-price-marker"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Room price ${formattedPrice}`}

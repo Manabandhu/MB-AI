@@ -837,6 +837,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           {filterCategories.map((cat) => (
             <Pressable
               key={cat.id}
+              testID={cat.id === 'veg' ? 'filter-chip-pure-veg' : undefined}
               onPress={() => setActiveCategory(cat.label)}
               style={[s.categoryChip, activeCategory === cat.label && s.categoryChipActive]}
             >
@@ -873,7 +874,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           const initialLng = selectedCity.longitude || mapMarkers[0]?.longitude || -97.7431;
 
           return (
-            <View style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}>
+            <View testID={isDualPane ? 'desktop-split-map' : 'map-container'} style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}>
               <UniversalMapView
                 initialRegion={{
                   latitude: initialLat,
@@ -1153,6 +1154,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           return (
             <Pressable
               key={room.id}
+              testID="room-listing-card"
               onPress={() => {
                 if (isDualPane) {
                   setSelectedPinRoomId(room.id);
@@ -1302,6 +1304,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           return (
             <Pressable
               key={room.id}
+              testID="room-listing-card"
               onPress={() => {
                 if (isDualPane) {
                   setSelectedPinRoomId(room.id);
@@ -1505,7 +1508,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           return (
             <View style={s.dualPaneContainer}>
               <View style={s.dualPaneLeft}>{renderListView()}</View>
-              <View style={s.dualPaneRight}>{renderMapView()}</View>
+              <View testID="desktop-split-map" style={s.dualPaneRight}>{renderMapView()}</View>
             </View>
           );
         }

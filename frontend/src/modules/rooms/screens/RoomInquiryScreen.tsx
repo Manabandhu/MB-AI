@@ -238,6 +238,7 @@ export function RoomInquiryScreen() {
             {/* Message */}
             <Text style={s.inputLabel}>Introductory Note & Questions *</Text>
             <TextArea
+              testID="inquiry-message-input"
               value={message}
               onChangeText={setMessage}
               placeholder="Hi, I'm interested in this room. I work nearby / study at UT and am looking for a quiet, clean flatmate..."
@@ -254,6 +255,7 @@ export function RoomInquiryScreen() {
           </View>
 
           <AppButton
+            testID="send-inquiry-btn"
             label={mutation.isPending ? 'Connecting...' : 'Send Inquiry & Start Chat'}
             onPress={handleSubmit}
             loading={mutation.isPending}
