@@ -314,7 +314,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
     let lng = values.longitude ? Number(values.longitude) : undefined;
     if ((!lat || !lng) && values.broadLocation) {
       const match = searchAllUSCities(values.broadLocation, 1)[0];
-      if (match && match.latitude && match.longitude) {
+      if (match?.latitude && match.longitude) {
         lat = match.latitude;
         lng = match.longitude;
       }

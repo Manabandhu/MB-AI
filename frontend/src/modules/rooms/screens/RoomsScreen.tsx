@@ -874,7 +874,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           const initialLng = selectedCity.longitude || mapMarkers[0]?.longitude || -97.7431;
 
           return (
-            <View testID={isDualPane ? 'desktop-split-map' : 'map-container'} style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}>
+            <View
+              testID={isDualPane ? 'desktop-split-map' : 'map-container'}
+              style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}
+            >
               <UniversalMapView
                 initialRegion={{
                   latitude: initialLat,
@@ -1077,8 +1080,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     isRoomPreviewExpanded && activePinRoom
                       ? s.zillowFloatingSwitchWrapperTop
                       : s.zillowFloatingSwitchWrapperBottom,
+                    { pointerEvents: 'box-none' },
                   ]}
-                  pointerEvents="box-none"
                 >
                   <Pressable
                     onPress={() => setViewMode('list')}
@@ -1100,7 +1103,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               )}
               {/* Floating "Search This Area" Pill */}
               {showSearchAreaBtn && (
-                <View style={s.searchThisAreaWrapper} pointerEvents="box-none">
+                <View style={[s.searchThisAreaWrapper, { pointerEvents: 'box-none' }]}>
                   <Pressable
                     onPress={() => {
                       setShowSearchAreaBtn(false);
@@ -1508,7 +1511,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           return (
             <View style={s.dualPaneContainer}>
               <View style={s.dualPaneLeft}>{renderListView()}</View>
-              <View testID="desktop-split-map" style={s.dualPaneRight}>{renderMapView()}</View>
+              <View testID="desktop-split-map" style={s.dualPaneRight}>
+                {renderMapView()}
+              </View>
             </View>
           );
         }

@@ -33,7 +33,7 @@ Owns room discovery, search, map, filters, saved rooms, listings, listing creati
 - `RoomFavoritesScreen` - real saved/favorite listings list backed by `savedRoomsStore` and backend favorites
 - `RoomMyListingsScreen` - real owner listings list
 - `RoomInquiryScreen` - inquiry form that creates a booking for the listing
-- Shared: `UniversalMapView`, `geoPolygon` (`isPointInPolygon`), `savedRoomsStore`, `locationService` (`searchAllUSCities`), `FeatureScreen`, `SearchBar`, `AppButton`, `TextArea`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`
+- Shared: `UniversalMapView`, `geoPolygon` (`isPointInPolygon`), `savedRoomsStore`, `locationService` (`searchAllUSCities`), `FeatureScreen`, `SearchBar`, `AppButton`, `TextArea`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`; listing creation uses `searchAllUSCities` geocoding fallback when latitude/longitude are omitted, and overlay controls use style-based `pointerEvents`.
 
 ## API Surface
 

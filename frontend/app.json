@@ -40,8 +40,15 @@
       ],
       "expo-secure-store",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-asset",
+      "expo-image"
     ],
+    "extra": {
+      "router": {
+        "importMode": "lazy"
+      }
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

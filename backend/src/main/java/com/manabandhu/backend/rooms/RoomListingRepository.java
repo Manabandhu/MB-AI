@@ -15,6 +15,8 @@ interface RoomListingRepository extends JpaRepository<RoomListing, UUID> {
 
     List<RoomListing> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
 
+    Page<RoomListing> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId, Pageable pageable);
+
     List<RoomListing> findByBroadLocationContainingIgnoreCaseAndStatusOrderByCreatedAtDesc(String location, String status);
 
     List<RoomListing> findByRoomTypeAndStatusOrderByCreatedAtDesc(String roomType, String status);

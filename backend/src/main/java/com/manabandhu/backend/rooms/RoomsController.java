@@ -288,9 +288,9 @@ public class RoomsController {
     }
 
     @GetMapping("/my-listings")
-    List<OwnerRoomListingResponse> myListings(Authentication authentication) {
+    Page<OwnerRoomListingResponse> myListings(Authentication authentication, Pageable pageable) {
         var ownerId = actorId(authentication);
-        return listingService.findByOwner(ownerId).stream().map(this::toOwnerResponse).toList();
+        return listingService.findByOwner(ownerId, pageable).map(this::toOwnerResponse);
     }
 
     @GetMapping("/listings/{listingId}/images")
@@ -522,6 +522,16 @@ public class RoomsController {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception ex) {
+        if (ex instanceof org.springframework.web.context.request.async.AsyncRequestNotUsableException
+                || ex instanceof org.apache.catalina.connector.ClientAbortException
+                || (ex.getCause() instanceof java.io.IOException && ex.getCause().getMessage() != null
+                    && ex.getCause().getMessage().contains("Broken pipe"))) {
+            log.warn("Client disconnected before response completed: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.OK).body(Map.of(
+                    "error", "Client disconnected",
+                    "type", "ClientAbortException"
+            ));
+        }
         log.error("Rooms error: {}", ex.getMessage(), ex);
         var status = HttpStatus.INTERNAL_SERVER_ERROR;
         if (ex instanceof ResponseStatusException rse) {

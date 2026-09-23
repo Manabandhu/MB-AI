@@ -65,6 +65,11 @@ public class RoomListingService {
     }
 
     @Transactional(readOnly = true)
+    public Page<RoomListing> findByOwner(UUID ownerId, Pageable pageable) {
+        return repository.findByOwnerIdOrderByCreatedAtDesc(ownerId, pageable);
+    }
+
+    @Transactional(readOnly = true)
     public Page<RoomListing> search(String location, String roomType, Pageable pageable) {
         if (location != null && roomType != null) {
             return repository.findByStatusAndRoomTypeAndBroadLocationContainingIgnoreCaseOrderByCreatedAtDesc(

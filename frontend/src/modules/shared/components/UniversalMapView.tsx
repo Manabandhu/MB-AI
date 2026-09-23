@@ -78,10 +78,13 @@ export function UniversalMapView({
 
   // On iOS, Google Maps native SDK is not bundled in Expo Go.
   // When running on iOS under Expo Go (StoreClient), we fall back to PROVIDER_DEFAULT (Apple Maps)
-  // so the map renders immediately and never displays a blank screen.
-  const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+  // so the map renders immediately and never displays a blank screen or crashes from missing pods.
+  const isExpoGo =
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+    (Constants as unknown as { appOwnership?: string }).appOwnership === 'expo' ||
+    !Constants.executionEnvironment;
   const activeProvider =
-    Platform.OS === 'ios' && isExpoGo
+    Platform.OS === 'ios' && (isExpoGo || preferredProvider !== 'google')
       ? PROVIDER_DEFAULT
       : preferredProvider === 'google'
         ? PROVIDER_GOOGLE
