@@ -89,6 +89,10 @@ public class RoomsController {
                 .anyMatch(a -> a.equals("ROLE_SUPER_ADMIN") || a.equals("ROLE_ADMIN"));
     }
 
+    private final java.util.concurrent.ConcurrentHashMap<String, CachedListingPage> searchCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private record CachedListingPage(Page<RoomListingResponse> page, long timestamp) {}
+
     @GetMapping("/amenities")
     public List<RoomAmenityCatalog> amenities() {
         return listingService.getAmenitiesCatalog();
@@ -110,32 +114,63 @@ public class RoomsController {
             @RequestParam(required = false) String genderPreference,
             @RequestParam(required = false) BigDecimal minRent,
             @RequestParam(required = false) BigDecimal maxRent,
+            @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) Boolean privateBathOnly,
             @RequestParam(required = false) BigDecimal lat,
             @RequestParam(required = false) BigDecimal lng,
             @RequestParam(required = false) Double radiusMiles,
+            @RequestParam(required = false) BigDecimal minLat,
+            @RequestParam(required = false) BigDecimal maxLat,
+            @RequestParam(required = false) BigDecimal minLng,
+            @RequestParam(required = false) BigDecimal maxLng,
             Pageable pageable) {
         var viewerId = authentication == null ? null : actorId(authentication);
         String searchCity = city != null ? city : location;
         String bath = Boolean.TRUE.equals(privateBathOnly) ? "PRIVATE_ATTACHED" : null;
+        BigDecimal effectiveMaxRent = maxRent != null ? maxRent : maxPrice;
+        Double latVal = lat != null ? lat.doubleValue() : null;
+        Double lngVal = lng != null ? lng.doubleValue() : null;
+        Double minLatVal = minLat != null ? minLat.doubleValue() : null;
+        Double maxLatVal = maxLat != null ? maxLat.doubleValue() : null;
+        Double minLngVal = minLng != null ? minLng.doubleValue() : null;
+        Double maxLngVal = maxLng != null ? maxLng.doubleValue() : null;
+
+        String cacheKey = null;
+        if (viewerId == null) {
+            cacheKey = searchCity + "|" + roomType + "|" + state + "|" + dietaryPreference + "|" + genderPreference
+                    + "|" + minRent + "|" + effectiveMaxRent + "|" + bath + "|" + latVal + "|" + lngVal + "|" + radiusMiles
+                    + "|" + minLatVal + "|" + maxLatVal + "|" + minLngVal + "|" + maxLngVal + "|" + pageable;
+            var cached = searchCache.get(cacheKey);
+            if (cached != null && (System.currentTimeMillis() - cached.timestamp()) < 60_000L) {
+                return cached.page();
+            }
+        }
 
         Page<RoomListing> listings;
         if (city != null || state != null || dietaryPreference != null || genderPreference != null
-                || minRent != null || maxRent != null || bath != null) {
+                || minRent != null || effectiveMaxRent != null || bath != null
+                || (latVal != null && lngVal != null) || (minLatVal != null && maxLatVal != null)) {
             listings = listingService.search(searchCity, state, dietaryPreference, genderPreference,
-                    minRent, maxRent, bath, pageable);
+                    minRent, effectiveMaxRent, bath, latVal, lngVal, radiusMiles,
+                    minLatVal, maxLatVal, minLngVal, maxLngVal, pageable);
         } else {
             listings = listingService.search(location, roomType, pageable);
         }
         List<UUID> listingIds = listings.getContent().stream().map(RoomListing::getId).toList();
-        var amenitiesMap = listingService.amenitiesForListings(listingIds);
-        var preferencesMap = listingService.preferencesForListings(listingIds);
-        var savedSet = viewerId == null ? java.util.Set.<UUID>of() : favoriteService.findSavedListingIds(viewerId, listingIds);
+        var amenitiesMap = listingIds.isEmpty() ? Map.<UUID, List<String>>of() : listingService.amenitiesForListings(listingIds);
+        var preferencesMap = listingIds.isEmpty() ? Map.<UUID, List<String>>of() : listingService.preferencesForListings(listingIds);
+        var savedSet = viewerId == null || listingIds.isEmpty() ? java.util.Set.<UUID>of() : favoriteService.findSavedListingIds(viewerId, listingIds);
 
-        return listings.map(l -> RoomListingResponse.from(l,
+        var result = listings.map(l -> RoomListingResponse.from(l,
                 amenitiesMap.getOrDefault(l.getId(), List.of()),
                 preferencesMap.getOrDefault(l.getId(), List.of()),
                 savedSet.contains(l.getId())));
+
+        if (cacheKey != null) {
+            searchCache.put(cacheKey, new CachedListingPage(result, System.currentTimeMillis()));
+        }
+
+        return result;
     }
 
     @PostMapping("/listings")
@@ -143,6 +178,7 @@ public class RoomsController {
                                                            @Valid @RequestBody CreateRoomListingInput input) {
         var ownerId = actorId(authentication);
         var listing = listingService.create(ownerId, input);
+        searchCache.clear();
         return ResponseEntity.created(URI.create("/api/v1/rooms/listings/" + listing.getId()))
                 .body(toOwnerResponse(listing));
     }
@@ -182,6 +218,7 @@ public class RoomsController {
                                            @Valid @RequestBody UpdateRoomListingInput input) {
         var actorId = actorId(authentication);
         var listing = listingService.update(listingId, actorId, isAdmin(authentication), input);
+        searchCache.clear();
         return toOwnerResponse(listing);
     }
 
@@ -190,61 +227,70 @@ public class RoomsController {
                                         @Valid @RequestBody UpdateRoomListingInput input) {
         var actorId = actorId(authentication);
         var listing = listingService.update(roomId, actorId, isAdmin(authentication), input);
+        searchCache.clear();
         return toOwnerResponse(listing);
     }
 
     @PatchMapping("/listings/{listingId}/publish")
     OwnerRoomListingResponse publish(Authentication authentication, @PathVariable UUID listingId) {
         var actorId = actorId(authentication);
+        searchCache.clear();
         return toOwnerResponse(listingService.setOwnerOnlyStatus(listingId, actorId, "active", "publish"));
     }
 
     @PatchMapping("/{roomId}/publish")
     OwnerRoomListingResponse publishRoom(Authentication authentication, @PathVariable UUID roomId) {
         var actorId = actorId(authentication);
+        searchCache.clear();
         return toOwnerResponse(listingService.setOwnerOnlyStatus(roomId, actorId, "active", "publish"));
     }
 
     @PatchMapping("/listings/{listingId}/pause")
     OwnerRoomListingResponse pause(Authentication authentication, @PathVariable UUID listingId) {
         var actorId = actorId(authentication);
+        searchCache.clear();
         return toOwnerResponse(listingService.setOwnerOnlyStatus(listingId, actorId, "paused", "pause"));
     }
 
     @PatchMapping("/{roomId}/pause")
     OwnerRoomListingResponse pauseRoom(Authentication authentication, @PathVariable UUID roomId) {
         var actorId = actorId(authentication);
+        searchCache.clear();
         return toOwnerResponse(listingService.setOwnerOnlyStatus(roomId, actorId, "paused", "pause"));
     }
 
     @PatchMapping("/listings/{listingId}/archive")
     OwnerRoomListingResponse archive(Authentication authentication, @PathVariable UUID listingId) {
         var actorId = actorId(authentication);
+        searchCache.clear();
         return toOwnerResponse(listingService.setOwnerOnlyStatus(listingId, actorId, "archived", "archive"));
     }
 
     @PatchMapping("/{roomId}/archive")
     OwnerRoomListingResponse archiveRoom(Authentication authentication, @PathVariable UUID roomId) {
         var actorId = actorId(authentication);
+        searchCache.clear();
         return toOwnerResponse(listingService.setOwnerOnlyStatus(roomId, actorId, "archived", "archive"));
     }
 
     @DeleteMapping("/listings/{listingId}")
     ResponseEntity<Void> deleteListing(Authentication authentication, @PathVariable UUID listingId) {
         listingService.delete(listingId, actorId(authentication), isAdmin(authentication));
+        searchCache.clear();
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{roomId}")
     ResponseEntity<Void> deleteRoom(Authentication authentication, @PathVariable UUID roomId) {
         listingService.delete(roomId, actorId(authentication), isAdmin(authentication));
+        searchCache.clear();
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my-listings")
-    List<OwnerRoomListingResponse> myListings(Authentication authentication) {
+    Page<OwnerRoomListingResponse> myListings(Authentication authentication, Pageable pageable) {
         var ownerId = actorId(authentication);
-        return listingService.findByOwner(ownerId).stream().map(this::toOwnerResponse).toList();
+        return listingService.findByOwner(ownerId, pageable).map(this::toOwnerResponse);
     }
 
     @GetMapping("/listings/{listingId}/images")
@@ -476,6 +522,16 @@ public class RoomsController {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception ex) {
+        if (ex instanceof org.springframework.web.context.request.async.AsyncRequestNotUsableException
+                || ex instanceof org.apache.catalina.connector.ClientAbortException
+                || (ex.getCause() instanceof java.io.IOException && ex.getCause().getMessage() != null
+                    && ex.getCause().getMessage().contains("Broken pipe"))) {
+            log.warn("Client disconnected before response completed: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.OK).body(Map.of(
+                    "error", "Client disconnected",
+                    "type", "ClientAbortException"
+            ));
+        }
         log.error("Rooms error: {}", ex.getMessage(), ex);
         var status = HttpStatus.INTERNAL_SERVER_ERROR;
         if (ex instanceof ResponseStatusException rse) {

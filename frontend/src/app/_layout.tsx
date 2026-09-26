@@ -5,7 +5,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import '../../global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaListener } from 'react-native-safe-area-context';
+import {
+  SafeAreaListener,
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from 'react-native-safe-area-context';
 import { Uniwind } from 'uniwind';
 import { useAuthStore } from '@/lib/authStore';
 import { GluestackUIProvider } from '@/modules/shared/ui/gluestack/gluestack-ui-provider';
@@ -29,19 +33,21 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SafeAreaListener
-      onChange={({ insets }) => {
-        Uniwind.updateInsets(insets);
-      }}
-    >
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <GluestackUIProvider mode="light">
-          <QueryClientProvider client={queryClient}>
-            <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }} />
-          </QueryClientProvider>
-        </GluestackUIProvider>
-      </GestureHandlerRootView>
-    </SafeAreaListener>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <SafeAreaListener
+          onChange={({ insets }) => {
+            Uniwind.updateInsets(insets);
+          }}
+        >
+          <GluestackUIProvider mode="light">
+            <QueryClientProvider client={queryClient}>
+              <StatusBar style="dark" />
+              <Stack screenOptions={{ headerShown: false }} />
+            </QueryClientProvider>
+          </GluestackUIProvider>
+        </SafeAreaListener>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

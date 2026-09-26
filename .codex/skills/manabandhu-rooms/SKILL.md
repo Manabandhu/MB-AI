@@ -33,7 +33,7 @@ Owns room discovery, search, map, filters, saved rooms, listings, listing creati
 - `RoomFavoritesScreen` - real saved/favorite listings list backed by `savedRoomsStore` and backend favorites
 - `RoomMyListingsScreen` - real owner listings list
 - `RoomInquiryScreen` - inquiry form that creates a booking for the listing
-- Shared: `UniversalMapView`, `geoPolygon` (`isPointInPolygon`), `savedRoomsStore`, `locationService` (`searchAllUSCities`), `FeatureScreen`, `SearchBar`, `AppButton`, `TextArea`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`
+- Shared: `UniversalMapView`, `geoPolygon` (`isPointInPolygon`), `savedRoomsStore`, `locationService` (`searchAllUSCities`), `FeatureScreen`, `SearchBar`, `AppButton`, `TextArea`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`; listing creation uses `searchAllUSCities` geocoding fallback when latitude/longitude are omitted, and overlay controls use style-based `pointerEvents`.
 
 ## API Surface
 
@@ -81,6 +81,13 @@ Backend services: `RoomListingService`, `RoomAvailabilityService`, `RoomBookingS
   - Widens `state_code` from `VARCHAR(10)` → `VARCHAR(50)` for full state names from address autocomplete.
   - Drops and recreates `room_listings_status_valid` check constraint to include `'rejected'` (used by admin moderation flow): `('draft','active','paused','archived','rejected')`.
   - **Frontend `RoomForm.tsx` Zod schema** matches: `stateCode: z.string().max(50)` (was `max(10)`).
+
+- Migration `V29__seed_load_test_and_indexes.sql`:
+  - Adds high-performance composite search index: `idx_room_listings_search_composite` on `(status, city, price, dietary_preference)`.
+  - Adds PostGIS GIST spatial index: `idx_room_listings_geo_point` on `ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)`.
+  - Adds spatial btree index: `idx_room_listings_location` on `(status, latitude, longitude)`.
+  - Seeds 100 synthetic verified user profiles in `auth.users` and `user_onboarding_progress` across major diaspora metros (DFW, SF Bay Area, Greater Chicago, New Jersey / NYC).
+  - Seeds 60 realistic diaspora room listings grounded in major diaspora corridors: Coppell, Richardson (UTD campus), Sunnyvale, and Naperville with pure veg, private bath, furnished, and campus shuttle amenities.
 
 Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`. Booking/Inquiry statuses: `pending`, `accepted`, `declined`, `cancelled`, `archived`.
 
@@ -130,23 +137,27 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`.
 - Unified `RoomForm.tsx` consolidates creation and editing forms with react-hook-form + zod, live Photon address search, country-state-city chips, dynamic Supabase amenities catalog, and multi-image picker with thumbnail previews.
 - Save/unsave uses optimistic invalidation of the detail and favorites queries.
 - My Listings management supports tab filtering (`Active`, `Draft`, `Rented`) and a 3-dot action menu (`Edit`, `Mark as Rented`, and `Delete` modal with `#ba1a1a` destructive button).
+- `RoomPriceMarker.tsx`: Zillow-style custom high-contrast price pills (`$420`, `$780`, `$920`) with arrow pointer notch, active border `#431ebe`, and elevation drop shadow.
+- `RoomMapCarousel.tsx`: Horizontal snapping bottom card carousel (`snapToInterval={CARD_WIDTH + 16}`) with bidirectional synchronization: tapping a pin scrolls carousel to listing and centers map; swiping carousel animates map camera to coordinates.
+- Floating "Search This Area" pill: Appears dynamically when panning or zooming map beyond 1 km; tapping refreshes query with bounding box parameters (`minLat`, `maxLat`, `minLng`, `maxLng`).
+- Anti-Scam Protection: Warning banners integrated into `RoomDetailScreen.tsx` and `RoomInquiryScreen.tsx` highlighting safety verification, wire-transfer warnings, and in-app chat safeguards.
 
 ## Accessibility and Responsive Behavior Rules
 
-- Minimum touch target: 44x44pt with hitSlop for navigation icons
-- Dual-pane reflow: Viewports width >= 1024px render dual-pane layout with 2-column scrollable cards on the left and sticky interactive map on the right
-- Safe Area Insets: Top navigation and bottom action bars use `useSafeAreaInsets()` (`Math.max(insets.bottom, 16)`)
-- Keyboard Avoidance: Forms wrap content with `KeyboardAvoidingView` (`behavior: Platform.OS === 'ios' ? 'padding' : 'height'`) and `keyboardShouldPersistTaps="handled"`
+- Minimum touch target: 44x44pt with `hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}` on all icon buttons (Heart, Back, Share, Close).
+- Dual-pane reflow: Viewports width >= 1024px render dual-pane layout with 50% scrollable cards on the left and 50% sticky interactive map on the right, featuring bidirectional hover highlight sync.
+- Safe Area Insets: Top navigation and sticky bottom action bars use `useSafeAreaInsets()` (`paddingBottom: Math.max(insets.bottom, 16)`, `paddingTop: Math.max(insets.top, 16)`).
+- Keyboard Avoidance: Forms wrap content with `KeyboardAvoidingView` (`behavior: Platform.OS === 'ios' ? 'padding' : undefined`) and `keyboardShouldPersistTaps="handled"`.
 - Android Hardware Back: Modal sheets, city switchers, and filter overlays implement `BackHandler` listeners **guarded with `if (Platform.OS !== 'android') return;`** — never call `BackHandler` on web or iOS.
-- Virtualization: FlatLists in list screens configure `initialNumToRender={6}`, `maxToRenderPerBatch={10}`, `windowSize={5}`, `removeClippedSubviews={Platform.OS === 'android'}`
-- Map screen requests location permission with education banner
-- Single column on compact, 2 columns on medium, 3 columns on expanded/wide
-- Color contrast meets WCAG 2.1 AA (at least 4.5:1 ratio)
-- Color is not the only indicator of state
+- Virtualization: FlatLists in list screens configure `initialNumToRender={6}`, `maxToRenderPerBatch={10}`, `windowSize={5}`, `removeClippedSubviews={Platform.OS === 'android'}`.
+- Map screen requests location permission with education banner.
+- Single column on compact, 2 columns on medium, 3 columns on expanded/wide.
+- Color contrast meets WCAG 2.1 AA (at least 4.5:1 ratio).
+- Color is not the only indicator of state.
 
 ## Current Implementation Status
 
-- **Complete**: End-to-end vertical slice across database (V16 & V24), backend (controllers/services/repositories/DTOs/authorization/chat handshake), REST contracts (openapi.yaml), and frontend (list, detail, create, edit, favorites, my-listings, inquiry).
+- **Complete**: End-to-end vertical slice across database (V16, V24, V26, V29), backend (controllers/services/repositories/DTOs/authorization/chat handshake), REST contracts (openapi.yaml), and frontend (list, detail, create, edit, favorites, my-listings, inquiry, map).
 - **Zero Hardcoding**: All dynamic amenities, lifestyles, preferences, and locations fetched from Supabase / REST backend.
 - **Free Geocoding**: Integrated `country-state-city`, OpenStreetMap Photon autocomplete, and Zippopotam.us ZIP auto-fill.
 - **Chat Handshake & Integration**: Direct 1-click transition from room inquiry into `/chat/[conversationId]`, with conversations categorized into "Rooms" in chat inboxes with room badges.
@@ -157,4 +168,6 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`.
 - **Code Consolidation**: Unified `RoomForm.tsx` eliminates duplication across create and edit screens.
 - **Global Location Synchronization & Multi-Metro Discovery**: Integrated with `useLocationStore` (`frontend/src/lib/locationStore.ts`) and universal dynamic `matchesRoomLocation` (replacing hardcoded metro keyword arrays with coordinate proximity ~45mi / 0.65°, token matching, preset landmarks, and state filtering), ensuring active city selection dynamically filters room listings, map markers, and city active counts across all US cities with zero hardcoding.
 - **Location Matching Accuracy & Keyboard-Safe City Bottom Sheet**: Fixed false-positive matches where selecting specific cities (such as Frisco, TX) erroneously matched distant metro rooms (such as Austin, TX); removed 2-letter state codes from preset landmarks, enforced exact city token prioritization, and restricted specific-city coordinate radius to ~12mi (0.18°) while preserving ~45mi (0.65°) for multi-city metro presets; replaced all-cities fallback on zero-match with intuitive city empty state; wrapped city selection modal in `KeyboardAvoidingView` with stabilized minimum sheet height (460px), absoluteFill dismiss backdrop, and `keyboardShouldPersistTaps="handled"` on scroll view so sheet never collapses below the software keyboard when search results are filtered.
+- **High-Concurrency Load Simulation & PostGIS Spatial Hardening**: Executed 150-worker automated load simulation (`backend/load-test-rooms.py`) verifying 500 requests across multi-attribute filters and PostGIS radius queries with 100% success rate and 19.3ms average latency. Seeded 100 synthetic users and 60 realistic diaspora listings via V29 migration. Increased HikariCP pool to 30 connections and implemented mutation-invalidated search caching. Hardened UI with Zillow-style price pills, snapping carousel, "Search This Area" bounding-box search, desktop 50/50 dual-pane hover sync, and anti-scam warning banners.
+- **Browser-Driven E2E UI Creation & Interaction Testing (Zero Direct SQL)**: Executed 100% browser-automated front-end E2E testing and listing generation suite (`scripts/e2e-browser-rooms.mjs`) through the real Expo Web UI (`http://localhost:8081`). Generates 50+ listings directly through the front-end form UI (`/rooms/create-listing`), authenticating test users via UI phone/OTP, verifying dynamic amenities and coordinate derivation, testing Zillow-style map pin rendering and carousel sync (`/rooms/map`), filtering by Pure Veg and testing 1-click landlord chat handshakes, and auditing responsive viewports across mobile (375x667) and desktop dual-pane (1280x800).
 

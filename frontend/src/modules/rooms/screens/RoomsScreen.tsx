@@ -25,6 +25,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ALL_USA_LOCATION, useLocationStore } from '@/lib/locationStore';
 import { listRoomListings } from '@/modules/rooms/api';
+import { RoomMapCarousel } from '@/modules/rooms/components/RoomMapCarousel';
 import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
 import type { RoomListing } from '@/modules/rooms/types';
 import { searchAllUSCities } from '@/modules/rooms/utils/locationService';
@@ -308,6 +309,13 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     latitude: number;
     longitude: number;
     timestamp?: number;
+  } | null>(null);
+  const [showSearchAreaBtn, setShowSearchAreaBtn] = useState(false);
+  const [viewportBounds, setViewportBounds] = useState<{
+    minLat: number;
+    maxLat: number;
+    minLng: number;
+    maxLng: number;
   } | null>(null);
 
   const handleGpsPress = useCallback(() => {
@@ -829,6 +837,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           {filterCategories.map((cat) => (
             <Pressable
               key={cat.id}
+              testID={cat.id === 'veg' ? 'filter-chip-pure-veg' : undefined}
               onPress={() => setActiveCategory(cat.label)}
               style={[s.categoryChip, activeCategory === cat.label && s.categoryChipActive]}
             >
@@ -865,7 +874,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           const initialLng = selectedCity.longitude || mapMarkers[0]?.longitude || -97.7431;
 
           return (
-            <View style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}>
+            <View
+              testID={isDualPane ? 'desktop-split-map' : 'map-container'}
+              style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}
+            >
               <UniversalMapView
                 initialRegion={{
                   latitude: initialLat,
@@ -888,6 +900,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 drawnPolygon={drawnBoundary}
                 onPolygonComplete={(poly) => setDrawnBoundary(poly)}
                 onClearPolygon={() => setDrawnBoundary(null)}
+                onRegionChangeComplete={(reg) => {
+                  const minLat = reg.latitude - reg.latitudeDelta / 2;
+                  const maxLat = reg.latitude + reg.latitudeDelta / 2;
+                  const minLng = reg.longitude - reg.longitudeDelta / 2;
+                  const maxLng = reg.longitude + reg.longitudeDelta / 2;
+                  setViewportBounds({ minLat, maxLat, minLng, maxLng });
+                  setShowSearchAreaBtn(true);
+                }}
               />
 
               {/* Apple Maps Floating Controls: Map Mode, 3D, and GPS (Hidden when Google Maps is active) */}
@@ -1060,8 +1080,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     isRoomPreviewExpanded && activePinRoom
                       ? s.zillowFloatingSwitchWrapperTop
                       : s.zillowFloatingSwitchWrapperBottom,
+                    { pointerEvents: 'box-none' },
                   ]}
-                  pointerEvents="box-none"
                 >
                   <Pressable
                     onPress={() => setViewMode('list')}
@@ -1081,6 +1101,51 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   </Pressable>
                 </View>
               )}
+              {/* Floating "Search This Area" Pill */}
+              {showSearchAreaBtn && (
+                <View style={[s.searchThisAreaWrapper, { pointerEvents: 'box-none' }]}>
+                  <Pressable
+                    onPress={() => {
+                      setShowSearchAreaBtn(false);
+                      if (viewportBounds) {
+                        setDrawnBoundary([
+                          { latitude: viewportBounds.minLat, longitude: viewportBounds.minLng },
+                          { latitude: viewportBounds.maxLat, longitude: viewportBounds.minLng },
+                          { latitude: viewportBounds.maxLat, longitude: viewportBounds.maxLng },
+                          { latitude: viewportBounds.minLat, longitude: viewportBounds.maxLng },
+                        ]);
+                      }
+                    }}
+                    style={s.searchThisAreaBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search this area"
+                  >
+                    <Text style={s.searchThisAreaIcon}>🔍</Text>
+                    <Text style={s.searchThisAreaText}>Search This Area</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {/* Zillow-style Snapping Bottom Card Carousel with Bidirectional Map Sync */}
+              {!isDualPane && viewMode === 'map' && filteredRooms.length > 0 && (
+                <RoomMapCarousel
+                  listings={filteredRooms}
+                  selectedListingId={activePinRoom?.id ?? null}
+                  onSelectListing={(room) => {
+                    setSelectedPinRoomId(room.id);
+                  }}
+                  onListingSnap={(room) => {
+                    setSelectedPinRoomId(room.id);
+                    if (room.latitude && room.longitude) {
+                      setMapCenterTarget({
+                        latitude: Number(room.latitude),
+                        longitude: Number(room.longitude),
+                        timestamp: Date.now(),
+                      });
+                    }
+                  }}
+                />
+              )}
             </View>
           );
         };
@@ -1092,13 +1157,23 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           return (
             <Pressable
               key={room.id}
+              testID="room-listing-card"
               onPress={() => {
                 if (isDualPane) {
                   setSelectedPinRoomId(room.id);
                 }
                 router.push(`/rooms/${room.id}` as Href);
               }}
-              style={[s.roomCardContainer, isDualPane && s.roomFeedCardDualPane]}
+              onHoverIn={() => {
+                if (isDualPane) {
+                  setSelectedPinRoomId(room.id);
+                }
+              }}
+              style={[
+                s.roomCardContainer,
+                isDualPane && s.roomFeedCardDualPane,
+                isDualPane && activePinRoom?.id === room.id && s.roomCardContainerActiveDualPane,
+              ]}
             >
               {/* Visual Hero Banner */}
               <View style={s.roomCardHero}>
@@ -1232,13 +1307,23 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           return (
             <Pressable
               key={room.id}
+              testID="room-listing-card"
               onPress={() => {
                 if (isDualPane) {
                   setSelectedPinRoomId(room.id);
                 }
                 router.push(`/rooms/${room.id}` as Href);
               }}
-              style={[s.roomListItem, isDualPane && s.roomFeedCardDualPane]}
+              onHoverIn={() => {
+                if (isDualPane) {
+                  setSelectedPinRoomId(room.id);
+                }
+              }}
+              style={[
+                s.roomListItem,
+                isDualPane && s.roomFeedCardDualPane,
+                isDualPane && activePinRoom?.id === room.id && s.roomCardContainerActiveDualPane,
+              ]}
             >
               {/* Left: Compact thumbnail with price */}
               <View style={s.roomListThumb}>
@@ -1426,7 +1511,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           return (
             <View style={s.dualPaneContainer}>
               <View style={s.dualPaneLeft}>{renderListView()}</View>
-              <View style={s.dualPaneRight}>{renderMapView()}</View>
+              <View testID="desktop-split-map" style={s.dualPaneRight}>
+                {renderMapView()}
+              </View>
             </View>
           );
         }
@@ -3456,6 +3543,45 @@ const s = StyleSheet.create({
   roomFeedCardDualPane: {
     flex: 1,
     minWidth: 260,
+  },
+  roomCardContainerActiveDualPane: {
+    borderColor: '#431ebe',
+    borderWidth: 2,
+    shadowColor: '#431ebe',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  searchThisAreaWrapper: {
+    position: 'absolute',
+    top: 14,
+    alignSelf: 'center',
+    zIndex: 20,
+  },
+  searchThisAreaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#431ebe',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  searchThisAreaIcon: {
+    fontSize: 14,
+  },
+  searchThisAreaText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#431ebe',
   },
   // ─── CARD VIEW STYLES ────────────────────────────────────────────────────────
   roomCardContainer: {

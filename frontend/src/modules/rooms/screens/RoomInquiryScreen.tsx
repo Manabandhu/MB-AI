@@ -137,12 +137,12 @@ export function RoomInquiryScreen() {
         style={{ flex: 1 }}
       >
         {/* Header */}
-        <View style={[s.header, { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) }]}>
+        <View style={[s.header, { paddingTop: Math.max(insets.top, 16) }]}>
           <Pressable
             onPress={() => router.back()}
             style={s.backBtn}
             accessibilityLabel="Back"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <AppIcon color={colors.ink} name="chevron-left" size={20} />
           </Pressable>
@@ -157,6 +157,20 @@ export function RoomInquiryScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Anti-Scam Warning Banner */}
+          <View style={s.scamWarningCard}>
+            <View style={s.scamWarningIconContainer}>
+              <AppIcon color="#b45309" name="shield" size={18} strokeWidth={2.5} />
+            </View>
+            <View style={s.scamWarningContent}>
+              <Text style={s.scamWarningTitle}>Safety & Anti-Scam Reminder</Text>
+              <Text style={s.scamWarningBody}>
+                Never send security deposits or rent payments via Zelle/Venmo before viewing the
+                room and verifying the host in person.
+              </Text>
+            </View>
+          </View>
+
           {/* Listing Summary Card */}
           <View style={s.summaryCard}>
             <View style={s.summaryBadge}>
@@ -224,6 +238,7 @@ export function RoomInquiryScreen() {
             {/* Message */}
             <Text style={s.inputLabel}>Introductory Note & Questions *</Text>
             <TextArea
+              testID="inquiry-message-input"
               value={message}
               onChangeText={setMessage}
               placeholder="Hi, I'm interested in this room. I work nearby / study at UT and am looking for a quiet, clean flatmate..."
@@ -240,6 +255,7 @@ export function RoomInquiryScreen() {
           </View>
 
           <AppButton
+            testID="send-inquiry-btn"
             label={mutation.isPending ? 'Connecting...' : 'Send Inquiry & Start Chat'}
             onPress={handleSubmit}
             loading={mutation.isPending}
@@ -284,6 +300,38 @@ const s = StyleSheet.create({
     maxWidth: 640,
     width: '100%',
     alignSelf: 'center',
+  },
+  scamWarningCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.x3,
+    backgroundColor: '#fffbeb',
+    borderColor: '#fef3c7',
+    borderWidth: 1.5,
+    borderRadius: 16,
+    padding: space.x3,
+  },
+  scamWarningIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fef3c7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scamWarningContent: {
+    flex: 1,
+    gap: 3,
+  },
+  scamWarningTitle: {
+    color: '#92400e',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  scamWarningBody: {
+    color: '#b45309',
+    fontSize: 11,
+    lineHeight: 16,
   },
   summaryCard: {
     backgroundColor: colors.surface,

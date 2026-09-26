@@ -23,6 +23,7 @@
     "prepare": "pnpm hooks:install"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.8"
+    "@biomejs/biome": "2.5.14",
+    "playwright": "^1.63.0"
   }
 }

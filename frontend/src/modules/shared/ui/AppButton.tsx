@@ -16,6 +16,7 @@ type AppButtonProps = {
   icon?: AppIconName;
   loading?: boolean;
   disabled?: boolean;
+  testID?: string;
 };
 
 export function AppButton({
@@ -26,6 +27,7 @@ export function AppButton({
   icon,
   loading,
   disabled,
+  testID,
 }: AppButtonProps) {
   const isPrimary = variant === 'primary';
   const gluestackVariant = isPrimary ? 'default' : variant === 'secondary' ? 'outline' : 'ghost';
@@ -54,6 +56,7 @@ export function AppButton({
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <Button
+        testID={testID}
         className="min-h-12 rounded-xl px-4"
         onPress={onPress ?? (() => route && router.push(route as Href))}
         onPressIn={handlePressIn}

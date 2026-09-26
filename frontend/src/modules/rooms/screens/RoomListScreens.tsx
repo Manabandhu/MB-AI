@@ -145,7 +145,11 @@ function SavedRoomCard({ room, onUnsave }: { room: RoomListing; onUnsave: () => 
   const router = useRouter();
 
   return (
-    <Pressable onPress={() => router.push(`/rooms/${room.id}` as Href)} style={styles.savedCard}>
+    <Pressable
+      testID="room-listing-card"
+      onPress={() => router.push(`/rooms/${room.id}` as Href)}
+      style={styles.savedCard}
+    >
       <View style={styles.cardHeader}>
         <View style={styles.thumbBox}>
           <Text style={styles.thumbEmoji}>🛏️</Text>
@@ -372,6 +376,7 @@ export function RoomMyListingsScreen() {
           return (
             <View
               key={listing.id}
+              testID="room-listing-card"
               style={[styles.myListingCard, isRented && styles.myListingCardRented]}
             >
               <View style={styles.cardHeaderInfo}>

@@ -41,6 +41,12 @@ export interface UniversalMapViewProps {
   drawnPolygon?: Coordinate[] | null;
   onPolygonComplete?: (polygon: Coordinate[]) => void;
   onClearPolygon?: () => void;
+  onRegionChangeComplete?: (region: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  }) => void;
 }
 
 const DEFAULT_REGION = {
@@ -65,16 +71,20 @@ export function UniversalMapView({
   drawnPolygon = null,
   onPolygonComplete,
   onClearPolygon,
+  onRegionChangeComplete,
 }: UniversalMapViewProps) {
   const mapRef = useRef<MapView>(null);
   const preferredProvider = useMapPreferencesStore((s) => s.provider);
 
   // On iOS, Google Maps native SDK is not bundled in Expo Go.
   // When running on iOS under Expo Go (StoreClient), we fall back to PROVIDER_DEFAULT (Apple Maps)
-  // so the map renders immediately and never displays a blank screen.
-  const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+  // so the map renders immediately and never displays a blank screen or crashes from missing pods.
+  const isExpoGo =
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+    (Constants as unknown as { appOwnership?: string }).appOwnership === 'expo' ||
+    !Constants.executionEnvironment;
   const activeProvider =
-    Platform.OS === 'ios' && isExpoGo
+    Platform.OS === 'ios' && (isExpoGo || preferredProvider !== 'google')
       ? PROVIDER_DEFAULT
       : preferredProvider === 'google'
         ? PROVIDER_GOOGLE
@@ -198,6 +208,7 @@ export function UniversalMapView({
         zoomEnabled={!isDrawingMode}
         rotateEnabled={!isDrawingMode}
         pitchEnabled={!isDrawingMode}
+        onRegionChangeComplete={onRegionChangeComplete}
       >
         {/* Render persistent drawn search polygon */}
         {drawnPolygon && drawnPolygon.length >= 3 && (

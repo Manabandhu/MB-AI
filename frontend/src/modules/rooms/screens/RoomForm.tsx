@@ -35,6 +35,7 @@ import {
   getUSStates,
   lookupZipCodeFree,
   searchAddressFree,
+  searchAllUSCities,
 } from '@/modules/rooms/utils/locationService';
 import { TextArea } from '@/modules/shared/components/TextArea';
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -133,7 +134,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const status = useAuthStore((s) => s.status);
-  const isAuthenticated = status === 'authenticated';
+  const session = useAuthStore((s) => s.session);
+  const isAuthenticated = status === 'authenticated' || Boolean(session?.access_token);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -284,8 +286,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
       setSuccessNotice('Room listing posted successfully!');
       setTimeout(() => {
-        router.replace('/rooms' as Href);
-      }, 1000);
+        router.replace('/rooms/my-listings' as Href);
+      }, 500);
     },
     onError: (error: Error) => {
       setServerError(error.message || 'Failed to create room listing');
@@ -308,6 +310,16 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
     }
     setServerError(null);
 
+    let lat = values.latitude ? Number(values.latitude) : undefined;
+    let lng = values.longitude ? Number(values.longitude) : undefined;
+    if ((!lat || !lng) && values.broadLocation) {
+      const match = searchAllUSCities(values.broadLocation, 1)[0];
+      if (match?.latitude && match.longitude) {
+        lat = match.latitude;
+        lng = match.longitude;
+      }
+    }
+
     const payload: CreateRoomListingInput = {
       title: values.title.trim(),
       description: values.description?.trim(),
@@ -315,8 +327,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
       roomType: values.roomType,
       broadLocation: values.broadLocation.trim(),
       exactAddress: values.exactAddress?.trim() || undefined,
-      latitude: values.latitude ? Number(values.latitude) : undefined,
-      longitude: values.longitude ? Number(values.longitude) : undefined,
+      latitude: lat,
+      longitude: lng,
       dietaryPreference: values.dietaryPreference,
       genderPreference: values.genderPreference,
       bathroomType: values.bathroomType,
@@ -339,16 +351,16 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
   return (
     <SafeAreaView style={s.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         {/* Header */}
-        <View style={[s.header, { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) }]}>
+        <View style={[s.header, { paddingTop: Math.max(insets.top, 16) }]}>
           <Pressable
             onPress={() => router.back()}
             style={s.backBtn}
             accessibilityLabel="Back"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <AppIcon color={colors.ink} name="chevron-left" size={20} />
           </Pressable>
@@ -390,7 +402,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
               name="title"
               render={({ field: { onChange, value } }) => (
                 <TextInput
-                  placeholder="e.g. Furnished Master Bedroom near Domain / Tech Corridor"
+                  testID="room-form-title"
+                  placeholder="Title (e.g. Furnished Master Bedroom near Tech Corridor)"
                   placeholderTextColor={colors.muted}
                   style={[s.input, errors.title && s.inputError]}
                   value={value}
@@ -422,7 +435,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
               name="description"
               render={({ field: { onChange, value } }) => (
                 <TextArea
-                  placeholder="Describe the house environment, quiet hours, Indian store proximity, roommates..."
+                  testID="room-form-description"
+                  placeholder="Description & House Rules: Describe the house environment, quiet hours, Indian store proximity..."
                   value={value || ''}
                   onChangeText={onChange}
                   maxLength={4000}
@@ -444,11 +458,15 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
             <Text style={s.inputLabel}>Street Address Search (Free Photon Autocomplete)</Text>
             <View style={s.searchBox}>
               <TextInput
-                placeholder="Search street or neighborhood (e.g. 11000 Domain Dr)"
+                testID="room-form-address"
+                placeholder="Address / Street (e.g. S Denton Tap Rd)"
                 placeholderTextColor={colors.muted}
                 style={s.searchInput}
                 value={addressQuery}
-                onChangeText={setAddressQuery}
+                onChangeText={(text) => {
+                  setAddressQuery(text);
+                  setValue('exactAddress', text);
+                }}
               />
               {isSearchingAddress && <ActivityIndicator size="small" color={colors.appPrimary} />}
             </View>
@@ -479,7 +497,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   name="zipCode"
                   render={({ field: { onChange, value } }) => (
                     <TextInput
-                      placeholder="78758"
+                      testID="room-form-zip"
+                      placeholder="ZIP (e.g. 75019)"
                       placeholderTextColor={colors.muted}
                       style={s.input}
                       keyboardType="numeric"
@@ -501,7 +520,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   name="stateCode"
                   render={({ field: { onChange, value } }) => (
                     <TextInput
-                      placeholder="TX"
+                      testID="room-form-state"
+                      placeholder="State (e.g. TX)"
                       placeholderTextColor={colors.muted}
                       style={s.input}
                       autoCapitalize="characters"
@@ -520,7 +540,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
               name="broadLocation"
               render={({ field: { onChange, value } }) => (
                 <TextInput
-                  placeholder="e.g. North Austin, Domain Corridor, TX"
+                  testID="room-form-city"
+                  placeholder="City (e.g. Coppell, TX)"
                   placeholderTextColor={colors.muted}
                   style={[s.input, errors.broadLocation && s.inputError]}
                   value={value}
@@ -572,7 +593,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   name="price"
                   render={({ field: { onChange, value } }) => (
                     <TextInput
-                      placeholder="850"
+                      testID="room-form-rent"
+                      placeholder="Rent ($)"
                       placeholderTextColor={colors.muted}
                       style={[s.input, errors.price && s.inputError]}
                       keyboardType="numeric"
@@ -591,7 +613,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   name="securityDeposit"
                   render={({ field: { onChange, value } }) => (
                     <TextInput
-                      placeholder="500"
+                      testID="room-form-deposit"
+                      placeholder="Deposit ($)"
                       placeholderTextColor={colors.muted}
                       style={s.input}
                       keyboardType="numeric"
@@ -629,7 +652,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   name="estUtilityMonthly"
                   render={({ field: { onChange, value } }) => (
                     <TextInput
-                      placeholder="e.g. 60 - 80"
+                      testID="room-form-utilities"
+                      placeholder="Utilities ($)"
                       placeholderTextColor={colors.muted}
                       style={s.input}
                       keyboardType="numeric"
@@ -801,9 +825,10 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                 isSubmitting || createMutation.isPending || updateMutation.isPending
                   ? 'Saving...'
                   : mode === 'create'
-                    ? 'Post Room Listing'
+                    ? 'Publish Listing'
                     : 'Save Listing Changes'
               }
+              testID="publish-listing-btn"
               onPress={handleSubmit(onSubmit)}
               loading={isSubmitting || createMutation.isPending || updateMutation.isPending}
               variant="primary"
