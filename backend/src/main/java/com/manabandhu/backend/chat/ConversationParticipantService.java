@@ -3,9 +3,14 @@ package com.manabandhu.backend.chat;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.auth.Actor;
+
+/** Conversation membership. Only active participants (and admins) can read or write a conversation. */
 @Service
 public class ConversationParticipantService {
 
@@ -21,14 +26,45 @@ public class ConversationParticipantService {
     }
 
     @Transactional(readOnly = true)
+    public List<ConversationParticipant> listFor(Actor actor, UUID conversationId) {
+        requireParticipant(actor, conversationId);
+        return repository.findByConversationIdAndLeftAtIsNull(conversationId);
+    }
+
+    @Transactional(readOnly = true)
     public boolean isParticipant(UUID conversationId, UUID userId) {
         return repository.findByConversationIdAndUserId(conversationId, userId)
                 .map(p -> p.getLeftAt() == null)
                 .orElse(false);
     }
 
+    /** Fails with 403 unless the caller is an active participant or an admin. */
+    @Transactional(readOnly = true)
+    public void requireParticipant(Actor actor, UUID conversationId) {
+        if (!actor.admin() && !isParticipant(conversationId, actor.id())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a participant in this conversation");
+        }
+    }
+
+    /** Only the conversation owner (or an admin) can invite people. */
+    @Transactional
+    public ConversationParticipant invite(Actor actor, UUID conversationId, UUID userId) {
+        var owner = repository.findByConversationIdAndUserId(conversationId, actor.id())
+                .filter(p -> p.getLeftAt() == null && p.getRole() == ConversationParticipant.ParticipantRole.OWNER);
+        if (!actor.admin() && owner.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the conversation owner can add participants");
+        }
+        return add(conversationId, userId, ConversationParticipant.ParticipantRole.MEMBER);
+    }
+
+    /** Adds a participant, or re-activates one who left, so the unique (conversation, user) row is reused. */
     @Transactional
     public ConversationParticipant add(UUID conversationId, UUID userId, ConversationParticipant.ParticipantRole role) {
+        var existing = repository.findByConversationIdAndUserId(conversationId, userId);
+        if (existing.isPresent()) {
+            existing.get().rejoin();
+            return existing.get();
+        }
         return repository.save(new ConversationParticipant(conversationId, userId, role));
     }
 

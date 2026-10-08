@@ -4,8 +4,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.manabandhu.backend.auth.Actor;
 
 @Service
 public class NotificationService {
@@ -32,15 +36,18 @@ public class NotificationService {
     }
 
     @Transactional
-    public Notification markRead(UUID id) {
-        var notification = repository.findById(id).orElseThrow();
+    public Notification markRead(Actor actor, UUID id) {
+        var notification = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found"));
+        actor.requireOwner(notification.getUserId(), "Not your notification");
         notification.markRead();
         return notification;
     }
 
-    @Transactional(readOnly = true)
-    public List<Notification> findPendingDigests() {
-        return repository.findByDispatchedFalseOrderByCreatedAtAsc();
+    /** Must run inside a transaction: the claimed rows stay locked until it commits. */
+    @Transactional
+    public List<Notification> claimPending(int limit) {
+        return repository.claimUndispatched(limit);
     }
 
     @Transactional

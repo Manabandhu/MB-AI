@@ -23,6 +23,11 @@ spring:
   flyway:
     baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
     baseline-version: ${FLYWAY_BASELINE_VERSION:0}
+  data:
+    web:
+      pageable:
+        # Bound every paged endpoint so a client cannot request an unbounded page.
+        max-page-size: 500
   graphql:
     graphiql:
       enabled: ${GRAPHIQL_ENABLED:false}
@@ -51,6 +56,11 @@ app:
     public-access-enabled: ${ADMIN_PUBLIC_ACCESS_ENABLED:false}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:19006}
+    # Local-network development origins. Set CORS_ALLOWED_ORIGIN_PATTERNS to an empty value in production.
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:[*],http://127.0.0.1:[*],http://192.168.*:[*],http://10.*:[*],http://172.16.*:[*],http://*.local:[*],exp://*}
+  maps:
+    # Google web-service key (Directions, Places, Geocoding). Server-side only; never ship it in the app.
+    google-server-key: ${GOOGLE_MAPS_SERVER_KEY:}
   automation:
     github:
       repository: ${AUTOMATION_GITHUB_REPOSITORY:}

@@ -253,6 +253,23 @@ export function ReferralDetailsScreen() {
                 <Text style={styles.termsValue}>{offerDetails.availability}</Text>
               </View>
             ) : null}
+
+            {requestDetails?.details ? (
+              <View style={styles.termsBox}>
+                <Text style={styles.termsLabel}>Details:</Text>
+                <Text style={styles.termsValue}>{requestDetails.details}</Text>
+              </View>
+            ) : null}
+
+            {requestDetails?.desiredOutcome ? (
+              <View style={styles.termsBox}>
+                <Text style={styles.termsLabel}>Hoping for:</Text>
+                <Text style={styles.termsValue}>
+                  {requestDetails.desiredOutcome}
+                  {requestDetails.urgency ? ` · ${requestDetails.urgency} urgency` : ''}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Bento Card 3: Eligibility & Criteria */}

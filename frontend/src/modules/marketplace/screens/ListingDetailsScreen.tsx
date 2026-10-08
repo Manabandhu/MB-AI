@@ -53,13 +53,13 @@ export function ListingDetailsScreen() {
     error,
   } = useQuery({
     queryKey: ['marketplace', 'listing', listingId],
-    queryFn: () => getMarketplaceListing(listingId!),
+    queryFn: () => getMarketplaceListing(listingId ?? ''),
     enabled: !!listingId,
   });
 
   const { data: images = [] } = useQuery({
     queryKey: ['marketplace', 'listing-images', listingId],
-    queryFn: () => getMarketplaceListingImages(listingId!),
+    queryFn: () => getMarketplaceListingImages(listingId ?? ''),
     enabled: !!listingId,
   });
 

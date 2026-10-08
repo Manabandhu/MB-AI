@@ -1,7 +1,7 @@
 import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
-import { Link, router } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -189,8 +189,9 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
     });
   };
   const [showCityModal, setShowCityModal] = useState(false);
-  const [pickupQuery, setPickupQuery] = useState('');
-  const [dropoffQuery, setDropoffQuery] = useState('');
+  const searchParams = useLocalSearchParams<{ from?: string; to?: string }>();
+  const [pickupQuery, setPickupQuery] = useState(searchParams.from ?? '');
+  const [dropoffQuery, setDropoffQuery] = useState(searchParams.to ?? '');
   const [activeCategory, setActiveCategory] = useState('all');
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [viewMode, setViewMode] = useState<'list' | 'map'>(screenId === 'map' ? 'map' : 'list');

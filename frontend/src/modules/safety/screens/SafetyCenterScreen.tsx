@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import {
@@ -241,7 +242,7 @@ export function SafetyCenterScreen() {
               key={item.id}
               accessibilityRole="button"
               accessibilityLabel={item.title}
-              onPress={() => router.push(item.route as any)}
+              onPress={() => router.push(item.route as Href)}
               style={s.toolCard}
             >
               <View style={[s.toolIconBox, { backgroundColor: item.bg }]}>

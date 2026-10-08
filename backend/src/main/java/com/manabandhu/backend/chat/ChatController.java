@@ -12,7 +12,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/chat")
@@ -30,65 +33,44 @@ public class ChatController {
 
     @GetMapping("/conversations")
     List<Conversation> conversations(Authentication authentication) {
-        return conversationService.findByParticipant(UUID.fromString(authentication.getName()));
+        return conversationService.findByParticipant(Actor.require(authentication).id());
     }
 
     @GetMapping("/conversations/{id}")
-    ResponseEntity<Conversation> getConversation(Authentication authentication, @PathVariable UUID id) {
-        if (!participantService.isParticipant(id, actorId(authentication)) && !isAdmin(authentication)) {
-            return ResponseEntity.status(403).build();
-        }
-        return ResponseEntity.ok(conversationService.find(id));
+    Conversation getConversation(Authentication authentication, @PathVariable UUID id) {
+        participantService.requireParticipant(Actor.require(authentication), id);
+        return conversationService.find(id);
     }
 
     @PostMapping("/conversations")
     ResponseEntity<Conversation> createConversation(Authentication authentication, @Valid @RequestBody CreateConversationInput input) {
         var type = Conversation.ConversationType.valueOf(input.type());
-        var conversation = conversationService.create(UUID.fromString(authentication.getName()), type, input.title());
+        var conversation = conversationService.createAs(Actor.require(authentication), type, input.title());
         return ResponseEntity.created(URI.create("/api/v1/chat/conversations/" + conversation.getId())).body(conversation);
     }
 
     @GetMapping("/conversations/{id}/messages")
-    ResponseEntity<List<Message>> messages(Authentication authentication, @PathVariable UUID id) {
-        if (!participantService.isParticipant(id, actorId(authentication)) && !isAdmin(authentication)) {
-            return ResponseEntity.status(403).build();
-        }
-        return ResponseEntity.ok(messageService.findByConversation(id));
+    List<Message> messages(Authentication authentication, @PathVariable UUID id,
+                           @RequestParam(required = false) Integer limit) {
+        return messageService.listFor(Actor.require(authentication), id, limit);
     }
 
     @PostMapping("/conversations/{id}/messages")
     ResponseEntity<Message> sendMessage(Authentication authentication, @PathVariable UUID id, @Valid @RequestBody SendMessageInput input) {
-        if (!participantService.isParticipant(id, actorId(authentication)) && !isAdmin(authentication)) {
-            return ResponseEntity.status(403).build();
-        }
         var messageType = Message.MessageType.valueOf(input.messageType());
-        var message = messageService.send(id, UUID.fromString(authentication.getName()), input.body(), messageType);
+        var message = messageService.sendAs(Actor.require(authentication), id, input.body(), messageType);
         return ResponseEntity.created(URI.create("/api/v1/chat/conversations/" + id + "/messages/" + message.getId())).body(message);
     }
 
     @GetMapping("/conversations/{id}/participants")
-    ResponseEntity<List<ConversationParticipant>> participants(Authentication authentication, @PathVariable UUID id) {
-        if (!participantService.isParticipant(id, actorId(authentication)) && !isAdmin(authentication)) {
-            return ResponseEntity.status(403).build();
-        }
-        return ResponseEntity.ok(participantService.findByConversation(id));
+    List<ConversationParticipant> participants(Authentication authentication, @PathVariable UUID id) {
+        return participantService.listFor(Actor.require(authentication), id);
     }
 
     @PostMapping("/conversations/{id}/participants")
-    ResponseEntity<ConversationParticipant> addParticipant(Authentication authentication, @PathVariable UUID id, @RequestBody AddParticipantInput input) {
-        if (!participantService.isParticipant(id, actorId(authentication)) && !isAdmin(authentication)) {
-            return ResponseEntity.status(403).build();
-        }
-        var participant = participantService.add(id, UUID.fromString(input.userId()), ConversationParticipant.ParticipantRole.MEMBER);
+    ResponseEntity<ConversationParticipant> addParticipant(Authentication authentication, @PathVariable UUID id,
+                                                           @Valid @RequestBody AddParticipantInput input) {
+        var participant = participantService.invite(Actor.require(authentication), id, UUID.fromString(input.userId()));
         return ResponseEntity.created(URI.create("/api/v1/chat/conversations/" + id + "/participants/" + participant.getId())).body(participant);
-    }
-
-    private UUID actorId(Authentication authentication) {
-        return UUID.fromString(authentication.getName());
-    }
-
-    private boolean isAdmin(Authentication authentication) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
     }
 }

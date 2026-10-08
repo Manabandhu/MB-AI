@@ -60,7 +60,7 @@ export function RideParticipantsScreen() {
                   <Text style={styles.cardTitle}>{participant.name}</Text>
                   <Text style={styles.cardMeta}>
                     {participant.role === 'DRIVER' ? 'Driver' : 'Rider'} ·{' '}
-                    {participant.status === 'CONFIRMED' ? 'Confirmed' : 'Pending'}
+                    {participant.status?.toUpperCase() === 'CONFIRMED' ? 'Confirmed' : 'Pending'}
                     {participant.tripShared ? ' · trip shared' : ''}
                   </Text>
                 </View>

@@ -152,7 +152,6 @@ export function RideDetailScreen() {
     data: rawOffer,
     isLoading,
     isError,
-    refetch,
   } = useQuery({
     queryKey: ['rides', 'detail', rideId],
     queryFn: () => getRideOffer(rideId as string),

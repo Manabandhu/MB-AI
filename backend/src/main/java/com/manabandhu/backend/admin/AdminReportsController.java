@@ -19,10 +19,12 @@ public class AdminReportsController {
 
     private final SafetyReportService reportService;
     private final AdminAccessPolicy accessPolicy;
+    private final AdminAuditService audit;
 
-    AdminReportsController(SafetyReportService reportService, AdminAccessPolicy accessPolicy) {
+    AdminReportsController(SafetyReportService reportService, AdminAccessPolicy accessPolicy, AdminAuditService audit) {
         this.reportService = reportService;
         this.accessPolicy = accessPolicy;
+        this.audit = audit;
     }
 
     record AdminReportProjection(
@@ -55,6 +57,7 @@ public class AdminReportsController {
     AdminReportProjection resolve(Authentication authentication, @PathVariable UUID id) {
         accessPolicy.require(authentication);
         var r = reportService.resolve(id);
+        audit.record(accessPolicy.actorId(authentication), "report.resolve", "SAFETY_REPORT", id.toString());
         return new AdminReportProjection(
                 r.getId(),
                 r.getCategory(),

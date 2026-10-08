@@ -1,5 +1,6 @@
 import { color, radius, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -228,7 +229,7 @@ export default function AdminDashboardScreen() {
                 <Pressable
                   key={item.route}
                   style={styles.moduleBtn}
-                  onPress={() => router.push(item.route as any)}
+                  onPress={() => router.push(item.route as Href)}
                 >
                   <Text style={styles.moduleBtnText}>{item.label}</Text>
                   <AppIcon name="chevron-right" size={16} color={color.muted} />

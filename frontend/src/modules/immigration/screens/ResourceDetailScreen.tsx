@@ -24,7 +24,18 @@ export function ResourceDetailScreen({ resourceId }: ResourceDetailScreenProps) 
     queryFn: async (): Promise<ResourceDetailContent> => {
       const response = await apiFetch(`/api/v1/immigration/resources/${resourceId}`);
       if (!response.ok) throw new Error(`Resource failed: ${response.status}`);
-      return response.json() as Promise<ResourceDetailContent>;
+      const resource = (await response.json()) as {
+        title: string;
+        description?: string | null;
+        category?: string | null;
+        url?: string | null;
+      };
+      return {
+        title: resource.title,
+        body: resource.description ?? '',
+        eyebrow: resource.category ?? 'Resource',
+        meta: resource.url ?? undefined,
+      };
     },
   });
 

@@ -58,8 +58,9 @@ export function RideMyListingsScreen() {
   const handleToggleStatus = async (rideId: string, currentStatus: string) => {
     try {
       setStatusUpdatingId(rideId);
+      const status = currentStatus?.toUpperCase();
       const isCurrentlyActive =
-        currentStatus === 'ACTIVE' || currentStatus === 'OPEN' || currentStatus === 'IN_PROGRESS';
+        status === 'ACTIVE' || status === 'OPEN' || status === 'IN_PROGRESS';
       const nextStatus = isCurrentlyActive ? 'CANCELLED' : 'ACTIVE';
       await updateRideStatus(rideId, nextStatus);
       queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
@@ -180,9 +181,9 @@ export function RideMyListingsScreen() {
                   <View
                     style={[
                       styles.statusBadge,
-                      ride.status === 'COMPLETED'
+                      ride.status?.toUpperCase() === 'COMPLETED'
                         ? styles.statusCompleted
-                        : ride.status === 'IN_PROGRESS'
+                        : ride.status?.toUpperCase() === 'IN_PROGRESS'
                           ? styles.statusInProgress
                           : styles.statusActive,
                     ]}
@@ -227,8 +228,8 @@ export function RideMyListingsScreen() {
 
                 {/* 1-Tap Activate / Deactivate Toggle Row */}
                 {(() => {
-                  const isRideActive =
-                    (ride.status as string) === 'ACTIVE' || (ride.status as string) === 'OPEN';
+                  const rideStatus = String(ride.status ?? '').toUpperCase();
+                  const isRideActive = rideStatus === 'ACTIVE' || rideStatus === 'OPEN';
                   return (
                     <View style={styles.statusToggleRow}>
                       <View style={styles.statusPillWrap}>
@@ -241,7 +242,7 @@ export function RideMyListingsScreen() {
                         <Text style={styles.statusPillText}>
                           {isRideActive
                             ? '🟢 Active & Searchable'
-                            : ride.status === 'IN_PROGRESS'
+                            : ride.status?.toUpperCase() === 'IN_PROGRESS'
                               ? '🚗 Trip in Progress'
                               : '⏸️ Deactivated'}
                         </Text>

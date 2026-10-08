@@ -2,15 +2,24 @@ package com.manabandhu.backend.rides;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+
+import jakarta.persistence.LockModeType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 interface RideOfferRepository extends JpaRepository<RideOffer, UUID> {
+    /** Locks the offer row so concurrent bookings cannot oversell seats. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM RideOffer r WHERE r.id = :id")
+    Optional<RideOffer> findByIdForUpdate(@Param("id") UUID id);
+
     List<RideOffer> findByStatusOrderByDepartureAtAsc(String status);
 
     List<RideOffer> findByDriverIdOrderByCreatedAtDesc(UUID driverId);

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/marketplace")
@@ -55,7 +56,7 @@ public class MarketplaceController {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.UNAUTHORIZED, "Authentication required");
         }
-        return UUID.fromString(authentication.getName());
+        return Actor.require(authentication).id();
     }
 
     private static boolean isAdmin(Authentication authentication) {
@@ -169,19 +170,19 @@ public class MarketplaceController {
 
     @PostMapping("/listings/{listingId}/favorite")
     ResponseEntity<ListingFavorite> favorite(Authentication authentication, @PathVariable UUID listingId) {
-        var userId = UUID.fromString(authentication.getName());
+        var userId = Actor.require(authentication).id();
         var favorite = favoriteService.favorite(userId, listingId);
         return ResponseEntity.created(URI.create("/api/v1/marketplace/favorites/" + favorite.getId())).body(favorite);
     }
 
     @DeleteMapping("/listings/{listingId}/favorite")
     ResponseEntity<Void> unfavorite(Authentication authentication, @PathVariable UUID listingId) {
-        favoriteService.unfavorite(UUID.fromString(authentication.getName()), listingId);
+        favoriteService.unfavorite(Actor.require(authentication).id(), listingId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/favorites")
     List<ListingFavorite> favorites(Authentication authentication) {
-        return favoriteService.findByUserId(UUID.fromString(authentication.getName()));
+        return favoriteService.findByUserId(Actor.require(authentication).id());
     }
 }

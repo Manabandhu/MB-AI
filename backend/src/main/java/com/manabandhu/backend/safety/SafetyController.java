@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/safety")
@@ -37,12 +38,12 @@ public class SafetyController {
 
     @GetMapping("/reports")
     List<SafetyReport> reports(Authentication authentication) {
-        return reportService.findByReporter(UUID.fromString(authentication.getName()));
+        return reportService.findByReporter(Actor.require(authentication).id());
     }
 
     @PostMapping("/reports")
     ResponseEntity<SafetyReport> createReport(Authentication authentication, @Valid @RequestBody CreateSafetyReportInput input) {
-        var reporterId = UUID.fromString(authentication.getName());
+        var reporterId = Actor.require(authentication).id();
         var targetId = UUID.fromString(input.targetId());
         var severity = SafetyReport.Severity.valueOf(input.severity());
         var report = reportService.create(reporterId, targetId, input.category(), input.description(), SafetyReport.ReportStatus.OPEN, severity, input.evidenceUrls());
@@ -63,7 +64,7 @@ public class SafetyController {
     }
 
     private UUID actorId(Authentication authentication) {
-        return UUID.fromString(authentication.getName());
+        return Actor.require(authentication).id();
     }
 
     private boolean isAdmin(Authentication authentication) {
@@ -73,12 +74,12 @@ public class SafetyController {
 
     @GetMapping("/blocked-users")
     List<BlockedUser> blockedUsers(Authentication authentication) {
-        return blockedUserService.findByOwner(UUID.fromString(authentication.getName()));
+        return blockedUserService.findByOwner(Actor.require(authentication).id());
     }
 
     @PostMapping("/blocked-users")
     ResponseEntity<BlockedUser> blockUser(Authentication authentication, @Valid @RequestBody BlockUserInput input) {
-        var ownerId = UUID.fromString(authentication.getName());
+        var ownerId = Actor.require(authentication).id();
         var blockedUserId = UUID.fromString(input.blockedUserId());
         var blocked = blockedUserService.block(ownerId, blockedUserId, input.reason());
         return ResponseEntity.created(URI.create("/api/v1/safety/blocked-users/" + blocked.getId())).body(blocked);
@@ -86,19 +87,19 @@ public class SafetyController {
 
     @PostMapping("/blocked-users/{blockedUserId}/unblock")
     ResponseEntity<Void> unblockUser(Authentication authentication, @PathVariable UUID blockedUserId) {
-        var ownerId = UUID.fromString(authentication.getName());
+        var ownerId = Actor.require(authentication).id();
         blockedUserService.unblock(ownerId, blockedUserId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/trusted-contacts")
     List<TrustedContact> trustedContacts(Authentication authentication) {
-        return trustedContactService.findByOwner(UUID.fromString(authentication.getName()));
+        return trustedContactService.findByOwner(Actor.require(authentication).id());
     }
 
     @PostMapping("/trusted-contacts")
     ResponseEntity<TrustedContact> createTrustedContact(Authentication authentication, @Valid @RequestBody CreateTrustedContactInput input) {
-        var contact = trustedContactService.create(UUID.fromString(authentication.getName()), input.name(), input.phone(), input.email(), input.relationship());
+        var contact = trustedContactService.create(Actor.require(authentication).id(), input.name(), input.phone(), input.email(), input.relationship());
         return ResponseEntity.created(URI.create("/api/v1/safety/trusted-contacts/" + contact.getId())).body(contact);
     }
 }

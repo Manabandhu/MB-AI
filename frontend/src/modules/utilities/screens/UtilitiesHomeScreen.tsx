@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -203,7 +204,7 @@ export function UtilitiesHomeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Packages"
-            onPress={() => router.push('/utilities/packages' as any)}
+            onPress={() => router.push('/utilities/packages' as Href)}
             style={s.quickActionCard}
           >
             <View style={[s.actionIconBox, { backgroundColor: C.primaryMuted }]}>
@@ -215,7 +216,7 @@ export function UtilitiesHomeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Nearby"
-            onPress={() => router.push('/utilities/nearby' as any)}
+            onPress={() => router.push('/utilities/nearby' as Href)}
             style={s.quickActionCard}
           >
             <View style={[s.actionIconBox, { backgroundColor: C.tealMuted }]}>
@@ -227,7 +228,7 @@ export function UtilitiesHomeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Emergency"
-            onPress={() => router.push('/utilities/emergency' as any)}
+            onPress={() => router.push('/utilities/emergency' as Href)}
             style={s.quickActionCard}
           >
             <View style={[s.actionIconBox, { backgroundColor: C.accentMuted }]}>
@@ -250,7 +251,7 @@ export function UtilitiesHomeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="View Move-in Guide"
-            onPress={() => router.push('/utilities/packages' as any)}
+            onPress={() => router.push('/utilities/packages' as Href)}
             style={s.featuredBtn}
           >
             <Text style={s.featuredBtnText}>Explore Move-In Bundles</Text>

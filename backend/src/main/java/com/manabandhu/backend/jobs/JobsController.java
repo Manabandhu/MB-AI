@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/jobs")
@@ -52,7 +53,7 @@ public class JobsController {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.UNAUTHORIZED, "Authentication required");
         }
-        return UUID.fromString(authentication.getName());
+        return Actor.require(authentication).id();
     }
 
     private static boolean isAdmin(Authentication authentication) {

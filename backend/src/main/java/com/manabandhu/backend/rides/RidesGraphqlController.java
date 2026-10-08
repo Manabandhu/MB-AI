@@ -11,13 +11,25 @@ import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
+import com.manabandhu.backend.auth.Actor;
+
 @Controller
 public class RidesGraphqlController {
 
     private final RidesService service;
+    private final RideRequestService requestService;
+    private final RideParticipantService participantService;
+    private final RideRatingService ratingService;
+    private final RideFavoriteService favoriteService;
 
-    RidesGraphqlController(RidesService service) {
+    RidesGraphqlController(RidesService service, RideRequestService requestService,
+                           RideParticipantService participantService, RideRatingService ratingService,
+                           RideFavoriteService favoriteService) {
         this.service = service;
+        this.requestService = requestService;
+        this.participantService = participantService;
+        this.ratingService = ratingService;
+        this.favoriteService = favoriteService;
     }
 
     @QueryMapping
@@ -33,29 +45,29 @@ public class RidesGraphqlController {
     }
 
     @QueryMapping
-    List<RideOffer> savedRides() {
-        return service.findSaved();
+    List<RideOffer> savedRides(Authentication authentication) {
+        return favoriteService.savedRides(Actor.require(authentication).id());
     }
 
     @QueryMapping
     List<RideOffer> myRides(Authentication authentication) {
-        return service.findMyRides(UUID.fromString(authentication.getName()));
+        return service.findMyRides(Actor.require(authentication).id());
     }
 
     @MutationMapping
     RideOffer createRideOffer(Authentication authentication, @Argument @Valid CreateRideOfferInput input) {
-        return service.createOffer(UUID.fromString(authentication.getName()), input.originArea(),
+        return service.createOffer(Actor.require(authentication).id(), input.originArea(),
                 input.destinationArea(), input.departureAt(), input.seatsTotal(), input.contribution());
     }
 
     @MutationMapping
     RideRequest requestRideSeat(Authentication authentication, @Argument UUID rideId, @Argument @Valid CreateRideRequestInput input) {
-        return service.requestSeat(rideId, UUID.fromString(authentication.getName()), input.seatsRequested(), input.message());
+        return requestService.create(rideId, Actor.require(authentication).id(), input);
     }
 
     @QueryMapping
-    List<RideParticipant> rideParticipants(@Argument UUID rideId) {
-        return service.findParticipants(rideId);
+    List<RideParticipant> rideParticipants(Authentication authentication, @Argument UUID rideId) {
+        return participantService.listForRide(Actor.require(authentication), rideId);
     }
 
     @QueryMapping
@@ -65,7 +77,6 @@ public class RidesGraphqlController {
 
     @MutationMapping
     RideRating rateRide(Authentication authentication, @Argument UUID rideId, @Argument @Valid CreateRideRatingInput input) {
-        return service.rate(rideId, UUID.fromString(authentication.getName()),
-                input.rateeId(), input.rating(), input.comment());
+        return ratingService.create(rideId, Actor.require(authentication).id(), input);
     }
 }

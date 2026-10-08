@@ -72,14 +72,14 @@ export function RideSeatRequestsScreen() {
                 <Text
                   style={[
                     styles.statusBadge,
-                    request.status === 'PENDING' && styles.statusPending,
-                    request.status === 'ACCEPTED' && styles.statusApproved,
-                    request.status === 'REJECTED' && styles.statusRejected,
+                    request.status?.toUpperCase() === 'PENDING' && styles.statusPending,
+                    request.status?.toUpperCase() === 'ACCEPTED' && styles.statusApproved,
+                    request.status?.toUpperCase() === 'REJECTED' && styles.statusRejected,
                   ]}
                 >
                   {request.status}
                 </Text>
-                {request.status === 'PENDING' ? (
+                {request.status?.toUpperCase() === 'PENDING' ? (
                   <View style={styles.cardActions}>
                     <AppButton
                       label="Approve"

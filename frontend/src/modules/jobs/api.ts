@@ -8,7 +8,10 @@ export async function getJobsScreen(screenId: string): Promise<CatalogScreenCont
 
 export async function listJobPostings(page = 0, size = 20): Promise<JobPosting[]> {
   const response = await apiFetch(`/api/v1/jobs?page=${page}&size=${size}`);
-  const data = await parseJsonOrThrow<any>(response, 'Job postings');
+  const data = await parseJsonOrThrow<JobPosting[] | { content?: JobPosting[] }>(
+    response,
+    'Job postings',
+  );
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.content)) return data.content;
   return [];

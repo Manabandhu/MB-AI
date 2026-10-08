@@ -21,18 +21,20 @@ export function useRealtimeChat(
   useEffect(() => {
     if (!conversationId) return;
 
+    // Private channel: Supabase checks the realtime.messages policy (V29) so only participants can join,
+    // listen for typing events, or broadcast them.
     const channelName = `conversation:${conversationId}`;
-    const channel = supabase.channel(channelName);
+    const channel = supabase.channel(channelName, { config: { private: true } });
     channelRef.current = channel;
 
-    // 1. Listen for real-time messages via Postgres Changes (<50ms delivery)
+    // 1. New messages: the backend writes to public.messages; RLS limits delivery to participants.
     channel
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'chat_messages',
+          table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
@@ -40,7 +42,7 @@ export function useRealtimeChat(
             id: string;
             conversation_id: string;
             sender_id: string;
-            content?: string;
+            body?: string;
             message_type?: Message['messageType'];
             created_at?: string;
           };
@@ -49,7 +51,7 @@ export function useRealtimeChat(
               id: row.id,
               conversationId: row.conversation_id,
               senderId: row.sender_id,
-              body: row.content || '',
+              body: row.body || '',
               messageType: row.message_type || 'TEXT',
               createdAt: row.created_at || new Date().toISOString(),
               sent: true,

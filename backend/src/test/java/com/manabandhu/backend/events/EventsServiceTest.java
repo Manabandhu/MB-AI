@@ -44,6 +44,7 @@ class EventsServiceTest {
         when(attendanceRepo.save(any(EventAttendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
         var service = new EventsService(eventRepo, attendanceRepo, categoryRepo);
         var eventId = UUID.randomUUID();
+        when(eventRepo.existsById(eventId)).thenReturn(true);
         var attendance = service.attend(eventId, UUID.randomUUID(), "GOING");
 
         assertThat(attendance).isNotNull();

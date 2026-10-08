@@ -9,6 +9,7 @@ import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import com.manabandhu.backend.auth.Actor;
 
 @Controller
 public class CommunityPostGraphqlController {
@@ -27,7 +28,7 @@ public class CommunityPostGraphqlController {
     @MutationMapping
     CommunityPost createCommunityPost(
             Authentication authentication, @Argument @Valid CreatePostInput input) {
-        return service.create(UUID.fromString(authentication.getName()), input);
+        return service.create(Actor.require(authentication).id(), input);
     }
 
     @QueryMapping
@@ -37,7 +38,7 @@ public class CommunityPostGraphqlController {
 
     @MutationMapping
     Community createCommunity(Authentication authentication, @Argument @Valid CreateCommunityInput input) {
-        return service.createCommunity(UUID.fromString(authentication.getName()), input.name(), input.description());
+        return service.createCommunity(Actor.require(authentication).id(), input.name(), input.description());
     }
 
     @QueryMapping
@@ -47,7 +48,7 @@ public class CommunityPostGraphqlController {
 
     @MutationMapping
     PostComment addPostComment(Authentication authentication, @Argument UUID postId, @Argument @Valid CreatePostCommentInput input) {
-        return service.addComment(postId, UUID.fromString(authentication.getName()), input.body());
+        return service.addComment(postId, Actor.require(authentication).id(), input.body());
     }
 
     @QueryMapping
@@ -57,6 +58,6 @@ public class CommunityPostGraphqlController {
 
     @MutationMapping
     PostReaction addPostReaction(Authentication authentication, @Argument UUID postId, @Argument @Valid CreatePostReactionInput input) {
-        return service.addReaction(postId, UUID.fromString(authentication.getName()), input.type());
+        return service.addReaction(postId, Actor.require(authentication).id(), input.type());
     }
 }

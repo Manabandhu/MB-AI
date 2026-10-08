@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/referrals")
@@ -38,34 +39,37 @@ public class ReferralController {
 
     @GetMapping
     List<Referral> referrals(Authentication authentication) {
-        if (authentication == null) {
-            return referralService.findAll();
-        }
-        return referralService.findByOwner(UUID.fromString(authentication.getName()));
+        return referralService.findByOwner(Actor.require(authentication).id());
     }
 
     @GetMapping("/public")
-    List<Referral> publicReferrals() {
-        return referralService.findAll();
+    List<ReferralView> publicReferrals() {
+        return referralService.listPublic();
     }
 
     @PostMapping
     ResponseEntity<Referral> createReferral(Authentication authentication, @Valid @RequestBody CreateReferralRequestInput input) {
-        var referral = referralService.create(UUID.fromString(authentication.getName()), UUID.randomUUID(), "request", input.title(), input.description(), "pending");
+        var referral = referralService.create(Actor.require(authentication).id(), null, "request", input.title(), input.description(), "pending");
         requestService.create(referral.getId(), input.category(), input.details(), input.urgency(), input.desiredOutcome());
         return ResponseEntity.created(URI.create("/api/v1/referrals/" + referral.getId())).body(referral);
     }
 
+    /** Creates an "offer" referral (someone offering to refer others) with its offer details. */
+    @PostMapping("/offer")
+    ResponseEntity<Referral> createOfferReferral(Authentication authentication, @Valid @RequestBody CreateReferralOfferInput input) {
+        var referral = referralService.create(Actor.require(authentication).id(), null, "offer", input.title(), input.description(), "pending");
+        offerService.create(referral.getId(), input.serviceType(), input.availability(), input.terms(), input.expiresAt());
+        return ResponseEntity.created(URI.create("/api/v1/referrals/" + referral.getId())).body(referral);
+    }
+
     @GetMapping("/{referralId}")
-    Referral referral(@PathVariable UUID referralId) {
-        return referralService.findById(referralId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Referral not found"));
+    ReferralView referral(Authentication authentication, @PathVariable UUID referralId) {
+        return referralService.viewFor(Actor.require(authentication), referralId);
     }
 
     @PatchMapping("/{referralId}/status")
-    Referral updateStatus(@PathVariable UUID referralId, @Valid @RequestBody UpdateReferralStatusInput input) {
-        return referralService.updateStatus(referralId, input.status());
+    Referral updateStatus(Authentication authentication, @PathVariable UUID referralId, @Valid @RequestBody UpdateReferralStatusInput input) {
+        return referralService.updateStatus(Actor.require(authentication), referralId, input.status());
     }
 
     @GetMapping("/{referralId}/request")
@@ -76,7 +80,8 @@ public class ReferralController {
     }
 
     @PostMapping("/{referralId}/offer")
-    ResponseEntity<ReferralOffer> createOffer(@PathVariable UUID referralId, @Valid @RequestBody CreateReferralOfferInput input) {
+    ResponseEntity<ReferralOffer> createOffer(Authentication authentication, @PathVariable UUID referralId, @Valid @RequestBody CreateReferralOfferInput input) {
+        referralService.requireOwned(Actor.require(authentication), referralId);
         var offer = offerService.create(referralId, input.serviceType(), input.availability(), input.terms(), input.expiresAt());
         return ResponseEntity.created(URI.create("/api/v1/referrals/offers/" + offer.getId())).body(offer);
     }

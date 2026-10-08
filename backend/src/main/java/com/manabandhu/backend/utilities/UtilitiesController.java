@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.manabandhu.backend.foundation.CatalogItem;
 import com.manabandhu.backend.foundation.CatalogMetric;
 import com.manabandhu.backend.foundation.CatalogScreenContent;
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/utilities")
@@ -49,13 +50,13 @@ public class UtilitiesController {
 
     @GetMapping("/packages")
     List<PackageTracking> packages(Authentication authentication) {
-        return packageService.findByOwner(UUID.fromString(authentication.getName()));
+        return packageService.findByOwner(Actor.require(authentication).id());
     }
 
     @PostMapping("/packages")
     ResponseEntity<PackageTracking> createPackage(Authentication authentication, @Valid @RequestBody CreatePackageTrackingInput input) {
         var status = PackageTracking.TrackingStatus.valueOf(input.status());
-        var tracking = packageService.create(UUID.fromString(authentication.getName()), input.trackingNumber(), input.carrier(), status, input.estimatedDelivery());
+        var tracking = packageService.create(Actor.require(authentication).id(), input.trackingNumber(), input.carrier(), status, input.estimatedDelivery());
         return ResponseEntity.created(URI.create("/api/v1/utilities/packages/" + tracking.getId())).body(tracking);
     }
 

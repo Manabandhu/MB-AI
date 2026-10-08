@@ -4,8 +4,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.manabandhu.backend.auth.Actor;
 
 @Service
 public class ReferralService {
@@ -16,9 +20,24 @@ public class ReferralService {
         this.repository = repository;
     }
 
+    /** The 100 newest referrals, without contact details. */
     @Transactional(readOnly = true)
-    public List<Referral> findAll() {
-        return repository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+    public List<ReferralView> listPublic() {
+        return repository.findTop100ByOrderByCreatedAtDesc().stream().map(r -> ReferralView.of(r, false)).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ReferralView viewFor(Actor actor, UUID id) {
+        var referral = require(id);
+        return ReferralView.of(referral, actor.admin() || actor.is(referral.getOwnerId()));
+    }
+
+    /** Fails with 403 unless the caller owns the referral or is an admin. */
+    @Transactional(readOnly = true)
+    public Referral requireOwned(Actor actor, UUID id) {
+        var referral = require(id);
+        actor.requireOwner(referral.getOwnerId(), "Only the referral owner can do this");
+        return referral;
     }
 
     @Transactional(readOnly = true)
@@ -37,12 +56,15 @@ public class ReferralService {
     }
 
     @Transactional
-    public Referral updateStatus(UUID id, String status) {
-        var referral = repository.findById(id)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Referral not found"));
+    public Referral updateStatus(Actor actor, UUID id, String status) {
+        var referral = requireOwned(actor, id);
         referral.status = status;
         referral.updatedAt = java.time.Instant.now();
         return repository.save(referral);
+    }
+
+    private Referral require(UUID id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Referral not found"));
     }
 }

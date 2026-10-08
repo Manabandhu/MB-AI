@@ -1,4 +1,7 @@
-const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+import { apiFetch } from '@/lib/api';
+
+// Google web-service calls go through the backend (/api/v1/rides/maps/*) so the key stays server-side.
+// When the backend has no key configured it answers 503 and these helpers fall back to free estimators.
 
 export interface RouteInfo {
   polyline: string;
@@ -17,43 +20,25 @@ export interface AutocompletePrediction {
 }
 
 /**
- * Fetch route information from Google Directions API or fallback to calculated estimate.
+ * Fetch route information via the backend Directions proxy, or fall back to a calculated estimate.
  */
 export async function fetchGoogleRoute(
   origin: { lat: number; lng: number },
   destination: { lat: number; lng: number },
   avoidTolls: boolean = false,
 ): Promise<RouteInfo | null> {
-  const avoidParam = avoidTolls ? '&avoid=tolls' : '';
-
-  if (GOOGLE_MAPS_API_KEY) {
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&mode=driving${avoidParam}&key=${GOOGLE_MAPS_API_KEY}`;
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.status === 'OK' && data.routes?.[0]) {
-        const route = data.routes[0];
-        const leg = route.legs[0];
-
-        // Check if route steps contain toll road warnings
-        const warnings: string[] = route.warnings || [];
-        const summary: string = route.summary || '';
-        const hasTolls =
-          warnings.some((w: string) => w.toLowerCase().includes('toll')) ||
-          summary.toLowerCase().includes('toll');
-
-        return {
-          polyline: route.overview_polyline?.points || '',
-          distanceMiles: parseFloat((leg.distance.value * 0.000621371).toFixed(1)),
-          durationMinutes: Math.round(leg.duration.value / 60),
-          hasTolls,
-          warnings,
-          summary,
-        };
-      }
-    } catch (error) {
-      console.warn('Google Directions API call failed, falling back to estimation:', error);
-    }
+  try {
+    const query = new URLSearchParams({
+      originLat: String(origin.lat),
+      originLng: String(origin.lng),
+      destinationLat: String(destination.lat),
+      destinationLng: String(destination.lng),
+      avoidTolls: String(avoidTolls),
+    });
+    const res = await apiFetch(`/api/v1/rides/maps/route?${query.toString()}`);
+    if (res.ok) return (await res.json()) as RouteInfo;
+  } catch (error) {
+    console.warn('Route lookup failed, falling back to estimation:', error);
   }
 
   // Graceful fallback: Calculate great-circle haversine distance & driving duration estimate
@@ -81,35 +66,19 @@ export async function fetchGoogleRoute(
 }
 
 /**
- * Places autocomplete search via Google Places API with fallback to OpenStreetMap Photon.
+ * Places autocomplete via the backend Places proxy, with fallback to OpenStreetMap Photon.
  */
 export async function autocompletePlacesGoogle(query: string): Promise<AutocompletePrediction[]> {
   if (!query || query.trim().length < 3) return [];
 
-  if (GOOGLE_MAPS_API_KEY) {
-    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&components=country:us&types=geocode|establishment&key=${GOOGLE_MAPS_API_KEY}`;
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.status === 'OK' && Array.isArray(data.predictions)) {
-        interface GooglePrediction {
-          description: string;
-          place_id: string;
-          structured_formatting?: {
-            main_text?: string;
-            secondary_text?: string;
-          };
-        }
-        return (data.predictions as GooglePrediction[]).map((p) => ({
-          description: p.description,
-          placeId: p.place_id,
-          mainText: p.structured_formatting?.main_text,
-          secondaryText: p.structured_formatting?.secondary_text,
-        }));
-      }
-    } catch (e) {
-      console.warn('Google Places autocomplete failed, falling back to Photon:', e);
+  try {
+    const res = await apiFetch(`/api/v1/rides/maps/autocomplete?q=${encodeURIComponent(query)}`);
+    if (res.ok) {
+      const predictions = (await res.json()) as AutocompletePrediction[];
+      if (predictions.length > 0) return predictions;
     }
+  } catch (e) {
+    console.warn('Places autocomplete failed, falling back to Photon:', e);
   }
 
   // Graceful free fallback: OpenStreetMap Photon
@@ -163,18 +132,11 @@ export async function geocodeAddress(
     return { lat: parseFloat(latLngMatch[1]), lng: parseFloat(latLngMatch[3]) };
   }
 
-  if (GOOGLE_MAPS_API_KEY) {
-    try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_API_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      const loc = data.results?.[0]?.geometry?.location;
-      if (loc) {
-        return { lat: loc.lat, lng: loc.lng };
-      }
-    } catch {
-      // fallback to photon below
-    }
+  try {
+    const res = await apiFetch(`/api/v1/rides/maps/geocode?address=${encodeURIComponent(address)}`);
+    if (res.ok) return (await res.json()) as { lat: number; lng: number };
+  } catch {
+    // fall back to Photon below
   }
 
   // Free Photon geocode

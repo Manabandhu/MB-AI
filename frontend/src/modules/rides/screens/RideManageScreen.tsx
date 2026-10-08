@@ -204,8 +204,8 @@ export function RideManageScreen() {
     );
   }
 
-  const isCompleted = data.status === 'COMPLETED';
-  const isInProgress = data.status === 'IN_PROGRESS';
+  const isCompleted = data.status?.toUpperCase() === 'COMPLETED';
+  const isInProgress = data.status?.toUpperCase() === 'IN_PROGRESS';
 
   return (
     <SafeAreaView style={styles.safeArea}>

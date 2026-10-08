@@ -1,5 +1,6 @@
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -54,7 +55,6 @@ export function JobDetailsScreen() {
     data: job,
     isLoading,
     error,
-    refetch,
   } = useQuery({
     queryKey: ['jobs', 'detail', jobId],
     queryFn: () => getJobPosting(jobId as string),
@@ -96,7 +96,7 @@ export function JobDetailsScreen() {
 
   const handleRequestReferral = () => {
     if (!session) {
-      router.push('/sign-in' as any);
+      router.push('/sign-in' as Href);
       return;
     }
     setReferralModalVisible(true);
@@ -229,8 +229,8 @@ export function JobDetailsScreen() {
 
           <Pressable
             onPress={() => {
-              if (!session) router.push('/sign-in' as any);
-              else router.push('/chat' as any);
+              if (!session) router.push('/sign-in' as Href);
+              else router.push('/chat' as Href);
             }}
             style={s.chatReferrerBtn}
           >

@@ -54,6 +54,10 @@ public class ConversationParticipant {
         this.leftAt = Instant.now();
     }
 
+    void rejoin() {
+        this.leftAt = null;
+    }
+
     public enum ParticipantRole {
         OWNER, MEMBER
     }

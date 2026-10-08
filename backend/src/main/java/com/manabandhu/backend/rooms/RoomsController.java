@@ -13,11 +13,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.auth.Actor;
 import com.manabandhu.backend.chat.Conversation;
 import com.manabandhu.backend.chat.ConversationParticipant;
 import com.manabandhu.backend.chat.ConversationParticipantService;
@@ -38,8 +35,6 @@ import com.manabandhu.backend.chat.MessageService;
 @RestController
 @RequestMapping("/api/v1/rooms")
 public class RoomsController {
-
-    private static final Logger log = LoggerFactory.getLogger(RoomsController.class);
 
     private final RoomsContentService contentService;
     private final RoomListingService listingService;
@@ -78,15 +73,15 @@ public class RoomsController {
     }
 
     private static UUID actorId(Authentication authentication) {
-        return UUID.fromString(authentication.getName());
+        return Actor.require(authentication).id();
+    }
+
+    private static UUID viewerId(Authentication authentication) {
+        return Actor.from(authentication).map(Actor::id).orElse(null);
     }
 
     private static boolean isAdmin(Authentication authentication) {
-        if (authentication == null || authentication.getAuthorities() == null) {
-            return false;
-        }
-        return authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority)
-                .anyMatch(a -> a.equals("ROLE_SUPER_ADMIN") || a.equals("ROLE_ADMIN"));
+        return Actor.from(authentication).map(Actor::admin).orElse(false);
     }
 
     @GetMapping("/amenities")
@@ -115,18 +110,11 @@ public class RoomsController {
             @RequestParam(required = false) BigDecimal lng,
             @RequestParam(required = false) Double radiusMiles,
             Pageable pageable) {
-        var viewerId = authentication == null ? null : actorId(authentication);
-        String searchCity = city != null ? city : location;
-        String bath = Boolean.TRUE.equals(privateBathOnly) ? "PRIVATE_ATTACHED" : null;
-
-        Page<RoomListing> listings;
-        if (city != null || state != null || dietaryPreference != null || genderPreference != null
-                || minRent != null || maxRent != null || bath != null) {
-            listings = listingService.search(searchCity, state, dietaryPreference, genderPreference,
-                    minRent, maxRent, bath, pageable);
-        } else {
-            listings = listingService.search(location, roomType, pageable);
-        }
+        var viewerId = viewerId(authentication);
+        var bath = Boolean.TRUE.equals(privateBathOnly) ? "PRIVATE_ATTACHED" : null;
+        var criteria = new RoomSearchCriteria(city != null ? city : location, roomType, state, dietaryPreference,
+                genderPreference, minRent, maxRent, bath, lat, lng, radiusMiles);
+        var listings = listingService.search(criteria, pageable);
         List<UUID> listingIds = listings.getContent().stream().map(RoomListing::getId).toList();
         var amenitiesMap = listingService.amenitiesForListings(listingIds);
         var preferencesMap = listingService.preferencesForListings(listingIds);
@@ -149,7 +137,7 @@ public class RoomsController {
 
     @GetMapping("/listings/{listingId}")
     RoomListingResponse listing(Authentication authentication, @PathVariable UUID listingId) {
-        var viewerId = authentication == null ? null : actorId(authentication);
+        var viewerId = viewerId(authentication);
         var listing = listingService.findPublishedById(listingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
         return toResponse(listing, viewerId);
@@ -157,7 +145,7 @@ public class RoomsController {
 
     @GetMapping("/{roomId}")
     RoomListingResponse roomDetail(Authentication authentication, @PathVariable UUID roomId) {
-        var viewerId = authentication == null ? null : actorId(authentication);
+        var viewerId = viewerId(authentication);
         var listing = listingService.findPublishedById(roomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
         return toResponse(listing, viewerId);
@@ -303,11 +291,8 @@ public class RoomsController {
             Authentication authentication,
             @PathVariable UUID roomId,
             @Valid @RequestBody RoomInquiryInput input) {
-        if (authentication == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required to submit room inquiry");
-        }
         var senderId = actorId(authentication);
-        var listing = listingService.findById(roomId)
+        var listing = listingService.findPublishedById(roomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
         var hostId = listing.getOwnerId();
 
@@ -472,18 +457,5 @@ public class RoomsController {
         return OwnerRoomListingResponse.from(listing,
                 listingService.amenitiesFor(listing.getId()),
                 listingService.preferencesFor(listing.getId()));
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleException(Exception ex) {
-        log.error("Rooms error: {}", ex.getMessage(), ex);
-        var status = HttpStatus.INTERNAL_SERVER_ERROR;
-        if (ex instanceof ResponseStatusException rse) {
-            status = HttpStatus.valueOf(rse.getStatusCode().value());
-        }
-        return ResponseEntity.status(status).body(Map.of(
-                "error", ex.getMessage() != null ? ex.getMessage() : "Unknown error",
-                "type", ex.getClass().getSimpleName()
-        ));
     }
 }

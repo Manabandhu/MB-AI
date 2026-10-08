@@ -36,8 +36,19 @@ class NotificationServiceTest {
     void markReadUpdatesNotification() {
         var notification = new Notification(UUID.randomUUID(), "Title", "Body", Notification.NotificationType.SYSTEM, null);
         when(repository.findById(notification.getId())).thenReturn(Optional.of(notification));
-        var updated = service.markRead(notification.getId());
+        var owner = new com.manabandhu.backend.auth.Actor(notification.getUserId(), false, false);
+        var updated = service.markRead(owner, notification.getId());
         assertThat(updated.isRead()).isTrue();
         assertThat(updated.getReadAt()).isNotNull();
+    }
+
+    @Test
+    void markReadRejectsOtherUsers() {
+        var notification = new Notification(UUID.randomUUID(), "Title", "Body", Notification.NotificationType.SYSTEM, null);
+        when(repository.findById(notification.getId())).thenReturn(Optional.of(notification));
+        var stranger = new com.manabandhu.backend.auth.Actor(UUID.randomUUID(), false, false);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.markRead(stranger, notification.getId()))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(notification.isRead()).isFalse();
     }
 }

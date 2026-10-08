@@ -1,6 +1,5 @@
 package com.manabandhu.backend.config;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -32,10 +31,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 
 @Configuration
@@ -44,40 +39,56 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // Read-only browse endpoints that never return private user data. Keep this list explicit:
+        // a wildcard here silently publishes every nested user-scoped route under it.
         var publicGetEndpoints = new String[] {
                 "/api/v1/health",
                 "/api/v1/foundation/welcome",
-                "/api/v1/foundation/screens/**",
-                "/api/v1/rooms/screens/**",
+                "/api/v1/foundation/screens/{screenId}",
+                "/api/v1/onboarding/config",
+                "/api/v1/rooms/screens/{screenId}",
                 "/api/v1/rooms/amenities",
                 "/api/v1/rooms/listings",
-                "/api/v1/rooms/{roomId}",
                 "/api/v1/rooms/listings/{listingId}",
-                "/api/v1/rides/screens/**",
+                "/api/v1/rooms/listings/{listingId}/images",
+                "/api/v1/rooms/listings/{listingId}/availability",
+                "/api/v1/rooms/{roomId}",
+                "/api/v1/rides/screens/{screenId}",
                 "/api/v1/rides/offers",
-                "/api/v1/rides/offers/**",
+                "/api/v1/rides/offers/{offerId}",
+                "/api/v1/rides/offers/{offerId}/ratings",
                 "/api/v1/rides/{rideId}",
                 "/api/v1/jobs",
-                "/api/v1/jobs/**",
-                "/api/v1/jobs/screens/**",
+                "/api/v1/jobs/screens/{screenId}",
                 "/api/v1/jobs/categories",
-                "/api/v1/jobs/categories/**",
+                "/api/v1/jobs/categories/{categoryId}",
+                "/api/v1/jobs/{jobId}",
                 "/api/v1/events",
-                "/api/v1/events/**",
-                "/api/v1/marketplace",
-                "/api/v1/marketplace/**",
-                "/api/v1/communities",
-                "/api/v1/communities/**",
+                "/api/v1/events/search",
+                "/api/v1/events/categories",
+                "/api/v1/events/{eventId}",
+                "/api/v1/marketplace/screens/{screenId}",
+                "/api/v1/marketplace/categories",
+                "/api/v1/marketplace/categories/{categoryId}",
+                "/api/v1/marketplace/listings",
+                "/api/v1/marketplace/listings/{listingId}",
+                "/api/v1/marketplace/listings/{listingId}/images",
                 "/api/v1/posts",
-                "/api/v1/posts/**",
-                "/api/v1/utilities/**",
-                "/api/v1/referrals",
-                "/api/v1/referrals/**",
-                "/api/v1/referrals/screens/**",
+                "/api/v1/posts/communities",
+                "/api/v1/posts/communities/{communityId}",
+                "/api/v1/posts/communities/{communityId}/posts",
+                "/api/v1/posts/{postId}",
+                "/api/v1/posts/{postId}/comments",
+                "/api/v1/posts/{postId}/reactions",
+                "/api/v1/referrals/public",
+                "/api/v1/referrals/screens/{screenId}",
                 "/api/v1/immigration/**",
-                "/api/v1/expenses/screens/**",
-                "/api/v1/safety/**",
-                "/api/v1/notifications/**",
+                "/api/v1/expenses/screens/{screenId}",
+                "/api/v1/utilities/home",
+                "/api/v1/utilities/nearby",
+                "/api/v1/utilities/emergency",
+                "/api/v1/safety/center",
+                "/api/v1/notifications/inbox",
                 "/actuator/health/**"
         };
 
@@ -87,9 +98,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, publicGetEndpoints).permitAll()
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/notifications/settings").permitAll()
-                        .requestMatchers("/api/v1/onboarding/**").permitAll()
-                        .requestMatchers("/actuator/info").permitAll()
+                        .requestMatchers("/actuator/info", "/error").permitAll()
+                        .requestMatchers("/actuator/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
@@ -151,22 +161,15 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins}") List<String> allowedOrigins) {
+            @Value("${app.cors.allowed-origins}") List<String> allowedOrigins,
+            @Value("${app.cors.allowed-origin-patterns:}") List<String> allowedOriginPatterns) {
         var configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(allowedOrigins);
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:[*]",
-                "http://127.0.0.1:[*]",
-                "http://192.168.*:[*]",
-                "http://10.*:[*]",
-                "http://172.16.*:[*]",
-                "http://*.local:[*]",
-                "exp://*",
-                "https://*.supabase.co"
-        ));
+        configuration.setAllowedOrigins(allowedOrigins.stream().filter(origin -> !origin.isBlank()).toList());
+        configuration.setAllowedOriginPatterns(allowedOriginPatterns.stream().filter(origin -> !origin.isBlank()).toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
-        configuration.setAllowCredentials(true);
+        // Clients authenticate with bearer tokens, never cookies, so credentialed CORS is not needed.
+        configuration.setAllowCredentials(false);
 
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

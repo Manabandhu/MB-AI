@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -111,7 +112,7 @@ export function SavedScreen() {
               {savedRooms.map((r: RoomListing) => (
                 <Pressable
                   key={r.id}
-                  onPress={() => router.push(`/rooms/${r.id}` as any)}
+                  onPress={() => router.push(`/rooms/${r.id}` as Href)}
                   style={s.card}
                 >
                   <View style={s.cardLeft}>
@@ -145,7 +146,7 @@ export function SavedScreen() {
               {savedMarket.map((m) => (
                 <Pressable
                   key={m.id}
-                  onPress={() => router.push(`/marketplace/${m.id}` as any)}
+                  onPress={() => router.push(`/marketplace/${m.id}` as Href)}
                   style={s.card}
                 >
                   <View style={s.cardLeft}>
@@ -179,7 +180,7 @@ export function SavedScreen() {
               {savedEvents.map((e) => (
                 <Pressable
                   key={e.id}
-                  onPress={() => router.push(`/events/${e.id}` as any)}
+                  onPress={() => router.push(`/events/${e.id}` as Href)}
                   style={s.card}
                 >
                   <View style={s.cardLeft}>

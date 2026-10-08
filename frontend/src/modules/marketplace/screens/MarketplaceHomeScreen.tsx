@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -34,7 +35,7 @@ const C = {
   goldText: '#b45309',
 };
 
-export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) {
+export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isCompact = width < 360;
@@ -51,11 +52,7 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Queries
-  const {
-    data: listings = [],
-    isLoading,
-    refetch,
-  } = useQuery({
+  const { data: listings = [], isLoading } = useQuery({
     queryKey: ['marketplace', 'listings'],
     queryFn: listMarketplaceListings,
   });
@@ -332,7 +329,7 @@ export function MarketplaceHomeScreen({ screenId }: { screenId?: string } = {}) 
                 accessibilityRole="button"
                 accessibilityLabel={`View details for ${item.title}`}
                 style={[s.itemCard, isCompact && s.itemCardCompact, isDesktop && s.itemCardDesktop]}
-                onPress={() => router.push(`/marketplace/${item.id}` as any)}
+                onPress={() => router.push(`/marketplace/${item.id}` as Href)}
               >
                 {/* Image Container */}
                 <View style={s.imageBox}>

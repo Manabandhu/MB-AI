@@ -3,8 +3,5 @@ export { FaqScreen } from './screens/FaqScreen';
 export { GuidesScreen } from './screens/GuidesScreen';
 export { ImmigrationScreen } from './screens/ImmigrationHomeScreen';
 export { ImmigrationNewsScreen } from './screens/ImmigrationNewsScreen';
-export { QuestionsScreen } from './screens/QuestionsScreen';
 export { ResourceDetailScreen } from './screens/ResourceDetailScreen';
 export { ResourcesScreen } from './screens/ResourcesScreen';
-export { SavedResourcesScreen } from './screens/SavedResourcesScreen';
-export { UscisScreen } from './screens/UscisScreen';

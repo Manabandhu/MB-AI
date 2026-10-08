@@ -4,8 +4,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.manabandhu.backend.auth.Actor;
 
 @Service
 public class ConversationService {
@@ -31,17 +35,25 @@ public class ConversationService {
         var ids = participants.stream().map(ConversationParticipant::getConversationId).toList();
         var list = repository.findByIdInOrderByLastMessageAtDesc(ids);
         for (var conv : list) {
-            var msgs = messageRepository.findByConversationIdOrderByCreatedAtDesc(conv.getId());
-            if (!msgs.isEmpty()) {
-                conv.setLastMessage(msgs.get(0).getBody());
-            }
+            messageRepository.findFirstByConversationIdOrderByCreatedAtDesc(conv.getId())
+                    .ifPresent(latest -> conv.setLastMessage(latest.getBody()));
         }
         return list;
     }
 
     @Transactional(readOnly = true)
     public Conversation find(UUID id) {
-        return repository.findById(id).orElseThrow();
+        return repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found"));
+    }
+
+    /** Conversations a user may start directly; inquiry and ride chats are created by their own flows. */
+    @Transactional
+    public Conversation createAs(Actor actor, Conversation.ConversationType type, String title) {
+        if (type != Conversation.ConversationType.DIRECT && type != Conversation.ConversationType.GROUP) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only DIRECT or GROUP conversations can be created");
+        }
+        return create(actor.id(), type, title);
     }
 
     @Transactional

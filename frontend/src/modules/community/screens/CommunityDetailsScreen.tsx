@@ -18,7 +18,7 @@ export function CommunityDetailsScreen() {
   const layout = useAdaptiveLayout();
   const maxWidth = layout.windowClass === 'compact' ? contentWidth.compact : layout.maxContentWidth;
   const { communityId } = useLocalSearchParams<{ communityId: string }>();
-  const [joined, setJoined] = useState(false);
+  const [joinedOverride, setJoinedOverride] = useState<boolean | null>(null);
 
   const {
     data: community,
@@ -37,19 +37,22 @@ export function CommunityDetailsScreen() {
     enabled: !!communityId,
   });
 
+  const joined = joinedOverride ?? community?.isJoined ?? false;
+
   const handleToggleJoin = async () => {
     try {
       if (joined) {
         await leaveCommunity(communityId);
-        setJoined(false);
+        setJoinedOverride(false);
         Alert.alert('Left Community', `You left ${community?.name ?? 'the community'}.`);
       } else {
         await joinCommunity(communityId);
-        setJoined(true);
+        setJoinedOverride(true);
         Alert.alert('Joined!', `Welcome to ${community?.name ?? 'the community'}!`);
       }
+      refetch();
     } catch {
-      setJoined((prev) => !prev);
+      Alert.alert('Something went wrong', 'Please sign in and try again.');
     }
   };
 
@@ -75,7 +78,7 @@ export function CommunityDetailsScreen() {
   }
 
   const postList = posts ?? [];
-  const memberCount = (community.memberCount || 0) + (joined ? 1 : 0);
+  const memberCount = community.memberCount || 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>

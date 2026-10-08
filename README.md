@@ -69,6 +69,19 @@ Flyway baselines existing Supabase schemas at version `0`, then applies reposito
 
 For production or serverless deployments, prefer Supabase's transaction pooler connection string instead of the direct database host and keep the Hikari pool small.
 
+## Run the backend against a local database
+
+Without a Supabase project you can run everything on a local PostgreSQL 16 with PostGIS:
+
+```bash
+createdb manabandhu
+psql -d manabandhu -f scripts/local-db/supabase-stub.sql   # auth schema, roles and realtime stand-ins
+DATABASE_URL=jdbc:postgresql://localhost:5432/manabandhu DATABASE_USERNAME=postgres DATABASE_PASSWORD=postgres \
+  pnpm dev:backend
+```
+
+Flyway applies every migration on startup. Never apply the stub file to a real Supabase project.
+
 ## API examples
 
 The public readiness endpoint is `GET /api/v1/health`. All other application endpoints require a Supabase access token.

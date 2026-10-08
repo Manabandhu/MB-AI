@@ -8,5 +8,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface SettlementRepository extends JpaRepository<Settlement, UUID> {
     List<Settlement> findByGroupIdOrderByCreatedAtDesc(UUID groupId);
+
+    List<Settlement> findByGroupIdIn(List<UUID> groupIds);
+
+    List<Settlement> findByFromUserIdOrToUserIdOrderByCreatedAtDesc(UUID fromUserId, UUID toUserId);
+
     Optional<Settlement> findById(UUID id);
 }

@@ -1,83 +1,79 @@
 import { color, radius, space } from '@manabandhu/design-system';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { type DebtBalance, recordSettlement } from '@/modules/expenses/api';
+import { useAuthStore } from '@/lib/authStore';
+import {
+  type DebtBalance,
+  listBalances,
+  memberLabel,
+  recordSettlement,
+} from '@/modules/expenses/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
-const INITIAL_BALANCES: DebtBalance[] = [
-  {
-    fromUserId: 'u-vikram',
-    fromUserName: 'Vikram Reddy',
-    toUserId: 'u-current',
-    toUserName: 'You',
-    amount: 45.0,
-  },
-  {
-    fromUserId: 'u-current',
-    fromUserName: 'You',
-    toUserId: 'u-sneha',
-    toUserName: 'Sneha Murthy',
-    amount: 28.5,
-  },
-  {
-    fromUserId: 'u-karthik',
-    fromUserName: 'Karthik Varma',
-    toUserId: 'u-current',
-    toUserName: 'You',
-    amount: 62.0,
-  },
-  {
-    fromUserId: 'u-ananya',
-    fromUserName: 'Ananya Rao',
-    toUserId: 'u-current',
-    toUserName: 'You',
-    amount: 15.0,
-  },
-];
+const balanceKey = (b: DebtBalance) => `${b.groupId}-${b.fromUserId}-${b.toUserId}`;
 
 export function BalancesScreen() {
   const router = useRouter();
-  const [balances, setBalances] = useState<DebtBalance[]>(INITIAL_BALANCES);
-  const [settlingId, setSettlingId] = useState<string | null>(null);
-
-  const handleSettleUp = async (b: DebtBalance) => {
-    const key = `${b.fromUserId}-${b.toUserId}`;
-    setSettlingId(key);
-    try {
-      await recordSettlement({
-        groupId: 'group-apt-1',
+  const queryClient = useQueryClient();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['expenses', 'balances'],
+    queryFn: listBalances,
+  });
+  const settle = useMutation({
+    mutationFn: (b: DebtBalance) =>
+      recordSettlement({
+        groupId: b.groupId,
         fromUserId: b.fromUserId,
         toUserId: b.toUserId,
         amount: b.amount,
-      });
-
-      // Zero out debt in local balance matrix
-      setBalances((prev) =>
-        prev.filter((item) => !(item.fromUserId === b.fromUserId && item.toUserId === b.toUserId)),
-      );
-
+      }),
+    onSuccess: (_settlement, b) => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
       Alert.alert(
         'Settled Up! 🎉',
-        `Payment of $${b.amount.toFixed(2)} between ${b.fromUserName} and ${b.toUserName} has been marked as settled.`,
+        `Payment of $${b.amount.toFixed(2)} between ${name(b.fromUserId)} and ${name(b.toUserId)} has been recorded.`,
       );
-    } catch {
-      Alert.alert('Error', 'Unable to record settlement.');
-    } finally {
-      setSettlingId(null);
-    }
-  };
+    },
+    onError: (err) => Alert.alert('Unable to record settlement', err.message),
+  });
+  const name = (userId: string) => memberLabel(userId, currentUserId);
+  const settlingId = settle.isPending && settle.variables ? balanceKey(settle.variables) : null;
 
+  if (isLoading) {
+    return (
+      <ScreenShell>
+        <LoadingState label="Loading balances..." />
+      </ScreenShell>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <ScreenShell>
+        <ErrorState
+          title="Unable to load balances"
+          body="There was a problem loading who owes whom."
+          retryLabel="Retry"
+          onRetry={() => refetch()}
+        />
+      </ScreenShell>
+    );
+  }
+
+  const balances = data;
   const totalOwedToYou = balances
-    .filter((b) => b.toUserName === 'You')
+    .filter((b) => b.toUserId === currentUserId)
     .reduce((sum, b) => sum + b.amount, 0);
-
   const totalYouOwe = balances
-    .filter((b) => b.fromUserName === 'You')
+    .filter((b) => b.fromUserId === currentUserId)
     .reduce((sum, b) => sum + b.amount, 0);
 
   return (
@@ -110,20 +106,21 @@ export function BalancesScreen() {
       ) : (
         <View style={styles.list}>
           {balances.map((b) => {
-            const isOwedToMe = b.toUserName === 'You';
-            const isSettling = settlingId === `${b.fromUserId}-${b.toUserId}`;
+            const isOwedToMe = b.toUserId === currentUserId;
+            const isSettling = settlingId === balanceKey(b);
             return (
-              <View key={`${b.fromUserId}-${b.toUserId}`} style={styles.card}>
+              <View key={balanceKey(b)} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.avatarPill}>
                     <Text style={styles.avatarPillText}>
-                      {b.fromUserName.slice(0, 2).toUpperCase()}
+                      {name(b.fromUserId).slice(0, 2).toUpperCase()}
                     </Text>
                   </View>
                   <View style={styles.cardMiddle}>
                     <Text style={styles.cardTitle}>
-                      <Text style={{ fontWeight: '700' }}>{b.fromUserName}</Text> owes{' '}
-                      <Text style={{ fontWeight: '700' }}>{b.toUserName}</Text>
+                      <Text style={styles.strong}>{name(b.fromUserId)}</Text>{' '}
+                      {b.fromUserId === currentUserId ? 'owe' : 'owes'}{' '}
+                      <Text style={styles.strong}>{name(b.toUserId)}</Text>
                     </Text>
                     <Text style={styles.cardSub}>
                       {isOwedToMe ? 'Will be transferred to you' : 'Direct payment via Zelle / UPI'}
@@ -137,12 +134,12 @@ export function BalancesScreen() {
                 <View style={styles.cardDivider} />
 
                 <View style={styles.cardFooter}>
-                  <Text style={styles.auditText}>Group: Arbor Oaks 2BHK</Text>
+                  <Text style={styles.auditText}>Group: {b.groupName}</Text>
                   <Pressable
-                    accessibilityLabel={`Settle up $${b.amount.toFixed(2)} with ${b.fromUserName}`}
+                    accessibilityLabel={`Settle up $${b.amount.toFixed(2)} with ${name(b.fromUserId)}`}
                     accessibilityRole="button"
                     disabled={isSettling}
-                    onPress={() => handleSettleUp(b)}
+                    onPress={() => settle.mutate(b)}
                     style={styles.settleBtn}
                   >
                     <AppIcon color="#431ebe" name="check" size={14} />
@@ -221,6 +218,7 @@ const styles = StyleSheet.create({
   avatarPillText: { fontSize: 13, fontWeight: '700', color: color.primary },
   cardMiddle: { flex: 1 },
   cardTitle: { fontSize: 14, color: color.ink },
+  strong: { fontWeight: '700' },
   cardSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   amountText: { fontSize: 16, fontWeight: '800' },
   cardDivider: { height: 1, backgroundColor: 'rgba(0,0,0,0.06)' },

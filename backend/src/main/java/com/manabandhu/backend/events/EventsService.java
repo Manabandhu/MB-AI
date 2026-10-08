@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.auth.Actor;
+
 @Service
 public class EventsService {
 
@@ -60,6 +62,15 @@ public class EventsService {
 
     @Transactional
     public EventAttendance attend(UUID eventId, UUID userId, String status) {
+        if (!eventRepository.existsById(eventId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found");
+        }
+        // One attendance row per user and event: re-RSVPs update the existing row.
+        var existing = attendanceRepository.findByEventIdAndUserId(eventId, userId);
+        if (existing.isPresent()) {
+            existing.get().setStatus(status);
+            return attendanceRepository.save(existing.get());
+        }
         return attendanceRepository.save(new EventAttendance(eventId, userId, status));
     }
 
@@ -71,5 +82,16 @@ public class EventsService {
     @Transactional(readOnly = true)
     public List<EventAttendance> findAttendance(UUID eventId) {
         return attendanceRepository.findByEventIdOrderByCreatedAtDesc(eventId);
+    }
+
+    /** The organizer and admins see the full guest list; everyone else sees only their own RSVP. */
+    @Transactional(readOnly = true)
+    public List<EventAttendance> attendanceFor(Actor actor, UUID eventId) {
+        var event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
+        if (actor.admin() || actor.is(event.getOrganizerId())) {
+            return attendanceRepository.findByEventIdOrderByCreatedAtDesc(eventId);
+        }
+        return attendanceRepository.findByEventIdAndUserId(eventId, actor.id()).map(List::of).orElse(List.of());
     }
 }

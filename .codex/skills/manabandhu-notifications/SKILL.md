@@ -28,5 +28,4 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 - Unified design system standardization: Standardized `NotificationsInboxScreen.tsx` with the single ManaBandhu Modern Vibrant design system (`#431ebe` Royal Indigo, `#00696b` Teal, `#ff7e33` Sunset Orange, `#faf8ff` surface).
 - Repo-Wide Code Review & Defect Remediation: Audited `NotificationsInboxScreen.tsx` for touch targets compliance, verified unread badge cache synchronization, and ensured all icon actions have `accessibilityRole` and `accessibilityLabel`.
 - Pull-to-refresh: `NotificationsInboxScreen` implements `RefreshControl` with query refetching when users swipe down on the notifications list.
-
-
+- Security & correctness hardening (2026-10): `GET/PATCH /api/v1/notifications/settings` are per user (stored in `notification_settings`, V29) and require a JWT; unknown keys are ignored. Only `/api/v1/notifications/inbox` is public. Marking read checks ownership; creating notifications by hand is admin-only. `NotificationDispatcherService` claims batches of 50 with `FOR UPDATE SKIP LOCKED`, uses 5s/10s HTTP timeouts, and leaves rows undispatched when no push provider is configured instead of silently marking them sent.

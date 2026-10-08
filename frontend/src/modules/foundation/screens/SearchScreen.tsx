@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -19,7 +20,7 @@ import { listMarketplaceListings } from '@/modules/marketplace/api';
 import type { MarketplaceListing } from '@/modules/marketplace/types';
 import { listRoomListings } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
 const C = {
   primary: '#E05638', // Warm Saffron
@@ -225,7 +226,7 @@ export function SearchScreen() {
                     key={item.id}
                     accessibilityRole="button"
                     accessibilityLabel={item.title}
-                    onPress={() => router.push(item.route as any)}
+                    onPress={() => router.push(item.route as Href)}
                     style={s.resultCard}
                   >
                     <View style={s.resultBody}>
@@ -319,10 +320,10 @@ export function SearchScreen() {
                 ].map((q) => (
                   <Pressable
                     key={q.label}
-                    onPress={() => router.push(q.route as any)}
+                    onPress={() => router.push(q.route as Href)}
                     style={[s.quickCard, { backgroundColor: q.bg }]}
                   >
-                    <AppIcon name={q.icon as any} size={20} color={q.color} />
+                    <AppIcon name={q.icon as AppIconName} size={20} color={q.color} />
                     <Text style={[s.quickCardText, { color: q.color }]}>{q.label}</Text>
                   </Pressable>
                 ))}

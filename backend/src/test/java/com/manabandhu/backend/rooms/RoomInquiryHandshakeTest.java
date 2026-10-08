@@ -65,9 +65,10 @@ class RoomInquiryHandshakeTest {
 
         var auth = mock(Authentication.class);
         when(auth.getName()).thenReturn(senderId.toString());
+        when(auth.isAuthenticated()).thenReturn(true);
 
         var listing = new RoomListing(hostId, "Sunny Room", "Desc", BigDecimal.valueOf(800), "PRIVATE", "active", "Austin", null, null, null);
-        when(listingService.findById(roomId)).thenReturn(Optional.of(listing));
+        when(listingService.findPublishedById(roomId)).thenReturn(Optional.of(listing));
 
         var conversation = mock(Conversation.class);
         var convId = UUID.randomUUID();

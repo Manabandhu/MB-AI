@@ -112,15 +112,6 @@ export type CreateRideOfferInput = {
   genderPreference?: 'ANY' | 'FEMALE_ONLY' | 'MALE_ONLY' | string;
 };
 
-export type CreateRideRequestInput = {
-  rideId: string;
-  pickupArea: string;
-  destination: string;
-  departureAt: string;
-  seatsRequested: number;
-  message?: string;
-};
-
 export type UpdateRideOfferInput = Partial<CreateRideOfferInput> & {
   status?: string;
   seatsAvailable?: number;

@@ -1,53 +1,98 @@
 package com.manabandhu.backend.expenses;
 
+import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.auth.Actor;
+
+/** Expense groups are private to their members; only the owner can rename, delete, or manage members. */
 @Service
 public class ExpenseGroupService {
 
     private final ExpenseGroupRepository repository;
+    private final ExpenseRepository expenseRepository;
+    private final ExpenseAccess access;
 
-    ExpenseGroupService(ExpenseGroupRepository repository) {
+    ExpenseGroupService(ExpenseGroupRepository repository, ExpenseRepository expenseRepository, ExpenseAccess access) {
         this.repository = repository;
+        this.expenseRepository = expenseRepository;
+        this.access = access;
     }
 
     @Transactional(readOnly = true)
-    public List<ExpenseGroup> findAll() {
-        return repository.findAll();
+    public List<ExpenseGroupView> listFor(Actor actor) {
+        var ids = access.groupIdsFor(actor.id());
+        if (ids.isEmpty()) return List.of();
+        return repository.findAllById(ids).stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .map(this::view)
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public Optional<ExpenseGroup> findById(UUID id) {
-        return repository.findById(id);
+    public ExpenseGroupView viewFor(Actor actor, UUID groupId) {
+        return view(access.requireMember(actor, groupId));
     }
 
     @Transactional
-    public ExpenseGroup create(UUID ownerId, String name, String description) {
-        return repository.save(new ExpenseGroup(ownerId, name, description));
+    public ExpenseGroupView create(Actor actor, CreateExpenseGroupInput input) {
+        var group = repository.saveAndFlush(new ExpenseGroup(actor.id(), input.name().trim(), input.description(),
+                input.groupType() != null ? input.groupType() : "APARTMENT",
+                input.currency() != null ? input.currency() : "USD"));
+        access.addMember(group.getId(), actor.id());
+        return view(group);
     }
 
     @Transactional
-    public ExpenseGroup update(UUID id, String name, String description) {
-        var group = repository.findById(id)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Expense group not found"));
-        if (name != null) group.name = name;
+    public ExpenseGroupView update(Actor actor, UUID id, String name, String description) {
+        var group = access.requireGroup(id);
+        actor.requireOwner(group.getOwnerId(), "Only the group owner can edit this group");
+        if (name != null && !name.isBlank()) group.name = name.trim();
         if (description != null) group.description = description;
-        group.updatedAt = java.time.Instant.now();
-        return repository.save(group);
+        group.updatedAt = Instant.now();
+        return view(repository.save(group));
     }
 
     @Transactional
-    public void delete(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.NOT_FOUND, "Expense group not found");
+    public void delete(Actor actor, UUID id) {
+        var group = access.requireGroup(id);
+        actor.requireOwner(group.getOwnerId(), "Only the group owner can delete this group");
+        repository.delete(group);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> members(Actor actor, UUID groupId) {
+        access.requireMember(actor, groupId);
+        return access.memberIds(groupId);
+    }
+
+    @Transactional
+    public List<UUID> addMember(Actor actor, UUID groupId, UUID userId) {
+        var group = access.requireGroup(groupId);
+        actor.requireOwner(group.getOwnerId(), "Only the group owner can add members");
+        access.addMember(groupId, userId);
+        return access.memberIds(groupId);
+    }
+
+    /** The owner can remove anyone except themselves; members can leave on their own. */
+    @Transactional
+    public void removeMember(Actor actor, UUID groupId, UUID userId) {
+        var group = access.requireGroup(groupId);
+        if (group.getOwnerId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "The owner cannot leave; delete the group instead");
         }
-        repository.deleteById(id);
+        actor.requireAnyOf("Only the owner or the member can remove this membership", group.getOwnerId(), userId);
+        access.removeMember(groupId, userId);
+    }
+
+    private ExpenseGroupView view(ExpenseGroup group) {
+        var members = Math.max(1, access.memberIds(group.getId()).size());
+        return ExpenseGroupView.of(group, members, expenseRepository.totalForGroup(group.getId()));
     }
 }

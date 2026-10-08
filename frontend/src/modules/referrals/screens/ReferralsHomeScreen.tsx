@@ -28,7 +28,7 @@ const FILTER_CHIPS = [
   { id: 'housing', label: 'Housing Help', icon: 'home' },
 ] as const;
 
-export function ReferralsScreen({ screenId }: { screenId?: string }) {
+export function ReferralsScreen(_props: { screenId?: string }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -38,11 +38,7 @@ export function ReferralsScreen({ screenId }: { screenId?: string }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const {
-    data: rawReferrals,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const { data: rawReferrals, isLoading } = useQuery({
     queryKey: ['referrals', 'public'],
     queryFn: listPublicReferrals,
   });

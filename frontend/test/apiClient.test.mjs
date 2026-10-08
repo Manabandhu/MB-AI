@@ -30,7 +30,7 @@ test('parseJsonOrThrow throws formatted error on failure', async () => {
   };
   await assert.rejects(
     async () => parseJsonOrThrow(mockResponse, 'UserFetch'),
-    /UserFetch failed: 404/
+    /UserFetch failed: 404/,
   );
 });
 
@@ -50,8 +50,5 @@ test('parseJson throws response text on non-ok', async () => {
     status: 400,
     text: async () => 'Invalid payload',
   };
-  await assert.rejects(
-    async () => parseJson(mockResponse),
-    /Invalid payload/
-  );
+  await assert.rejects(async () => parseJson(mockResponse), /Invalid payload/);
 });

@@ -165,12 +165,6 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   signInWithPhone: async (phone) => {
     set({ isLoading: true, error: null });
     try {
-      const normalized = phone.replace(/\D/g, '');
-      if (normalized === '14695550100' || normalized === '4695550100') {
-        set({ otpIdentifier: '+14695550100', otpType: 'sms', isLoading: false });
-        router.push('/otp-verification');
-        return;
-      }
       const { error } = await supabase.auth.signInWithOtp({ phone });
       if (error) throw error;
       set({ otpIdentifier: phone, otpType: 'sms', isLoading: false });
@@ -220,38 +214,6 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   verifyOtp: async (emailOrPhone, token, type) => {
     set({ isLoading: true, error: null });
     try {
-      const normalized = emailOrPhone.replace(/\D/g, '');
-      const isTestPhone =
-        (normalized === '14695550100' || normalized === '4695550100') && token.trim() === '123456';
-      if (isTestPhone) {
-        const testUser = {
-          id: '00000000-0000-0000-0000-000000000001',
-          aud: 'authenticated',
-          role: 'authenticated',
-          email: 'test.member@manabandhu.com',
-          phone: '+14695550100',
-          app_metadata: { provider: 'phone', providers: ['phone'] },
-          user_metadata: { full_name: 'Verified Test Member', phone: '+14695550100' },
-          created_at: new Date().toISOString(),
-        } as unknown as User;
-
-        const testSession = {
-          access_token: 'mock-test-phone-access-token',
-          refresh_token: 'mock-test-phone-refresh-token',
-          expires_in: 3600,
-          token_type: 'bearer',
-          user: testUser,
-        } as unknown as Session;
-
-        _get().setSession(testSession);
-        set({
-          otpIdentifier: null,
-          otpType: null,
-          error: null,
-        });
-        return;
-      }
-
       const payload =
         type === 'email'
           ? { email: emailOrPhone, token, type: 'email' as const }

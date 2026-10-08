@@ -8,6 +8,7 @@ paths:
   /health:
     get:
       operationId: getHealth
+      summary: Get health
       security: []
       responses:
         '200':
@@ -19,6 +20,7 @@ paths:
   /me:
     get:
       operationId: getIdentity
+      summary: Get identity
       description: Returns the identity of the authenticated user derived from the verified JWT principal. The role is read from trusted app_metadata, never from user-editable metadata.
       responses:
         '200':
@@ -31,6 +33,7 @@ paths:
   /foundation/welcome:
     get:
       operationId: getWelcomeFlow
+      summary: Get welcome flow
       security: []
       responses:
         '200':
@@ -42,6 +45,7 @@ paths:
   /foundation/screens/{screenId}:
     get:
       operationId: getFoundationScreenContent
+      summary: Get foundation screen content
       security: []
       parameters:
         - name: screenId
@@ -61,6 +65,7 @@ paths:
   /notifications/inbox:
     get:
       operationId: getNotificationsInbox
+      summary: Get notifications inbox
       security: []
       responses:
         '200':
@@ -72,6 +77,7 @@ paths:
   /rooms/screens/{screenId}:
     get:
       operationId: getRoomsScreenContent
+      summary: Get rooms screen content
       security: []
       parameters:
         - name: screenId
@@ -91,6 +97,7 @@ paths:
   /rides/screens/{screenId}:
     get:
       operationId: getRidesScreenContent
+      summary: Get rides screen content
       security: []
       parameters:
         - name: screenId
@@ -110,6 +117,7 @@ paths:
   /posts:
     get:
       operationId: listCommunityPosts
+      summary: List community posts
       responses:
         '200':
           description: Community posts
@@ -121,6 +129,7 @@ paths:
                   $ref: '#/components/schemas/CommunityPost'
     post:
       operationId: createCommunityPost
+      summary: Create community post
       requestBody:
         required: true
         content:
@@ -137,6 +146,7 @@ paths:
   /immigration/resources:
     get:
       operationId: listImmigrationResources
+      summary: List immigration resources
       responses:
         '200':
           description: Immigration resources
@@ -152,6 +162,7 @@ paths:
           schema: { type: string }
     post:
       operationId: createImmigrationResource
+      summary: Create immigration resource
       requestBody:
         required: true
         content:
@@ -168,6 +179,7 @@ paths:
   /immigration/guides:
     get:
       operationId: listImmigrationGuides
+      summary: List immigration guides
       responses:
         '200':
           description: Immigration guides
@@ -184,6 +196,7 @@ paths:
   /immigration/checklists:
     get:
       operationId: listImmigrationChecklists
+      summary: List immigration checklists
       responses:
         '200':
           description: Immigration checklists
@@ -200,6 +213,7 @@ paths:
   /immigration/faq:
     get:
       operationId: listFaqItems
+      summary: List faq items
       responses:
         '200':
           description: FAQ items
@@ -216,6 +230,7 @@ paths:
   /immigration/news:
     get:
       operationId: listImmigrationNews
+      summary: List immigration news
       responses:
         '200':
           description: Immigration news
@@ -228,6 +243,7 @@ paths:
   /safety/reports:
     get:
       operationId: listSafetyReports
+      summary: List safety reports
       responses:
         '200':
           description: Safety reports
@@ -239,6 +255,7 @@ paths:
                   $ref: '#/components/schemas/SafetyReport'
     post:
       operationId: createSafetyReport
+      summary: Create safety report
       requestBody:
         required: true
         content:
@@ -255,6 +272,7 @@ paths:
   /safety/reports/{id}/resolve:
     post:
       operationId: resolveSafetyReport
+      summary: Resolve safety report
       parameters:
         - name: id
           in: path
@@ -266,6 +284,7 @@ paths:
   /safety/blocked-users:
     get:
       operationId: listBlockedUsers
+      summary: List blocked users
       responses:
         '200':
           description: Blocked users
@@ -277,6 +296,7 @@ paths:
                   $ref: '#/components/schemas/BlockedUser'
     post:
       operationId: blockUser
+      summary: Block user
       requestBody:
         required: true
         content:
@@ -293,6 +313,7 @@ paths:
   /safety/blocked-users/{blockedUserId}/unblock:
     post:
       operationId: unblockUser
+      summary: Unblock user
       parameters:
         - name: blockedUserId
           in: path
@@ -304,6 +325,7 @@ paths:
   /safety/trusted-contacts:
     get:
       operationId: listTrustedContacts
+      summary: List trusted contacts
       responses:
         '200':
           description: Trusted contacts
@@ -315,6 +337,7 @@ paths:
                   $ref: '#/components/schemas/TrustedContact'
     post:
       operationId: createTrustedContact
+      summary: Create trusted contact
       requestBody:
         required: true
         content:
@@ -331,6 +354,7 @@ paths:
   /utilities/packages:
     get:
       operationId: listPackageTrackings
+      summary: List package trackings
       responses:
         '200':
           description: Package trackings
@@ -342,6 +366,7 @@ paths:
                   $ref: '#/components/schemas/PackageTracking'
     post:
       operationId: createPackageTracking
+      summary: Create package tracking
       requestBody:
         required: true
         content:
@@ -358,6 +383,7 @@ paths:
   /utilities/nearby:
     get:
       operationId: listNearbyPlaces
+      summary: List nearby places
       responses:
         '200':
           description: Nearby places
@@ -374,6 +400,7 @@ paths:
   /utilities/emergency:
     get:
       operationId: listEmergencyResources
+      summary: List emergency resources
       responses:
         '200':
           description: Emergency resources
@@ -390,6 +417,7 @@ paths:
   /notifications:
     get:
       operationId: listNotifications
+      summary: List notifications
       responses:
         '200':
           description: Notifications
@@ -401,6 +429,7 @@ paths:
                   $ref: '#/components/schemas/Notification'
     post:
       operationId: createNotification
+      summary: Create notification
       requestBody:
         required: true
         content:
@@ -417,6 +446,7 @@ paths:
   /notifications/unread-count:
     get:
       operationId: getUnreadNotificationCount
+      summary: Get unread notification count
       responses:
         '200':
           description: Unread notification count
@@ -427,6 +457,7 @@ paths:
   /notifications/{id}/read:
     post:
       operationId: markNotificationRead
+      summary: Mark notification read
       parameters:
         - name: id
           in: path
@@ -442,6 +473,7 @@ paths:
   /notifications/preferences:
     get:
       operationId: listNotificationPreferences
+      summary: List notification preferences
       responses:
         '200':
           description: Notification preferences
@@ -453,6 +485,7 @@ paths:
                   $ref: '#/components/schemas/NotificationPreference'
     post:
       operationId: setNotificationPreference
+      summary: Set notification preference
       requestBody:
         required: true
         content:
@@ -469,6 +502,7 @@ paths:
   /chat/conversations:
     get:
       operationId: listConversations
+      summary: List conversations
       responses:
         '200':
           description: Conversations
@@ -480,6 +514,7 @@ paths:
                   $ref: '#/components/schemas/Conversation'
     post:
       operationId: createConversation
+      summary: Create conversation
       requestBody:
         required: true
         content:
@@ -496,6 +531,7 @@ paths:
   /chat/conversations/{id}:
     get:
       operationId: getConversation
+      summary: Get conversation
       parameters:
         - name: id
           in: path
@@ -511,6 +547,7 @@ paths:
   /chat/conversations/{id}/messages:
     get:
       operationId: listMessages
+      summary: List messages
       parameters:
         - name: id
           in: path
@@ -527,6 +564,7 @@ paths:
                   $ref: '#/components/schemas/Message'
     post:
       operationId: sendMessage
+      summary: Send message
       parameters:
         - name: id
           in: path
@@ -548,6 +586,7 @@ paths:
   /chat/conversations/{id}/participants:
     get:
       operationId: listParticipants
+      summary: List participants
       parameters:
         - name: id
           in: path
@@ -564,6 +603,7 @@ paths:
                   $ref: '#/components/schemas/ConversationParticipant'
     post:
       operationId: addParticipant
+      summary: Add participant
       parameters:
         - name: id
           in: path
@@ -585,6 +625,7 @@ paths:
   /assistant/conversations:
     get:
       operationId: listAssistantConversations
+      summary: List assistant conversations
       responses:
         '200':
           description: Assistant conversations
@@ -596,6 +637,7 @@ paths:
                   $ref: '#/components/schemas/AssistantConversation'
     post:
       operationId: createAssistantConversation
+      summary: Create assistant conversation
       requestBody:
         required: true
         content:
@@ -612,6 +654,7 @@ paths:
   /assistant/conversations/{id}/messages:
     get:
       operationId: listAssistantMessages
+      summary: List assistant messages
       parameters:
         - name: id
           in: path
@@ -628,6 +671,7 @@ paths:
                   $ref: '#/components/schemas/AssistantMessage'
     post:
       operationId: sendAssistantMessage
+      summary: Send assistant message
       parameters:
         - name: id
           in: path
@@ -649,6 +693,7 @@ paths:
   /assistant/conversations/{id}/stream:
     get:
       operationId: streamAssistantMessages
+      summary: Stream assistant messages
       parameters:
         - name: id
           in: path
@@ -664,6 +709,7 @@ paths:
   /assistant/messages/{id}/citations:
     get:
       operationId: listAssistantCitations
+      summary: List assistant citations
       parameters:
         - name: id
           in: path
@@ -680,6 +726,7 @@ paths:
                   $ref: '#/components/schemas/AssistantCitation'
     post:
       operationId: createAssistantCitation
+      summary: Create assistant citation
       parameters:
         - name: id
           in: path
@@ -701,6 +748,7 @@ paths:
   /rooms:
     get:
       operationId: listRoomListings
+      summary: List room listings
       parameters:
         - name: location
           in: query
@@ -715,6 +763,7 @@ paths:
                 items: { $ref: '#/components/schemas/RoomListing' }
     post:
       operationId: createRoomListing
+      summary: Create room listing
       requestBody:
         required: true
         content:
@@ -729,6 +778,7 @@ paths:
   /rooms/saved:
     get:
       operationId: listSavedRoomListings
+      summary: List saved room listings
       responses:
         '200':
           description: Saved room listings
@@ -740,6 +790,7 @@ paths:
   /rooms/my-listings:
     get:
       operationId: listMyRoomListings
+      summary: List my room listings
       responses:
         '200':
           description: My room listings
@@ -751,6 +802,7 @@ paths:
   /rooms/{roomId}:
     get:
       operationId: getRoomListing
+      summary: Get room listing
       parameters:
         - name: roomId
           in: path
@@ -765,6 +817,7 @@ paths:
   /rooms/{roomId}/owner:
     get:
       operationId: getRoomListingForOwner
+      summary: Get room listing for owner
       parameters:
         - name: roomId
           in: path
@@ -779,6 +832,7 @@ paths:
   /rooms/{roomId}/publish:
     post:
       operationId: publishRoomListing
+      summary: Publish room listing
       parameters:
         - name: roomId
           in: path
@@ -793,6 +847,7 @@ paths:
   /rooms/{roomId}/pause:
     post:
       operationId: pauseRoomListing
+      summary: Pause room listing
       parameters:
         - name: roomId
           in: path
@@ -807,6 +862,7 @@ paths:
   /rooms/{roomId}/archive:
     post:
       operationId: archiveRoomListing
+      summary: Archive room listing
       parameters:
         - name: roomId
           in: path
@@ -821,6 +877,7 @@ paths:
   /rooms/{roomId}/bookings:
     get:
       operationId: listRoomBookings
+      summary: List room bookings
       parameters:
         - name: roomId
           in: path
@@ -836,6 +893,7 @@ paths:
                 items: { $ref: '#/components/schemas/RoomBooking' }
     post:
       operationId: createRoomBooking
+      summary: Create room booking
       parameters:
         - name: roomId
           in: path
@@ -855,6 +913,7 @@ paths:
   /rooms/saved-searches:
     get:
       operationId: listSavedSearches
+      summary: List saved searches
       responses:
         '200':
           description: Saved searches
@@ -865,6 +924,7 @@ paths:
                 items: { $ref: '#/components/schemas/SavedSearch' }
     post:
       operationId: createSavedSearch
+      summary: Create saved search
       requestBody:
         required: true
         content:
@@ -879,6 +939,7 @@ paths:
   /rooms/saved-searches/{searchId}:
     patch:
       operationId: updateSavedSearch
+      summary: Update saved search
       parameters:
         - name: searchId
           in: path
@@ -897,6 +958,7 @@ paths:
               schema: { $ref: '#/components/schemas/SavedSearch' }
     delete:
       operationId: deleteSavedSearch
+      summary: Delete saved search
       parameters:
         - name: searchId
           in: path
@@ -908,6 +970,7 @@ paths:
   /rooms/listings/{listingId}/report:
     post:
       operationId: reportRoomListing
+      summary: Report room listing
       parameters:
         - name: listingId
           in: path
@@ -927,6 +990,7 @@ paths:
   /rooms/my-reports:
     get:
       operationId: listMyReports
+      summary: List my reports
       responses:
         '200':
           description: Reports submitted by the user
@@ -938,6 +1002,7 @@ paths:
   /rooms/listings/{listingId}/analytics:
     get:
       operationId: getRoomAnalytics
+      summary: Get room analytics
       parameters:
         - name: listingId
           in: path
@@ -952,6 +1017,7 @@ paths:
   /rooms/admin/reports:
     get:
       operationId: listReviewQueue
+      summary: List review queue
       parameters:
         - name: status
           in: query
@@ -967,6 +1033,7 @@ paths:
   /rooms/admin/reports/{reportId}/review:
     post:
       operationId: reviewReport
+      summary: Review report
       parameters:
         - name: reportId
           in: path
@@ -988,6 +1055,7 @@ paths:
   /rooms/admin/listings/{listingId}/moderate:
     post:
       operationId: moderateRoomListing
+      summary: Moderate room listing
       parameters:
         - name: listingId
           in: path
@@ -1006,6 +1074,7 @@ paths:
   /rides:
     get:
       operationId: listRideOffers
+      summary: List ride offers
       parameters:
         - name: origin
           in: query
@@ -1023,6 +1092,7 @@ paths:
                 items: { $ref: '#/components/schemas/RideOffer' }
     post:
       operationId: createRideOffer
+      summary: Create ride offer
       requestBody:
         required: true
         content:
@@ -1037,6 +1107,7 @@ paths:
   /rides/saved:
     get:
       operationId: listSavedRides
+      summary: List saved rides
       responses:
         '200':
           description: Saved rides
@@ -1048,6 +1119,7 @@ paths:
   /rides/mine:
     get:
       operationId: listMyRides
+      summary: List my rides
       responses:
         '200':
           description: My rides
@@ -1059,6 +1131,7 @@ paths:
   /rides/history:
     get:
       operationId: listRideHistory
+      summary: List ride history
       responses:
         '200':
           description: Ride history
@@ -1070,6 +1143,7 @@ paths:
   /rides/{rideId}:
     get:
       operationId: getRideOffer
+      summary: Get ride offer
       parameters:
         - name: rideId
           in: path
@@ -1084,6 +1158,7 @@ paths:
   /rides/{rideId}/requests:
     get:
       operationId: listRideRequests
+      summary: List ride requests
       parameters:
         - name: rideId
           in: path
@@ -1099,6 +1174,7 @@ paths:
                 items: { $ref: '#/components/schemas/RideRequest' }
     post:
       operationId: createRideRequest
+      summary: Create ride request
       parameters:
         - name: rideId
           in: path
@@ -1118,6 +1194,7 @@ paths:
   /rides/{rideId}/participants:
     get:
       operationId: listRideParticipants
+      summary: List ride participants
       parameters:
         - name: rideId
           in: path
@@ -1134,6 +1211,7 @@ paths:
   /rides/{rideId}/rate:
     post:
       operationId: rateRide
+      summary: Rate ride
       parameters:
         - name: rideId
           in: path
@@ -1153,6 +1231,7 @@ paths:
   /rides/{rideId}/ratings:
     get:
       operationId: listRideRatings
+      summary: List ride ratings
       parameters:
         - name: rideId
           in: path
@@ -1169,6 +1248,7 @@ paths:
   /posts/communities:
     get:
       operationId: listCommunities
+      summary: List communities
       responses:
         '200':
           description: Communities
@@ -1179,6 +1259,7 @@ paths:
                 items: { $ref: '#/components/schemas/Community' }
     post:
       operationId: createCommunity
+      summary: Create community
       requestBody:
         required: true
         content:
@@ -1193,6 +1274,7 @@ paths:
   /posts/{postId}/comments:
     get:
       operationId: listPostComments
+      summary: List post comments
       parameters:
         - name: postId
           in: path
@@ -1208,6 +1290,7 @@ paths:
                 items: { $ref: '#/components/schemas/PostComment' }
     post:
       operationId: createPostComment
+      summary: Create post comment
       parameters:
         - name: postId
           in: path
@@ -1227,6 +1310,7 @@ paths:
   /posts/{postId}/reactions:
     get:
       operationId: listPostReactions
+      summary: List post reactions
       parameters:
         - name: postId
           in: path
@@ -1242,6 +1326,7 @@ paths:
                 items: { $ref: '#/components/schemas/PostReaction' }
     post:
       operationId: createPostReaction
+      summary: Create post reaction
       parameters:
         - name: postId
           in: path
@@ -1261,6 +1346,7 @@ paths:
   /events:
     get:
       operationId: listEvents
+      summary: List events
       parameters:
         - name: q
           in: query
@@ -1275,6 +1361,7 @@ paths:
                 items: { $ref: '#/components/schemas/Event' }
     post:
       operationId: createEvent
+      summary: Create event
       requestBody:
         required: true
         content:
@@ -1289,6 +1376,7 @@ paths:
   /events/saved:
     get:
       operationId: listSavedEvents
+      summary: List saved events
       responses:
         '200':
           description: Saved events
@@ -1300,6 +1388,7 @@ paths:
   /events/mine:
     get:
       operationId: listMyEvents
+      summary: List my events
       responses:
         '200':
           description: My events
@@ -1311,6 +1400,7 @@ paths:
   /events/{eventId}:
     get:
       operationId: getEvent
+      summary: Get event
       parameters:
         - name: eventId
           in: path
@@ -1325,6 +1415,7 @@ paths:
   /events/{eventId}/attendance:
     get:
       operationId: listEventAttendance
+      summary: List event attendance
       parameters:
         - name: eventId
           in: path
@@ -1340,6 +1431,7 @@ paths:
                 items: { $ref: '#/components/schemas/EventAttendance' }
     post:
       operationId: createEventAttendance
+      summary: Create event attendance
       parameters:
         - name: eventId
           in: path
@@ -1359,6 +1451,7 @@ paths:
   /events/categories:
     get:
       operationId: listEventCategories
+      summary: List event categories
       responses:
         '200':
           description: Event categories
@@ -1370,6 +1463,7 @@ paths:
   /admin/automations:
     get:
       operationId: listAutomationOperations
+      summary: List automation operations
       description: Requires the trusted SUPER_ADMIN role from JWT app_metadata unless the temporary public admin override is enabled.
       responses:
         '200':
@@ -1384,6 +1478,7 @@ paths:
   /admin/automations/{operationId}/executions:
     post:
       operationId: executeAutomation
+      summary: Execute automation
       description: Dispatches an allow-listed workflow. High-impact operations require confirmation. Requires SUPER_ADMIN unless the temporary public admin override is enabled.
       parameters:
         - name: operationId
@@ -1405,6 +1500,265 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { description: Explicit confirmation is required }
         '503': { description: Automation provider is not configured }
+  /expenses/groups:
+    get:
+      operationId: listExpenseGroups
+      summary: List expense groups
+      description: Groups the caller owns or belongs to, with member count and total spend.
+      responses:
+        '200':
+          description: Expense groups
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ExpenseGroup' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: createExpenseGroup
+      summary: Create expense group
+      description: Creates a group owned by the caller; the caller becomes its first member.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+                description: { type: string, maxLength: 4000 }
+                groupType: { type: string, enum: [APARTMENT, TRIP, CARPOOL, EVENT] }
+                currency: { type: string, pattern: '^[A-Z]{3}$' }
+      responses:
+        '201':
+          description: Created group
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseGroup' }
+  /expenses/groups/{groupId}/members:
+    post:
+      operationId: addExpenseGroupMember
+      summary: Add expense group member
+      description: Owner only. Adds a member by user id.
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [userId], properties: { userId: { type: string, format: uuid } } }
+      responses:
+        '200': { description: Member ids, content: { application/json: { schema: { type: array, items: { type: string, format: uuid } } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /expenses/groups/{groupId}/expenses:
+    post:
+      operationId: createExpense
+      summary: Create expense
+      description: Members only. The caller pays; the amount is split equally across members to the cent.
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: number, minimum: 0.01 }
+                title: { type: string, maxLength: 150 }
+                category: { type: string }
+                currency: { type: string, description: Defaults to the group currency }
+                expenseDate: { type: string, format: date, description: Defaults to today }
+      responses:
+        '201': { description: Recorded expense }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /expenses/balances:
+    get:
+      operationId: listExpenseBalances
+      summary: List expense balances
+      description: Net amounts the caller owes or is owed, per group and counterpart, after completed settlements.
+      responses:
+        '200':
+          description: Balances
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/DebtBalance' } }
+  /expenses/groups/{groupId}/settlements:
+    post:
+      operationId: createSettlement
+      summary: Create settlement
+      description: Records a payment between two members; the caller must be one of them.
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toUserId, amount]
+              properties:
+                fromUserId: { type: string, format: uuid, description: Defaults to the caller }
+                toUserId: { type: string, format: uuid }
+                amount: { type: number, minimum: 0.01 }
+                status: { type: string, enum: [pending, completed, cancelled] }
+      responses:
+        '201': { description: Recorded settlement }
+        '400': { description: Parties are not both group members }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /posts/communities/{communityId}/join:
+    post:
+      operationId: joinCommunity
+      summary: Join community
+      parameters:
+        - { name: communityId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Joined (idempotent) }
+  /posts/communities/{communityId}/leave:
+    post:
+      operationId: leaveCommunity
+      summary: Leave community
+      parameters:
+        - { name: communityId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Left (idempotent) }
+  /rides/{rideId}/favorite:
+    post:
+      operationId: saveRide
+      summary: Save ride
+      parameters:
+        - { name: rideId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Bookmarked ride }
+    delete:
+      operationId: unsaveRide
+      summary: Unsave ride
+      parameters:
+        - { name: rideId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Bookmark removed }
+  /rides/bookings/{bookingId}/status:
+    patch:
+      operationId: updateRideBookingStatus
+      summary: Update ride booking status
+      description: Passenger may cancel; driver may confirm or cancel. Cancelled is terminal and returns seats.
+      parameters:
+        - { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { status: { type: string, enum: [pending, confirmed, cancelled] } } }
+      responses:
+        '200': { description: Updated booking }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Booking already cancelled }
+  /rides/maps/route:
+    get:
+      operationId: getRideRoute
+      summary: Get ride route
+      description: Google Directions proxy (key stays server-side). 503 when no key is configured.
+      parameters:
+        - { name: originLat, in: query, required: true, schema: { type: number } }
+        - { name: originLng, in: query, required: true, schema: { type: number } }
+        - { name: destinationLat, in: query, required: true, schema: { type: number } }
+        - { name: destinationLng, in: query, required: true, schema: { type: number } }
+        - { name: avoidTolls, in: query, schema: { type: boolean } }
+      responses:
+        '200': { description: Route summary }
+        '503': { description: Maps provider is not configured }
+  /rides/maps/autocomplete:
+    get:
+      operationId: autocompletePlaces
+      summary: Autocomplete places
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, maxLength: 200 } }
+      responses:
+        '200': { description: Place predictions }
+        '503': { description: Maps provider is not configured }
+  /rides/maps/geocode:
+    get:
+      operationId: geocodeAddress
+      summary: Geocode address
+      parameters:
+        - { name: address, in: query, required: true, schema: { type: string, maxLength: 300 } }
+      responses:
+        '200': { description: Coordinates }
+        '503': { description: Maps provider is not configured }
+  /referrals/public:
+    get:
+      operationId: listPublicReferrals
+      summary: List public referrals
+      description: Newest 100 referrals without contact details. Public.
+      security: []
+      responses:
+        '200': { description: Referrals (contactInfo is always null) }
+  /referrals/offer:
+    post:
+      operationId: createReferralOffer
+      summary: Create referral offer
+      description: Creates an "offer" referral owned by the caller.
+      responses:
+        '201': { description: Created referral }
+  /notifications/settings:
+    get:
+      operationId: getNotificationSettings
+      summary: Get notification settings
+      description: The caller's notification toggles (defaults merged with saved values).
+      responses:
+        '200': { description: Settings }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      operationId: updateNotificationSettings
+      summary: Update notification settings
+      description: Merges known boolean toggles into the caller's own settings; unknown keys are ignored.
+      responses:
+        '200': { description: Settings }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /immigration/resources/{resourceId}:
+    get:
+      operationId: getImmigrationResource
+      summary: Get immigration resource
+      security: []
+      parameters:
+        - { name: resourceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Resource }
+        '404': { description: Not found }
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      summary: List admin users
+      description: ADMIN or SUPER_ADMIN. Newest 200 accounts from Supabase Auth.
+      responses:
+        '200': { description: Users }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { description: User directory is not available }
+  /admin/users/{id}/status:
+    patch:
+      operationId: updateAdminUserStatus
+      summary: Update admin user status
+      description: Suspends (bans) or reactivates an account through the Supabase Auth admin API. Audited.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [status], properties: { status: { type: string, enum: [Active, Suspended] } } }
+      responses:
+        '200': { description: Updated user }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/rooms:
+    get: { operationId: listAdminRooms, summary: List admin rooms, responses: { '200': { description: Newest 200 room listings } } }
+  /admin/jobs:
+    get: { operationId: listAdminJobs, summary: List admin jobs, responses: { '200': { description: Newest 200 job postings } } }
+  /admin/events:
+    get: { operationId: listAdminEvents, summary: List admin events, responses: { '200': { description: Newest 200 events } } }
+  /admin/community:
+    get: { operationId: listAdminCommunityPosts, summary: List admin community posts, responses: { '200': { description: Newest 200 community posts } } }
+  /admin/audit-log:
+    get: { operationId: listAdminAuditLog, summary: List admin audit log, responses: { '200': { description: Newest 200 privileged actions } } }
 components:
   securitySchemes:
     bearerAuth:
@@ -1412,7 +1766,30 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-     Health:
+    ExpenseGroup:
+      type: object
+      required: [id, name, groupType, currency, createdBy, createdAt, memberCount, totalExpenses]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        groupType: { type: string }
+        currency: { type: string }
+        createdBy: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        memberCount: { type: integer }
+        totalExpenses: { type: number }
+    DebtBalance:
+      type: object
+      required: [groupId, groupName, fromUserId, toUserId, amount, currency]
+      properties:
+        groupId: { type: string, format: uuid }
+        groupName: { type: string }
+        fromUserId: { type: string, format: uuid }
+        toUserId: { type: string, format: uuid }
+        amount: { type: number }
+        currency: { type: string }
+    Health:
       type: object
       required: [status, service]
       properties:
@@ -1424,8 +1801,8 @@ components:
       required: [id, email, fullName, role]
       properties:
         id: { type: string, description: JWT subject (Supabase user UUID) }
-        email: { type: string, format: email, nullable: true, description: Verified email from the JWT }
-        fullName: { type: string, nullable: true, description: Display name from user_metadata }
+        email: { type: [string, 'null'], format: email, description: Verified email from the JWT }
+        fullName: { type: [string, 'null'], description: Display name from user_metadata }
         role: { type: string, description: Primary role from trusted app_metadata; defaults to user }
     WelcomeFlow:
       type: object

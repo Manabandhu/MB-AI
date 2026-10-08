@@ -13,13 +13,31 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.auth.Actor;
+
 @Service
 public class RideOfferService {
 
-    private final RideOfferRepository repository;
+    static final java.util.Set<String> OFFER_STATUSES =
+            java.util.Set.of("draft", "active", "in_progress", "completed", "cancelled");
 
-    RideOfferService(RideOfferRepository repository) {
+    private final RideOfferRepository repository;
+    private final RideAccess access;
+
+    RideOfferService(RideOfferRepository repository, RideAccess access) {
         this.repository = repository;
+        this.access = access;
+    }
+
+    @Transactional(readOnly = true)
+    public List<RideOffer> findAllById(List<UUID> ids) {
+        return repository.findAllById(ids);
+    }
+
+    /** Fails with 403 unless the caller is the driver, a passenger, or an admin. */
+    @Transactional(readOnly = true)
+    public void requireRideMember(Actor actor, RideOffer offer) {
+        access.requireMember(actor, offer);
     }
 
     @Transactional(readOnly = true)
@@ -61,7 +79,7 @@ public class RideOfferService {
     @Transactional
     public RideOffer create(UUID driverId, CreateRideOfferInput input) {
         var offer = new RideOffer(driverId, input.originArea(), input.destinationArea(), input.departureAt(),
-                input.seatsTotal(), input.seatsTotal(), input.contribution(), "ACTIVE");
+                input.seatsTotal(), input.seatsTotal(), input.contribution(), "active");
         if (input.originLat() != null) offer.setOriginLat(input.originLat());
         if (input.originLng() != null) offer.setOriginLng(input.originLng());
         if (input.destinationLat() != null) offer.setDestinationLat(input.destinationLat());
@@ -97,7 +115,7 @@ public class RideOfferService {
                 original.getSeatsTotal(),
                 original.getSeatsTotal(),
                 original.getContribution(),
-                "ACTIVE"
+                "active"
         );
         clone.setOriginLat(original.getOriginLat());
         clone.setOriginLng(original.getOriginLng());
@@ -124,9 +142,14 @@ public class RideOfferService {
         if (!offer.getDriverId().equals(actorId) && !isAdmin) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to update this ride");
         }
-        String upper = status.toUpperCase();
-        offer.setStatus(upper);
-        if ("COMPLETED".equals(upper)) {
+        // Statuses are stored lowercase to match the ride_offers_status_valid constraint.
+        var normalized = status == null ? "" : status.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!OFFER_STATUSES.contains(normalized)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Status must be one of draft, active, in_progress, completed, cancelled");
+        }
+        offer.setStatus(normalized);
+        if ("completed".equals(normalized)) {
             Instant now = Instant.now();
             offer.setCompletedAt(now);
             offer.setChatExpiresAt(now.plus(Duration.ofHours(2)));
@@ -169,9 +192,9 @@ public class RideOfferService {
 
     @Transactional
     public RideOffer adjustSeats(UUID rideId, int seatsToAdd) {
-        var offer = repository.findById(rideId)
+        var offer = repository.findByIdForUpdate(rideId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
-        offer.setSeatsAvailable(Math.max(0, offer.getSeatsAvailable() + seatsToAdd));
+        offer.setSeatsAvailable(Math.min(offer.getSeatsTotal(), Math.max(0, offer.getSeatsAvailable() + seatsToAdd)));
         offer.setUpdatedAt(Instant.now());
         return repository.save(offer);
     }

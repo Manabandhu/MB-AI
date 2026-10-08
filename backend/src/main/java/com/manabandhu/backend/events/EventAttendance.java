@@ -42,4 +42,6 @@ public class EventAttendance {
     public UUID getUserId() { return userId; }
     public String getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
+
+    void setStatus(String status) { this.status = status; }
 }

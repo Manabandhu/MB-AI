@@ -64,33 +64,26 @@ public class RoomListingService {
         return repository.findByOwnerIdOrderByCreatedAtDesc(ownerId);
     }
 
+    /** Active listings matching every provided filter; {@code radiusMiles} applies around {@code lat}/{@code lng}. */
     @Transactional(readOnly = true)
-    public Page<RoomListing> search(String location, String roomType, Pageable pageable) {
-        if (location != null && roomType != null) {
-            return repository.findByStatusAndRoomTypeAndBroadLocationContainingIgnoreCaseOrderByCreatedAtDesc(
-                    "active", roomType, location, pageable);
+    public Page<RoomListing> search(RoomSearchCriteria criteria, Pageable pageable) {
+        BigDecimal minLat = null, maxLat = null, minLng = null, maxLng = null;
+        if (criteria.lat() != null && criteria.lng() != null && criteria.radiusMiles() != null && criteria.radiusMiles() > 0) {
+            var latDelta = criteria.radiusMiles() / 69.0;
+            var lngDelta = criteria.radiusMiles() / (69.0 * Math.max(0.1, Math.cos(Math.toRadians(criteria.lat().doubleValue()))));
+            minLat = criteria.lat().subtract(BigDecimal.valueOf(latDelta));
+            maxLat = criteria.lat().add(BigDecimal.valueOf(latDelta));
+            minLng = criteria.lng().subtract(BigDecimal.valueOf(lngDelta));
+            maxLng = criteria.lng().add(BigDecimal.valueOf(lngDelta));
         }
-        if (location != null) {
-            return repository.findByBroadLocationContainingIgnoreCaseAndStatusOrderByCreatedAtDesc(location, "active", pageable);
-        }
-        if (roomType != null) {
-            return repository.findByRoomTypeAndStatusOrderByCreatedAtDesc(roomType, "active", pageable);
-        }
-        return repository.findByStatusOrderByCreatedAtDesc("active", pageable);
+        return repository.searchListings("active", blankToNull(criteria.location()), blankToNull(criteria.roomType()),
+                blankToNull(criteria.stateCode()), blankToNull(criteria.dietaryPreference()),
+                blankToNull(criteria.genderPreference()), criteria.minRent(), criteria.maxRent(),
+                blankToNull(criteria.bathroomType()), minLat, maxLat, minLng, maxLng, pageable);
     }
 
-    @Transactional(readOnly = true)
-    public Page<RoomListing> search(
-            String city,
-            String stateCode,
-            String dietaryPreference,
-            String genderPreference,
-            BigDecimal minRent,
-            BigDecimal maxRent,
-            String bathroomType,
-            Pageable pageable) {
-        return repository.searchListings("active", city, stateCode, dietaryPreference, genderPreference,
-                minRent, maxRent, bathroomType, pageable);
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     @Transactional

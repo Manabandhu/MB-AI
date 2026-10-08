@@ -1,5 +1,6 @@
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -185,7 +186,7 @@ export default function EventsHomeScreen() {
 
         <View style={[s.topBarRight, isCompact && s.topBarRightCompact]}>
           <Pressable
-            onPress={() => router.push('/events/saved' as any)}
+            onPress={() => router.push('/events/saved' as Href)}
             style={[s.iconButton, isCompact && s.iconButtonCompact]}
             accessibilityLabel="Saved Events"
           >
@@ -199,8 +200,8 @@ export default function EventsHomeScreen() {
 
           <Pressable
             onPress={() => {
-              if (!session) router.push('/sign-in' as any);
-              else router.push('/events/create' as any);
+              if (!session) router.push('/sign-in' as Href);
+              else router.push('/events/create' as Href);
             }}
             style={s.hostButton}
           >
@@ -288,7 +289,7 @@ export default function EventsHomeScreen() {
               </View>
 
               <Pressable
-                onPress={() => router.push(`/events/${featuredEvent.id}` as any)}
+                onPress={() => router.push(`/events/${featuredEvent.id}` as Href)}
                 style={s.rsvpSpotlightBtn}
               >
                 <Text style={s.rsvpSpotlightBtnText}>RSVP Free Spot 🪔</Text>
@@ -348,7 +349,7 @@ export default function EventsHomeScreen() {
                     </Pressable>
                   </View>
 
-                  <Pressable onPress={() => router.push(`/events/${event.id}` as any)}>
+                  <Pressable onPress={() => router.push(`/events/${event.id}` as Href)}>
                     <Text style={s.cardTitle}>{event.title}</Text>
                   </Pressable>
 
@@ -380,14 +381,14 @@ export default function EventsHomeScreen() {
                   {/* Action Bar */}
                   <View style={s.cardActionsRow}>
                     <Pressable
-                      onPress={() => router.push(`/events/${event.id}` as any)}
+                      onPress={() => router.push(`/events/${event.id}` as Href)}
                       style={s.viewDetailsBtn}
                     >
                       <Text style={s.viewDetailsText}>View Details ↗</Text>
                     </Pressable>
 
                     <Pressable
-                      onPress={() => router.push(`/events/${event.id}` as any)}
+                      onPress={() => router.push(`/events/${event.id}` as Href)}
                       style={s.rsvpCardBtn}
                     >
                       <Text style={s.rsvpCardText}>RSVP Free Spot</Text>
@@ -411,8 +412,8 @@ export default function EventsHomeScreen() {
           </View>
           <Pressable
             onPress={() => {
-              if (!session) router.push('/sign-in' as any);
-              else router.push('/events/create' as any);
+              if (!session) router.push('/sign-in' as Href);
+              else router.push('/events/create' as Href);
             }}
             style={s.createEventBannerBtn}
           >

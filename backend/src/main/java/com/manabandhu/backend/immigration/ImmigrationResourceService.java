@@ -21,6 +21,11 @@ public class ImmigrationResourceService {
     }
 
     @Transactional(readOnly = true)
+    public java.util.Optional<ImmigrationResource> findById(UUID id) {
+        return repository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
     public List<ImmigrationResource> findByOwner(UUID ownerId) {
         return repository.findByOwnerIdOrderByCreatedAtDesc(ownerId);
     }

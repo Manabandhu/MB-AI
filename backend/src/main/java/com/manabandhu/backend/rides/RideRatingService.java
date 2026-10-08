@@ -13,11 +13,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class RideRatingService {
 
     private final RideRatingRepository repository;
-    private final RideOfferRepository offerRepository;
+    private final RideAccess access;
 
-    RideRatingService(RideRatingRepository repository, RideOfferRepository offerRepository) {
+    RideRatingService(RideRatingRepository repository, RideAccess access) {
         this.repository = repository;
-        this.offerRepository = offerRepository;
+        this.access = access;
     }
 
     @Transactional(readOnly = true)
@@ -37,11 +37,16 @@ public class RideRatingService {
 
     @Transactional
     public RideRating create(UUID rideId, UUID raterId, CreateRideRatingInput input) {
-        if (!offerRepository.existsById(rideId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found");
-        }
+        var offer = access.requireOffer(rideId);
         if (raterId.equals(input.rateeId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot rate yourself");
+        }
+        // Only people who shared the ride can rate each other, once per pair.
+        if (!onRide(raterId, offer) || !onRide(input.rateeId(), offer)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the driver and passengers of this ride can rate each other");
+        }
+        if (repository.existsByRideIdAndRaterIdAndRateeId(rideId, raterId, input.rateeId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You already rated this person for this ride");
         }
         var rating = new RideRating(rideId, raterId, input.rateeId(), input.rating(), input.comment());
         return repository.save(rating);
@@ -53,5 +58,9 @@ public class RideRatingService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride rating not found");
         }
         repository.deleteById(id);
+    }
+
+    private boolean onRide(UUID userId, RideOffer offer) {
+        return offer.getDriverId().equals(userId) || access.isPassenger(userId, offer.getId());
     }
 }

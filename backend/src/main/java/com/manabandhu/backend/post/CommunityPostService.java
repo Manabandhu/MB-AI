@@ -42,7 +42,8 @@ public class CommunityPostService {
 
     @Transactional(readOnly = true)
     public List<Community> findAllCommunities() {
-        return communityRepository.findAll();
+        return communityRepository.findAll(org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Direction.DESC, "memberCount"));
     }
 
     @Transactional(readOnly = true)

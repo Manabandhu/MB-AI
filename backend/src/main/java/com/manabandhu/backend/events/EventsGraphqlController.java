@@ -13,6 +13,8 @@ import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
+import com.manabandhu.backend.auth.Actor;
+
 @Controller
 public class EventsGraphqlController {
 
@@ -41,20 +43,20 @@ public class EventsGraphqlController {
 
     @QueryMapping
     List<Event> myEvents(Authentication authentication) {
-        return service.findMyEvents(UUID.fromString(authentication.getName()));
+        return service.findMyEvents(Actor.require(authentication).id());
     }
 
     @MutationMapping
     Event createEvent(Authentication authentication, @Argument @Valid CreateEventInput input) {
         var startAt = java.time.Instant.parse(input.startAt());
         var endAt = java.time.Instant.parse(input.endAt());
-        return service.create(UUID.fromString(authentication.getName()), input.title(), input.description(),
+        return service.create(Actor.require(authentication).id(), input.title(), input.description(),
                 input.location(), input.latitude(), input.longitude(), startAt, endAt, input.categoryId());
     }
 
     @MutationMapping
     EventAttendance attendEvent(Authentication authentication, @Argument UUID eventId, @Argument @Valid CreateEventAttendanceInput input) {
-        return service.attend(eventId, UUID.fromString(authentication.getName()), input.status());
+        return service.attend(eventId, Actor.require(authentication).id(), input.status());
     }
 
     @QueryMapping
@@ -63,7 +65,7 @@ public class EventsGraphqlController {
     }
 
     @QueryMapping
-    List<EventAttendance> eventAttendance(@Argument UUID eventId) {
-        return service.findAttendance(eventId);
+    List<EventAttendance> eventAttendance(Authentication authentication, @Argument UUID eventId) {
+        return service.attendanceFor(Actor.require(authentication), eventId);
     }
 }

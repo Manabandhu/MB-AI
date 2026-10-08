@@ -1,7 +1,8 @@
-import { space } from '@manabandhu/design-system';
+import { color, radius, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, useColorScheme, View } from 'react-native';
-import { apiFetch } from '@/lib/api';
+import { StyleSheet, Text, View } from 'react-native';
+import { useAuthStore } from '@/lib/authStore';
+import { getExpenseGroup, listGroupExpenses, memberLabel } from '@/modules/expenses/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -9,36 +10,24 @@ import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 
-type Expense = {
-  id: string;
-  title: string;
-  body: string;
-  meta?: string;
-};
-
-type GroupDetailsContent = {
-  title: string;
-  subtitle: string;
-  eyebrow: string;
-  expenses: Expense[];
-};
-
 type GroupDetailsScreenProps = {
   groupId: string;
 };
 
 export function GroupDetailsScreen({ groupId }: GroupDetailsScreenProps) {
-  const _colorScheme = useColorScheme();
-  const { data, isLoading, error, refetch } = useQuery({
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const group = useQuery({
     queryKey: ['expenses', 'group', groupId],
-    queryFn: async (): Promise<GroupDetailsContent> => {
-      const response = await apiFetch(`/api/v1/expenses/groups/${groupId}`);
-      if (!response.ok) throw new Error(`Group failed: ${response.status}`);
-      return response.json() as Promise<GroupDetailsContent>;
-    },
+    queryFn: () => getExpenseGroup(groupId),
+    enabled: !!groupId,
+  });
+  const expenses = useQuery({
+    queryKey: ['expenses', 'group', groupId, 'expenses'],
+    queryFn: () => listGroupExpenses(groupId),
+    enabled: !!groupId,
   });
 
-  if (isLoading) {
+  if (group.isLoading || expenses.isLoading) {
     return (
       <ScreenShell>
         <LoadingState label="Loading details..." />
@@ -46,46 +35,61 @@ export function GroupDetailsScreen({ groupId }: GroupDetailsScreenProps) {
     );
   }
 
-  if (error || !data) {
+  if (group.error || expenses.error || !group.data || !expenses.data) {
     return (
       <ScreenShell>
         <ErrorState
           title="Unable to load group"
-          body="There was a problem loading this expense group."
+          body="This group does not exist or you are not a member of it."
           retryLabel="Retry"
-          onRetry={() => refetch()}
+          onRetry={() => {
+            group.refetch();
+            expenses.refetch();
+          }}
         />
       </ScreenShell>
     );
   }
 
-  const content = data;
+  const info = group.data;
+  const symbol = info.currency === 'USD' ? '$' : `${info.currency} `;
 
   return (
     <ScreenShell>
-      <SectionHeader eyebrow={content.eyebrow} title={content.title} subtitle={content.subtitle} />
-      {content.expenses.length === 0 ? (
+      <SectionHeader
+        eyebrow={info.groupType.toLowerCase()}
+        title={info.name}
+        subtitle={`${info.memberCount} ${info.memberCount === 1 ? 'member' : 'members'} · ${symbol}${info.totalExpenses.toFixed(2)} spent`}
+      />
+      {expenses.data.length === 0 ? (
         <EmptyState
           title="No expenses"
           body="Add your first expense to get started."
-          actionLabel="Add expense"
-          onAction={() => {}}
+          actionLabel="Refresh"
+          onAction={() => expenses.refetch()}
         />
       ) : (
         <View style={styles.list}>
-          {content.expenses.map((expense) => (
-            <AppButton
-              key={expense.id}
-              label={expense.title}
-              route={`/expenses/groups/${groupId}`}
-              variant="secondary"
-            />
+          {expenses.data.map((expense) => (
+            <View key={expense.id} style={styles.row}>
+              <View style={styles.rowText}>
+                <Text style={styles.title}>{expense.title}</Text>
+                <Text style={styles.meta}>
+                  Paid by {memberLabel(expense.payerId, currentUserId)} · {expense.expenseDate}
+                </Text>
+              </View>
+              <Text style={styles.amount}>
+                {symbol}
+                {expense.amount.toFixed(2)}
+              </Text>
+            </View>
           ))}
         </View>
       )}
       <View style={styles.actions}>
-        <AppButton label="Add expense" route="/expenses/add" />
-        <AppButton label="View settlements" route="/expenses/settlements" variant="secondary" />
+        <AppButton label="Add expense" route={`/expenses/add?groupId=${groupId}`} />
+        <AppButton label="Balances" route="/expenses/balances" variant="secondary" />
+        <AppButton label="Settlements" route="/expenses/settlements" variant="secondary" />
       </View>
     </ScreenShell>
   );
@@ -93,5 +97,19 @@ export function GroupDetailsScreen({ groupId }: GroupDetailsScreenProps) {
 
 const styles = StyleSheet.create({
   list: { gap: space.x3, marginTop: space.x4 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.x3,
+    padding: space.x4,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.surface,
+  },
+  rowText: { flex: 1, gap: space.x1 },
+  title: { ...typography.bodyStrong, color: color.ink },
+  meta: { ...typography.caption, color: color.muted },
+  amount: { ...typography.h4, color: color.ink },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x6 },
 });

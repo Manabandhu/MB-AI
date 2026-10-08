@@ -1,7 +1,10 @@
 package com.manabandhu.backend.rides;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -9,20 +12,44 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.auth.Actor;
+
+/**
+ * Seat bookings. Every non-cancelled booking holds its seats; cancelling is terminal and returns them.
+ * Seat changes always run against a row-locked offer so concurrent requests cannot oversell a ride.
+ */
 @Service
 public class RideBookingService {
 
+    static final String PENDING = "pending";
+    static final String CONFIRMED = "confirmed";
+    static final String CANCELLED = "cancelled";
+    private static final Set<String> STATUSES = Set.of(PENDING, CONFIRMED, CANCELLED);
+
     private final RideBookingRepository repository;
     private final RideOfferRepository offerRepository;
+    private final RideAccess access;
 
-    RideBookingService(RideBookingRepository repository, RideOfferRepository offerRepository) {
+    RideBookingService(RideBookingRepository repository, RideOfferRepository offerRepository, RideAccess access) {
         this.repository = repository;
         this.offerRepository = offerRepository;
+        this.access = access;
     }
 
+    /** All bookings for internal coordination (for example provisioning the ride chat). */
     @Transactional(readOnly = true)
     public List<RideBooking> findByRideId(UUID rideId) {
         return repository.findByRideIdOrderByCreatedAtDesc(rideId);
+    }
+
+    /** The driver and admins see every booking; anyone else sees only their own. */
+    @Transactional(readOnly = true)
+    public List<RideBooking> listForRide(Actor actor, UUID rideId) {
+        var offer = access.requireOffer(rideId);
+        if (access.canManage(actor, offer)) {
+            return repository.findByRideIdOrderByCreatedAtDesc(rideId);
+        }
+        return repository.findByRideIdAndUserIdOrderByCreatedAtDesc(rideId, actor.id());
     }
 
     @Transactional(readOnly = true)
@@ -35,43 +62,101 @@ public class RideBookingService {
         return repository.findById(id);
     }
 
-    @Transactional
-    public RideBooking create(UUID rideId, UUID userId, CreateRideBookingInput input) {
-        var offer = offerRepository.findById(rideId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
-        if (offer.getSeatsAvailable() < input.seatsBooked()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Not enough seats available");
-        }
-        var booking = new RideBooking(rideId, userId, input.seatsBooked(), "confirmed");
-        offer.setSeatsAvailable(offer.getSeatsAvailable() - input.seatsBooked());
-        offer.setUpdatedAt(java.time.Instant.now());
-        offerRepository.save(offer);
-        return repository.save(booking);
+    /** Visible to the passenger who booked, the driver, and admins. */
+    @Transactional(readOnly = true)
+    public RideBooking requireVisible(Actor actor, UUID id) {
+        var booking = requireBooking(id);
+        var offer = access.requireOffer(booking.getRideId());
+        actor.requireAnyOf("Not authorized to view this booking", booking.getUserId(), offer.getDriverId());
+        return booking;
     }
 
     @Transactional
-    public RideBooking updateStatus(UUID id, String status) {
-        var booking = repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride booking not found"));
-        if ("cancelled".equals(booking.getStatus()) && "cancelled".equals(status)) {
+    public RideBooking create(UUID rideId, UUID userId, CreateRideBookingInput input) {
+        var offer = lockOffer(rideId);
+        if (offer.getDriverId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You cannot book a seat on your own ride");
+        }
+        if (!"active".equalsIgnoreCase(offer.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This ride is not accepting bookings");
+        }
+        if (offer.getDepartureAt() != null && offer.getDepartureAt().isBefore(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This ride has already departed");
+        }
+        if (repository.existsByRideIdAndUserIdAndStatusNot(rideId, userId, CANCELLED)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have a booking on this ride");
+        }
+        if (offer.getSeatsAvailable() < input.seatsBooked()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Not enough seats available");
+        }
+        adjustSeats(offer, -input.seatsBooked());
+        return repository.save(new RideBooking(rideId, userId, input.seatsBooked(), CONFIRMED));
+    }
+
+    /**
+     * Status changes: the passenger may cancel; the driver may confirm or cancel. Cancelled is terminal,
+     * so a booking can never re-acquire seats it already returned — the passenger books again instead.
+     */
+    @Transactional
+    public RideBooking updateStatus(Actor actor, UUID id, String rawStatus) {
+        var status = normalize(rawStatus);
+        var booking = requireBooking(id);
+        var offer = lockOffer(booking.getRideId());
+        var isDriver = access.canManage(actor, offer);
+        var isPassenger = actor.is(booking.getUserId());
+        if (!isDriver && !isPassenger) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to update this booking");
+        }
+        if (status.equals(booking.getStatus())) {
             return booking;
         }
-        if ("cancelled".equals(status) && !"cancelled".equals(booking.getStatus())) {
-            var offer = offerRepository.findById(booking.getRideId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
-            offer.setSeatsAvailable(offer.getSeatsAvailable() + booking.getSeatsBooked());
-            offer.setUpdatedAt(java.time.Instant.now());
-            offerRepository.save(offer);
+        if (CANCELLED.equals(booking.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A cancelled booking cannot be reopened; book again instead");
+        }
+        if (!CANCELLED.equals(status) && !isDriver) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the driver can confirm a booking");
+        }
+        if (CANCELLED.equals(status)) {
+            adjustSeats(offer, booking.getSeatsBooked());
         }
         booking.setStatus(status);
         return repository.save(booking);
     }
 
+    /** Deleting a live booking returns its seats first. */
     @Transactional
-    public void delete(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride booking not found");
+    public void delete(Actor actor, UUID id) {
+        var booking = requireBooking(id);
+        var offer = lockOffer(booking.getRideId());
+        actor.requireAnyOf("Not authorized to delete this booking", booking.getUserId(), offer.getDriverId());
+        if (!CANCELLED.equals(booking.getStatus())) {
+            adjustSeats(offer, booking.getSeatsBooked());
         }
-        repository.deleteById(id);
+        repository.delete(booking);
+    }
+
+    private RideBooking requireBooking(UUID id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride booking not found"));
+    }
+
+    private RideOffer lockOffer(UUID rideId) {
+        return offerRepository.findByIdForUpdate(rideId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+    }
+
+    private void adjustSeats(RideOffer offer, int delta) {
+        var seats = Math.min(offer.getSeatsTotal(), Math.max(0, offer.getSeatsAvailable() + delta));
+        offer.setSeatsAvailable(seats);
+        offer.setUpdatedAt(Instant.now());
+        offerRepository.save(offer);
+    }
+
+    private static String normalize(String status) {
+        var value = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
+        if (!STATUSES.contains(value)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status must be one of pending, confirmed, cancelled");
+        }
+        return value;
     }
 }

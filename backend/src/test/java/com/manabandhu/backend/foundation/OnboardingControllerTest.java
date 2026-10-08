@@ -14,7 +14,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -32,20 +31,7 @@ class OnboardingControllerTest {
     }
 
     private static Authentication authWith(Jwt jwt) {
-        return new AbstractAuthenticationToken(List.of()) {
-            @Override
-            public Object getCredentials() {
-                return null;
-            }
-            @Override
-            public Object getPrincipal() {
-                return jwt;
-            }
-            @Override
-            public String getName() {
-                return jwt.getSubject();
-            }
-        };
+        return new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(jwt, List.of());
     }
 
     private static Jwt jwtWith(String subject) {

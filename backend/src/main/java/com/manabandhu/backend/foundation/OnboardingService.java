@@ -150,22 +150,22 @@ public class OnboardingService {
         if ("location".equals(stepKey) || payload.containsKey("metroLocation")) {
             if (payload.containsKey("metroLocation")) {
                 setClauses.add("metro_location = ?");
-                params.add(payload.get("metroLocation"));
+                params.add(text(payload.get("metroLocation")));
             }
             if (payload.containsKey("zipCode")) {
                 setClauses.add("zip_code = ?");
-                params.add(payload.get("zipCode"));
+                params.add(text(payload.get("zipCode")));
             }
             if (payload.containsKey("universityCampus")) {
                 setClauses.add("university_campus = ?");
-                params.add(payload.get("universityCampus"));
+                params.add(text(payload.get("universityCampus")));
             }
         }
 
         if ("languages".equals(stepKey) || payload.containsKey("primaryLanguage") || payload.containsKey("secondaryLanguages")) {
             if (payload.containsKey("primaryLanguage")) {
                 setClauses.add("primary_language = ?");
-                params.add(payload.get("primaryLanguage"));
+                params.add(text(payload.get("primaryLanguage")));
             }
             List<String> sec = extractStringList(payload, "secondaryLanguages", "languages");
             if (sec != null) {
@@ -185,11 +185,11 @@ public class OnboardingService {
         if ("profile-photo".equals(stepKey) || "profile_photo".equals(stepKey) || payload.containsKey("avatarUrl") || payload.containsKey("bio")) {
             if (payload.containsKey("avatarUrl")) {
                 setClauses.add("avatar_url = ?");
-                params.add(payload.get("avatarUrl"));
+                params.add(text(payload.get("avatarUrl")));
             }
             if (payload.containsKey("bio")) {
                 setClauses.add("bio = ?");
-                params.add(payload.get("bio"));
+                params.add(text(payload.get("bio")));
             }
         }
 
@@ -300,18 +300,16 @@ public class OnboardingService {
         return List.of();
     }
 
-    private static String toPgArray(List<String> list) {
-        if (list == null || list.isEmpty()) {
-            return "{}";
-        }
-        StringBuilder sb = new StringBuilder("{");
-        for (int i = 0; i < list.size(); i++) {
-            if (i > 0) sb.append(",");
-            String s = list.get(i).replace("\"", "\\\"");
-            sb.append("\"").append(s).append("\"");
-        }
-        sb.append("}");
-        return sb.toString();
+    /** Coerces a client value to bounded text so non-string JSON never reaches a text column. */
+    private static String text(Object value) {
+        if (value == null) return null;
+        var text = String.valueOf(value).trim();
+        return text.length() > 500 ? text.substring(0, 500) : text;
+    }
+
+    /** Binds as a native text[] parameter so values are never spliced into an array literal. */
+    private static String[] toPgArray(List<String> list) {
+        return list == null ? new String[0] : list.toArray(String[]::new);
     }
 
     private List<String> extractStringList(Map<String, Object> map, String... keys) {

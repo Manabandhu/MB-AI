@@ -87,7 +87,7 @@ export default function CreateEventScreen() {
       queryClient.invalidateQueries({ queryKey: ['foundation', 'shell', 'explore'] });
       router.replace('/events');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       setError(err?.message ?? 'Failed to publish event. Please check inputs and try again.');
     },
   });

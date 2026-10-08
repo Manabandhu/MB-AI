@@ -1,4 +1,5 @@
-import { useRouter } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -13,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { createExpense } from '@/modules/expenses/api';
+import { createExpense, listExpenseGroups } from '@/modules/expenses/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
@@ -49,8 +50,14 @@ export function AddExpenseScreen() {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Groceries & Subzi');
-  const [splitMethod, setSplitMethod] = useState<'equal' | 'you_paid' | 'roommate_paid'>('equal');
+  const params = useLocalSearchParams<{ groupId?: string }>();
+  const queryClient = useQueryClient();
+  const groups = useQuery({ queryKey: ['expenses', 'groups'], queryFn: listExpenseGroups });
+  const [pickedGroupId, setPickedGroupId] = useState<string | null>(null);
+  const groupId = pickedGroupId ?? params.groupId ?? groups.data?.[0]?.id ?? null;
+  const groupName = groups.data?.find((g) => g.id === groupId)?.name;
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   const onSubmit = async () => {
@@ -63,10 +70,15 @@ export function AddExpenseScreen() {
       setError('Please enter a valid expense amount greater than $0.');
       return;
     }
+    if (!groupId) {
+      setError('Create or join an expense group first.');
+      return;
+    }
     setError(null);
+    setSaving(true);
     try {
       await createExpense({
-        groupId: 'group-apt-1',
+        groupId,
         title: title.trim(),
         amount: num,
         category: selectedCategory.includes('Rent')
@@ -78,10 +90,17 @@ export function AddExpenseScreen() {
               : selectedCategory.includes('Groceries')
                 ? 'GROCERIES'
                 : 'GENERAL',
-        splitType: splitMethod === 'equal' ? 'EQUAL' : 'EXACT',
+        splitType: 'EQUAL',
       });
-    } catch {}
-    setSubmitted(true);
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      setSubmitted(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to record the expense. Please try again.',
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (submitted) {
@@ -93,8 +112,8 @@ export function AddExpenseScreen() {
           </View>
           <Text style={s.successTitle}>Expense Recorded!</Text>
           <Text style={s.successBody}>
-            ${parseFloat(amount).toFixed(2)} for "{title}" has been split and added to your group
-            balance.
+            ${parseFloat(amount).toFixed(2)} for "{title}" has been split equally and added to{' '}
+            {groupName ?? 'your group'}.
           </Text>
           <View style={s.successCard}>
             <View style={s.successRow}>
@@ -103,9 +122,7 @@ export function AddExpenseScreen() {
             </View>
             <View style={s.successRow}>
               <Text style={s.successLabel}>Split Rule</Text>
-              <Text style={s.successVal}>
-                {splitMethod === 'equal' ? 'Split Equally (50/50)' : 'Individual Settlement'}
-              </Text>
+              <Text style={s.successVal}>Split equally</Text>
             </View>
           </View>
           <View style={{ width: '100%', maxWidth: 320, gap: 10, marginTop: 16 }}>
@@ -162,6 +179,38 @@ export function AddExpenseScreen() {
           ) : null}
 
           <View style={s.formCard}>
+            {/* Group */}
+            <View style={s.fieldGroup}>
+              <Text style={s.fieldLabel}>GROUP *</Text>
+              {groups.data && groups.data.length > 0 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {groups.data.map((g) => (
+                    <Pressable
+                      key={g.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: g.id === groupId }}
+                      onPress={() => setPickedGroupId(g.id)}
+                      style={[s.groupChip, g.id === groupId && s.splitOptionActive]}
+                    >
+                      <Text
+                        style={[s.splitOptionTitle, g.id === groupId && s.splitOptionTitleActive]}
+                      >
+                        {g.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              ) : (
+                <Pressable accessibilityRole="link" onPress={() => router.push('/expenses/groups')}>
+                  <Text style={s.splitOptionSub}>
+                    {groups.isLoading
+                      ? 'Loading your groups…'
+                      : 'No groups yet — tap to create one.'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+
             {/* Amount Input */}
             <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>TOTAL AMOUNT *</Text>
@@ -221,34 +270,10 @@ export function AddExpenseScreen() {
             <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>SPLIT METHOD</Text>
               <View style={s.splitRow}>
-                <Pressable
-                  onPress={() => setSplitMethod('equal')}
-                  style={[s.splitOption, splitMethod === 'equal' && s.splitOptionActive]}
-                >
-                  <Text
-                    style={[
-                      s.splitOptionTitle,
-                      splitMethod === 'equal' && s.splitOptionTitleActive,
-                    ]}
-                  >
-                    Split 50 / 50
-                  </Text>
-                  <Text style={s.splitOptionSub}>Equally between all flatmates</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setSplitMethod('you_paid')}
-                  style={[s.splitOption, splitMethod === 'you_paid' && s.splitOptionActive]}
-                >
-                  <Text
-                    style={[
-                      s.splitOptionTitle,
-                      splitMethod === 'you_paid' && s.splitOptionTitleActive,
-                    ]}
-                  >
-                    You Paid Entirely
-                  </Text>
-                  <Text style={s.splitOptionSub}>Others owe you full amount</Text>
-                </Pressable>
+                <View style={[s.splitOption, s.splitOptionActive]}>
+                  <Text style={[s.splitOptionTitle, s.splitOptionTitleActive]}>Split equally</Text>
+                  <Text style={s.splitOptionSub}>Between everyone in the group</Text>
+                </View>
               </View>
             </View>
 
@@ -263,7 +288,12 @@ export function AddExpenseScreen() {
                 <Text style={s.cancelBtnText}>Cancel</Text>
               </Pressable>
               <View style={{ flex: 1 }}>
-                <AppButton label="Save Expense" onPress={onSubmit} />
+                <AppButton
+                  label="Save Expense"
+                  loading={saving}
+                  disabled={saving}
+                  onPress={onSubmit}
+                />
               </View>
             </View>
           </View>
@@ -341,6 +371,15 @@ const s = StyleSheet.create({
     borderColor: C.border,
     padding: 20,
     gap: 20,
+  },
+  groupChip: {
+    marginRight: 8,
+    backgroundColor: C.bg,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   fieldGroup: {
     gap: 8,

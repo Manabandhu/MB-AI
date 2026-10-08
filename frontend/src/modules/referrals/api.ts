@@ -81,7 +81,7 @@ export type ReferralRequestDetails = {
 };
 
 export async function listPublicReferrals(): Promise<Referral[]> {
-  return parseJson(await apiFetch('/api/v1/referrals'));
+  return parseJson(await apiFetch('/api/v1/referrals/public'));
 }
 
 export async function getReferralOffer(referralId: string): Promise<ReferralOfferDetails | null> {

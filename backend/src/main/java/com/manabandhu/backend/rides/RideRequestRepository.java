@@ -9,4 +9,8 @@ interface RideRequestRepository extends JpaRepository<RideRequest, UUID> {
     List<RideRequest> findByRideIdOrderByCreatedAtDesc(UUID rideId);
 
     List<RideRequest> findByRiderIdOrderByCreatedAtDesc(UUID riderId);
+
+    List<RideRequest> findByRideIdAndRiderIdOrderByCreatedAtDesc(UUID rideId, UUID riderId);
+
+    boolean existsByRideIdAndRiderIdAndStatus(UUID rideId, UUID riderId, String status);
 }

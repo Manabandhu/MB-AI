@@ -1,7 +1,7 @@
 import { color as baseColors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
-import { Link, router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -220,13 +220,6 @@ export function RoomDetailScreen() {
       console.warn('Share error:', e);
     }
   };
-
-  const samplePhotos = [
-    '🛏️ Master Bed',
-    '🚿 Attached Bath',
-    '🍳 Modular Kitchen',
-    '🏊 Community Pool',
-  ];
 
   const dietaryLabel =
     room.dietaryPreference === 'PURE_VEG'

@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.manabandhu.backend.auth.Actor;
+
 @RestController
 @RequestMapping("/api/v1/events")
 public class EventsController {
@@ -51,7 +53,7 @@ public class EventsController {
 
     @GetMapping("/mine")
     List<Event> mine(Authentication authentication) {
-        return service.findMyEvents(UUID.fromString(authentication.getName()));
+        return service.findMyEvents(Actor.require(authentication).id());
     }
 
     @GetMapping("/{eventId}")
@@ -63,7 +65,7 @@ public class EventsController {
 
     @PostMapping
     ResponseEntity<Event> create(Authentication authentication, @Valid @RequestBody CreateEventInput input) {
-        var event = service.create(UUID.fromString(authentication.getName()), input.title(), input.description(),
+        var event = service.create(Actor.require(authentication).id(), input.title(), input.description(),
                 input.location(), input.latitude(), input.longitude(),
                 java.time.Instant.parse(input.startAt()), java.time.Instant.parse(input.endAt()),
                 input.categoryId());
@@ -73,13 +75,13 @@ public class EventsController {
     @PostMapping("/{eventId}/attendance")
     ResponseEntity<EventAttendance> attend(@PathVariable UUID eventId, Authentication authentication,
                                            @Valid @RequestBody CreateEventAttendanceInput input) {
-        var attendance = service.attend(eventId, UUID.fromString(authentication.getName()), input.status());
+        var attendance = service.attend(eventId, Actor.require(authentication).id(), input.status());
         return ResponseEntity.created(URI.create("/api/v1/events/" + eventId + "/attendance/" + attendance.getId())).body(attendance);
     }
 
     @GetMapping("/{eventId}/attendance")
-    List<EventAttendance> attendance(@PathVariable UUID eventId) {
-        return service.findAttendance(eventId);
+    List<EventAttendance> attendance(Authentication authentication, @PathVariable UUID eventId) {
+        return service.attendanceFor(Actor.require(authentication), eventId);
     }
 
     @GetMapping("/categories")

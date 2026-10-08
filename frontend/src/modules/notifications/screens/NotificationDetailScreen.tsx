@@ -19,7 +19,7 @@ export function NotificationDetailScreen() {
     error,
   } = useQuery({
     queryKey: ['notifications', 'detail', id],
-    queryFn: () => getNotificationDetail(id!),
+    queryFn: () => getNotificationDetail(id ?? ''),
     enabled: !!id,
     retry: false,
   });

@@ -3,6 +3,11 @@ package com.manabandhu.backend.notifications;
 import com.manabandhu.backend.foundation.CatalogScreenContent;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+import com.manabandhu.backend.auth.Actor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,12 +35,12 @@ public class NotificationsController {
     }
 
     @GetMapping("/settings")
-    ResponseEntity<NotificationSettings> settings() {
-        return ResponseEntity.ok(service.settings());
+    ResponseEntity<NotificationSettings> settings(Authentication authentication) {
+        return ResponseEntity.ok(service.settings(Actor.require(authentication).id()));
     }
 
-    @org.springframework.web.bind.annotation.PatchMapping("/settings")
-    ResponseEntity<NotificationSettings> updateSettings(@org.springframework.web.bind.annotation.RequestBody NotificationSettings update) {
-        return ResponseEntity.ok(service.updateSettings(update));
+    @PatchMapping("/settings")
+    ResponseEntity<NotificationSettings> updateSettings(Authentication authentication, @RequestBody NotificationSettings update) {
+        return ResponseEntity.ok(service.updateSettings(Actor.require(authentication).id(), update));
     }
 }

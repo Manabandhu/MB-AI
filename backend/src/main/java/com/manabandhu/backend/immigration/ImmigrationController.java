@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/immigration")
@@ -49,8 +50,18 @@ public class ImmigrationController {
     @PostMapping("/resources")
     ResponseEntity<ImmigrationResource> createResource(Authentication authentication, @Valid @RequestBody CreateImmigrationResourceInput input) {
         var type = ImmigrationResource.ResourceType.valueOf(input.resourceType());
-        var resource = resourceService.create(UUID.fromString(authentication.getName()), input.title(), input.description(), input.category(), input.url(), type, input.tags(), input.verified());
+        var actor = Actor.require(authentication);
+        // Only admins can mark a resource as verified; community submissions start unverified.
+        var verified = actor.admin() && input.verified();
+        var resource = resourceService.create(actor.id(), input.title(), input.description(), input.category(), input.url(), type, input.tags(), verified);
         return ResponseEntity.created(URI.create("/api/v1/immigration/resources/" + resource.getId())).body(resource);
+    }
+
+    @GetMapping("/resources/{resourceId}")
+    ImmigrationResource resource(@PathVariable UUID resourceId) {
+        return resourceService.findById(resourceId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Resource not found"));
     }
 
     @GetMapping("/guides")

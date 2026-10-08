@@ -1,5 +1,6 @@
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -56,7 +57,6 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
     data: event,
     isLoading,
     isError,
-    refetch,
   } = useQuery({
     queryKey: ['events', resolvedEventId],
     queryFn: () => getEvent(resolvedEventId as string),
@@ -120,7 +120,7 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
 
   const handleRsvp = () => {
     if (!session) {
-      router.push('/sign-in' as any);
+      router.push('/sign-in' as Href);
       return;
     }
     setHasRsvpd(true);
@@ -248,7 +248,7 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
               <Text style={s.directionsBtnText}>Get Directions 🗺️</Text>
             </Pressable>
 
-            <Pressable onPress={() => router.push('/rides' as any)} style={s.carpoolPromoBtn}>
+            <Pressable onPress={() => router.push('/rides' as Href)} style={s.carpoolPromoBtn}>
               <Text style={s.carpoolPromoText}>🚗 Carpool Rides Available</Text>
             </Pressable>
           </View>

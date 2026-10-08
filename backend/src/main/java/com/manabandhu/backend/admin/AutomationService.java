@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 class AutomationService {
 
     private static final Logger log = LoggerFactory.getLogger(AutomationService.class);
+    private static final java.util.regex.Pattern PRODUCTION_REF =
+            java.util.regex.Pattern.compile("^(main|refs/heads/main|v\\d+\\.\\d+\\.\\d+[A-Za-z0-9.-]*|refs/tags/v\\d+\\.\\d+\\.\\d+[A-Za-z0-9.-]*)$");
 
     private final AutomationCatalog catalog;
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -43,8 +45,17 @@ class AutomationService {
         this.token = token;
     }
 
-    AutomationExecution execute(String operationId, ExecuteAutomationRequest input, String actorId) {
+    AutomationExecution execute(String operationId, ExecuteAutomationRequest input, String actorId, boolean superAdmin) {
         var definition = catalog.require(operationId);
+        if ("production".equals(input.environment())) {
+            // Production changes are reserved for SUPER_ADMIN and must ship reviewed code: main or a release tag.
+            if (!superAdmin) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Production automations require the SUPER_ADMIN role");
+            }
+            if (!PRODUCTION_REF.matcher(input.ref()).matches()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Production runs must use main or a v* release tag");
+            }
+        }
         if (!definition.operation().configured()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Automation provider is not configured");
         }

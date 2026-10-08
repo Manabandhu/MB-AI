@@ -80,7 +80,7 @@ export default function AdminReportsScreen() {
                       Reporter: {r.reporterName} · {r.status}
                     </Text>
                   </View>
-                  {r.status === 'Open' ? (
+                  {r.status?.toUpperCase() === 'OPEN' ? (
                     <AppButton
                       label="Resolve"
                       variant="secondary"

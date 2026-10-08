@@ -37,7 +37,7 @@ export type EventAttendee = {
 
 export async function listEvents(): Promise<Event[]> {
   const response = await apiFetch('/api/v1/events');
-  const data = await parseJsonOrThrow<any>(response, 'Events');
+  const data = await parseJsonOrThrow<Event[] | { content?: Event[] }>(response, 'Events');
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.content)) return data.content;
   return [];
@@ -46,7 +46,7 @@ export async function listEvents(): Promise<Event[]> {
 export async function searchEvents(query: string): Promise<Event[]> {
   const suffix = query ? `?q=${encodeURIComponent(query)}` : '';
   const response = await apiFetch(`/api/v1/events/search${suffix}`);
-  const data = await parseJsonOrThrow<any>(response, 'Events search');
+  const data = await parseJsonOrThrow<Event[] | { content?: Event[] }>(response, 'Events search');
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.content)) return data.content;
   return [];
@@ -76,14 +76,14 @@ export async function createEvent(input: {
 
 export async function listSavedEvents(): Promise<Event[]> {
   const response = await apiFetch('/api/v1/events/saved');
-  const data = await parseJson<any>(response);
+  const data = await parseJson<Event[]>(response);
   if (Array.isArray(data)) return data;
   return [];
 }
 
 export async function listMyEvents(): Promise<Event[]> {
   const response = await apiFetch('/api/v1/events/mine');
-  const data = await parseJson<any>(response);
+  const data = await parseJson<Event[]>(response);
   if (Array.isArray(data)) return data;
   return [];
 }

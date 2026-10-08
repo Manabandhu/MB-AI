@@ -1,53 +1,54 @@
 import { color, radius, space } from '@manabandhu/design-system';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import type { Settlement } from '@/modules/expenses/api';
+import { useAuthStore } from '@/lib/authStore';
+import { listSettlements, memberLabel, type Settlement } from '@/modules/expenses/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
-const SAMPLE_SETTLEMENTS: Settlement[] = [
-  {
-    id: 'settle-1',
-    groupId: 'group-apt-1',
-    fromUserId: 'u-vikram',
-    fromUserName: 'Vikram Reddy',
-    toUserId: 'u-current',
-    toUserName: 'You',
-    amount: 140.0,
-    status: 'SETTLED',
-    settledAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-  {
-    id: 'settle-2',
-    groupId: 'group-trip-1',
-    fromUserId: 'u-current',
-    fromUserName: 'You',
-    toUserId: 'u-sneha',
-    toUserName: 'Sneha Murthy',
-    amount: 22.5,
-    status: 'SETTLED',
-    settledAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-  },
-  {
-    id: 'settle-3',
-    groupId: 'group-apt-1',
-    fromUserId: 'u-karthik',
-    fromUserName: 'Karthik Varma',
-    toUserId: 'u-current',
-    toUserName: 'You',
-    amount: 75.0,
-    status: 'SETTLED',
-    settledAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-  },
-];
+const STATUS_LABEL: Record<Settlement['status'], string> = {
+  completed: 'Settled',
+  pending: 'Pending',
+  cancelled: 'Cancelled',
+};
 
 export function SettlementsScreen() {
   const router = useRouter();
-  const [settlements] = useState<Settlement[]>(SAMPLE_SETTLEMENTS);
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['expenses', 'settlements'],
+    queryFn: listSettlements,
+  });
+  const name = (userId: string) => memberLabel(userId, currentUserId);
+
+  if (isLoading) {
+    return (
+      <ScreenShell>
+        <LoadingState label="Loading settlements..." />
+      </ScreenShell>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <ScreenShell>
+        <ErrorState
+          title="Unable to load settlements"
+          body="There was a problem loading your settlement history."
+          retryLabel="Retry"
+          onRetry={() => refetch()}
+        />
+      </ScreenShell>
+    );
+  }
+
+  const settlements = data;
 
   return (
     <ScreenShell>
@@ -71,10 +72,10 @@ export function SettlementsScreen() {
               <View style={styles.cardTop}>
                 <View style={styles.statusBadge}>
                   <AppIcon color="#16a34a" name="check" size={14} />
-                  <Text style={styles.statusText}>Settled</Text>
+                  <Text style={styles.statusText}>{STATUS_LABEL[s.status] ?? s.status}</Text>
                 </View>
                 <Text style={styles.dateText}>
-                  {new Date(s.settledAt).toLocaleDateString([], {
+                  {new Date(s.settledAt ?? s.createdAt).toLocaleDateString([], {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
@@ -88,10 +89,10 @@ export function SettlementsScreen() {
                 </View>
                 <View style={styles.details}>
                   <Text style={styles.participants}>
-                    <Text style={{ fontWeight: '700' }}>{s.fromUserName}</Text> paid{' '}
-                    <Text style={{ fontWeight: '700' }}>{s.toUserName}</Text>
+                    <Text style={styles.strong}>{name(s.fromUserId)}</Text> paid{' '}
+                    <Text style={styles.strong}>{name(s.toUserId)}</Text>
                   </Text>
-                  <Text style={styles.subtext}>Zelle / Direct Settlement • Verified</Text>
+                  <Text style={styles.subtext}>Recorded payment</Text>
                 </View>
                 <Text style={styles.amountText}>${s.amount.toFixed(2)}</Text>
               </View>
@@ -109,6 +110,7 @@ export function SettlementsScreen() {
 }
 
 const styles = StyleSheet.create({
+  strong: { fontWeight: '700' },
   list: { gap: space.x3, marginTop: space.x4 },
   actions: { marginTop: space.x6, gap: 12 },
   card: {

@@ -1,5 +1,6 @@
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -69,7 +70,7 @@ const QUICK_TAGS = [
   { id: 'austin', label: '🏢 Austin Tech Hub', icon: '🏢' },
 ];
 
-export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
+export function JobsHomeScreen(_props: { screenId?: string }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -211,7 +212,7 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
 
         <View style={s.topBarRight}>
           <Pressable
-            onPress={() => router.push('/jobs/saved' as any)}
+            onPress={() => router.push('/jobs/saved' as Href)}
             style={s.iconButton}
             accessibilityLabel="Saved Jobs"
           >
@@ -225,8 +226,8 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
 
           <Pressable
             onPress={() => {
-              if (!session) router.push('/sign-in' as any);
-              else router.push('/jobs/post' as any);
+              if (!session) router.push('/sign-in' as Href);
+              else router.push('/jobs/post' as Href);
             }}
             style={s.postButton}
           >
@@ -382,7 +383,7 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                   </View>
 
                   {/* Job Title */}
-                  <Pressable onPress={() => router.push(`/jobs/${job.id}` as any)}>
+                  <Pressable onPress={() => router.push(`/jobs/${job.id}` as Href)}>
                     <Text style={s.cardTitle}>{job.title}</Text>
                   </Pressable>
 
@@ -428,7 +429,7 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                   {/* Card Actions */}
                   <View style={s.cardActionsRow}>
                     <Pressable
-                      onPress={() => router.push(`/jobs/${job.id}` as any)}
+                      onPress={() => router.push(`/jobs/${job.id}` as Href)}
                       style={s.detailsActionBtn}
                     >
                       <Text style={s.detailsActionText}>View Details ↗</Text>
@@ -436,8 +437,8 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
 
                     <Pressable
                       onPress={() => {
-                        if (!session) router.push('/sign-in' as any);
-                        else router.push(`/jobs/${job.id}` as any);
+                        if (!session) router.push('/sign-in' as Href);
+                        else router.push(`/jobs/${job.id}` as Href);
                       }}
                       style={s.requestReferralBtn}
                     >
@@ -480,7 +481,9 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                 ].map((opt) => (
                   <Pressable
                     key={opt.id}
-                    onPress={() => setFilters((p) => ({ ...p, visaAuth: opt.id as any }))}
+                    onPress={() =>
+                      setFilters((p) => ({ ...p, visaAuth: opt.id as FilterState['visaAuth'] }))
+                    }
                     style={[s.filterChip, filters.visaAuth === opt.id && s.filterChipActive]}
                   >
                     <Text
@@ -505,7 +508,9 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                 ].map((opt) => (
                   <Pressable
                     key={opt.id}
-                    onPress={() => setFilters((p) => ({ ...p, workModel: opt.id as any }))}
+                    onPress={() =>
+                      setFilters((p) => ({ ...p, workModel: opt.id as FilterState['workModel'] }))
+                    }
                     style={[s.filterChip, filters.workModel === opt.id && s.filterChipActive]}
                   >
                     <Text
@@ -556,7 +561,9 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
                 ].map((sOpt) => (
                   <Pressable
                     key={sOpt.id}
-                    onPress={() => setFilters((p) => ({ ...p, sortBy: sOpt.id as any }))}
+                    onPress={() =>
+                      setFilters((p) => ({ ...p, sortBy: sOpt.id as FilterState['sortBy'] }))
+                    }
                     style={[s.filterChip, filters.sortBy === sOpt.id && s.filterChipActive]}
                   >
                     <Text

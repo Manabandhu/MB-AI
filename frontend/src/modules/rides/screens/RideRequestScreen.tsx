@@ -1,64 +1,31 @@
 import { color as colors, space, typography } from '@manabandhu/design-system';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { createRideRequest } from '@/modules/rides/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
 
+/**
+ * Riders find a driver going their way and request a seat on that ride. (Open "ride wanted" posts are not
+ * supported by the backend, so this screen searches matching offers instead of pretending to send a request.)
+ */
 export function RideRequestScreen() {
-  const queryClient = useQueryClient();
   const [pickupArea, setPickupArea] = useState('');
   const [destination, setDestination] = useState('');
-  const [departureAt, setDepartureAt] = useState('');
-  const [seats, setSeats] = useState('1');
-  const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-
-  const mutation = useMutation({
-    mutationFn: createRideRequest,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rides', 'my-requests'] });
-      setSuccess(true);
-    },
-    onError: (err: Error) => setError(err.message),
-  });
 
   function handleSubmit() {
     setError(null);
-    if (!pickupArea.trim() || !destination.trim() || !departureAt.trim()) {
-      setError('Please fill in all required fields.');
+    if (!pickupArea.trim() || !destination.trim()) {
+      setError('Please enter both a pickup area and a destination.');
       return;
     }
-    mutation.mutate({
-      rideId: 'search',
-      pickupArea: pickupArea.trim(),
-      destination: destination.trim(),
-      departureAt: departureAt.trim(),
-      seatsRequested: parseInt(seats, 10) || 1,
-      message: message.trim() || undefined,
+    router.push({
+      pathname: '/rides/search',
+      params: { from: pickupArea.trim(), to: destination.trim() },
     });
-  }
-
-  if (success) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Text style={styles.successTitle}>Request sent</Text>
-          <Text style={styles.successBody}>Drivers will see your request and can respond.</Text>
-          <AppButton label="Search rides" onPress={() => router.replace('/rides/search')} />
-          <AppButton
-            label="Request another"
-            onPress={() => router.replace('/rides/request')}
-            variant="secondary"
-          />
-        </View>
-      </SafeAreaView>
-    );
   }
 
   return (
@@ -67,9 +34,10 @@ export function RideRequestScreen() {
         <ScrollView contentContainerStyle={styles.page}>
           <View style={styles.container}>
             <Text style={styles.eyebrow}>Rides</Text>
-            <Text style={styles.title}>Request a ride</Text>
+            <Text style={styles.title}>Find a ride</Text>
             <Text style={styles.subtitle}>
-              Request a ride by describing your route, timing, and seat needs.
+              Tell us where you are going. We will show drivers heading your way, and you can
+              request a seat on the ride that fits.
             </Text>
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -97,48 +65,8 @@ export function RideRequestScreen() {
                 </Input>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Departure date & time</Text>
-                <Input className="min-h-14 rounded-xl bg-secondary/70">
-                  <InputField
-                    placeholder="e.g. 2026-09-15 08:30"
-                    value={departureAt}
-                    onChangeText={setDepartureAt}
-                  />
-                </Input>
-              </View>
-
-              <View style={styles.row}>
-                <View style={[styles.inputGroup, styles.flex1]}>
-                  <Text style={styles.inputLabel}>Seats needed</Text>
-                  <Input className="min-h-14 rounded-xl bg-secondary/70">
-                    <InputField
-                      placeholder="1"
-                      keyboardType="number-pad"
-                      value={seats}
-                      onChangeText={setSeats}
-                    />
-                  </Input>
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Message (optional)</Text>
-                <Input className="min-h-14 rounded-xl bg-secondary/70">
-                  <InputField
-                    placeholder="Introduce yourself and any special needs"
-                    value={message}
-                    onChangeText={setMessage}
-                  />
-                </Input>
-              </View>
-
               <View style={styles.actions}>
-                <AppButton
-                  label="Send request"
-                  onPress={handleSubmit}
-                  loading={mutation.isPending}
-                />
+                <AppButton label="Find matching rides" onPress={handleSubmit} />
                 <AppButton label="Cancel" onPress={() => router.back()} variant="secondary" />
               </View>
             </View>
@@ -160,10 +88,6 @@ const styles = StyleSheet.create({
   form: { gap: space.x4 },
   inputGroup: { gap: space.x2 },
   inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
-  row: { flexDirection: 'row', gap: space.x3 },
-  flex1: { flex: 1 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
   errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
-  successTitle: { ...typography.h2, color: colors.success, textAlign: 'center' },
-  successBody: { ...typography.body, color: colors.muted, textAlign: 'center' },
 });

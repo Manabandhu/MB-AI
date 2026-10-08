@@ -21,8 +21,8 @@ public class AssistantCitationService {
     }
 
     @Transactional(readOnly = true)
-    public List<AssistantCitation> listRecent() {
-        return repository.findTop20ByOrderByCreatedAtDesc();
+    public List<AssistantCitation> findByMessages(List<UUID> messageIds) {
+        return messageIds.isEmpty() ? List.of() : repository.findByMessageIdInOrderByCreatedAtAsc(messageIds);
     }
 
     @Transactional

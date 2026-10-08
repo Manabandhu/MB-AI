@@ -8,7 +8,8 @@ type CommunityPost {
 
 type Community {
   id: ID!
-  ownerId: ID!
+  # Null for seeded hubs that have no individual owner.
+  ownerId: ID
   name: String!
   description: String
   createdAt: String!

@@ -1,9 +1,9 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { supabase } from '@/lib/supabase';
 import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 import type {
   CreateRideOfferInput,
   CreateRideRatingInput,
-  CreateRideRequestInput,
   OwnerRideListing,
   RideChatResponse,
   RideListing,
@@ -174,59 +174,120 @@ export async function unsaveRide(rideId: string): Promise<void> {
   if (!response.ok) throw new Error(`Unsave ride failed: ${response.status}`);
 }
 
-export async function createRideRequest(input: CreateRideRequestInput): Promise<RideRequest> {
-  return parseJsonOrThrow(
-    await apiFetch('/api/v1/rides/requests', { method: 'POST', body: JSON.stringify(input) }),
-    'Create ride request',
-  );
-}
-
 export async function getMyRideRequests(): Promise<RideRequest[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/rides/my-requests'), 'My ride requests');
 }
 
 export async function listSeatRequests(rideId: string): Promise<RideSeatRequest[]> {
-  return parseJsonOrThrow(await apiFetch(`/api/v1/rides/${rideId}/seat-requests`), 'Seat requests');
+  const rows = await parseJsonOrThrow<BackendRideRequest[]>(
+    await apiFetch(`/api/v1/rides/offers/${rideId}/requests`),
+    'Seat requests',
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    rideId: row.rideId,
+    requesterId: row.riderId,
+    requesterName: `Rider ${row.riderId.slice(0, 4).toUpperCase()}`,
+    pickupArea: '',
+    seatsRequested: row.seatsRequested,
+    message: row.message ?? undefined,
+    status: row.status.toUpperCase() as RideSeatRequest['status'],
+    createdAt: row.createdAt,
+  }));
 }
 
 export async function updateSeatRequestStatus(
   requestId: string,
   status: string,
 ): Promise<RideSeatRequest> {
-  const body = JSON.stringify({ status });
   return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rides/seat-requests/${requestId}/status`, {
+    await apiFetch(`/api/v1/rides/requests/${requestId}/status`, {
       method: 'PATCH',
-      body,
+      body: JSON.stringify({ status: status.toLowerCase() }),
     }),
     'Update seat request status',
   );
 }
 
 export async function listParticipants(rideId: string): Promise<RideParticipant[]> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rides/${rideId}/participants`),
+  const rows = await parseJsonOrThrow<BackendRideParticipant[]>(
+    await apiFetch(`/api/v1/rides/offers/${rideId}/participants`),
     'Ride participants',
   );
+  return rows.map((row) => ({
+    id: row.id,
+    rideId: row.rideId,
+    userId: row.userId,
+    name: `${row.role === 'driver' ? 'Driver' : 'Rider'} ${row.userId.slice(0, 4).toUpperCase()}`,
+    role: row.role.toUpperCase() as RideParticipant['role'],
+    status: 'CONFIRMED',
+    tripShared: false,
+  }));
 }
 
 export async function submitRideRating(
   rideId: string,
   input: CreateRideRatingInput,
 ): Promise<RideRating> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rides/${rideId}/ratings`, {
+  // The backend stores one 1-5 score per person; the three category scores are averaged into it.
+  const ride = await getRideOffer(rideId);
+  const rating = Math.round(
+    (input.safetyRating + input.timelinessRating + input.comfortRating) / 3,
+  );
+  const saved = await parseJsonOrThrow<BackendRideRating>(
+    await apiFetch(`/api/v1/rides/offers/${rideId}/ratings`, {
       method: 'POST',
-      body: JSON.stringify(input),
+      body: JSON.stringify({ rateeId: ride.driverId, rating, comment: input.comment }),
     }),
     'Submit ride rating',
   );
+  return toRideRating(saved);
 }
 
 export async function getRideRating(rideId: string): Promise<RideRating | null> {
-  try {
-    return await parseJsonOrThrow(await apiFetch(`/api/v1/rides/${rideId}/ratings`), 'Ride rating');
-  } catch {
-    return null;
-  }
+  const [ratings, { data }] = await Promise.all([
+    parseJsonOrThrow<BackendRideRating[]>(
+      await apiFetch(`/api/v1/rides/offers/${rideId}/ratings`),
+      'Ride rating',
+    ),
+    supabase.auth.getSession(),
+  ]);
+  const mine = ratings.find((r) => r.raterId === data.session?.user.id);
+  return mine ? toRideRating(mine) : null;
+}
+
+type BackendRideRequest = {
+  id: string;
+  rideId: string;
+  riderId: string;
+  seatsRequested: number;
+  message?: string | null;
+  status: string;
+  createdAt: string;
+};
+
+type BackendRideParticipant = { id: string; rideId: string; userId: string; role: string };
+
+type BackendRideRating = {
+  id: string;
+  rideId: string;
+  raterId: string;
+  rateeId: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+};
+
+function toRideRating(row: BackendRideRating): RideRating {
+  return {
+    id: row.id,
+    rideId: row.rideId,
+    raterId: row.raterId,
+    ratedId: row.rateeId,
+    safetyRating: row.rating,
+    timelinessRating: row.rating,
+    comfortRating: row.rating,
+    comment: row.comment ?? undefined,
+    createdAt: row.createdAt,
+  };
 }

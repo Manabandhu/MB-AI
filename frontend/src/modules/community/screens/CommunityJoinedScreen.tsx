@@ -22,7 +22,7 @@ export function CommunityJoinedScreen() {
     queryFn: listCommunities,
   });
 
-  const communities = data ?? [];
+  const communities = useMemo(() => (data ?? []).filter((c) => c.isJoined), [data]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return communities;

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -238,7 +239,7 @@ export function NotificationsInboxScreen() {
                   key={item.id}
                   accessibilityRole="button"
                   accessibilityLabel={item.title}
-                  onPress={() => router.push(`/notifications/${item.id}` as any)}
+                  onPress={() => router.push(`/notifications/${item.id}` as Href)}
                   style={[s.notifCard, !item.read && s.notifCardUnread]}
                 >
                   <View style={[s.iconBox, { backgroundColor: iconStyle.bg }]}>
