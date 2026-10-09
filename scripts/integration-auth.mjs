@@ -4,7 +4,13 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321/auth/v1
 const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:8080';
 const PUBLISHABLE_KEY =
   process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
-const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || 'sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz';
+const SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
+if (!SECRET_KEY) {
+  console.error(
+    'Set SUPABASE_SECRET_KEY (run `supabase status` for the local stack key). Secrets are never hard-coded.',
+  );
+  process.exit(1);
+}
 
 function api(path, options = {}) {
   const opts = {

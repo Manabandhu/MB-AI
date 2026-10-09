@@ -8,7 +8,7 @@ description: Maintain ManaBandhu notifications across in-app inbox, mobile push,
 Frontend notification center, preferences, permissions, badges, and deep-link behavior belong to `frontend/src/modules/notifications`.
 
 The module owns the foundation-level Notifications screen even when it is linked from the global app shell.
-The first-batch inbox route `/notifications` uses `frontend/src/modules/notifications/screens/NotificationsInboxScreen.tsx` and the read-only demo endpoint `GET /api/v1/notifications/inbox`.
+The first-batch inbox route `/notifications` uses `frontend/src/modules/notifications/screens/NotificationsInboxScreen.tsx` and the authenticated per-user endpoint `GET /api/v1/notifications/inbox`.
 
 1. Read `platform/notifications/MODULE.md` and the AsyncAPI contract.
 2. Emit versioned, idempotent notification requests; never call providers from business transactions.
@@ -17,15 +17,16 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 5. Design in-app and push now; keep email/SMS adapters explicit. Preserve future watch delivery compatibility.
 6. Test duplicate events, retries, disabled channels, quiet hours, and provider failure.
 7. Update this skill when channels, event fields, providers, policies, or paths change.
-8. Current frontend implementation: inbox route `/notifications` renders `NotificationsInboxScreen` from `frontend/src/modules/notifications/screens/`. Additional screens include `NotificationDetailScreen` and `NotificationSettingsScreen`. API client in `frontend/src/modules/notifications/api.ts` uses read-only demo endpoints.
+8. Current frontend implementation: inbox route `/notifications` renders `NotificationsInboxScreen` from `frontend/src/modules/notifications/screens/`. Additional screens include `NotificationDetailScreen` and `NotificationSettingsScreen`. API client in `frontend/src/modules/notifications/api.ts` reads the signed-in user's notifications.
 9. Backend: REST and GraphQL APIs implemented under `/api/v1/notifications` with notifications, preferences, device registrations, AsyncAPI `notificationRequested` producer, and Flyway migration V13.
 10. Recent fixes: `NotificationsInboxScreen` import grouping was cleaned up and inline JSX props were expanded for readability without changing behavior.
 
 - Recent client-side refactor: shared API response parsing helpers in `frontend/src/lib/apiClient.ts` replaced duplicated module-local response handling across module API files.
 - Recent inbox fallback fix: `NotificationsInboxScreen` `useQuery` now uses direct API query and displays standard `EmptyState` when inbox is clear, removing `fallbackNotifications`.
 - Notification Detail & Settings wiring: `NotificationDetailScreen` is wired to `getNotificationDetail` with `LoadingState` and `ErrorState`; `NotificationSettingsScreen` is wired to `getNotificationSettings`.
-- Notifications Inbox Stitch overhaul: modernized `NotificationsInboxScreen.tsx` with premium Stitch notification cards, unread saffron indicator badges, category filter tabs ("All", "Unread"), contextual category vector icons, search input, and direct navigation to notification details and settings; added default notification fallbacks and `isCompact` support for narrow screens.
+- Notifications Inbox Stitch overhaul: modernized `NotificationsInboxScreen.tsx` with premium Stitch notification cards, unread saffron indicator badges, category filter tabs ("All", "Unread"), contextual category vector icons, search input, and direct navigation to notification details and settings; added `isCompact` support for narrow screens.
 - Unified design system standardization: Standardized `NotificationsInboxScreen.tsx` with the single ManaBandhu Modern Vibrant design system (`#431ebe` Royal Indigo, `#00696b` Teal, `#ff7e33` Sunset Orange, `#faf8ff` surface).
 - Repo-Wide Code Review & Defect Remediation: Audited `NotificationsInboxScreen.tsx` for touch targets compliance, verified unread badge cache synchronization, and ensured all icon actions have `accessibilityRole` and `accessibilityLabel`.
 - Pull-to-refresh: `NotificationsInboxScreen` implements `RefreshControl` with query refetching when users swipe down on the notifications list.
-- Security & correctness hardening (2026-10): `GET/PATCH /api/v1/notifications/settings` are per user (stored in `notification_settings`, V29) and require a JWT; unknown keys are ignored. Only `/api/v1/notifications/inbox` is public. Marking read checks ownership; creating notifications by hand is admin-only. `NotificationDispatcherService` claims batches of 50 with `FOR UPDATE SKIP LOCKED`, uses 5s/10s HTTP timeouts, and leaves rows undispatched when no push provider is configured instead of silently marking them sent.
+- Security & correctness hardening (2026-10): `GET/PATCH /api/v1/notifications/settings` are per user (stored in `notification_settings`, V29) and require a JWT; unknown keys are ignored. No notification route is public. Marking read checks ownership; creating notifications by hand is admin-only. `NotificationDispatcherService` claims batches of 50 with `FOR UPDATE SKIP LOCKED`, uses 5s/10s HTTP timeouts, and leaves rows undispatched when no push provider is configured instead of silently marking them sent.
+- Real inbox (2026-10 review): `GET /api/v1/notifications/inbox` requires a JWT and returns `NotificationInbox(items)` built from the caller's latest 100 notifications (`NotificationDetail`: `id`, `title`, `body`, `meta`, `read`, `route`, `createdAt`). `GET /api/v1/notifications/{id}` marks the caller's own notification read and returns it. The demo content in `NotificationsContentService` and `DEFAULT_NOTIFICATIONS` in the inbox screen were removed; an empty inbox shows `EmptyState`.

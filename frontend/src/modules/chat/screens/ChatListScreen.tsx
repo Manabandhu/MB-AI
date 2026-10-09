@@ -23,61 +23,6 @@ interface EnrichedConversation extends Conversation {
   isVerified?: boolean;
 }
 
-const SAMPLE_INQUIRIES: EnrichedConversation[] = [
-  {
-    id: 'conv-mkt-1',
-    type: 'DIRECT',
-    title: 'Suresh Reddy',
-    lastMessage: 'Sure! I can meet tomorrow at 11 AM in front of Patel Brothers.',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    unreadCount: 2,
-    moduleCategory: 'Marketplace',
-    inquiryContext: 'Preethi Eco Twin Mixer • $45 Offer',
-    isOnline: true,
-    avatarInitial: 'SR',
-    isVerified: true,
-  },
-  {
-    id: 'conv-room-1',
-    type: 'DIRECT',
-    title: 'Ananya Rao',
-    lastMessage: 'Yes, the private room with attached bath is available from Oct 1st.',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 65).toISOString(),
-    unreadCount: 0,
-    moduleCategory: 'Rooms',
-    inquiryContext: 'North Austin 1BHK • $750/mo',
-    isOnline: true,
-    avatarInitial: 'AR',
-    isVerified: true,
-  },
-  {
-    id: 'conv-ride-1',
-    type: 'DIRECT',
-    title: 'Karthik Varma',
-    lastMessage: 'Got your seat request! Leaving at 7:30 AM from Round Rock HEB.',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    unreadCount: 1,
-    moduleCategory: 'Rides',
-    inquiryContext: 'Austin → Dallas Carpool • 2 Seats',
-    isOnline: false,
-    avatarInitial: 'KV',
-    isVerified: true,
-  },
-  {
-    id: 'conv-mkt-2',
-    type: 'DIRECT',
-    title: 'Deepa Goud',
-    lastMessage: 'Is the Ultra Pride wet grinder still under warranty?',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
-    unreadCount: 0,
-    moduleCategory: 'Marketplace',
-    inquiryContext: 'Ultra Pride+ Wet Grinder • $95',
-    isOnline: false,
-    avatarInitial: 'DG',
-    isVerified: true,
-  },
-];
-
 export default function ChatListScreen() {
   const router = useRouter();
   const layout = useAdaptiveLayout();
@@ -89,9 +34,8 @@ export default function ChatListScreen() {
     queryFn: listConversations,
   });
 
-  // Combine live data with sample inquiries for zero-state demonstration
   const allConversations: EnrichedConversation[] = useMemo(() => {
-    const liveList: EnrichedConversation[] = (data ?? []).map((c, idx) => {
+    const liveList: EnrichedConversation[] = (data ?? []).map((c) => {
       let moduleCategory: 'Marketplace' | 'Rooms' | 'Rides' | 'General' = 'General';
       let inquiryContext: string | undefined;
 
@@ -124,18 +68,13 @@ export default function ChatListScreen() {
         moduleCategory,
         inquiryContext,
         avatarInitial: (c.title ?? 'MB').slice(0, 2).toUpperCase(),
-        isOnline: idx % 2 === 0,
-        isVerified: true,
+        // Presence and verification are not tracked yet; never show invented badges.
+        isOnline: false,
+        isVerified: false,
       };
     });
 
-    if (liveList.length > 0) {
-      // Prioritize live conversations; append samples that don't collide
-      const liveIds = new Set(liveList.map((l) => l.id));
-      const remainingSamples = SAMPLE_INQUIRIES.filter((s) => !liveIds.has(s.id));
-      return [...liveList, ...remainingSamples];
-    }
-    return SAMPLE_INQUIRIES;
+    return liveList;
   }, [data]);
 
   const filtered = useMemo(() => {

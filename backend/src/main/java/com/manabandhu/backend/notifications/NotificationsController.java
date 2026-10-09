@@ -1,37 +1,44 @@
 package com.manabandhu.backend.notifications;
 
-import com.manabandhu.backend.foundation.CatalogScreenContent;
+import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-
-import com.manabandhu.backend.auth.Actor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
 public class NotificationsController {
 
     private final NotificationsContentService service;
+    private final NotificationService notificationService;
 
-    NotificationsController(NotificationsContentService service) {
+    NotificationsController(NotificationsContentService service, NotificationService notificationService) {
         this.service = service;
+        this.notificationService = notificationService;
     }
 
+    /** The caller's own notifications, newest first (capped at 100). */
     @GetMapping("/inbox")
-    CatalogScreenContent inbox() {
-        return service.inbox();
+    NotificationInbox inbox(Authentication authentication) {
+        var items = notificationService.findByUser(Actor.require(authentication).id()).stream()
+                .limit(100)
+                .map(NotificationDetail::of)
+                .toList();
+        return new NotificationInbox(items);
     }
 
+    /** Opening a notification marks it read. Only the recipient can open it. */
     @GetMapping("/{id}")
-    ResponseEntity<NotificationDetail> detail(@PathVariable String id) {
-        var item = service.detail(id);
-        return ResponseEntity.ok(item);
+    NotificationDetail detail(Authentication authentication, @PathVariable UUID id) {
+        return NotificationDetail.of(notificationService.markRead(Actor.require(authentication), id));
     }
 
     @GetMapping("/settings")

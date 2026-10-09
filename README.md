@@ -75,7 +75,7 @@ Without a Supabase project you can run everything on a local PostgreSQL 16 with 
 
 ```bash
 createdb manabandhu
-psql -d manabandhu -f scripts/local-db/supabase-stub.sql   # auth schema, roles and realtime stand-ins
+psql -d manabandhu -f scripts/local-dev/supabase-stub.sql   # auth schema, roles and realtime stand-ins
 DATABASE_URL=jdbc:postgresql://localhost:5432/manabandhu DATABASE_USERNAME=postgres DATABASE_PASSWORD=postgres \
   pnpm dev:backend
 ```

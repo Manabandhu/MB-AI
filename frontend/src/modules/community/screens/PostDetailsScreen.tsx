@@ -76,7 +76,14 @@ export function PostDetailsScreen() {
       [type]: isAlready ? prev[type] - 1 : prev[type] + 1,
     }));
     if (postId) {
-      reactPost(postId, type.toUpperCase()).catch(() => {});
+      reactPost(postId, type.toUpperCase()).catch(() => {
+        // Roll back the optimistic update so the count matches the server.
+        setUserReactions((prev) => ({ ...prev, [type]: isAlready }));
+        setReactionCounts((prev) => ({
+          ...prev,
+          [type]: isAlready ? prev[type] + 1 : prev[type] - 1,
+        }));
+      });
     }
   };
 

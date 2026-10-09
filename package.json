@@ -14,13 +14,15 @@
     "test": "pnpm --filter @manabandhu/frontend test && ./backend/mvnw -f backend/pom.xml test",
     "verify:contracts": "node scripts/verify-contracts.mjs",
     "verify:skills": "node scripts/verify-module-skills.mjs",
-    "verify": "pnpm lint && pnpm verify:contracts && pnpm verify:skills",
+    "verify": "pnpm lint && pnpm verify:contracts && pnpm verify:skills && pnpm verify:routes && pnpm verify:secrets",
     "review:commit": "node scripts/review-commit.mjs",
     "commit:message": "node scripts/generate-commit-message.mjs",
     "commit:message:check": "node scripts/validate-commit-message.mjs",
     "review:history": "node scripts/review-skill-history.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
-    "prepare": "pnpm hooks:install"
+    "prepare": "pnpm hooks:install",
+    "verify:routes": "node scripts/verify-api-routes.mjs",
+    "verify:secrets": "node scripts/verify-no-secrets.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.8"

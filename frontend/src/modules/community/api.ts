@@ -97,10 +97,11 @@ export async function addComment(
 }
 
 export async function reactPost(postId: string, type: string = 'LIKE'): Promise<void> {
-  await apiFetch(`/api/v1/posts/${encodeURIComponent(postId)}/reactions`, {
+  const response = await apiFetch(`/api/v1/posts/${encodeURIComponent(postId)}/reactions`, {
     method: 'POST',
     body: JSON.stringify({ type }),
   });
+  if (!response.ok) throw new Error(`Reaction failed: ${response.status}`);
 }
 
 export async function joinCommunity(id: string): Promise<void> {

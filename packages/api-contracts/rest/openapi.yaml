@@ -65,15 +65,15 @@ paths:
   /notifications/inbox:
     get:
       operationId: getNotificationsInbox
-      summary: Get notifications inbox
-      security: []
+      summary: Get the signed-in user's latest notifications
       responses:
         '200':
-          description: Demo-safe in-app notification inbox content
+          description: Up to 100 of the caller's notifications, newest first
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CatalogScreenContent'
+                $ref: '#/components/schemas/NotificationInbox'
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /rooms/screens/{screenId}:
     get:
       operationId: getRoomsScreenContent
@@ -1836,6 +1836,24 @@ components:
         imageUrl: { type: string, format: uri }
         actionLabel: { type: string, minLength: 1 }
         secondaryActionLabel: { type: string }
+    NotificationInbox:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/NotificationInboxItem' }
+    NotificationInboxItem:
+      type: object
+      required: [id, title, read]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        body: { type: [string, 'null'] }
+        meta: { type: [string, 'null'] }
+        read: { type: boolean }
+        route: { type: [string, 'null'] }
+        createdAt: { type: [string, 'null'], format: date-time }
     CatalogScreenContent:
       type: object
       additionalProperties: false

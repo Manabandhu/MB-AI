@@ -17,3 +17,4 @@ description: Maintain ManaBandhu build, CI/CD, environments, releases, migration
 10. Use quoted heredocs for multiline Ruby or other embedded languages in `run` blocks so actionlint and ShellCheck parse the shell boundary correctly.
 11. Grant CodeQL `actions: read`, `contents: read`, and `security-events: write`; SARIF upload reads workflow-run metadata before publishing results.
 12. Update this skill when providers, environments, pipeline paths, commands, action baselines, or release policy change.
+13. Every workflow declares top-level `permissions: contents: read` and widens per job only when needed. The `migrate` workflow runs Flyway with `-baselineOnMigrate=true -baselineVersion=0` to match backend startup. The Quality workflow also runs `scripts/verify-api-routes.mjs` and `scripts/verify-no-secrets.mjs`; tool configs (`.kilo/kilo.json`, `.mcp.json`) reference tokens only through environment variables.

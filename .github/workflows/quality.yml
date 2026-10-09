@@ -34,3 +34,7 @@ jobs:
         run: node scripts/review-skill-history.mjs
       - name: Verify API contract synchronization
         run: node scripts/verify-contracts.mjs
+      - name: Verify frontend calls match backend routes
+        run: node scripts/verify-api-routes.mjs
+      - name: Scan tracked files for credentials
+        run: node scripts/verify-no-secrets.mjs

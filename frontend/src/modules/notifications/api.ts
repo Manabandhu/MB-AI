@@ -6,6 +6,8 @@ export type NotificationItem = {
   body: string;
   meta: string;
   read: boolean;
+  route?: string | null;
+  createdAt?: string;
 };
 
 export async function getNotificationsInbox(): Promise<{ items: NotificationItem[] }> {

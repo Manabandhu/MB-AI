@@ -88,7 +88,6 @@ public class SecurityConfig {
                 "/api/v1/utilities/nearby",
                 "/api/v1/utilities/emergency",
                 "/api/v1/safety/center",
-                "/api/v1/notifications/inbox",
                 "/actuator/health/**"
         };
 
