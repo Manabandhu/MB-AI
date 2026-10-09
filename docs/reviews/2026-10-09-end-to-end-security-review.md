@@ -69,3 +69,24 @@ This commit (second pass):
 4. The AI assistant module is a placeholder with no backend.
 5. `RoomsScreen.tsx` is very large; split it before further feature work.
 6. Push, uploads, user suspension, and the maps proxy need provider keys configured per environment.
+
+## Follow-up: sign-in, welcome, and onboarding (iPhone-first)
+
+Driven end to end with Playwright on iPhone SE, 15, 15 Pro Max, a folded foldable, iPad, and desktop (25 steps each,
+no page errors, no horizontal scrolling) against the local Supabase Auth stand-in.
+
+Fixed:
+- New members never reached onboarding; every route sent signed-in users straight to Home. All post-auth navigation now
+  goes through `routeAfterAuth()`.
+- Nobody could finish onboarding: the `profile-photo` and `complete` step keys were missing from `onboarding_steps`, so
+  the `current_step` foreign key rejected those saves, and the app hid the failure (V34; errors now shown).
+- Onboarding choices appeared two or three times (V33 dedupes and adds a unique index).
+- Apple/Google sign-in did nothing in the native app; it now uses an in-app browser session with the app scheme.
+- The reset-password route redirected the recovery session to Home before a new password could be set.
+- The query cache survived sign-out, so a second account on the same device could briefly see the first's data.
+- Removed unbacked claims ("Bank-grade encryption", "Trusted session", "Multi-factor", "+50 credits", "verified"
+  access/identities) and invented onboarding defaults.
+
+Open: Supabase Auth needs the app redirect URLs, Apple/Google provider credentials, and an SMS provider configured
+before these flows work against the hosted project (see `frontend/src/modules/auth/MODULE.md`). Terms of Service and
+Privacy Policy pages do not exist yet; App Store review requires a privacy policy link.

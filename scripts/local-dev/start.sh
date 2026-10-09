@@ -39,8 +39,10 @@ if ! psql -d postgres -qtAc 'select 1' >/dev/null 2>&1; then
 fi
 
 if $RESET; then
-  "$ROOT/scripts/local-dev/stop.sh" >/dev/null 2>&1 || true
+  "$ROOT/scripts/local-dev/stop.sh" backend jwks >/dev/null 2>&1 || true
   psql -d postgres -qc "DROP DATABASE IF EXISTS $DB;"
+  # Accounts created through the local Supabase Auth stand-in live in the dropped database too.
+  rm -f "$STATE/auth-users.json"
 fi
 if ! psql -d postgres -qtAc "select 1 from pg_database where datname = '$DB'" | grep -q 1; then
   psql -d postgres -qc "CREATE DATABASE $DB;"

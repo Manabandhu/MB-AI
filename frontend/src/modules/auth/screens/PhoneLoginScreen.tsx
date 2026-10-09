@@ -1,203 +1,186 @@
 import { color, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
 import { type CountryItem, supportedCountries } from '@/modules/auth/authConstants';
-import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
-import { AuthSuccessCelebration } from '@/modules/auth/components/AuthSuccessCelebration';
-import { InlinePhoneInput } from '@/modules/auth/components/InlinePhoneInput';
-import { AppButton } from '@/modules/shared/ui/AppButton';
+import { friendlyAuthError, toE164 } from '@/modules/auth/authHelpers';
+import {
+  AuthButton,
+  AuthField,
+  AuthNotice,
+  AuthScreen,
+  AuthSwitch,
+} from '@/modules/auth/components/AuthKit';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 export function PhoneLoginScreen() {
-  const [selectedCountry, setSelectedCountry] = useState<CountryItem>(supportedCountries[0]);
-  const [phoneDigits, setPhoneDigits] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [showCelebration, setShowCelebration] = useState(false);
+  const signInWithPhone = useAuthStore((s) => s.signInWithPhone);
+  const insets = useSafeAreaInsets();
+  const [country, setCountry] = useState<CountryItem>(supportedCountries[0]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [digits, setDigits] = useState('');
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const status = useAuthStore((s) => s.status);
-  const user = useAuthStore((s) => s.user);
-  const storeError = useAuthStore((s) => s.error);
-
-  useEffect(() => {
-    if (status === 'authenticated' && !localError && !storeError && user) {
-      setShowCelebration(true);
-    } else {
-      setShowCelebration(false);
-    }
-  }, [status, localError, storeError, user]);
-
-  async function handleSendCode() {
-    const trimmed = phoneDigits.trim();
-    if (!trimmed) {
-      setLocalError('Please enter your mobile phone number.');
+  const submit = async () => {
+    const number = digits.replace(/\D/g, '');
+    if (number.length < 7 || number.length > 12) {
+      setFieldError('Enter your mobile number without the country code');
       return;
     }
-    setLoading(true);
-    setLocalError(null);
+    setFieldError(null);
+    setFormError(null);
+    setSubmitting(true);
     try {
-      const fullPhone = `${selectedCountry.code}${trimmed.replace(/\D/g, '')}`;
-      await useAuthStore.getState().signInWithPhone(fullPhone);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to send verification code';
-      setLocalError(msg);
+      await signInWithPhone(toE164(country.code, number));
+      router.push('/otp-verification');
+    } catch (error) {
+      setFormError(friendlyAuthError(error));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  }
-
-  const error = localError || storeError;
+  };
 
   return (
-    <AuthPageLayout
-      title="Phone Sign In"
-      subtitle="Enter your mobile number to receive a 6-digit verification code"
-      badgeText="Fast & Secure Mobile Login"
-      backHref="/sign-in"
+    <AuthScreen
+      title="Sign in with your phone"
+      subtitle="We'll text you a 6-digit code. Message and data rates may apply."
+      footer={
+        <>
+          <AuthButton label="Send code" loading={submitting} onPress={submit} />
+          <AuthSwitch
+            prompt="Prefer email?"
+            action="Sign in with email"
+            onPress={() => router.replace('/sign-in')}
+          />
+        </>
+      }
     >
-      {showCelebration ? (
-        <AuthSuccessCelebration
-          userName={user?.user_metadata?.full_name ?? user?.email ?? 'Member'}
-          title="Welcome Back! 🎉"
-          subtitle="Your verified session is ready. Redirecting you home..."
-          onComplete={() => router.replace('/home')}
-        />
-      ) : null}
-
-      {/* Mobile Phone Number Input with Embedded Country Dropdown */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>MOBILE PHONE NUMBER</Text>
-        <InlinePhoneInput
-          selectedCountry={selectedCountry}
-          onSelectCountry={setSelectedCountry}
-          phoneDigits={phoneDigits}
-          onChangePhoneDigits={(val) => {
-            setPhoneDigits(val);
-            if (error) setLocalError(null);
-          }}
-        />
-        <Text style={styles.helperText}>
-          We will send an SMS with a one-time verification code. Standard carrier rates may apply.
-        </Text>
-      </View>
-
-      {/* Inline Error Banner with exact AppIcon */}
-      {error ? (
-        <View style={styles.errorBanner}>
-          <AppIcon name="warning" size={16} color="#ba1a1a" />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
-
-      {/* Send Code CTA using Gluestack AppButton */}
-      <AppButton
-        label={loading ? 'Sending Verification Code…' : 'Send Code →'}
-        onPress={handleSendCode}
-        loading={loading}
+      {formError ? <AuthNotice>{formError}</AuthNotice> : null}
+      <AuthField
+        label="Mobile number"
+        value={digits}
+        onChangeText={(value) => {
+          setDigits(value.replace(/[^\d\s()-]/g, ''));
+          if (fieldError) setFieldError(null);
+        }}
+        error={fieldError}
+        placeholder="(555) 000-0000"
+        keyboardType="phone-pad"
+        autoComplete="tel-national"
+        textContentType="telephoneNumber"
+        returnKeyType="send"
+        onSubmitEditing={submit}
+        leading={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Country code ${country.name} ${country.code}. Change`}
+            onPress={() => setPickerOpen(true)}
+            style={styles.countryButton}
+          >
+            <Text style={styles.flag}>{country.flag}</Text>
+            <Text style={styles.dial}>{country.code}</Text>
+            <AppIcon name="chevron-down" size={14} color={color.muted} />
+          </Pressable>
+        }
       />
 
-      {/* Alternative Auth Switch (Email & Password) */}
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or switch to</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
-      <Pressable
-        onPress={() => router.push('/email-login')}
-        style={styles.altButton}
-        accessibilityRole="button"
+      <Modal
+        visible={pickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPickerOpen(false)}
       >
-        <AppIcon name="mail" size={16} color={color.primary} />
-        <Text style={styles.altButtonText}>Continue with Email & Password</Text>
-      </Pressable>
-
-      {/* Return to Sign In */}
-      <Pressable
-        onPress={() => router.push('/sign-in')}
-        style={styles.backLink}
-        accessibilityRole="link"
-      >
-        <Text style={styles.backLinkText}>Return to main Sign In options</Text>
-      </Pressable>
-    </AuthPageLayout>
+        <Pressable
+          accessibilityLabel="Close"
+          style={styles.backdrop}
+          onPress={() => setPickerOpen(false)}
+        />
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, space.x4) }]}>
+          <View style={styles.grabber} />
+          <Text accessibilityRole="header" style={styles.sheetTitle}>
+            Country or region
+          </Text>
+          <ScrollView>
+            {supportedCountries.map((item) => {
+              const selected = item.code === country.code && item.name === country.name;
+              return (
+                <Pressable
+                  key={item.code + item.name}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`${item.name} ${item.code}`}
+                  onPress={() => {
+                    setCountry(item);
+                    setPickerOpen(false);
+                  }}
+                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                >
+                  <Text style={styles.flag}>{item.flag}</Text>
+                  <Text style={styles.rowName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.rowCode}>{item.code}</Text>
+                  {selected ? <AppIcon name="check" size={18} color={color.primary} /> : null}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
+    </AuthScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  inputGroup: {
-    gap: space.x2,
-  },
-  inputLabel: {
-    color: color.ink,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  helperText: {
-    color: color.muted,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  errorBanner: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(186, 26, 26, 0.08)',
-    borderColor: 'rgba(186, 26, 26, 0.25)',
-    borderRadius: 12,
-    borderWidth: 1,
+  countryButton: {
     flexDirection: 'row',
-    gap: space.x2,
-    padding: space.x3,
-  },
-  errorText: {
-    color: '#ba1a1a',
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  dividerRow: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x3,
-    marginVertical: space.x1,
+    gap: 4,
+    minHeight: 44,
+    paddingRight: space.x2,
+    marginRight: space.x1,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: '#d9d5e4',
   },
-  dividerLine: {
-    backgroundColor: color.border,
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    color: color.muted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  altButton: {
-    alignItems: 'center',
+  flag: { fontSize: 20 },
+  dial: { color: color.ink, fontSize: 17, fontWeight: '600' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(19,27,46,0.4)' },
+  sheet: {
+    maxHeight: '70%',
     backgroundColor: color.surface,
-    borderColor: color.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x2,
-    justifyContent: 'center',
-    minHeight: 48,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: space.x4,
   },
-  altButtonText: {
-    color: color.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  backLink: {
+  grabber: {
     alignSelf: 'center',
-    marginTop: space.x1,
-    paddingVertical: space.x1,
+    width: 36,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#d9d5e4',
+    marginTop: space.x2,
   },
-  backLinkText: {
-    color: color.primary,
-    fontSize: 13,
+  sheetTitle: {
+    color: color.ink,
+    fontSize: 17,
     fontWeight: '700',
+    textAlign: 'center',
+    marginVertical: space.x3,
   },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.x3,
+    minHeight: 52,
+    paddingHorizontal: space.x2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.border,
+  },
+  rowPressed: { backgroundColor: color.background },
+  rowName: { flex: 1, color: color.ink, fontSize: 17 },
+  rowCode: { color: color.muted, fontSize: 17 },
 });

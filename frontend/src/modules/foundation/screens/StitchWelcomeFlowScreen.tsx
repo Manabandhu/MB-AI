@@ -1,1042 +1,315 @@
 import { color, space } from '@manabandhu/design-system';
-import { Link, router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { useAuthStore } from '@/lib/authStore';
+import { router } from 'expo-router';
+import { useRef, useState } from 'react';
+import {
+  FlatList,
+  Image,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRedirectIfAuthenticated } from '@/lib/authStore';
+import { AuthButton } from '@/modules/auth/components/AuthKit';
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
 import type { AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { useAdaptiveLayout } from '@/platform/adaptive';
 
-interface SlideItem {
-  category: string;
+type Slide = {
+  key: string;
+  icon: AppIconName;
   title: string;
-  desc: string;
-  tag: string;
-  tagBg: string;
-  tagColor: string;
-  stat: string;
-  iconName: AppIconName;
-  bullets: string[];
-}
+  body: string;
+  tint: string;
+  accent: string;
+  chips: [string, string, string];
+};
 
-const slides: SlideItem[] = [
+const SLIDES: Slide[] = [
   {
-    category: 'Housing',
-    title: 'Rooms & Roommates',
-    desc: 'Find shared rooms, 1BHK/2BHK apartments, and Desi roommates across Dallas, Bay Area, Seattle, NJ, and beyond.',
-    tag: 'Direct Community',
-    tagBg: 'rgba(67, 30, 190, 0.10)',
-    tagColor: color.primary,
-    stat: 'Listed by members',
-    iconName: 'home',
-    bullets: [
-      'Shared rooms & apartments',
-      'Furnished & lease-share listings',
-      'Direct chats with hosts',
-    ],
+    key: 'rooms',
+    icon: 'home',
+    title: 'Find a room or roommate',
+    body: 'Browse rooms and shared apartments listed by members, and message hosts directly.',
+    tint: '#ece6ff',
+    accent: color.primary,
+    chips: ['Shared rooms', 'Lease takeovers', 'Chat with hosts'],
   },
   {
-    category: 'Carpools',
-    title: 'Community Carpools & Commute',
-    desc: 'Share rides with Desi colleagues and friends to office parks, airports (DFW, SFO, SEA, ORD), and weekend intercity trips. Safe and friendly.',
-    tag: 'Trusted Routes',
-    tagBg: 'rgba(0, 105, 107, 0.12)',
-    tagColor: color.teal,
-    stat: 'Direct Cost Splitting',
-    iconName: 'car',
-    bullets: [
-      'Daily office park commutes',
-      'Airport luggage-friendly rides',
-      'Direct fuel & toll cost splitting',
-    ],
+    key: 'rides',
+    icon: 'car',
+    title: 'Share the ride',
+    body: 'Carpool to work, the airport, or a weekend trip, and split fuel and tolls fairly.',
+    tint: '#dff3f2',
+    accent: color.teal,
+    chips: ['Daily commutes', 'Airport runs', 'Split costs'],
   },
   {
-    category: 'Careers',
-    title: 'Insider Job Referrals & Tech Hub',
-    desc: 'Ask Desi engineers, managers, and recruiters in the community for referrals, and browse openings shared by members.',
-    tag: 'Fast Track',
-    tagBg: 'rgba(255, 126, 51, 0.14)',
-    tagColor: color.warm,
-    stat: 'Direct Employee Referrals',
-    iconName: 'briefcase',
-    bullets: [
-      'Request and offer employee referrals',
-      'Community job postings',
-      'Filter openings by visa needs',
-    ],
+    key: 'careers',
+    icon: 'briefcase',
+    title: 'Grow your career',
+    body: 'Ask for employee referrals and discover jobs shared by people in your community.',
+    tint: '#fff0e6',
+    accent: '#c2560f',
+    chips: ['Referrals', 'Job posts', 'Visa-friendly'],
   },
   {
-    category: 'Community',
-    title: 'Vibrant Hub, Events & Support',
-    desc: 'Celebrate Diwali, Eid, Ugadi, and cricket screenings together. Buy & sell furniture, and get trusted answers on visa and utilities.',
-    tag: 'Local & Cultural',
-    tagBg: 'rgba(67, 30, 190, 0.10)',
-    tagColor: color.primary,
-    stat: 'Events & marketplace',
-    iconName: 'community',
-    bullets: [
-      'Festive & cultural local meetups',
-      'Student marketplace for pre-loved items',
-      'Emergency resources & safety tools',
-    ],
+    key: 'community',
+    icon: 'community',
+    title: 'Belong, wherever you are',
+    body: 'Join city groups and festivals, and get help with visas, utilities, and everyday life.',
+    tint: '#ece6ff',
+    accent: color.primary,
+    chips: ['City groups', 'Events', 'Visa help'],
   },
 ];
 
+/** Width at which welcome switches to a two-column layout (iPad, unfolded foldables, desktop). */
+const TWO_COLUMN = 820;
+
 export function StitchWelcomeFlowScreen() {
-  const status = useAuthStore((s) => s.status);
-  const isLoading = useAuthStore((s) => s.isLoading);
-  const { windowClass } = useAdaptiveLayout();
-  const isDesktop = windowClass !== 'compact';
+  useRedirectIfAuthenticated();
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const twoColumn = width >= TWO_COLUMN;
+  // Phones know the page width up front, so slides render on the first frame instead of after a layout pass.
+  const [pageWidth, setPageWidth] = useState(width >= TWO_COLUMN ? 0 : width);
+  const [index, setIndex] = useState(0);
+  const listRef = useRef<FlatList<Slide>>(null);
+  // Size the artwork from the height left after the header, slide text, dots, and buttons (about 440pt plus the
+  // safe areas), so the copy is never clipped on an iPhone SE and the art fills taller phones.
+  const phoneArt = Math.max(
+    150,
+    Math.min(width - space.x6 * 2, height - insets.top - insets.bottom - 440),
+  );
+  const artSize = twoColumn ? 360 : phoneArt;
 
-  const [activeSlide, setActiveSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const onScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!pageWidth) return;
+    setIndex(Math.round(event.nativeEvent.contentOffset.x / pageWidth));
+  };
 
-  useEffect(() => {
-    if (!isLoading && status === 'authenticated') {
-      router.replace('/home');
-    }
-  }, [status, isLoading]);
+  const goTo = (next: number) => {
+    setIndex(next);
+    listRef.current?.scrollToIndex({ index: next, animated: true });
+  };
 
-  // Auto-advance carousel every 4.5 seconds unless paused
-  useEffect(() => {
-    if (isPaused) return;
-    const timer = setInterval(() => {
-      setActiveSlide((curr) => (curr + 1) % slides.length);
-    }, 4500);
-    return () => clearInterval(timer);
-  }, [isPaused]);
+  const pager = (
+    <View style={styles.pager} onLayout={(event) => setPageWidth(event.nativeEvent.layout.width)}>
+      {pageWidth > 0 ? (
+        <FlatList
+          ref={listRef}
+          data={SLIDES}
+          keyExtractor={(slide) => slide.key}
+          horizontal
+          pagingEnabled
+          style={styles.list}
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onScrollEnd}
+          onScrollEndDrag={onScrollEnd}
+          getItemLayout={(_, i) => ({ length: pageWidth, offset: pageWidth * i, index: i })}
+          renderItem={({ item }) => (
+            <View
+              style={[styles.page, { width: pageWidth }]}
+              accessibilityLabel={`${item.title}. ${item.body}`}
+            >
+              <SlideArt slide={item} size={artSize} />
+              <Text style={styles.slideTitle}>{item.title}</Text>
+              <Text style={styles.slideBody}>{item.body}</Text>
+            </View>
+          )}
+        />
+      ) : null}
+      <View
+        style={styles.dots}
+        accessibilityRole="adjustable"
+        accessibilityLabel={`Page ${index + 1} of ${SLIDES.length}`}
+      >
+        {SLIDES.map((slide, i) => (
+          <Pressable
+            key={slide.key}
+            accessibilityRole="button"
+            accessibilityLabel={`Show ${slide.title}`}
+            hitSlop={10}
+            onPress={() => goTo(i)}
+            style={[styles.dot, i === index && styles.dotActive]}
+          />
+        ))}
+      </View>
+    </View>
+  );
 
-  const current = slides[activeSlide];
+  const actions = (
+    <View style={styles.actions}>
+      <AuthButton label="Get started" onPress={() => router.push('/sign-up')} />
+      <AuthButton
+        label="I already have an account"
+        variant="secondary"
+        onPress={() => router.push('/sign-in')}
+      />
+    </View>
+  );
 
-  function handlePrev() {
-    setIsPaused(true);
-    setActiveSlide((curr) => (curr - 1 + slides.length) % slides.length);
-  }
-
-  function handleNext() {
-    setIsPaused(true);
-    setActiveSlide((curr) => (curr + 1) % slides.length);
-  }
-
-  function handleSelectSlide(idx: number) {
-    setIsPaused(true);
-    setActiveSlide(idx);
+  if (twoColumn) {
+    return (
+      <View
+        style={[
+          styles.root,
+          styles.rootWide,
+          { paddingTop: insets.top, paddingBottom: insets.bottom },
+        ]}
+      >
+        <View style={styles.wideInner}>
+          <View style={styles.wideIntro}>
+            <Brand />
+            <Text accessibilityRole="header" style={styles.headline}>
+              Your community, wherever you go.
+            </Text>
+            <Text style={styles.lead}>
+              Rooms, rides, referrals, events, and everyday help from people who share your roots.
+            </Text>
+            {actions}
+          </View>
+          <View style={styles.widePager}>{pager}</View>
+        </View>
+      </View>
+    );
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-        {/* ========================================================================= */}
-        {/* DESKTOP WEB NAVIGATION BAR                                               */}
-        {/* ========================================================================= */}
-        {isDesktop ? (
-          <View style={styles.desktopNavbar}>
-            <View style={styles.brandRow}>
-              <Image source={welcomeLogo} style={styles.desktopNavLogo} />
-              <View>
-                <View style={styles.brandTitleRow}>
-                  <Text style={styles.brandTitle}>ManaBandhu</Text>
-                </View>
-                <Text style={styles.brandSubtitle}>Desi Community Platform</Text>
-              </View>
-            </View>
+    <View style={[styles.root, { paddingTop: insets.top + space.x2 }]}>
+      <View style={styles.header}>
+        <Brand />
+      </View>
+      {pager}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, space.x4) }]}>
+        {actions}
+      </View>
+    </View>
+  );
+}
 
-            {/* Nav Links */}
-            <View style={styles.desktopNavLinks}>
-              <Pressable onPress={() => handleSelectSlide(0)} style={styles.navLinkItem}>
-                <Text style={[styles.navLinkText, activeSlide === 0 && styles.navLinkActive]}>
-                  Rooms
-                </Text>
-              </Pressable>
-              <Pressable onPress={() => handleSelectSlide(1)} style={styles.navLinkItem}>
-                <Text style={[styles.navLinkText, activeSlide === 1 && styles.navLinkActive]}>
-                  Carpools
-                </Text>
-              </Pressable>
-              <Pressable onPress={() => handleSelectSlide(2)} style={styles.navLinkItem}>
-                <Text style={[styles.navLinkText, activeSlide === 2 && styles.navLinkActive]}>
-                  Job Referrals
-                </Text>
-              </Pressable>
-              <Pressable onPress={() => handleSelectSlide(3)} style={styles.navLinkItem}>
-                <Text style={[styles.navLinkText, activeSlide === 3 && styles.navLinkActive]}>
-                  Community Hub
-                </Text>
-              </Pressable>
-            </View>
+function Brand() {
+  return (
+    <View style={styles.brand} accessibilityRole="header">
+      <Image source={welcomeLogo} style={styles.logo} accessibilityIgnoresInvertColors />
+      <Text style={styles.brandName}>ManaBandhu</Text>
+    </View>
+  );
+}
 
-            {/* Nav CTAs */}
-            <View style={styles.desktopNavActions}>
-              <Pressable
-                onPress={() => router.push('/sign-in')}
-                style={styles.desktopNavSignIn}
-                accessibilityRole="button"
-              >
-                <Text style={styles.desktopNavSignInText}>Sign In</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => router.push('/sign-up')}
-                style={styles.desktopNavCta}
-                accessibilityRole="button"
-              >
-                <Text style={styles.desktopNavCtaText}>Join Free →</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
-
-        <View style={[styles.pageContainer, isDesktop && styles.pageContainerDesktop]}>
-          {/* ========================================================================= */}
-          {/* MOBILE HEADER                                                             */}
-          {/* ========================================================================= */}
-          {!isDesktop ? (
-            <View style={styles.mobileTopBar}>
-              <View style={styles.brandRow}>
-                <Image source={welcomeLogo} style={styles.brandLogo} />
-                <View>
-                  <View style={styles.brandTitleRow}>
-                    <Text style={styles.brandTitle}>ManaBandhu</Text>
-                  </View>
-                  <Text style={styles.brandSubtitle}>Desi Community Platform</Text>
-                </View>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Skip to sign in"
-                onPress={() => router.push('/sign-in')}
-                style={styles.skipButton}
-              >
-                <Text style={styles.skipText}>Skip</Text>
-              </Pressable>
-            </View>
-          ) : null}
-
-          {/* ========================================================================= */}
-          {/* HERO SECTION (2-COL ON DESKTOP, STACK ON MOBILE)                         */}
-          {/* ========================================================================= */}
-          <View style={[styles.heroRow, isDesktop && styles.heroRowDesktop]}>
-            {/* Left Column: Hero Text & Value Props */}
-            <View style={[styles.heroTextCol, isDesktop && styles.heroTextColDesktop]}>
-              <View style={styles.heroPillBadge}>
-                <AppIcon name="star" size={14} color={color.primary} />
-                <Text style={styles.heroPillText}>Desi Community Platform</Text>
-              </View>
-              <Text style={[styles.mainHeading, isDesktop && styles.mainHeadingDesktop]}>
-                Your Trusted Desi Community, Everywhere You Go
-              </Text>
-              <Text style={[styles.mainSubheading, isDesktop && styles.mainSubheadingDesktop]}>
-                Connect with Desi students, working professionals, and families. Find housing
-                directly from members, share daily commutes, ask for tech referrals, and celebrate
-                our shared roots.
-              </Text>
-
-              {/* Value Checkpoints */}
-              <View style={styles.valuePointsBlock}>
-                <View style={styles.valuePointItem}>
-                  <View style={styles.checkCircle}>
-                    <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
-                  </View>
-                  <Text style={styles.valuePointText}>
-                    Report tools on listings, rides, and chats
-                  </Text>
-                </View>
-                <View style={styles.valuePointItem}>
-                  <View style={styles.checkCircle}>
-                    <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
-                  </View>
-                  <Text style={styles.valuePointText}>
-                    Direct Community Housing & Transparent Costs
-                  </Text>
-                </View>
-                <View style={styles.valuePointItem}>
-                  <View style={styles.checkCircle}>
-                    <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
-                  </View>
-                  <Text style={styles.valuePointText}>
-                    Peer help through community chat and events
-                  </Text>
-                </View>
-              </View>
-
-              {/* Desktop CTA Row */}
-              {isDesktop ? (
-                <View style={styles.desktopCtaRow}>
-                  <Pressable
-                    onPress={() => router.push('/sign-up')}
-                    style={styles.desktopHeroPrimaryCta}
-                    accessibilityRole="button"
-                  >
-                    <Text style={styles.desktopHeroPrimaryCtaText}>Get Started Free →</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => router.push('/sign-in')}
-                    style={styles.desktopHeroSecondaryCta}
-                    accessibilityRole="button"
-                  >
-                    <Text style={styles.desktopHeroSecondaryCtaText}>Sign In</Text>
-                  </Pressable>
-                </View>
-              ) : null}
-            </View>
-
-            {/* Right Column: Interactive Carousel Showcase Card */}
-            <View style={[styles.carouselCard, isDesktop && styles.carouselCardDesktop]}>
-              {/* Category Navigation Pills */}
-              <View style={styles.categoryPillsRow}>
-                {slides.map((s, idx) => {
-                  const isActive = idx === activeSlide;
-                  return (
-                    <Pressable
-                      key={s.category}
-                      onPress={() => handleSelectSlide(idx)}
-                      style={[styles.categoryPill, isActive && styles.categoryPillActive]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`View ${s.category}`}
-                    >
-                      <Text
-                        style={[styles.categoryPillText, isActive && styles.categoryPillTextActive]}
-                      >
-                        {s.category}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {/* Slide Content Display Frame */}
-              <Pressable
-                onPress={() => setIsPaused(!isPaused)}
-                style={styles.slideFrame}
-                accessibilityRole="button"
-                accessibilityLabel="Toggle carousel auto-play"
-              >
-                <View style={styles.slideHeader}>
-                  <View style={styles.slideIconWrap}>
-                    <AppIcon name={current.iconName} size={24} color={color.primary} />
-                  </View>
-                  <View style={styles.slideHeaderRight}>
-                    <View style={[styles.slideTag, { backgroundColor: current.tagBg }]}>
-                      <Text style={[styles.slideTagText, { color: current.tagColor }]}>
-                        {current.tag}
-                      </Text>
-                    </View>
-                    <Text style={styles.slideStatBadge}>{current.stat}</Text>
-                  </View>
-                </View>
-
-                {/* Slide Title & Description */}
-                <Text style={styles.slideTitle}>{current.title}</Text>
-                <Text style={styles.slideDesc}>{current.desc}</Text>
-
-                {/* Bullets with vector icons */}
-                <View style={styles.slideBulletsCol}>
-                  {current.bullets.map((b) => (
-                    <View key={b} style={styles.slideBulletRow}>
-                      <AppIcon name="sparks" size={13} color={color.primary} />
-                      <Text style={styles.slideBulletText}>{b}</Text>
-                    </View>
-                  ))}
-                </View>
-              </Pressable>
-
-              {/* Carousel Interactive Controls (Prev / Next & Dots) */}
-              <View style={styles.carouselControlsRow}>
-                <Pressable
-                  onPress={handlePrev}
-                  style={styles.arrowButton}
-                  accessibilityRole="button"
-                  accessibilityLabel="Previous slide"
-                >
-                  <AppIcon name="chevron-left" size={18} color={color.primary} />
-                </Pressable>
-
-                {/* Clickable Animated Stepper Dots */}
-                <View style={styles.dotsRow}>
-                  {slides.map((s, idx) => (
-                    <Pressable
-                      key={s.category}
-                      onPress={() => handleSelectSlide(idx)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Slide ${idx + 1}`}
-                      style={idx === activeSlide ? styles.dotActive : styles.dot}
-                    />
-                  ))}
-                </View>
-
-                <Pressable
-                  onPress={handleNext}
-                  style={styles.arrowButton}
-                  accessibilityRole="button"
-                  accessibilityLabel="Next slide"
-                >
-                  <AppIcon name="chevron-right" size={18} color={color.primary} />
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          {/* ========================================================================= */}
-          {/* MOBILE CTAS                                                               */}
-          {/* ========================================================================= */}
-          {!isDesktop ? (
-            <View style={styles.mobileActionsBlock}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/sign-up')}
-                style={styles.mobilePrimaryCta}
-              >
-                <Text style={styles.mobilePrimaryCtaText}>Get Started Free →</Text>
-              </Pressable>
-
-              <View style={styles.mobileSecondaryRow}>
-                <Text style={styles.mobileSecondaryPrompt}>Already have an account? </Text>
-                <Link href="/sign-in" asChild>
-                  <Pressable accessibilityRole="link">
-                    <Text style={styles.mobileSecondaryLink}>Sign In</Text>
-                  </Pressable>
-                </Link>
-              </View>
-
-              <Text style={styles.termsNote}>
-                By continuing, you agree to ManaBandhu Terms of Service & Privacy Policy
-              </Text>
-            </View>
-          ) : null}
-
-          {/* ========================================================================= */}
-          {/* DESKTOP FULL FEATURE MATRIX                                              */}
-          {/* ========================================================================= */}
-          {isDesktop ? (
-            <View style={styles.desktopFeaturesMatrix}>
-              <View style={styles.matrixHeader}>
-                <Text style={styles.matrixBadge}>EVERYTHING YOU NEED</Text>
-                <Text style={styles.matrixHeading}>Built Exclusively for the Desi Community</Text>
-                <Text style={styles.matrixSub}>
-                  Housing, rides, jobs, events, and help in one organized place instead of scattered
-                  group chats.
-                </Text>
-              </View>
-
-              <View style={styles.matrixGrid}>
-                {slides.map((s, idx) => (
-                  <Pressable
-                    key={s.title}
-                    onPress={() => handleSelectSlide(idx)}
-                    style={[styles.matrixCard, activeSlide === idx && styles.matrixCardSelected]}
-                  >
-                    <View style={styles.matrixCardTop}>
-                      <View style={styles.matrixIconBubble}>
-                        <AppIcon name={s.iconName} size={22} color={color.primary} />
-                      </View>
-                      <View style={[styles.matrixCardTag, { backgroundColor: s.tagBg }]}>
-                        <Text style={[styles.matrixCardTagText, { color: s.tagColor }]}>
-                          {s.tag}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.matrixCardTitle}>{s.title}</Text>
-                    <Text style={styles.matrixCardDesc}>{s.desc}</Text>
-                    <Text style={styles.matrixCardStat}>{s.stat}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              {/* Safety Banner with exact Shield AppIcon */}
-              <View style={styles.safetyPledgeBanner}>
-                <View style={styles.safetyIconBubble}>
-                  <AppIcon name="shield" size={28} color={color.teal} />
-                </View>
-                <View style={styles.safetyPledgeCol}>
-                  <Text style={styles.safetyPledgeTitle}>
-                    ManaBandhu Safety & Moderation Pledge
-                  </Text>
-                  <Text style={styles.safetyPledgeDesc}>
-                    Report suspicious postings, rides, or messages from the app so community
-                    moderators can review them.
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => router.push('/sign-up')}
-                  style={styles.safetyPledgeCta}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.safetyPledgeCtaText}>Join the Safe Community</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : null}
-
-          {/* ========================================================================= */}
-          {/* FOOTER                                                                    */}
-          {/* ========================================================================= */}
-          <View style={styles.footerBlock}>
-            <Text style={styles.footerCopyright}>
-              © 2026 ManaBandhu Inc. Connecting Desi diaspora across USA, Canada & worldwide.
-            </Text>
-            <View style={styles.footerLinksRow}>
-              <Text style={styles.footerLink}>Privacy Policy</Text>
-              <Text style={styles.footerDot}>•</Text>
-              <Text style={styles.footerLink}>Terms of Service</Text>
-              <Text style={styles.footerDot}>•</Text>
-              <Text style={styles.footerLink}>Community Guidelines</Text>
-              <Text style={styles.footerDot}>•</Text>
-              <Text style={styles.footerLink}>Help Center</Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+function SlideArt({ slide, size }: { slide: Slide; size: number }) {
+  const ring = size * 0.36;
+  return (
+    <View
+      style={[styles.art, { width: size, height: size, backgroundColor: slide.tint }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <View
+        style={[styles.artHalo, { width: ring * 1.7, height: ring * 1.7, borderRadius: ring }]}
+      />
+      <View style={[styles.artIcon, { width: ring, height: ring, borderRadius: ring / 2 }]}>
+        <AppIcon name={slide.icon} size={ring * 0.46} color={slide.accent} strokeWidth={1.8} />
+      </View>
+      <View style={[styles.chip, styles.chipTopLeft]}>
+        <Text style={[styles.chipText, { color: slide.accent }]}>{slide.chips[0]}</Text>
+      </View>
+      <View style={[styles.chip, styles.chipRight]}>
+        <Text style={[styles.chipText, { color: slide.accent }]}>{slide.chips[1]}</Text>
+      </View>
+      <View style={[styles.chip, styles.chipBottomLeft]}>
+        <Text style={[styles.chipText, { color: slide.accent }]}>{slide.chips[2]}</Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: color.background, flex: 1 },
-  scrollContent: { flexGrow: 1, paddingBottom: space.x8 },
-  // Desktop Navbar
-  desktopNavbar: {
-    alignItems: 'center',
+  root: { flex: 1, backgroundColor: color.surface },
+  rootWide: { backgroundColor: color.background, justifyContent: 'center' },
+  header: { paddingHorizontal: space.x6, height: 44, justifyContent: 'center' },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
+  logo: { width: 32, height: 32, borderRadius: 8 },
+  brandName: { color: color.ink, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
+  pager: { flex: 1, justifyContent: 'center' },
+  // Size the list to its slides so the art, copy, and dots stay grouped in the middle of tall phones.
+  list: { flexGrow: 0 },
+  page: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.x6 },
+  art: { borderRadius: 32, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  artHalo: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.45)' },
+  artIcon: {
     backgroundColor: '#ffffff',
-    borderBottomColor: 'rgba(67, 30, 190, 0.08)',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x8,
-    paddingVertical: space.x3,
-  },
-  desktopNavLogo: { borderRadius: 10, height: 40, width: 40 },
-  desktopNavLinks: { alignItems: 'center', flexDirection: 'row', gap: space.x5 },
-  navLinkItem: { paddingVertical: space.x2 },
-  navLinkText: { color: color.muted, fontSize: 14, fontWeight: '700' },
-  navLinkActive: { color: color.primary },
-  desktopNavActions: { alignItems: 'center', flexDirection: 'row', gap: space.x3 },
-  desktopNavSignIn: {
-    borderColor: color.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x2,
-  },
-  desktopNavSignInText: { color: color.ink, fontSize: 14, fontWeight: '700' },
-  desktopNavCta: {
-    backgroundColor: color.primary,
-    borderRadius: 999,
-    paddingHorizontal: space.x5,
-    paddingVertical: space.x2,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  desktopNavCtaText: { color: '#ffffff', fontSize: 14, fontWeight: '800' },
-
-  // Containers
-  pageContainer: {
-    maxWidth: 500,
-    width: '100%',
-    alignSelf: 'center',
-    gap: space.x5,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  pageContainerDesktop: {
-    maxWidth: 1200,
-    paddingHorizontal: space.x6,
-    paddingVertical: space.x8,
-    gap: space.x8,
-  },
-
-  // Mobile Top Bar
-  mobileTopBar: {
     alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x1,
-  },
-  brandRow: { alignItems: 'center', flexDirection: 'row', gap: space.x2 },
-  brandLogo: { borderRadius: 10, height: 38, width: 38 },
-  brandTitleRow: { alignItems: 'center', flexDirection: 'row', gap: space.x1 },
-  brandTitle: { color: color.primary, fontSize: 18, fontWeight: '800' },
-  brandSubtitle: { color: color.muted, fontSize: 11, fontWeight: '600' },
-  skipButton: { padding: space.x2 },
-  skipText: { color: color.muted, fontSize: 14, fontWeight: '700' },
-
-  // Hero Section
-  heroRow: {
-    gap: space.x5,
-  },
-  heroRowDesktop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x8,
-  },
-  heroTextCol: {
-    gap: space.x3,
-  },
-  heroTextColDesktop: {
-    flex: 1.1,
-    gap: space.x4,
-  },
-  heroPillBadge: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    borderColor: 'rgba(67, 30, 190, 0.18)',
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: space.x3,
-    paddingVertical: 5,
-  },
-  heroPillText: {
-    color: color.primary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  mainHeading: {
-    color: color.ink,
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    lineHeight: 34,
-  },
-  mainHeadingDesktop: {
-    fontSize: 40,
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
-  mainSubheading: {
-    color: color.muted,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  mainSubheadingDesktop: {
-    fontSize: 16,
-    lineHeight: 26,
-  },
-
-  // Value Checkpoints
-  valuePointsBlock: {
-    gap: space.x2,
-    marginVertical: space.x1,
-  },
-  valuePointItem: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x2,
-  },
-  checkCircle: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 105, 107, 0.12)',
-    borderRadius: 10,
-    height: 20,
     justifyContent: 'center',
-    width: 20,
-  },
-  valuePointText: {
-    color: color.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  // Desktop CTA Row
-  desktopCtaRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x3,
-    marginTop: space.x2,
-  },
-  desktopHeroPrimaryCta: {
-    backgroundColor: color.primary,
-    borderRadius: 999,
-    paddingHorizontal: space.x6,
-    paddingVertical: space.x3,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  desktopHeroPrimaryCtaText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  desktopHeroSecondaryCta: {
-    backgroundColor: '#ffffff',
-    borderColor: color.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: space.x5,
-    paddingVertical: space.x3,
-  },
-  desktopHeroSecondaryCtaText: {
-    color: color.ink,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-
-  // Stats Ticker
-
-  // Carousel Showcase Card
-  carouselCard: {
-    backgroundColor: '#ffffff',
-    borderColor: 'rgba(67, 30, 190, 0.14)',
-    borderRadius: 28,
-    borderWidth: 1,
-    gap: space.x3,
-    padding: space.x4,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 10 },
+    shadowColor: '#131b2e',
     shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 6,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
   },
-  carouselCardDesktop: {
-    flex: 1,
-    padding: space.x5,
-  },
-  categoryPillsRow: {
-    flexDirection: 'row',
-    gap: space.x2,
-    justifyContent: 'space-between',
-  },
-  categoryPill: {
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderRadius: 999,
-    flex: 1,
-    paddingVertical: 7,
-    alignItems: 'center',
-  },
-  categoryPillActive: {
-    backgroundColor: color.primary,
-  },
-  categoryPillText: {
-    color: color.muted,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  categoryPillTextActive: {
-    color: '#ffffff',
-  },
-
-  // Slide Frame
-  slideFrame: {
-    backgroundColor: 'rgba(250, 248, 255, 0.8)',
-    borderColor: 'rgba(67, 30, 190, 0.08)',
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: space.x3,
-    padding: space.x4,
-  },
-  slideHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  slideIconWrap: {
-    alignItems: 'center',
+  chip: {
+    position: 'absolute',
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    height: 48,
-    justifyContent: 'center',
-    width: 48,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  slideHeaderRight: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  slideTag: {
     borderRadius: 999,
-    paddingHorizontal: space.x2,
-    paddingVertical: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    shadowColor: '#131b2e',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
-  slideTagText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  slideStatBadge: {
-    color: color.muted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
+  chipTopLeft: { top: '9%', left: '6%' },
+  chipRight: { top: '21%', right: '6%' },
+  chipBottomLeft: { bottom: '9%', left: '18%' },
+  chipText: { fontSize: 13, fontWeight: '700' },
   slideTitle: {
+    marginTop: space.x6,
     color: color.ink,
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  slideDesc: {
-    color: color.muted,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  slideBulletsCol: {
-    gap: 6,
-  },
-  slideBulletRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x2,
-  },
-  slideBulletText: {
-    color: color.ink,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  // Carousel Controls
-  carouselControlsRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x2,
-    paddingTop: space.x1,
-  },
-  arrowButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    borderRadius: 999,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  dotsRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x2,
-  },
-  dot: {
-    backgroundColor: color.border,
-    borderRadius: 4,
-    height: 7,
-    width: 7,
-  },
-  dotActive: {
-    backgroundColor: color.primary,
-    borderRadius: 4,
-    height: 7,
-    width: 26,
-  },
-
-  // Mobile Action CTA
-  mobileActionsBlock: {
-    gap: space.x3,
-    marginTop: space.x2,
-  },
-  mobilePrimaryCta: {
-    alignItems: 'center',
-    backgroundColor: color.primary,
-    borderRadius: 999,
-    justifyContent: 'center',
-    minHeight: 52,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  mobilePrimaryCtaText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  mobileSecondaryRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  mobileSecondaryPrompt: {
-    color: color.muted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  mobileSecondaryLink: {
-    color: color.primary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  termsNote: {
-    color: color.muted,
-    fontSize: 11,
-    lineHeight: 16,
-    textAlign: 'center',
-  },
-
-  // Desktop Features Matrix
-  desktopFeaturesMatrix: {
-    gap: space.x6,
-    marginTop: space.x4,
-  },
-  matrixHeader: {
-    alignItems: 'center',
-    gap: space.x2,
-  },
-  matrixBadge: {
-    color: color.primary,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  matrixHeading: {
-    color: color.ink,
-    fontSize: 32,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '800',
     letterSpacing: -0.5,
     textAlign: 'center',
   },
-  matrixSub: {
+  slideBody: {
+    marginTop: space.x2,
+    maxWidth: 360,
     color: color.muted,
-    fontSize: 16,
-    maxWidth: 640,
-    textAlign: 'center',
+    fontSize: 17,
     lineHeight: 24,
-  },
-  matrixGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.x4,
-  },
-  matrixCard: {
-    backgroundColor: '#ffffff',
-    borderColor: color.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    flexBasis: '48%',
-    flexGrow: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  matrixCardSelected: {
-    borderColor: color.primary,
-    backgroundColor: 'rgba(67, 30, 190, 0.02)',
-  },
-  matrixCardTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  matrixIconBubble: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    borderRadius: 12,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
-  },
-  matrixCardTag: {
-    borderRadius: 999,
-    paddingHorizontal: space.x2,
-    paddingVertical: 3,
-  },
-  matrixCardTagText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  matrixCardTitle: {
-    color: color.ink,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  matrixCardDesc: {
-    color: color.muted,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  matrixCardStat: {
-    color: color.primary,
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: space.x1,
-  },
-
-  // Safety Pledge Banner with AppIcon
-  safetyPledgeBanner: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 105, 107, 0.08)',
-    borderColor: 'rgba(0, 105, 107, 0.2)',
-    borderRadius: 20,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x4,
-    padding: space.x5,
-  },
-  safetyIconBubble: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
-    height: 52,
-    justifyContent: 'center',
-    width: 52,
-    shadowColor: '#00696b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  safetyPledgeCol: {
-    flex: 1,
-  },
-  safetyPledgeTitle: {
-    color: color.teal,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  safetyPledgeDesc: {
-    color: color.ink,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 2,
-  },
-  safetyPledgeCta: {
-    backgroundColor: color.teal,
-    borderRadius: 999,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x2,
-  },
-  safetyPledgeCtaText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-
-  // Footer
-  footerBlock: {
-    alignItems: 'center',
-    borderTopColor: color.border,
-    borderTopWidth: 1,
-    gap: space.x2,
-    marginTop: space.x6,
-    paddingTop: space.x5,
-  },
-  footerCopyright: {
-    color: color.muted,
-    fontSize: 12,
     textAlign: 'center',
   },
-  footerLinksRow: {
-    alignItems: 'center',
+  dots: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.x2,
     justifyContent: 'center',
+    gap: space.x2,
+    paddingVertical: space.x4,
   },
-  footerLink: {
-    color: color.primary,
-    fontSize: 12,
-    fontWeight: '600',
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#d9d5e4' },
+  dotActive: { width: 24, backgroundColor: color.primary },
+  footer: { paddingHorizontal: space.x6, paddingTop: space.x2 },
+  actions: { gap: space.x3, width: '100%' },
+  wideInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 1120,
+    paddingHorizontal: space.x10,
+    gap: space.x10,
   },
-  footerDot: {
-    color: color.muted,
-    fontSize: 12,
+  wideIntro: { flex: 1, maxWidth: 460, gap: space.x5 },
+  widePager: { flex: 1, minHeight: 560 },
+  headline: {
+    color: color.ink,
+    fontSize: 44,
+    lineHeight: 50,
+    fontWeight: '800',
+    letterSpacing: -1,
   },
+  lead: { color: color.muted, fontSize: 19, lineHeight: 28 },
 });

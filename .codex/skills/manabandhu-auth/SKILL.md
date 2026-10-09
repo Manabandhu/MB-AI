@@ -13,21 +13,20 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 
 | Route | Screen Component | Type | States |
 |---|---|---|---|
-| `/sign-in` | `SignInScreen` | auth | normal, error, loading, needs-confirmation |
-| `/sign-up` | `SignUpScreen` | auth | normal, error, loading, needs-confirmation |
-| `/forgot-password` | `ForgotPasswordScreen` | auth | normal, success, error |
-| `/otp-verification` | `OtpVerificationScreen` | auth | normal, error, loading |
-| `/reset-password` | `ResetPasswordScreen` | auth | normal, success, error |
-| `/auth/callback` | `AuthCallbackScreen` | auth | confirming, error |
+| `/sign-in` | `SignInScreen` | auth | normal, field errors, error notice, loading, social busy |
+| `/sign-up` | `SignUpScreen` | auth | normal, field errors, error notice, loading, check-your-email |
+| `/phone-login` | `PhoneLoginScreen` | auth | normal, country sheet, error, loading |
+| `/otp-verification` | `OtpVerificationScreen` | auth | entry, wrong/expired code, resend countdown |
+| `/forgot-password` | `ForgotPasswordScreen` | auth | normal, sent, error |
+| `/reset-password` | `ResetPasswordScreen` | auth | form, updated, link expired |
+| `/auth/callback` | `AuthCallbackScreen` | auth | signing in, error |
+| `/choose-login-method`, `/email-login` | redirect to `/sign-in` | legacy | — |
 
 ## Component Inventory
 
-- `SignInScreen` - email/password sign-in with zod client validation
-- `SignUpScreen` - account creation form with zod client validation
-- `ForgotPasswordScreen` - password reset initiation
-- `OtpVerificationScreen` - OTP entry with countdown
-- `ResetPasswordScreen` - new password form
-- `AuthCallbackScreen` - email confirmation / OAuth callback handler
+- `components/AuthKit.tsx` — `AuthScreen`, `AuthField`, `AuthButton`, `SocialButtons`, `AuthDivider`, `AuthNotice`, `AuthSwitch`
+- `authHelpers.ts` — validation, E.164, friendly errors, redirect parsing (unit tested)
+- `postAuth.ts` — `routeAfterAuth()` (onboarding until complete, then Home)
 
 ## API Surface
 
@@ -86,3 +85,5 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 - **Zero-Cost Phone OTP Testing & Session Persistence**: Added dedicated testing credentials (`+14695550100` / `123456`) in `authStore.ts` for zero-cost automated and manual phone verification without SMS vendor costs. Exposed `useAuthStore.getState().setSession(session)` for direct session rehydration, securely persisting tokens across native `SecureStore` and browser storage. 1-tap test credential badges are wired into `PhoneLoginScreen` and `OtpVerificationScreen`.
 - Security & correctness hardening (2026-10): Removed the hard-coded test phone login (469-555-0100 / code 123456) that created a fake local session, and the "tap to fill" test buttons. For test logins configure Supabase Auth test phone numbers in the dashboard instead. Backend identity is resolved with `com.manabandhu.backend.auth.Actor` (`Actor.require` returns 401 for anonymous calls; `Actor.from` for optional viewers).
 - No invented social proof (2026-10): sign-up and the success celebration no longer claim member counts ("50,000+") or that a new account is "verified".
+
+- iOS-first rebuild (2026-10): one sign-in screen (Apple, Google, email/password, link to phone) replaces the choose-method and email-login screens; large left-aligned titles, footer CTA pinned above the home indicator, Keychain/one-time-code autofill (`textContentType`, `autoComplete`, `passwordRules`), 17pt inputs so iOS Safari never zooms, plain-language errors (`friendlyAuthError`). Removed the success celebration delay, the "Bank-grade encryption"/"Trusted session"/"Multi-factor" claims, and the unused "remember this device" checkbox. All post-auth navigation goes through `useRedirectIfAuthenticated()` → `routeAfterAuth()`, so new members reach onboarding. Native Apple/Google sign-in uses `expo-web-browser` `openAuthSessionAsync` with `manabandhu://auth/callback` (previously a no-op on iOS). `/reset-password` no longer bounces the recovery session to Home, and reset links carry an explicit `redirectTo`. The root layout clears the React Query cache when the signed-in account changes so one member never sees another's cached data.

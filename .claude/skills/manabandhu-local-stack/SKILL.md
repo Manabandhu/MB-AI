@@ -60,6 +60,15 @@ Chromium for Playwright is at `/opt/pw-browsers/chromium-*/chrome-linux/chrome` 
 `playwright-core` with `executablePath` (do not run `playwright install`). Use a 390×844 viewport for phone layouts and
 wait for `networkidle` plus a few seconds before screenshots.
 
+## Real sign-up and sign-in locally
+
+`auth.mjs serve` (started by `start.sh`) also stands in for the Supabase Auth endpoints the app uses: password sign-up
+and sign-in, phone OTP, password recovery, OAuth (`/auth/v1/authorize` redirects straight back with a session), refresh,
+user, and logout. New accounts are stored in `.local-dev/auth-users.json` (passwords scrypt-hashed) and mirrored into
+`auth.users`; `start.sh --reset` forgets them. Phone codes are random and written to `.local-dev/jwks.log`
+(`grep "OTP for" .local-dev/jwks.log`). With the web app pointed at `EXPO_PUBLIC_SUPABASE_URL=http://localhost:9999`
+you can drive the real flow (welcome → sign up → onboarding → home) with Playwright instead of injecting tokens.
+
 ## Against the hosted Supabase project
 
 `scripts/local-dev/start-supabase.sh [--no-migrate] [--build]` runs the backend (:8080) and web app (:8081) against the

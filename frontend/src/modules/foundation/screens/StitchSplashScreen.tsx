@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
+import { routeAfterAuth } from '@/modules/auth/postAuth';
 import { welcomeLogo } from '@/modules/foundation/welcomeAssets';
 
 export function StitchSplashScreen() {
@@ -103,15 +104,15 @@ export function StitchSplashScreen() {
       if (redirected) return;
       redirected = true;
       if (status === 'authenticated') {
-        router.replace('/home');
+        void routeAfterAuth();
       } else {
         router.replace('/welcome');
       }
     };
 
-    // If session check already settled, transition smoothly
+    // Leave as soon as the session check settles; a short beat lets the logo animation register.
     if (rootNavigationState?.key && !isLoading) {
-      const redirectTimer = setTimeout(doRedirect, 1400);
+      const redirectTimer = setTimeout(doRedirect, 500);
       return () => clearTimeout(redirectTimer);
     }
 
@@ -123,7 +124,7 @@ export function StitchSplashScreen() {
   const navigateToWelcome = () => {
     const currentStatus = useAuthStore.getState().status;
     if (currentStatus === 'authenticated') {
-      router.replace('/home');
+      void routeAfterAuth();
     } else {
       router.replace('/welcome');
     }

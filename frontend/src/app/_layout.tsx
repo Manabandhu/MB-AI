@@ -20,6 +20,18 @@ export default function RootLayout() {
       }),
   );
 
+  // Cached queries hold one member's data; drop them whenever the signed-in account changes or signs out.
+  useEffect(() => {
+    let previousUserId = useAuthStore.getState().user?.id ?? null;
+    return useAuthStore.subscribe((state) => {
+      const userId = state.user?.id ?? null;
+      if (userId !== previousUserId) {
+        if (previousUserId !== null) queryClient.clear();
+        previousUserId = userId;
+      }
+    });
+  }, [queryClient]);
+
   useEffect(() => {
     ExpoSplashScreen.hideAsync().catch(() => undefined);
     useAuthStore

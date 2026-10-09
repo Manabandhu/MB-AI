@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   useCompleteOnboarding,
@@ -158,6 +158,7 @@ function resolveAppIcon(iconName?: string | null): AppIconName {
 }
 
 export function StitchOnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
+  const insets = useSafeAreaInsets();
   const normalizedKey = normalizeStepKey(kind);
   const meta = STEP_METAS[normalizedKey] || STEP_METAS.goals;
 
@@ -172,11 +173,12 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
   const completeMutation = useCompleteOnboarding();
 
   // Local editable state populated from persisted user progress
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
   const [metroLocation, setMetroLocation] = useState<string>('');
   const [universityCampus, setUniversityCampus] = useState<string>('');
   const [searchLocationQuery, setSearchLocationQuery] = useState<string>('');
-  const [primaryLanguage, setPrimaryLanguage] = useState<string>('telugu');
+  const [primaryLanguage, setPrimaryLanguage] = useState<string>('');
   const [secondaryLanguages, setSecondaryLanguages] = useState<string[]>([]);
   const [interestTags, setInterestTags] = useState<string[]>([]);
   const [bio, setBio] = useState<string>('');
@@ -239,10 +241,16 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
   const handleNext = async () => {
     if (saveStepMutation.isPending || completeMutation.isPending) return;
 
+    setSaveError(null);
     if (meta.index === 8) {
-      // Step 8: Complete
-      await completeMutation.mutateAsync();
-      router.replace('/home');
+      try {
+        await completeMutation.mutateAsync();
+        router.replace('/home');
+      } catch {
+        setSaveError(
+          "We couldn't finish setting up your profile. Check your connection and try again.",
+        );
+      }
       return;
     }
 
@@ -270,8 +278,9 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
         stepKey: meta.key,
         payload,
       });
-    } catch (err) {
-      console.warn('Failed to save step to DB, continuing to next route:', err);
+    } catch {
+      setSaveError("We couldn't save this step. Check your connection and try again.");
+      return;
     }
 
     router.push(meta.nextRoute as Href);
@@ -714,10 +723,10 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                 <View style={styles.shieldBigBox}>
                   <AppIcon color={colors.teal} name="shield" size={32} />
                 </View>
-                <Text style={styles.pledgeHeroTitle}>Our Verified Community Trust Code</Text>
+                <Text style={styles.pledgeHeroTitle}>Our Community Trust Code</Text>
                 <Text style={styles.pledgeHeroSub}>
-                  ManaBandhu is a safe haven built on mutual accountability, authentic identities,
-                  and zero exploitation.
+                  ManaBandhu works when everyone is honest and respectful. Agree to these pledges to
+                  join.
                 </Text>
               </View>
 
@@ -773,17 +782,10 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                 <View style={styles.sparkleCircle}>
                   <AppIcon color={colors.warm} name="sparks" size={36} />
                 </View>
-                <Text style={styles.celebrateTitle}>Welcome to the ManaBandhu Family!</Text>
+                <Text style={styles.celebrateTitle}>You're all set</Text>
                 <Text style={styles.celebrateSub}>
-                  Your preferences are stored securely. You now have full verified access to rooms,
-                  rides, job referrals, and local events.
+                  Your preferences are saved. You can change them any time in Settings.
                 </Text>
-
-                {/* Welcome bonus badge */}
-                <View style={styles.bonusBadge}>
-                  <AppIcon color={colors.teal} name="star" size={16} />
-                  <Text style={styles.bonusBadgeText}>+50 Welcome Community Credits Awarded</Text>
-                </View>
               </View>
 
               {/* Personalized Profile Summary Card */}
@@ -792,13 +794,13 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
 
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Metro Area</Text>
-                  <Text style={styles.summaryValue}>{metroLocation || 'DFW / Coppell, TX'}</Text>
+                  <Text style={styles.summaryValue}>{metroLocation || 'Not set'}</Text>
                 </View>
 
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Primary Language</Text>
                   <Text style={styles.summaryValue}>
-                    {primaryLanguage.toUpperCase() || 'TELUGU'}
+                    {primaryLanguage ? primaryLanguage.toUpperCase() : 'Not set'}
                   </Text>
                 </View>
 
@@ -806,24 +808,27 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                   <Text style={styles.summaryLabel}>Top Goals</Text>
                   <Text style={styles.summaryValue}>
                     {selectedReasons.length
-                      ? `${selectedReasons.length} goals selected`
-                      : 'Housing, Rides, Jobs'}
+                      ? `${selectedReasons.length} selected`
+                      : 'None selected'}
                   </Text>
                 </View>
 
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Community Interests</Text>
                   <Text style={styles.summaryValue}>
-                    {interestTags.length
-                      ? `${interestTags.length} topics picked`
-                      : 'Subleases, Carpool, Tech'}
+                    {interestTags.length ? `${interestTags.length} selected` : 'None selected'}
                   </Text>
                 </View>
 
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Trust Pledge</Text>
-                  <Text style={[styles.summaryValue, { color: colors.teal }]}>
-                    ✓ Verified & Agreed
+                  <Text
+                    style={[
+                      styles.summaryValue,
+                      progress?.safetyPledgeAccepted ? { color: colors.teal } : null,
+                    ]}
+                  >
+                    {progress?.safetyPledgeAccepted ? 'Agreed' : 'Not yet agreed'}
                   </Text>
                 </View>
               </View>
@@ -831,8 +836,13 @@ export function StitchOnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
           )}
         </ScrollView>
 
-        {/* Docked Sticky Bottom Action Bar */}
-        <View style={styles.bottomBar}>
+        {/* Docked Sticky Bottom Action Bar, clear of the iPhone home indicator */}
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, space.x4) }]}>
+          {saveError ? (
+            <Text accessibilityRole="alert" style={styles.saveError}>
+              {saveError}
+            </Text>
+          ) : null}
           <AppButton
             disabled={saveStepMutation.isPending || completeMutation.isPending}
             icon={meta.index === 8 ? 'home' : 'chevron-right'}
@@ -1429,23 +1439,6 @@ const styles = StyleSheet.create({
     marginTop: space.x2,
     textAlign: 'center',
   },
-  bonusBadge: {
-    alignItems: 'center',
-    backgroundColor: '#e6f7ef',
-    borderColor: '#a3e6cd',
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x2,
-    marginTop: space.x4,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x2,
-  },
-  bonusBadgeText: {
-    color: colors.teal,
-    fontSize: 13,
-    fontWeight: '700',
-  },
   summaryCard: {
     backgroundColor: colors.surfaceContainerLow,
     borderColor: colors.border,
@@ -1475,6 +1468,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  saveError: { color: '#ba1a1a', fontSize: 14, lineHeight: 20, marginBottom: space.x2 },
   bottomBar: {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
