@@ -27,6 +27,7 @@
       "Bash(node scripts/local-dev/authz-smoke.mjs:*)",
       "Bash(node scripts/local-dev/auth.mjs mint:*)",
       "Bash(scripts/local-dev/start.sh:*)",
+      "Bash(scripts/local-dev/start-supabase.sh:*)",
       "Bash(scripts/local-dev/stop.sh)",
       "Bash(./mvnw -q -B -o test:*)",
       "Bash(./mvnw -q -B -o compile:*)",

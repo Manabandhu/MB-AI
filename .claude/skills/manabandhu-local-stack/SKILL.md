@@ -60,6 +60,15 @@ Chromium for Playwright is at `/opt/pw-browsers/chromium-*/chrome-linux/chrome` 
 `playwright-core` with `executablePath` (do not run `playwright install`). Use a 390×844 viewport for phone layouts and
 wait for `networkidle` plus a few seconds before screenshots.
 
+## Against the hosted Supabase project
+
+`scripts/local-dev/start-supabase.sh [--no-migrate] [--build]` runs the backend (:8080) and web app (:8081) against the
+real Supabase database and Auth. It needs network access to `*.supabase.co` and `*.pooler.supabase.com`, the
+`DATABASE_PASSWORD` environment secret, and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (fetch it with the Supabase MCP
+`get_publishable_keys`; never commit it). Without `--no-migrate` pending Flyway migrations are applied to the hosted
+database, so say so before running it. Sign in with real accounts; never mint local tokens against Supabase. If the
+pooler host differs, set `SUPABASE_POOLER_HOST` (for example `aws-1-us-east-2.pooler.supabase.com`).
+
 ## Sharing a live link
 
 Cloud sessions cannot expose ports publicly unless the environment's network policy allows a tunnel host
