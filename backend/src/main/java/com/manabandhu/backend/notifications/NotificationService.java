@@ -45,9 +45,12 @@ public class NotificationService {
     }
 
     /** Must run inside a transaction: the claimed rows stay locked until it commits. */
+    /** After this many failed pushes a notification stays in the inbox but is no longer pushed. */
+    static final int MAX_DISPATCH_ATTEMPTS = 5;
+
     @Transactional
     public List<Notification> claimPending(int limit) {
-        return repository.claimUndispatched(limit);
+        return repository.claimUndispatched(limit, MAX_DISPATCH_ATTEMPTS);
     }
 
     @Transactional

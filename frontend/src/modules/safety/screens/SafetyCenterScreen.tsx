@@ -15,7 +15,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getSafetyCenter } from '@/modules/safety/api';
+import {
+  getBlockedUsers,
+  getReports,
+  getTrustedContacts,
+  isOpenReport,
+} from '@/modules/safety/api';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
@@ -34,42 +40,6 @@ const C = {
   crimsonBg: '#FEE2E2',
   tealBg: '#E0F5F5',
   saffronBg: '#FFF0E8',
-};
-
-const DEFAULT_SAFETY_DATA = {
-  title: 'Safety Center',
-  subtitle: 'Manage reports, blocked users, trusted contacts, and emergency escalation.',
-  eyebrow: 'Safety',
-  metrics: [
-    { label: 'Open reports', value: '0' },
-    { label: 'Blocked users', value: '0' },
-  ],
-  items: [
-    {
-      id: 'reports',
-      title: 'Your reports',
-      body: 'Track reports you have submitted and their status.',
-      meta: 'Open reports',
-      route: '/safety/reports',
-      status: null,
-    },
-    {
-      id: 'blocked',
-      title: 'Blocked users',
-      body: 'Manage users you have blocked and the reasons.',
-      meta: 'Blocked',
-      route: '/safety/blocked-users',
-      status: null,
-    },
-    {
-      id: 'trusted',
-      title: 'Trusted contacts',
-      body: 'Manage people you trust for safety check-ins.',
-      meta: 'Trusted',
-      route: '/safety/trusted-contacts',
-      status: null,
-    },
-  ],
 };
 
 export function SafetyCenterScreen() {
@@ -99,24 +69,27 @@ export function SafetyCenterScreen() {
     return () => loop.stop();
   }, [pulseAnim]);
 
-  const center = useQuery({
-    queryKey: ['safety', 'center'],
-    queryFn: getSafetyCenter,
-    retry: false,
+  // Counts come from the caller's own lists; nothing is shown until they load, and a failure shows an error.
+  const reports = useQuery({ queryKey: ['safety', 'reports'], queryFn: getReports });
+  const blockedUsers = useQuery({
+    queryKey: ['safety', 'blocked-users'],
+    queryFn: getBlockedUsers,
+  });
+  const trustedContacts = useQuery({
+    queryKey: ['safety', 'trusted-contacts'],
+    queryFn: getTrustedContacts,
   });
 
-  if (center.isLoading) {
-    return (
-      <SafeAreaView style={s.safe}>
-        <View style={s.centerContainer}>
-          <LoadingState label="Loading safety center..." />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const data = center.data ?? DEFAULT_SAFETY_DATA;
-  const metrics = data.metrics ?? [];
+  const metricsLoading = reports.isLoading || blockedUsers.isLoading || trustedContacts.isLoading;
+  const metricsError = reports.isError || blockedUsers.isError || trustedContacts.isError;
+  const metrics =
+    reports.data && blockedUsers.data && trustedContacts.data
+      ? [
+          { label: 'Open reports', value: String(reports.data.filter(isOpenReport).length) },
+          { label: 'Blocked users', value: String(blockedUsers.data.length) },
+          { label: 'Trusted contacts', value: String(trustedContacts.data.length) },
+        ]
+      : [];
 
   const tools: {
     id: string;
@@ -222,17 +195,30 @@ export function SafetyCenterScreen() {
           </View>
         </View>
 
-        {/* Metrics Bar */}
-        {metrics.length > 0 ? (
+        {/* Metrics Bar: the signed-in user's own counts */}
+        {metricsLoading ? (
+          <LoadingState label="Loading your safety summary..." />
+        ) : metricsError ? (
+          <ErrorState
+            title="Unable to load your safety summary"
+            body="Your reports, blocked users, and trusted contacts could not be loaded."
+            retryLabel="Retry"
+            onRetry={() => {
+              reports.refetch();
+              blockedUsers.refetch();
+              trustedContacts.refetch();
+            }}
+          />
+        ) : (
           <View style={s.metricsRow}>
-            {metrics.map((m, idx) => (
-              <View key={idx} style={s.metricCard}>
+            {metrics.map((m) => (
+              <View key={m.label} style={s.metricCard}>
                 <Text style={s.metricValue}>{m.value}</Text>
                 <Text style={s.metricLabel}>{m.label}</Text>
               </View>
             ))}
           </View>
-        ) : null}
+        )}
 
         {/* Safety Tools Section */}
         <Text style={s.sectionTitle}>Safety Tools & Controls</Text>
@@ -263,10 +249,10 @@ export function SafetyCenterScreen() {
           <View style={s.trustItem}>
             <View style={s.trustDot} />
             <View style={s.trustContent}>
-              <Text style={s.trustHeading}>Verified Member Identity</Text>
+              <Text style={s.trustHeading}>Signed-in members only</Text>
               <Text style={s.trustDesc}>
-                All room hosts, drivers, and referrers undergo ID and contact verification before
-                listing.
+                Rooms, rides, and referrals can only be posted by signed-in members, and any member
+                can be reported or blocked.
               </Text>
             </View>
           </View>

@@ -16,6 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getNotificationSettings, updateNotificationSettings } from '@/modules/notifications/api';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
 // Visual Design Tokens
@@ -39,8 +41,6 @@ const C = {
   purple: '#6d28d9',
   purpleBg: '#ede9fe',
 };
-
-type DeliveryPace = 'instant' | 'batch' | 'daily';
 
 interface ChannelConfig {
   id: string;
@@ -165,15 +165,13 @@ export function NotificationSettingsScreen() {
     quietHours: true,
   });
 
-  const [deliveryPace, setDeliveryPace] = useState<DeliveryPace>('instant');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastAnim] = useState(() => new Animated.Value(0));
 
-  // Query settings from backend
-  const { data } = useQuery({
+  // Query settings from backend; toggles render only once the user's saved preferences have loaded.
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['notifications', 'settings'],
     queryFn: getNotificationSettings,
-    retry: false,
   });
 
   // Sync backend preferences into local state
@@ -194,7 +192,10 @@ export function NotificationSettingsScreen() {
       showToast('Preferences saved');
     },
     onError: () => {
-      showToast('Saved locally');
+      // Nothing was saved: drop the optimistic change and reload what the server has.
+      if (data?.preferences) setPreferences((prev) => ({ ...prev, ...data.preferences }));
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'settings'] });
+      showToast('Could not save preferences. Please try again.');
     },
   });
 
@@ -257,10 +258,29 @@ export function NotificationSettingsScreen() {
       quietHours: true,
     };
     setPreferences(defaults);
-    setDeliveryPace('instant');
     mutation.mutate(defaults);
-    showToast('Reset to defaults');
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <LoadingState label="Loading your notification settings..." />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ErrorState
+          title="Unable to load notification settings"
+          body="Your saved preferences could not be loaded."
+          retryLabel="Retry"
+          onRetry={() => refetch()}
+        />
+      </SafeAreaView>
+    );
+  }
 
   const activeChannelCount = [
     preferences.push,
@@ -362,10 +382,12 @@ export function NotificationSettingsScreen() {
 
             {/* Quick Summary Pill Bar */}
             <View style={styles.statPillsRow}>
-              <View style={styles.statPill}>
-                <AppIcon color={C.teal} name="check" size={13} strokeWidth={2.5} />
-                <Text style={styles.statPillText}>Push & In-App Enabled</Text>
-              </View>
+              {preferences.push && preferences.inApp ? (
+                <View style={styles.statPill}>
+                  <AppIcon color={C.teal} name="check" size={13} strokeWidth={2.5} />
+                  <Text style={styles.statPillText}>Push & In-App Enabled</Text>
+                </View>
+              ) : null}
               <View style={styles.statPill}>
                 <AppIcon color={C.purple} name="shield" size={13} />
                 <Text style={styles.statPillText}>Safety Always Protected</Text>
@@ -479,10 +501,8 @@ export function NotificationSettingsScreen() {
           {/* Section 3: Quiet Hours & Frequency */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Quiet Hours & Delivery Pace</Text>
-              <Text style={styles.sectionSub}>
-                Silence non-urgent notifications during sleep or bundle them into digests
-              </Text>
+              <Text style={styles.sectionTitle}>Quiet Hours</Text>
+              <Text style={styles.sectionSub}>Silence non-urgent notifications during sleep</Text>
             </View>
 
             <View style={styles.cardGroup}>
@@ -506,71 +526,6 @@ export function NotificationSettingsScreen() {
                   trackColor={{ false: '#e2e8f0', true: C.purple }}
                   value={preferences.quietHours ?? true}
                 />
-              </View>
-
-              <View style={styles.divider} />
-
-              {/* Delivery Frequency Segmented Picker */}
-              <View style={styles.paceContainer}>
-                <Text style={styles.paceLabel}>DELIVERY FREQUENCY</Text>
-                <View style={styles.paceSegments}>
-                  <Pressable
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: deliveryPace === 'instant' }}
-                    onPress={() => {
-                      setDeliveryPace('instant');
-                      showToast('Pace set to Instant');
-                    }}
-                    style={[styles.paceBtn, deliveryPace === 'instant' && styles.paceBtnActive]}
-                  >
-                    <Text
-                      style={[
-                        styles.paceBtnText,
-                        deliveryPace === 'instant' && styles.paceBtnTextActive,
-                      ]}
-                    >
-                      Instant
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: deliveryPace === 'batch' }}
-                    onPress={() => {
-                      setDeliveryPace('batch');
-                      showToast('Pace set to 2-Hour Batch');
-                    }}
-                    style={[styles.paceBtn, deliveryPace === 'batch' && styles.paceBtnActive]}
-                  >
-                    <Text
-                      style={[
-                        styles.paceBtnText,
-                        deliveryPace === 'batch' && styles.paceBtnTextActive,
-                      ]}
-                    >
-                      2-Hr Batch
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: deliveryPace === 'daily' }}
-                    onPress={() => {
-                      setDeliveryPace('daily');
-                      showToast('Pace set to Daily Digest');
-                    }}
-                    style={[styles.paceBtn, deliveryPace === 'daily' && styles.paceBtnActive]}
-                  >
-                    <Text
-                      style={[
-                        styles.paceBtnText,
-                        deliveryPace === 'daily' && styles.paceBtnTextActive,
-                      ]}
-                    >
-                      Daily Digest
-                    </Text>
-                  </Pressable>
-                </View>
               </View>
             </View>
           </View>

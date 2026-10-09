@@ -21,7 +21,7 @@ export function AuthPageLayout({
   children,
   title,
   subtitle,
-  badgeText = 'Verified Desi Community',
+  badgeText = 'Desi Community Platform',
   showBack = true,
   backHref = '/welcome',
 }: AuthPageLayoutProps) {
@@ -64,16 +64,12 @@ export function AuthPageLayout({
 
               {/* Showcase Pitch */}
               <View style={styles.showcasePitchBlock}>
-                <View style={styles.showcaseTagPill}>
-                  <Text style={styles.showcaseTagText}>#1 Trusted Community</Text>
-                </View>
                 <Text style={styles.showcaseHeadline}>
                   Connecting Desi Hearts Across Continents
                 </Text>
                 <Text style={styles.showcaseSubheadline}>
-                  Find verified housing directly from community members, commute safely with
-                  community carpools, unlock tech job referrals, and celebrate our shared culture
-                  together.
+                  Find housing directly from community members, share commutes with community
+                  carpools, ask for tech job referrals, and celebrate our shared culture together.
                 </Text>
               </View>
 
@@ -84,9 +80,9 @@ export function AuthPageLayout({
                     <AppIcon name="home" size={18} color="#ffffff" />
                   </View>
                   <View style={styles.showcaseFeatureTextCol}>
-                    <Text style={styles.showcaseFeatureTitle}>Verified Rooms & Roommates</Text>
+                    <Text style={styles.showcaseFeatureTitle}>Rooms & Roommates</Text>
                     <Text style={styles.showcaseFeatureDesc}>
-                      Direct community listings, background checks, lease sharing.
+                      Direct community listings and lease sharing.
                     </Text>
                   </View>
                 </View>
@@ -98,7 +94,7 @@ export function AuthPageLayout({
                   <View style={styles.showcaseFeatureTextCol}>
                     <Text style={styles.showcaseFeatureTitle}>Community Carpools</Text>
                     <Text style={styles.showcaseFeatureDesc}>
-                      Trusted daily commutes, airport pickups, shared fuel.
+                      Daily commutes, airport rides, shared fuel costs.
                     </Text>
                   </View>
                 </View>
@@ -110,26 +106,8 @@ export function AuthPageLayout({
                   <View style={styles.showcaseFeatureTextCol}>
                     <Text style={styles.showcaseFeatureTitle}>Tech Referrals & Mentorship</Text>
                     <Text style={styles.showcaseFeatureDesc}>
-                      Direct employee referrals at top tech companies.
+                      Ask community members for employee referrals.
                     </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Testimonial Quote Card */}
-              <View style={styles.showcaseTestimonialCard}>
-                <Text style={styles.showcaseQuoteMarks}>“</Text>
-                <Text style={styles.showcaseQuoteText}>
-                  ManaBandhu helped me find a safe room in Dallas within 48 hours of landing in the
-                  US. The community verification gave my parents total peace of mind!
-                </Text>
-                <View style={styles.showcaseAuthorRow}>
-                  <View style={styles.showcaseAuthorAvatar}>
-                    <Text style={styles.showcaseAuthorInitial}>P</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.showcaseAuthorName}>Priya V.</Text>
-                    <Text style={styles.showcaseAuthorRole}>Software Engineer • Dallas, TX</Text>
                   </View>
                 </View>
               </View>
@@ -138,7 +116,7 @@ export function AuthPageLayout({
               <View style={styles.showcaseFooterRow}>
                 <AppIcon name="shield" size={14} color="rgba(255,255,255,0.8)" />
                 <Text style={styles.showcaseSecurityText}>
-                  256-Bit TLS Encryption • 100% Privacy Preserved
+                  Connections to ManaBandhu are encrypted in transit
                 </Text>
               </View>
             </View>
@@ -256,14 +234,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.3,
   },
-  showcaseVerifiedBadge: {
-    alignItems: 'center',
-    backgroundColor: color.teal,
-    borderRadius: 8,
-    height: 16,
-    justifyContent: 'center',
-    width: 16,
-  },
   showcaseBrandSubtitle: {
     color: 'rgba(255,255,255,0.75)',
     fontSize: 12,
@@ -271,18 +241,6 @@ const styles = StyleSheet.create({
   },
   showcasePitchBlock: {
     gap: space.x2,
-  },
-  showcaseTagPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 999,
-    paddingHorizontal: space.x3,
-    paddingVertical: 4,
-  },
-  showcaseTagText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
   },
   showcaseHeadline: {
     color: '#ffffff',
@@ -327,54 +285,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.78)',
     fontSize: 12,
     lineHeight: 16,
-  },
-  showcaseTestimonialCard: {
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 18,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  showcaseQuoteMarks: {
-    color: color.warm,
-    fontSize: 28,
-    fontWeight: '900',
-    lineHeight: 20,
-  },
-  showcaseQuoteText: {
-    color: 'rgba(255,255,255,0.92)',
-    fontSize: 13,
-    fontStyle: 'italic',
-    lineHeight: 19,
-  },
-  showcaseAuthorRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x2,
-    marginTop: space.x1,
-  },
-  showcaseAuthorAvatar: {
-    alignItems: 'center',
-    backgroundColor: color.warm,
-    borderRadius: 14,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  showcaseAuthorInitial: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  showcaseAuthorName: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  showcaseAuthorRole: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 11,
   },
   showcaseFooterRow: {
     alignItems: 'center',

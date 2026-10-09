@@ -19,28 +19,23 @@ interface SlideItem {
   tagColor: string;
   stat: string;
   iconName: AppIconName;
-  testimonial: string;
-  author: string;
   bullets: string[];
 }
 
 const slides: SlideItem[] = [
   {
     category: 'Housing',
-    title: 'Verified Rooms & Roommates',
-    desc: 'Find verified shared rooms, 1BHK/2BHK apartments, and trusted Desi roommates across Dallas, Bay Area, Seattle, NJ, and beyond.',
+    title: 'Rooms & Roommates',
+    desc: 'Find shared rooms, 1BHK/2BHK apartments, and Desi roommates across Dallas, Bay Area, Seattle, NJ, and beyond.',
     tag: 'Direct Community',
     tagBg: 'rgba(67, 30, 190, 0.10)',
     tagColor: color.primary,
-    stat: 'Zero Brokerage',
+    stat: 'Listed by members',
     iconName: 'home',
-    testimonial:
-      '“Find shared rooms and lease transfers directly from verified community residents.”',
-    author: 'Verified Community Resident',
     bullets: [
-      'ID verified hosts & tenants',
+      'Shared rooms & apartments',
       'Furnished & lease-share listings',
-      'Direct chats with verified community hosts',
+      'Direct chats with hosts',
     ],
   },
   {
@@ -52,8 +47,6 @@ const slides: SlideItem[] = [
     tagColor: color.teal,
     stat: 'Direct Cost Splitting',
     iconName: 'car',
-    testimonial: '“Share fuel and toll expenses with verified coworkers and local neighbors.”',
-    author: 'Verified Community Commuter',
     bullets: [
       'Daily office park commutes',
       'Airport luggage-friendly rides',
@@ -63,37 +56,31 @@ const slides: SlideItem[] = [
   {
     category: 'Careers',
     title: 'Insider Job Referrals & Tech Hub',
-    desc: 'Get recommended directly by Desi engineers, managers, and recruiters at Google, Microsoft, Amazon, Meta, and high-growth startups.',
+    desc: 'Ask Desi engineers, managers, and recruiters in the community for referrals, and browse openings shared by members.',
     tag: 'Fast Track',
     tagBg: 'rgba(255, 126, 51, 0.14)',
     tagColor: color.warm,
     stat: 'Direct Employee Referrals',
     iconName: 'briefcase',
-    testimonial:
-      '“Connect with fellow professionals across top tech hubs for direct internal referrals.”',
-    author: 'Verified Community Professional',
     bullets: [
-      'Direct employee internal referrals',
-      'Senior dev resume reviews',
-      'H-1B & OPT friendly tech openings',
+      'Request and offer employee referrals',
+      'Community job postings',
+      'Filter openings by visa needs',
     ],
   },
   {
     category: 'Community',
     title: 'Vibrant Hub, Events & Support',
     desc: 'Celebrate Diwali, Eid, Ugadi, and cricket screenings together. Buy & sell furniture, and get trusted answers on visa and utilities.',
-    tag: 'Active 24/7',
+    tag: 'Local & Cultural',
     tagBg: 'rgba(67, 30, 190, 0.10)',
     tagColor: color.primary,
-    stat: 'Zero Commission',
+    stat: 'Events & marketplace',
     iconName: 'community',
-    testimonial:
-      '“Connect with trusted locals for festivals, housing support, and pre-loved items.”',
-    author: 'ManaBandhu Community Member',
     bullets: [
       'Festive & cultural local meetups',
       'Student marketplace for pre-loved items',
-      '24/7 community emergency assistance',
+      'Emergency resources & safety tools',
     ],
   },
 ];
@@ -161,7 +148,7 @@ export function StitchWelcomeFlowScreen() {
             <View style={styles.desktopNavLinks}>
               <Pressable onPress={() => handleSelectSlide(0)} style={styles.navLinkItem}>
                 <Text style={[styles.navLinkText, activeSlide === 0 && styles.navLinkActive]}>
-                  Verified Rooms
+                  Rooms
                 </Text>
               </Pressable>
               <Pressable onPress={() => handleSelectSlide(1)} style={styles.navLinkItem}>
@@ -235,15 +222,15 @@ export function StitchWelcomeFlowScreen() {
             <View style={[styles.heroTextCol, isDesktop && styles.heroTextColDesktop]}>
               <View style={styles.heroPillBadge}>
                 <AppIcon name="star" size={14} color={color.primary} />
-                <Text style={styles.heroPillText}>North America’s #1 Desi Community Platform</Text>
+                <Text style={styles.heroPillText}>Desi Community Platform</Text>
               </View>
               <Text style={[styles.mainHeading, isDesktop && styles.mainHeadingDesktop]}>
                 Your Trusted Desi Community, Everywhere You Go
               </Text>
               <Text style={[styles.mainSubheading, isDesktop && styles.mainSubheadingDesktop]}>
-                Connect with 50,000+ verified Desi students, working professionals, and families.
-                Find verified housing directly from members, share friendly daily commutes, unlock
-                insider tech referrals, and celebrate our shared roots.
+                Connect with Desi students, working professionals, and families. Find housing
+                directly from members, share daily commutes, ask for tech referrals, and celebrate
+                our shared roots.
               </Text>
 
               {/* Value Checkpoints */}
@@ -252,7 +239,9 @@ export function StitchWelcomeFlowScreen() {
                   <View style={styles.checkCircle}>
                     <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
                   </View>
-                  <Text style={styles.valuePointText}>100% ID Verified & Moderated Community</Text>
+                  <Text style={styles.valuePointText}>
+                    Report tools on listings, rides, and chats
+                  </Text>
                 </View>
                 <View style={styles.valuePointItem}>
                   <View style={styles.checkCircle}>
@@ -267,7 +256,7 @@ export function StitchWelcomeFlowScreen() {
                     <AppIcon name="check" size={12} color={color.teal} strokeWidth={3} />
                   </View>
                   <Text style={styles.valuePointText}>
-                    24/7 Peer Assistance & Local Community Chapters
+                    Peer help through community chat and events
                   </Text>
                 </View>
               </View>
@@ -291,29 +280,6 @@ export function StitchWelcomeFlowScreen() {
                   </Pressable>
                 </View>
               ) : null}
-
-              {/* Community Trust Pillars */}
-              <View style={styles.statsTicker}>
-                <View style={styles.statBox}>
-                  <Text style={styles.statNum}>Zero</Text>
-                  <Text style={styles.statLabel}>Brokerage</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statBox}>
-                  <Text style={styles.statNum}>Direct</Text>
-                  <Text style={styles.statLabel}>Verified Contacts</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statBox}>
-                  <Text style={styles.statNum}>Desi</Text>
-                  <Text style={styles.statLabel}>Community First</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statBox}>
-                  <Text style={styles.statNum}>100%</Text>
-                  <Text style={styles.statLabel}>Free Access</Text>
-                </View>
-              </View>
             </View>
 
             {/* Right Column: Interactive Carousel Showcase Card */}
@@ -373,12 +339,6 @@ export function StitchWelcomeFlowScreen() {
                       <Text style={styles.slideBulletText}>{b}</Text>
                     </View>
                   ))}
-                </View>
-
-                {/* Testimonial Quote */}
-                <View style={styles.slideQuoteBox}>
-                  <Text style={styles.slideQuoteText}>{current.testimonial}</Text>
-                  <Text style={styles.slideQuoteAuthor}>{current.author}</Text>
                 </View>
               </Pressable>
 
@@ -455,8 +415,8 @@ export function StitchWelcomeFlowScreen() {
                 <Text style={styles.matrixBadge}>EVERYTHING YOU NEED</Text>
                 <Text style={styles.matrixHeading}>Built Exclusively for the Desi Community</Text>
                 <Text style={styles.matrixSub}>
-                  No more unverified Facebook groups or fragmented WhatsApp chats. One verified,
-                  safe, organized platform.
+                  Housing, rides, jobs, events, and help in one organized place instead of scattered
+                  group chats.
                 </Text>
               </View>
 
@@ -494,8 +454,8 @@ export function StitchWelcomeFlowScreen() {
                     ManaBandhu Safety & Moderation Pledge
                   </Text>
                   <Text style={styles.safetyPledgeDesc}>
-                    Every profile is phone and email verified. Suspicious postings are flagged by AI
-                    and human community moderators within minutes.
+                    Report suspicious postings, rides, or messages from the app so community
+                    moderators can review them.
                   </Text>
                 </View>
                 <Pressable
@@ -600,14 +560,6 @@ const styles = StyleSheet.create({
   brandLogo: { borderRadius: 10, height: 38, width: 38 },
   brandTitleRow: { alignItems: 'center', flexDirection: 'row', gap: space.x1 },
   brandTitle: { color: color.primary, fontSize: 18, fontWeight: '800' },
-  verifiedDot: {
-    alignItems: 'center',
-    backgroundColor: color.teal,
-    borderRadius: 8,
-    height: 16,
-    justifyContent: 'center',
-    width: 16,
-  },
   brandSubtitle: { color: color.muted, fontSize: 11, fontWeight: '600' },
   skipButton: { padding: space.x2 },
   skipText: { color: color.muted, fontSize: 14, fontWeight: '700' },
@@ -729,36 +681,6 @@ const styles = StyleSheet.create({
   },
 
   // Stats Ticker
-  statsTicker: {
-    backgroundColor: '#ffffff',
-    borderColor: 'rgba(67, 30, 190, 0.10)',
-    borderRadius: 20,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: space.x2,
-    paddingVertical: space.x3,
-  },
-  statBox: {
-    alignItems: 'center',
-  },
-  statNum: {
-    color: color.primary,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  statLabel: {
-    color: color.muted,
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  statDivider: {
-    backgroundColor: color.border,
-    height: '60%',
-    width: 1,
-    alignSelf: 'center',
-  },
 
   // Carousel Showcase Card
   carouselCard: {
@@ -870,25 +792,6 @@ const styles = StyleSheet.create({
     color: color.ink,
     fontSize: 12,
     fontWeight: '600',
-  },
-  slideQuoteBox: {
-    backgroundColor: '#ffffff',
-    borderColor: 'rgba(67, 30, 190, 0.10)',
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: space.x3,
-  },
-  slideQuoteText: {
-    color: color.ink,
-    fontSize: 12,
-    fontStyle: 'italic',
-    lineHeight: 17,
-  },
-  slideQuoteAuthor: {
-    color: color.primary,
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 4,
   },
 
   // Carousel Controls

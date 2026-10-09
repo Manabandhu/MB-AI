@@ -1,6 +1,9 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 
+// Types mirror the backend entities serialized by SafetyController (SafetyReport, BlockedUser, TrustedContact).
+// There is no sample or fallback data: callers surface errors and render empty states for empty lists.
+
 export async function getSafetyCenter(): Promise<CatalogScreenContent> {
   return parseJsonOrThrow(await apiFetch('/api/v1/safety/center'), 'Safety center');
 }
@@ -13,30 +16,56 @@ export async function getBlockedUsers(): Promise<BlockedUserItem[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/safety/blocked-users'), 'Blocked users');
 }
 
+export async function unblockUser(blockedUserId: string): Promise<void> {
+  const response = await apiFetch(
+    `/api/v1/safety/blocked-users/${encodeURIComponent(blockedUserId)}/unblock`,
+    { method: 'POST' },
+  );
+  if (!response.ok) {
+    throw new Error(`Unblock user failed (${response.status})`);
+  }
+}
+
 export async function getTrustedContacts(): Promise<TrustedContactItem[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/safety/trusted-contacts'), 'Trusted contacts');
 }
 
+export type ReportStatus = 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED';
+
+/** Statuses that still need attention; matches the backend's open-report count. */
+export const OPEN_REPORT_STATUSES: readonly ReportStatus[] = ['OPEN', 'IN_REVIEW'];
+
+export function isOpenReport(report: Pick<ReportItem, 'status'>): boolean {
+  return OPEN_REPORT_STATUSES.includes(String(report.status).toUpperCase() as ReportStatus);
+}
+
 export type ReportItem = {
   id: string;
-  title: string;
-  body: string;
-  meta: string;
-  status: 'open' | 'reviewing' | 'resolved';
+  reporterId: string;
+  targetId: string;
+  category: string;
+  description: string;
+  status: ReportStatus;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  evidenceUrls?: string | null;
+  createdAt: string;
+  resolvedAt?: string | null;
 };
 
 export type BlockedUserItem = {
   id: string;
-  name: string;
-  initials: string;
-  reason: string;
-  blockedAt: string;
+  ownerId: string;
+  blockedUserId: string;
+  reason?: string | null;
+  createdAt: string;
 };
 
 export type TrustedContactItem = {
   id: string;
+  ownerId: string;
   name: string;
-  initials: string;
-  relationship: string;
-  addedAt: string;
+  phone?: string | null;
+  email?: string | null;
+  relationship?: string | null;
+  createdAt: string;
 };

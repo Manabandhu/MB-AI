@@ -202,8 +202,10 @@ function SavedRoomCard({ room, onUnsave }: { room: RoomListing; onUnsave: () => 
       {/* Card Actions */}
       <View style={styles.cardFooter}>
         <View style={styles.hostTrustRow}>
-          <View style={styles.verifiedDot} />
-          <Text style={styles.hostTrustText}>Verified Host · Direct Contact</Text>
+          {room.isVerifiedHost ? <View style={styles.verifiedDot} /> : null}
+          <Text style={styles.hostTrustText}>
+            {room.isVerifiedHost ? 'Verified Host' : 'Community Host'}
+          </Text>
         </View>
         <View style={styles.ctaRow}>
           <Link href={`/rooms/${room.id}/inquiry` as Href} asChild>

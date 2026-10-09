@@ -1,9 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   Pressable,
@@ -14,8 +15,15 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useAuthStore } from '@/lib/authStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { listMarketplaceCategories, listMarketplaceListings } from '../api';
+import {
+  favoriteMarketplaceListing,
+  listMarketplaceCategories,
+  listMarketplaceFavorites,
+  listMarketplaceListings,
+  unfavoriteMarketplaceListing,
+} from '../api';
 import type { MarketplaceListing } from '../types';
 
 // Palette tokens aligned with ManaBandhu Modern Vibrant design system
@@ -48,11 +56,15 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
   const [under50Only, setUnder50Only] = useState(false);
   const [negotiableOnly, setNegotiableOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'recent' | 'price_low' | 'price_high'>('recent');
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Queries
-  const { data: listings = [], isLoading } = useQuery({
+  const {
+    data: listings = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['marketplace', 'listings'],
     queryFn: listMarketplaceListings,
   });
@@ -62,13 +74,30 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
     queryFn: listMarketplaceCategories,
   });
 
+  // Saved items are the signed-in member's favorites on the backend.
+  const { session } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { data: favorites = [] } = useQuery({
+    queryKey: ['marketplace', 'favorites'],
+    queryFn: listMarketplaceFavorites,
+    enabled: Boolean(session),
+  });
+  const savedIds = useMemo(() => new Set(favorites.map((f) => f.listingId)), [favorites]);
+  const saveMutation = useMutation({
+    mutationFn: async ({ id, saved }: { id: string; saved: boolean }): Promise<void> => {
+      if (saved) await unfavoriteMarketplaceListing(id);
+      else await favoriteMarketplaceListing(id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['marketplace', 'favorites'] }),
+    onError: (err: Error) => Alert.alert('Unable to update saved items', err.message),
+  });
+
   const toggleSave = (id: string) => {
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    if (!session) {
+      router.push('/sign-in' as Href);
+      return;
+    }
+    saveMutation.mutate({ id, saved: savedIds.has(id) });
   };
 
   // Filtered & Sorted Listings
@@ -118,32 +147,9 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
     sortBy,
   ]);
 
-  // Fallback image helper
-  const getItemImage = (item: MarketplaceListing) => {
-    if (item.images && item.images.length > 0) return item.images[0].url;
-    const t = item.title.toLowerCase();
-    if (
-      t.includes('mixer') ||
-      t.includes('grinder') ||
-      t.includes('pot') ||
-      t.includes('cookware')
-    ) {
-      return 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80';
-    }
-    if (t.includes('cricket') || t.includes('bat') || t.includes('sports')) {
-      return 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=800&q=80';
-    }
-    if (t.includes('table') || t.includes('chair') || t.includes('furniture')) {
-      return 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=800&q=80';
-    }
-    if (t.includes('saree') || t.includes('silk') || t.includes('ethnic')) {
-      return 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
-    }
-    if (t.includes('speaker') || t.includes('gadget') || t.includes('electronics')) {
-      return 'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=800&q=80';
-    }
-    return 'https://images.unsplash.com/photo-1605648916361-9bc12ad6a569?auto=format&fit=crop&w=800&q=80';
-  };
+  // Only the seller's own photo is shown; listings without one get a neutral placeholder.
+  const getItemImage = (item: MarketplaceListing) =>
+    item.images && item.images.length > 0 ? item.images[0].url : null;
 
   return (
     <View style={s.root}>
@@ -160,7 +166,7 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
             <View style={s.trustTextGroup}>
               <Text style={s.trustTitle}>Telugu & Desi Community Marketplace</Text>
               <Text style={s.trustSub}>
-                0% Brokerage · Safe Neighborhood Pickups · Verified Desi Bandhus
+                Buy, sell, and give away items with community members nearby.
               </Text>
             </View>
           </View>
@@ -292,13 +298,26 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
           </View>
         )}
 
+        {/* Error State */}
+        {isError && (
+          <View style={s.emptyContainer}>
+            <Text style={s.emptyTitle}>Unable to load listings</Text>
+            <Text style={s.emptySub}>Check your connection and try again.</Text>
+            <Pressable style={s.resetBtn} onPress={() => refetch()}>
+              <Text style={s.resetBtnText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Empty State */}
-        {!isLoading && filteredListings.length === 0 && (
+        {!isLoading && !isError && filteredListings.length === 0 && (
           <View style={s.emptyContainer}>
             <View style={s.emptyIconCircle}>
               <AppIcon name="package" size={40} color={C.secondary} />
             </View>
-            <Text style={s.emptyTitle}>No items match your criteria</Text>
+            <Text style={s.emptyTitle}>
+              {listings.length === 0 ? 'No items listed yet' : 'No items match your criteria'}
+            </Text>
             <Text style={s.emptySub}>
               Try adjusting your category, price range, or search keywords.
             </Text>
@@ -333,7 +352,14 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
               >
                 {/* Image Container */}
                 <View style={s.imageBox}>
-                  <Image source={{ uri: imageUrl }} style={s.thumbnail} />
+                  {imageUrl ? (
+                    <Image source={{ uri: imageUrl }} style={s.thumbnail} />
+                  ) : (
+                    <View style={[s.thumbnail, s.noPhoto]}>
+                      <AppIcon name="package" size={32} color={C.inkMuted} />
+                      <Text style={s.noPhotoText}>No photo</Text>
+                    </View>
+                  )}
 
                   {/* Price Tag Overlay */}
                   <View style={s.priceTag}>
@@ -379,14 +405,6 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
                         <Text style={s.negText}>Negotiable</Text>
                       </View>
                     )}
-                  </View>
-
-                  {/* Seller Trust Tag */}
-                  <View style={s.sellerRow}>
-                    <View style={s.verifiedDot}>
-                      <AppIcon name="verified-user" size={14} color={C.secondary} />
-                    </View>
-                    <Text style={s.sellerText}>Verified Telugu Bandhu</Text>
                   </View>
                 </View>
               </Pressable>
@@ -515,6 +533,13 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
 export const MarketplaceScreen = MarketplaceHomeScreen;
 
 const s = StyleSheet.create({
+  noPhoto: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f0f7',
+    gap: 4,
+  },
+  noPhotoText: { fontSize: 12, color: C.inkMuted, fontWeight: '600' },
   root: {
     flex: 1,
     backgroundColor: C.bg,
@@ -859,23 +884,6 @@ const s = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     color: C.goldText,
-  },
-  sellerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginTop: 2,
-  },
-  verifiedDot: {
-    width: 14,
-    height: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sellerText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: C.secondary,
   },
   fab: {
     position: 'absolute',

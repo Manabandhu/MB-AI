@@ -17,6 +17,7 @@ import {
 import { useAuthStore } from '@/lib/authStore';
 import { useLocationStore } from '@/lib/locationStore';
 import { listJobPostings } from '@/modules/jobs/api';
+import { listPublicReferrals } from '@/modules/referrals/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
@@ -98,12 +99,27 @@ export function JobsHomeScreen(_props: { screenId?: string }) {
   const {
     data: rawJobs = [],
     isLoading,
+    isError,
     refetch,
   } = useQuery({
     queryKey: ['jobs', 'list'],
     queryFn: () => listJobPostings(0, 50),
     staleTime: 1000 * 60 * 2,
   });
+
+  // Open referral offers come from the referrals module; the count is only shown once loaded.
+  const { data: publicReferrals } = useQuery({
+    queryKey: ['referrals', 'public'],
+    queryFn: listPublicReferrals,
+    staleTime: 1000 * 60 * 2,
+  });
+  const referralOfferCount = publicReferrals?.filter(
+    (r) => r.type?.toLowerCase() === 'offer',
+  ).length;
+  const postedLastDay = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    return rawJobs.filter((job) => new Date(job.createdAt).getTime() >= cutoff).length;
+  }, [rawJobs]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -202,9 +218,7 @@ export function JobsHomeScreen(_props: { screenId?: string }) {
               style={s.citySelectorPill}
               accessibilityRole="button"
             >
-              <Text style={s.citySelectorText}>
-                📍 {selectedCity} · {filteredJobs.length} Verified Roles
-              </Text>
+              <Text style={s.citySelectorText}>📍 {selectedCity}</Text>
               <AppIcon name="chevron-down" size={14} color={colors.inkSecondary} />
             </Pressable>
           </View>
@@ -280,14 +294,25 @@ export function JobsHomeScreen(_props: { screenId?: string }) {
             </Pressable>
           </View>
 
-          {/* Quick Metrics */}
-          <View style={s.metricsRow}>
-            <Text style={s.metricItem}>⚡ 84 New Referrals Today</Text>
-            <Text style={s.metricDivider}>•</Text>
-            <Text style={s.metricItem}>🛡️ 100% Verified Corporate Referrers</Text>
-            <Text style={s.metricDivider}>•</Text>
-            <Text style={s.metricItem}>💵 Zero Placement Fees</Text>
-          </View>
+          {/* Quick Metrics — derived from the loaded job postings and public referral offers */}
+          {!isLoading && !isError ? (
+            <View style={s.metricsRow}>
+              <Text style={s.metricItem}>
+                💼 {rawJobs.length} {rawJobs.length === 1 ? 'open role' : 'open roles'}
+              </Text>
+              <Text style={s.metricDivider}>•</Text>
+              <Text style={s.metricItem}>⚡ {postedLastDay} posted in the last 24h</Text>
+              {referralOfferCount !== undefined ? (
+                <>
+                  <Text style={s.metricDivider}>•</Text>
+                  <Text style={s.metricItem}>
+                    🤝 {referralOfferCount}{' '}
+                    {referralOfferCount === 1 ? 'referral offer' : 'referral offers'}
+                  </Text>
+                </>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         {/* Quick Filter Tag Chips */}
@@ -319,15 +344,15 @@ export function JobsHomeScreen(_props: { screenId?: string }) {
           <View style={s.trustContent}>
             <Text style={s.trustTitle}>Direct Community Jobs & Employee Referrals</Text>
             <Text style={s.trustSubtitle}>
-              100% Verified Corporate Work Emails (@google, @apple, @stripe) · Transparent
-              Compensation · Zero Brokerage or Middleman Fees
+              Roles and referral offers posted by community members. Review each posting and apply
+              through the employer's link.
             </Text>
           </View>
         </View>
 
         {/* Job Listings List */}
         <View style={s.sectionHeaderRow}>
-          <Text style={s.sectionTitle}>Verified Tech Openings ({filteredJobs.length})</Text>
+          <Text style={s.sectionTitle}>Open Roles ({filteredJobs.length})</Text>
           <Pressable onPress={() => setFilterModalVisible(true)}>
             <Text style={s.sortTriggerText}>Sort: {filters.sortBy.replace('_', ' ')} ▾</Text>
           </Pressable>
@@ -335,7 +360,30 @@ export function JobsHomeScreen(_props: { screenId?: string }) {
 
         {isLoading ? (
           <View style={s.emptyStateBox}>
-            <Text style={s.loadingText}>Loading verified Desi community jobs...</Text>
+            <Text style={s.loadingText}>Loading jobs...</Text>
+          </View>
+        ) : isError ? (
+          <View style={s.emptyStateBox}>
+            <Text style={s.emptyStateEmoji}>⚠️</Text>
+            <Text style={s.emptyStateTitle}>Unable to load jobs</Text>
+            <Text style={s.emptyStateSubtitle}>Check your connection and try again.</Text>
+            <Pressable onPress={() => refetch()} style={s.resetButton}>
+              <Text style={s.resetButtonText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : rawJobs.length === 0 ? (
+          <View style={s.emptyStateBox}>
+            <Text style={s.emptyStateEmoji}>💼</Text>
+            <Text style={s.emptyStateTitle}>No jobs posted yet</Text>
+            <Text style={s.emptyStateSubtitle}>
+              Be the first to share an opening with the community.
+            </Text>
+            <Pressable
+              onPress={() => router.push((session ? '/jobs/post' : '/sign-in') as Href)}
+              style={s.resetButton}
+            >
+              <Text style={s.resetButtonText}>Post Role</Text>
+            </Pressable>
           </View>
         ) : filteredJobs.length === 0 ? (
           <View style={s.emptyStateBox}>
@@ -366,10 +414,11 @@ export function JobsHomeScreen(_props: { screenId?: string }) {
                       </View>
                       <View>
                         <View style={s.companyNameRow}>
-                          <Text style={s.companyName}>{job.company || 'Tech Company'}</Text>
-                          <Text style={s.verifiedIcon}>✓</Text>
+                          <Text style={s.companyName}>{job.company || 'Company not listed'}</Text>
                         </View>
-                        <Text style={s.jobLocation}>📍 {job.location || 'Austin, TX'}</Text>
+                        <Text style={s.jobLocation}>
+                          📍 {job.location || (job.isRemote ? 'Remote' : 'Location not listed')}
+                        </Text>
                       </View>
                     </View>
 
@@ -392,38 +441,16 @@ export function JobsHomeScreen(_props: { screenId?: string }) {
                     <View style={s.salaryBadge}>
                       <Text style={s.salaryBadgeText}>💵 {salaryText}</Text>
                     </View>
-                    <View style={s.workTypeBadge}>
-                      <Text style={s.workTypeBadgeText}>{job.employmentType || 'Full-time'}</Text>
-                    </View>
+                    {job.employmentType ? (
+                      <View style={s.workTypeBadge}>
+                        <Text style={s.workTypeBadgeText}>{job.employmentType}</Text>
+                      </View>
+                    ) : null}
                     {job.isRemote && (
                       <View style={s.remoteBadge}>
                         <Text style={s.remoteBadgeText}>🌐 Remote OK</Text>
                       </View>
                     )}
-                  </View>
-
-                  {/* Visa & Authorization Perks */}
-                  <View style={s.visaRow}>
-                    <View style={s.visaPill}>
-                      <Text style={s.visaPillText}>⚡ H-1B Transfer Ready</Text>
-                    </View>
-                    <View style={s.visaPill}>
-                      <Text style={s.visaPillText}>🎓 STEM OPT Friendly</Text>
-                    </View>
-                    <View style={s.visaPill}>
-                      <Text style={s.visaPillText}>🌱 PERM Support</Text>
-                    </View>
-                  </View>
-
-                  {/* Internal Referrer Callout */}
-                  <View style={s.referrerBox}>
-                    <Text style={s.referrerEmoji}>🤝</Text>
-                    <View style={s.referrerContent}>
-                      <Text style={s.referrerTitle}>Internal Referral Support Available</Text>
-                      <Text style={s.referrerSubtitle}>
-                        Direct employee referral and introduction via ManaBandhu members
-                      </Text>
-                    </View>
                   </View>
 
                   {/* Card Actions */}
@@ -1000,11 +1027,6 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: colors.ink,
   },
-  verifiedIcon: {
-    fontSize: 12,
-    color: '#059669',
-    fontWeight: '800',
-  },
   jobLocation: {
     fontSize: 12,
     color: colors.inkSecondary,
@@ -1068,52 +1090,6 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#1e40af',
-  },
-  visaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: sp.md,
-  },
-  visaPill: {
-    backgroundColor: '#f5f3ff',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: '#ddd6fe',
-  },
-  visaPillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#6d28d9',
-  },
-  referrerBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.sm,
-    backgroundColor: '#fefce8',
-    borderRadius: radius.control,
-    padding: sp.sm,
-    borderWidth: 1,
-    borderColor: '#fef08a',
-    marginBottom: sp.md,
-  },
-  referrerEmoji: {
-    fontSize: 18,
-  },
-  referrerContent: {
-    flex: 1,
-  },
-  referrerTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#854d0e',
-  },
-  referrerSubtitle: {
-    fontSize: 10,
-    color: '#a16207',
-    marginTop: 1,
   },
   cardActionsRow: {
     flexDirection: 'row',

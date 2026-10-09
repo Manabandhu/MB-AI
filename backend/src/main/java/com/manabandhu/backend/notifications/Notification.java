@@ -1,5 +1,6 @@
 package com.manabandhu.backend.notifications;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -48,6 +49,12 @@ public class Notification {
     @Column(name = "dispatched_at")
     private Instant dispatchedAt;
 
+    @Column(name = "dispatch_attempts", nullable = false)
+    private int dispatchAttempts;
+
+    @Column(name = "next_dispatch_at")
+    private Instant nextDispatchAt;
+
     protected Notification() {}
 
     Notification(UUID userId, String title, String body, NotificationType type, String actionRoute) {
@@ -83,6 +90,14 @@ public class Notification {
         this.dispatched = true;
         this.dispatchedAt = Instant.now();
     }
+
+    /** Backs off exponentially: 2, 4, 8, 16 minutes after successive failures. */
+    public void recordDispatchFailure() {
+        this.dispatchAttempts++;
+        this.nextDispatchAt = Instant.now().plus(Duration.ofMinutes(1L << dispatchAttempts));
+    }
+
+    public int getDispatchAttempts() { return dispatchAttempts; }
 
     public enum NotificationType {
         SYSTEM, COMMUNITY, SAFETY, RIDE, ROOM, CHAT, AI

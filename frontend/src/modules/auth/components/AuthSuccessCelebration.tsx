@@ -105,7 +105,7 @@ export function AuthSuccessCelebration({
           {/* Member Trust Pill */}
           <View style={styles.trustPill}>
             <AppIcon name="shield" size={14} color={color.teal} />
-            <Text style={styles.trustPillText}>Verified Desi Community Member</Text>
+            <Text style={styles.trustPillText}>ManaBandhu Community Member</Text>
           </View>
 
           {/* Headline */}

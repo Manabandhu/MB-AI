@@ -1,21 +1,28 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
-  Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useAuthStore } from '@/lib/authStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { getMarketplaceListing, getMarketplaceListingImages } from '../api';
+import {
+  favoriteMarketplaceListing,
+  getMarketplaceListing,
+  getMarketplaceListingImages,
+  listMarketplaceFavorites,
+  unfavoriteMarketplaceListing,
+} from '../api';
 
 const C = {
   primary: '#431ebe', // Royal Indigo
@@ -40,11 +47,8 @@ export function ListingDetailsScreen() {
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
-  const [offerAmount, setOfferAmount] = useState('');
-  const [offerMessage, setOfferMessage] = useState('');
-  const [offerSubmitted, setOfferSubmitted] = useState(false);
+  const { session } = useAuthStore();
+  const queryClient = useQueryClient();
 
   // Fetch listing data
   const {
@@ -61,6 +65,22 @@ export function ListingDetailsScreen() {
     queryKey: ['marketplace', 'listing-images', listingId],
     queryFn: () => getMarketplaceListingImages(listingId ?? ''),
     enabled: !!listingId,
+  });
+
+  // Saved state is the member's backend favorite, not local UI state.
+  const { data: favorites = [] } = useQuery({
+    queryKey: ['marketplace', 'favorites'],
+    queryFn: listMarketplaceFavorites,
+    enabled: Boolean(session),
+  });
+  const isSaved = favorites.some((f) => f.listingId === listingId);
+  const saveMutation = useMutation({
+    mutationFn: async (): Promise<void> => {
+      if (isSaved) await unfavoriteMarketplaceListing(listingId ?? '');
+      else await favoriteMarketplaceListing(listingId ?? '');
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['marketplace', 'favorites'] }),
+    onError: (err: Error) => Alert.alert('Unable to update saved items', err.message),
   });
 
   if (isLoading) {
@@ -87,31 +107,27 @@ export function ListingDetailsScreen() {
     );
   }
 
-  // Gallery URLs
-  const galleryUrls =
-    images.length > 0
-      ? images.map((img) => img.url)
-      : [
-          'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80',
-          'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80',
-        ];
+  // Only the seller's uploaded photos are shown.
+  const galleryUrls = images.map((img) => img.url);
 
-  const handleMakeOffer = () => {
-    if (!offerAmount.trim()) {
-      Alert.alert('Please enter an offer amount');
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `${listing.title} — ${
+          listing.price === 0 ? 'free' : `$${Number(listing.price).toFixed(0)}`
+        } (${listing.location})`,
+      });
+    } catch (err) {
+      Alert.alert('Unable to share', err instanceof Error ? err.message : 'Please try again.');
+    }
+  };
+
+  const handleToggleSave = () => {
+    if (!session) {
+      router.push('/sign-in' as Href);
       return;
     }
-    setOfferSubmitted(true);
-    setTimeout(() => {
-      setIsOfferModalOpen(false);
-      setOfferSubmitted(false);
-      setOfferAmount('');
-      setOfferMessage('');
-      Alert.alert(
-        'Offer Sent!',
-        `Your offer of $${offerAmount} has been sent to the seller. You can track this conversation in Chat.`,
-      );
-    }, 1000);
+    saveMutation.mutate();
   };
 
   return (
@@ -136,7 +152,7 @@ export function ListingDetailsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Share listing"
             style={s.navIconBtn}
-            onPress={() => Alert.alert('Share Link', 'Listing link copied to clipboard!')}
+            onPress={handleShare}
           >
             <AppIcon name="community" size={20} color={C.ink} />
           </Pressable>
@@ -144,7 +160,8 @@ export function ListingDetailsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Save listing"
             style={s.navIconBtn}
-            onPress={() => setIsSaved(!isSaved)}
+            onPress={handleToggleSave}
+            disabled={saveMutation.isPending}
           >
             <Text style={[s.heartText, isSaved && s.heartTextSaved]}>{isSaved ? '♥' : '♡'}</Text>
           </Pressable>
@@ -159,12 +176,21 @@ export function ListingDetailsScreen() {
           {/* Left Column: Image Carousel */}
           <View style={[s.galleryColumn, isDesktop && s.galleryColumnDesktop]}>
             <View style={s.heroImageContainer}>
-              <Image source={{ uri: galleryUrls[activeImageIndex] }} style={s.heroImage} />
-              <View style={s.pageBadge}>
-                <Text style={s.pageBadgeText}>
-                  {activeImageIndex + 1} / {galleryUrls.length}
-                </Text>
-              </View>
+              {galleryUrls.length > 0 ? (
+                <>
+                  <Image source={{ uri: galleryUrls[activeImageIndex] }} style={s.heroImage} />
+                  <View style={s.pageBadge}>
+                    <Text style={s.pageBadgeText}>
+                      {activeImageIndex + 1} / {galleryUrls.length}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <View style={[s.heroImage, s.noPhoto]}>
+                  <AppIcon name="package" size={44} color={C.inkMuted} />
+                  <Text style={s.noPhotoText}>The seller has not added photos</Text>
+                </View>
+              )}
             </View>
 
             {/* Thumbnail selector */}
@@ -187,13 +213,11 @@ export function ListingDetailsScreen() {
               <View style={s.safetyCard}>
                 <View style={s.safetyHeader}>
                   <AppIcon name="shield" size={22} color={C.secondary} />
-                  <Text style={s.safetyTitle}>ManaBandhu Safe Deal Promise</Text>
+                  <Text style={s.safetyTitle}>Safe Deal Tips</Text>
                 </View>
                 <Text style={s.safetyText}>
-                  • Meet in daylight at designated public community spots (e.g., Patel Brothers
-                  Austin, HEB Round Rock).{'\n'}• Verify seller identity via ManaBandhu community
-                  profile.{'\n'}• Never send wires or gift cards. Inspect goods in person before
-                  paying via Zelle/Cash.
+                  • Meet in daylight at a busy public place.{'\n'}• Never send wires or gift cards.
+                  Inspect goods in person before paying.
                 </Text>
               </View>
             )}
@@ -241,21 +265,15 @@ export function ListingDetailsScreen() {
               <View style={s.sellerHeader}>
                 <View style={s.sellerAvatarRing}>
                   <Text style={s.sellerInitial}>
-                    {listing.ownerId ? listing.ownerId.slice(0, 1).toUpperCase() : 'M'}
+                    {listing.ownerId ? listing.ownerId.slice(0, 1).toUpperCase() : '?'}
                   </Text>
                 </View>
                 <View style={s.sellerInfo}>
                   <View style={s.sellerNameRow}>
-                    <Text style={s.sellerName}>
-                      {listing.ownerId
-                        ? `Resident #${listing.ownerId.slice(0, 6)}`
-                        : 'Verified Resident'}
-                    </Text>
-                    <AppIcon name="verified-user" size={16} color={C.secondary} />
+                    <Text style={s.sellerName}>Community member</Text>
                   </View>
-                  <Text style={s.sellerMeta}>Verified Community Resident · Austin Metro</Text>
-                  <Text style={s.sellerLanguage}>
-                    ⚡ Direct chat available · Zero brokerage community sale
+                  <Text style={s.sellerMeta}>
+                    Listed {new Date(listing.createdAt).toLocaleDateString()}
                   </Text>
                 </View>
               </View>
@@ -292,11 +310,10 @@ export function ListingDetailsScreen() {
               <View style={s.safetyCard}>
                 <View style={s.safetyHeader}>
                   <AppIcon name="shield" size={20} color={C.secondary} />
-                  <Text style={s.safetyTitle}>ManaBandhu Safe Deal Promise</Text>
+                  <Text style={s.safetyTitle}>Safe Deal Tips</Text>
                 </View>
                 <Text style={s.safetyText}>
-                  Always meet in public daylight locations like Patel Brothers or HEB. Inspect
-                  before paying.
+                  Meet in a busy public place in daylight. Inspect before paying.
                 </Text>
               </View>
             )}
@@ -314,17 +331,6 @@ export function ListingDetailsScreen() {
         </View>
 
         <View style={s.bottomActionButtons}>
-          {listing.negotiable && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Make an offer"
-              style={s.offerBtn}
-              onPress={() => setIsOfferModalOpen(true)}
-            >
-              <Text style={s.offerBtnText}>Make Offer</Text>
-            </Pressable>
-          )}
-
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Chat with seller"
@@ -336,71 +342,18 @@ export function ListingDetailsScreen() {
           </Pressable>
         </View>
       </View>
-
-      {/* Make Offer Modal / Bottom Sheet */}
-      <Modal
-        visible={isOfferModalOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsOfferModalOpen(false)}
-      >
-        <View style={[s.modalBackdrop, !isDesktop && s.modalBackdropMobile]}>
-          <View style={[s.modalBox, isDesktop && s.modalBoxDesktop]}>
-            <View style={s.modalTop}>
-              <Text style={s.modalHeaderTitle}>Make an Offer</Text>
-              <Pressable onPress={() => setIsOfferModalOpen(false)} hitSlop={10}>
-                <Text style={s.modalCloseText}>✕</Text>
-              </Pressable>
-            </View>
-
-            <Text style={s.modalItemTitle}>{listing.title}</Text>
-            <Text style={s.modalListedPrice}>
-              Listed Price: ${Number(listing.price).toFixed(0)}
-            </Text>
-
-            <View style={s.inputBlock}>
-              <Text style={s.inputLabel}>Your Offer (USD)</Text>
-              <View style={s.priceInputWrap}>
-                <Text style={s.dollarSign}>$</Text>
-                <TextInput
-                  style={s.priceInputField}
-                  placeholder="e.g. 50"
-                  placeholderTextColor={C.inkMuted}
-                  keyboardType="numeric"
-                  value={offerAmount}
-                  onChangeText={setOfferAmount}
-                />
-              </View>
-            </View>
-
-            <View style={s.inputBlock}>
-              <Text style={s.inputLabel}>Note to Seller (Optional)</Text>
-              <TextInput
-                style={s.messageInputField}
-                placeholder="Can pick up today in Round Rock..."
-                placeholderTextColor={C.inkMuted}
-                multiline
-                numberOfLines={3}
-                value={offerMessage}
-                onChangeText={setOfferMessage}
-              />
-            </View>
-
-            <Pressable style={s.submitOfferBtn} onPress={handleMakeOffer} disabled={offerSubmitted}>
-              {offerSubmitted ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text style={s.submitOfferText}>Send Offer to Seller</Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const s = StyleSheet.create({
+  noPhoto: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f0f7',
+    gap: 8,
+  },
+  noPhotoText: { fontSize: 13, color: C.inkMuted, fontWeight: '600' },
   root: {
     flex: 1,
     backgroundColor: C.bg,
@@ -680,11 +633,6 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: C.inkMuted,
   },
-  sellerLanguage: {
-    fontSize: 11,
-    color: C.secondary,
-    fontWeight: '600',
-  },
   descriptionText: {
     fontSize: 14,
     color: C.ink,
@@ -776,18 +724,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  offerBtn: {
-    borderWidth: 1.5,
-    borderColor: C.secondary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  offerBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.secondary,
-  },
   chatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -799,105 +735,6 @@ const s = StyleSheet.create({
   },
   chatBtnText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalBackdropMobile: {
-    justifyContent: 'flex-end',
-  },
-  modalBox: {
-    backgroundColor: C.bg,
-    width: '100%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    gap: 14,
-  },
-  modalBoxDesktop: {
-    maxWidth: 480,
-    borderRadius: 24,
-  },
-  modalTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  modalCloseText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  modalItemTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: C.ink,
-  },
-  modalListedPrice: {
-    fontSize: 13,
-    color: C.inkMuted,
-  },
-  inputBlock: {
-    gap: 6,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.ink,
-  },
-  priceInputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  dollarSign: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: C.ink,
-    marginRight: 4,
-  },
-  priceInputField: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: C.ink,
-    height: '100%',
-  },
-  messageInputField: {
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 13,
-    color: C.ink,
-    textAlignVertical: 'top',
-    height: 80,
-  },
-  submitOfferBtn: {
-    backgroundColor: C.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  submitOfferText: {
-    fontSize: 14,
     fontWeight: '700',
     color: '#FFF',
   },

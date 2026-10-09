@@ -196,8 +196,8 @@ export function SignUpScreen() {
   return (
     <AuthPageLayout
       title="Join ManaBandhu"
-      subtitle="Create your verified account to connect with Desi rooms, carpools & jobs."
-      badgeText="50,000+ Verified Members"
+      subtitle="Create your account to connect with Desi rooms, carpools & jobs."
+      badgeText="Join the Community"
       backHref="/sign-in"
     >
       {/* Animated Success Celebration Takeover */}
@@ -205,7 +205,7 @@ export function SignUpScreen() {
         <AuthSuccessCelebration
           userName={user?.user_metadata?.full_name ?? user?.email ?? phoneName ?? 'Member'}
           title="Welcome to the Community! 🎉"
-          subtitle="Your verified profile is activated. Let's take you home..."
+          subtitle="Your account is ready. Let's take you home..."
           onComplete={() => router.replace('/home')}
         />
       ) : null}
@@ -627,10 +627,10 @@ export function SignUpScreen() {
       <View style={styles.communitySafetyBanner}>
         <AppIcon name="shield" size={18} color={color.teal} />
         <View style={styles.communitySafetyCol}>
-          <Text style={styles.communitySafetyTitle}>Trusted Desi Community</Text>
+          <Text style={styles.communitySafetyTitle}>Community Safety</Text>
           <Text style={styles.communitySafetyDesc}>
-            All members are verified to ensure safe roommates, friendly carpools, and genuine
-            referrals.
+            Report suspicious listings, rides, or messages from any screen so moderators can review
+            them.
           </Text>
         </View>
       </View>

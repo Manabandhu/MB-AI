@@ -18,9 +18,7 @@ type CategoryFilter = 'All' | 'Direct Messages' | 'Temporary Carpools' | 'Rooms'
 interface EnrichedConversation extends Conversation {
   moduleCategory?: 'Marketplace' | 'Rooms' | 'Rides' | 'General';
   inquiryContext?: string;
-  isOnline?: boolean;
   avatarInitial?: string;
-  isVerified?: boolean;
 }
 
 export default function ChatListScreen() {
@@ -68,9 +66,6 @@ export default function ChatListScreen() {
         moduleCategory,
         inquiryContext,
         avatarInitial: (c.title ?? 'MB').slice(0, 2).toUpperCase(),
-        // Presence and verification are not tracked yet; never show invented badges.
-        isOnline: false,
-        isVerified: false,
       };
     });
 
@@ -233,21 +228,14 @@ export default function ChatListScreen() {
                       <View style={styles.avatar}>
                         <Text style={styles.avatarText}>{c.avatarInitial ?? 'MB'}</Text>
                       </View>
-                      {c.isOnline ? <View style={styles.onlineDot} /> : null}
                     </View>
 
                     {/* Chat Details */}
                     <View style={styles.itemBody}>
-                      {/* Top row: Name, Verified Badge, Time */}
+                      {/* Top row: Name, Time */}
                       <View style={styles.topRow}>
                         <View style={styles.nameRow}>
                           <Text style={styles.itemTitle}>{c.title ?? 'ManaBandhu Member'}</Text>
-                          {c.isVerified ? (
-                            <View style={styles.verifiedTag}>
-                              <AppIcon name="shield" size={11} color="#00696b" />
-                              <Text style={styles.verifiedText}>Verified</Text>
-                            </View>
-                          ) : null}
                         </View>
                         <Text style={[styles.timeText, hasUnread && styles.timeTextUnread]}>
                           {formatTimestamp(c.lastMessageAt)}
@@ -401,17 +389,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
-    backgroundColor: '#16a34a',
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
 
   itemBody: {
     flex: 1,
@@ -431,20 +408,6 @@ const styles = StyleSheet.create({
     color: '#131b2e',
     fontSize: 15,
     fontWeight: '800',
-  },
-  verifiedTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: 'rgba(0,105,107,0.08)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  verifiedText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#00696b',
   },
   timeText: {
     fontSize: 11,

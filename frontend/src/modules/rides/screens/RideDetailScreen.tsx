@@ -31,6 +31,28 @@ import {
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
+const RECURRENCE_LABELS: Record<string, string> = {
+  ONE_TIME: 'One-time trip',
+  WEEKDAYS: 'Repeats on weekdays',
+  DAILY: 'Repeats daily',
+  WEEKLY: 'Repeats weekly',
+};
+const LUGGAGE_LABELS: Record<string, string> = {
+  NONE: 'No luggage',
+  BACKPACK_ONLY: 'Backpack only',
+  MEDIUM: 'Medium bags',
+  LARGE_SUITCASE: 'Large suitcases OK',
+};
+const GENDER_LABELS: Record<string, string> = {
+  FEMALE_ONLY: 'Women riders only',
+  MALE_ONLY: 'Men riders only',
+};
+const TOLL_LABELS: Record<string, string> = {
+  AVOID_TOLLS: 'Avoids toll roads',
+  TOLLS_INCLUDED: 'Tolls included in price',
+  TOLLS_SPLIT: 'Tolls split among riders',
+};
+
 const colors = {
   ...baseColors,
   appPrimary: '#431ebe',
@@ -111,7 +133,7 @@ export function RideDetailScreen() {
   async function handleShare() {
     try {
       const shareTitle = `Carpool: ${detailData?.originArea || 'Origin'} to ${detailData?.destinationArea || 'Destination'}`;
-      const shareMsg = `Join carpool with ${detailData?.driverName || 'Verified Driver'} from ${detailData?.originArea || 'Origin'} to ${detailData?.destinationArea || 'Destination'} on ManaBandhu: https://manabandhu.com/rides/${rideId}`;
+      const shareMsg = `Join carpool with ${detailData?.driverName || 'a ManaBandhu member'} from ${detailData?.originArea || 'Origin'} to ${detailData?.destinationArea || 'Destination'} on ManaBandhu: https://manabandhu.com/rides/${rideId}`;
       await Share.share({
         title: shareTitle,
         message: shareMsg,
@@ -158,53 +180,43 @@ export function RideDetailScreen() {
     enabled: Boolean(rideId),
   });
 
-  // Derive presentation data dynamically from rawOffer
+  // Everything shown about the ride comes from the ride record itself; nothing is invented per driver.
   const detailData = useMemo(() => {
     if (!rawOffer) return null;
-    const depTime = rawOffer.departureAt
-      ? new Date(rawOffer.departureAt).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : 'Flexible Departure';
-    const costDollars = (
-      parseFloat(String(rawOffer.contribution || '6').replace(/[^0-9.]/g, '')) || 6
-    ).toFixed(2);
+    const departure = rawOffer.departureAt ? new Date(rawOffer.departureAt) : null;
+    const depTime = departure
+      ? departure.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'Time not set';
+    const amount = parseFloat(String(rawOffer.contribution ?? '').replace(/[^0-9.]/g, ''));
+    const costDollars = Number.isFinite(amount) ? amount.toFixed(2) : null;
+    const preferences = [
+      LUGGAGE_LABELS[rawOffer.luggageCapacity ?? ''],
+      GENDER_LABELS[rawOffer.genderPreference ?? ''],
+      TOLL_LABELS[rawOffer.tollPreference ?? ''],
+    ].filter((label): label is string => Boolean(label));
 
     return {
       ...rawOffer,
-      driverName: rawOffer.driverId
-        ? `Verified Driver (${rawOffer.driverId.slice(0, 6)})`
-        : 'Verified Driver',
-      driverTitle: 'Community Carpool Host',
-      driverEmployer: 'Verified Member',
-      driverCorporateEmail: undefined,
-      driverRating: 4.95,
-      carpoolsGiven: 24,
-      onTimeRate: '99%',
-      replySpeed: 'Fast reply',
-      driverQuote: 'Sharing community commute to split fuel and travel together.',
-      commuteFreq: 'Community Carpool',
-      durationEst: 'Direct Corridor Route',
-      routeDistance: `${rawOffer.originArea} to ${rawOffer.destinationArea}`,
-      trafficCondition: 'Standard Traffic',
-      highwayNote: `Direct corridor commute from ${rawOffer.originArea} to ${rawOffer.destinationArea}`,
+      driverName: rawOffer.driverId ? `Member ${rawOffer.driverId.slice(0, 6)}` : 'Ride host',
+      driverTitle: 'Ride host',
+      departureDate: departure
+        ? departure.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+        : 'Date not set',
+      commuteFreq: RECURRENCE_LABELS[rawOffer.recurrencePattern ?? ''] ?? 'One-time trip',
+      durationEst: rawOffer.estimatedDurationMins
+        ? `About ${Math.round(rawOffer.estimatedDurationMins)} min`
+        : null,
+      routeDistance: rawOffer.distanceMiles
+        ? `${rawOffer.distanceMiles.toFixed(1)} mi`
+        : `${rawOffer.originArea} to ${rawOffer.destinationArea}`,
+      highwayNote: `${rawOffer.originArea} to ${rawOffer.destinationArea}`,
       pickupExact: rawOffer.originArea,
       dropoffExact: rawOffer.destinationArea,
       pickupTime: depTime,
       dropoffTime: undefined,
-      contribution: `$${costDollars}`,
-      fuelShareEstimate: `$${costDollars}`,
-      vehicleName: 'Commuter Vehicle',
-      vehicleSub: 'Insured Member Vehicle',
-      amenities: [
-        { icon: '⚡', label: 'Carpool Eligible' },
-        { icon: '❄️', label: 'Air Conditioned' },
-        { icon: '🎒', label: 'Trunk Space' },
-      ],
-      ecoTag: 'Zero Brokerage Community Commute 🌿',
-      vibes: ['Direct Commute 🚗', 'Non-Smoking 🚭'],
-      totalSeats: rawOffer.seatsTotal || 4,
+      contribution: costDollars ? `$${costDollars}` : 'Not set',
+      preferences,
+      totalSeats: rawOffer.seatsTotal,
       coRiders: [],
     };
   }, [rawOffer]);
@@ -276,8 +288,7 @@ export function RideDetailScreen() {
     );
   }
 
-  const numericCost =
-    parseFloat(String(detailData.contribution || '$6').replace(/[^0-9.]/g, '')) || 6;
+  const numericCost = parseFloat(String(detailData.contribution).replace(/[^0-9.]/g, '')) || 0;
   const totalCost = (numericCost * selectedSeatSlots.length).toFixed(2);
 
   return (
@@ -358,9 +369,6 @@ export function RideDetailScreen() {
               <View style={styles.driverProfileLeft}>
                 <View style={styles.driverAvatarCircle}>
                   <Text style={styles.driverAvatarInitial}>{detailData.driverName.charAt(0)}</Text>
-                  <View style={styles.verifiedDriverBadge}>
-                    <AppIcon color={colors.surfaceContainerLowest} name="check" size={10} />
-                  </View>
                 </View>
 
                 <View>
@@ -370,40 +378,9 @@ export function RideDetailScreen() {
                       <Text style={styles.staffBadgeText}>{detailData.driverTitle}</Text>
                     </View>
                   </View>
-                  <View style={styles.employerRow}>
-                    <AppIcon color={colors.inkSecondary} name="home" size={13} />
-                    <Text style={styles.employerName}>{detailData.driverEmployer}</Text>
-                  </View>
-                  <View style={styles.ratingsRow}>
-                    <View style={styles.starRow}>
-                      <AppIcon color={colors.warm} name="star" size={13} />
-                      <Text style={styles.ratingNumber}>{detailData.driverRating.toFixed(1)}</Text>
-                      <Text style={styles.ratingCount}>({detailData.carpoolsGiven} carpools)</Text>
-                    </View>
-                    <Text style={styles.dotSeparator}>•</Text>
-                    <View style={styles.onTimeRow}>
-                      <AppIcon color={colors.teal} name="calendar" size={12} />
-                      <Text style={styles.onTimeText}>{detailData.onTimeRate} On-time</Text>
-                    </View>
-                  </View>
+                  <Text style={styles.employerName}>Shares this ride with the community</Text>
                 </View>
               </View>
-
-              <View style={styles.driverBadgeStack}>
-                <View style={styles.fastReplyPill}>
-                  <AppIcon color={colors.teal} name="sparks" size={12} />
-                  <Text style={styles.fastReplyText}>{detailData.replySpeed}</Text>
-                </View>
-                <View style={styles.superCommuterPill}>
-                  <Text style={styles.superCommuterText}>Desi Super Commuter</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Driver Quote */}
-            <View style={styles.quoteBox}>
-              <Text style={{ fontSize: 18, color: colors.appPrimary, fontWeight: '800' }}>“</Text>
-              <Text style={styles.quoteText}>“{detailData.driverQuote}”</Text>
             </View>
           </View>
 
@@ -413,14 +390,16 @@ export function RideDetailScreen() {
               <View style={styles.dateRow}>
                 <AppIcon color={colors.appPrimary} name="calendar" size={18} />
                 <View>
-                  <Text style={styles.dateTitle}>Today, Scheduled Commute</Text>
+                  <Text style={styles.dateTitle}>{detailData.departureDate}</Text>
                   <Text style={styles.dateSub}>{detailData.commuteFreq}</Text>
                 </View>
               </View>
-              <View style={styles.durationBadge}>
-                <AppIcon color={colors.teal} name="sparks" size={13} />
-                <Text style={styles.durationText}>{detailData.durationEst}</Text>
-              </View>
+              {detailData.durationEst ? (
+                <View style={styles.durationBadge}>
+                  <AppIcon color={colors.teal} name="sparks" size={13} />
+                  <Text style={styles.durationText}>{detailData.durationEst}</Text>
+                </View>
+              ) : null}
             </View>
 
             {/* Visual Route Timeline */}
@@ -470,9 +449,6 @@ export function RideDetailScreen() {
               <View style={styles.routeDistanceRow}>
                 <AppIcon color={colors.teal} name="compass" size={15} />
                 <Text style={styles.routeDistanceText}>{detailData.routeDistance}</Text>
-              </View>
-              <View style={styles.trafficPill}>
-                <Text style={styles.trafficText}>{detailData.trafficCondition}</Text>
               </View>
             </View>
           </View>
@@ -541,60 +517,32 @@ export function RideDetailScreen() {
             </View>
           </View>
 
-          {/* ── Vehicle Specifications Card ─────────────────────────────────── */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <View>
-                <Text style={styles.sectionEyebrow}>Vehicle Details</Text>
-                <Text style={styles.vehicleTitle}>{detailData.vehicleName}</Text>
-                <Text style={styles.vehicleSubtitle}>{detailData.vehicleSub}</Text>
+          {/* ── Trip Preferences (from the ride record) ────────────────────── */}
+          {detailData.preferences.length > 0 ? (
+            <View style={styles.card}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.cardHeading}>Trip preferences</Text>
               </View>
-              <View style={styles.carIconCircle}>
-                <AppIcon color={colors.appPrimary} name="car" size={24} />
+              <View style={styles.vibesGrid}>
+                {detailData.preferences.map((label) => (
+                  <View key={label} style={styles.vibePill}>
+                    <Text style={styles.vibePillText}>{label}</Text>
+                  </View>
+                ))}
               </View>
             </View>
-
-            {/* Amenities Grid */}
-            <View style={styles.amenitiesGrid}>
-              {detailData.amenities.map((item: { icon: string; label: string }, idx: number) => (
-                <View key={idx} style={styles.amenityItem}>
-                  <Text style={styles.amenityIcon}>{item.icon}</Text>
-                  <Text style={styles.amenityLabel}>{item.label}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Eco Badge */}
-            <View style={styles.ecoBadge}>
-              <Text style={styles.ecoBadgeText}>{detailData.ecoTag}</Text>
-            </View>
-          </View>
-
-          {/* ── Commute Vibe & Preferences ─────────────────────────────────── */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeading}>Commute Vibe & Preferences</Text>
-              <Text style={styles.verifiedTag}>Driver verified</Text>
-            </View>
-            <View style={styles.vibesGrid}>
-              {detailData.vibes.map((vibe: string, idx: number) => (
-                <View key={idx} style={styles.vibePill}>
-                  <Text style={styles.vibePillText}>{vibe}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+          ) : null}
 
           {/* ── Vehicle Capacity & Co-Riders Grid ───────────────────────────── */}
           <View style={styles.card}>
             <View style={styles.cardHeaderRow}>
               <View>
                 <Text style={styles.cardHeading}>Vehicle Capacity & Co-Riders</Text>
-                <Text style={styles.capacitySub}>4 total passenger slots</Text>
+                <Text style={styles.capacitySub}>{detailData.totalSeats} seats in total</Text>
               </View>
               <View style={styles.seatsAvailableBadge}>
                 <Text style={styles.seatsAvailableText}>
-                  {detailData.seatsAvailable ?? 2} Seats Available
+                  {detailData.seatsAvailable} Seats Available
                 </Text>
               </View>
             </View>
@@ -801,20 +749,13 @@ export function RideDetailScreen() {
                 <Text style={styles.feeTotalValue}>${totalCost}</Text>
               </View>
             </View>
-
-            <View style={styles.guaranteePill}>
-              <AppIcon color={colors.teal} name="verified-user" size={15} />
-              <Text style={styles.guaranteeText}>
-                100% Employer Verified Carpools · Zero Surge Guarantee
-              </Text>
-            </View>
           </View>
 
           {/* ── Community Safety Protocol Card ──────────────────────────────── */}
           <View style={styles.card}>
             <View style={styles.safetyHeader}>
               <AppIcon color={colors.appPrimary} name="shield" size={18} />
-              <Text style={styles.safetyTitle}>ManaBandhu Safety & Trust Protocol</Text>
+              <Text style={styles.safetyTitle}>Riding safely</Text>
             </View>
             <View style={styles.safetyItems}>
               <View style={styles.safetyItem}>
@@ -822,8 +763,7 @@ export function RideDetailScreen() {
                   <AppIcon color={colors.teal} name="check" size={12} />
                 </View>
                 <Text style={styles.safetyItemText}>
-                  Corporate Email Verified:{' '}
-                  <Text style={styles.safetyItemHighlight}>{detailData.driverCorporateEmail}</Text>
+                  Meet at a public pickup point and confirm the driver before you get in.
                 </Text>
               </View>
               <View style={styles.safetyItem}>
@@ -831,7 +771,7 @@ export function RideDetailScreen() {
                   <AppIcon color={colors.teal} name="check" size={12} />
                 </View>
                 <Text style={styles.safetyItemText}>
-                  Texas Driver License & Clean Driving Record
+                  Tell a trusted contact about your trip; add contacts in the Safety Center.
                 </Text>
               </View>
               <View style={styles.safetyItem}>
@@ -839,7 +779,7 @@ export function RideDetailScreen() {
                   <AppIcon color={colors.teal} name="check" size={12} />
                 </View>
                 <Text style={styles.safetyItemText}>
-                  Live GPS sharing & SOS with trusted contacts
+                  Report anything that feels wrong from the Safety Center.
                 </Text>
               </View>
             </View>
@@ -908,8 +848,8 @@ export function RideDetailScreen() {
                   You booked {selectedSeatSlots.length} seat(s) with {detailData.driverName}.
                 </Text>
                 <Text style={styles.bookingSuccessDetails}>
-                  Pickup: {detailData.pickupExact} at {detailData.pickupTime}. Driver has been
-                  notified via WhatsApp & ManaBandhu chat.
+                  Pickup: {detailData.pickupExact} at {detailData.pickupTime}. The driver will see
+                  your request in their ride bookings.
                 </Text>
                 <Pressable
                   onPress={() => {
@@ -932,9 +872,7 @@ export function RideDetailScreen() {
 
                 <View style={styles.bookingSummaryRow}>
                   <View>
-                    <Text style={styles.bookingSummaryDriver}>
-                      {detailData.driverName} ({detailData.driverEmployer})
-                    </Text>
+                    <Text style={styles.bookingSummaryDriver}>{detailData.driverName}</Text>
                     <Text style={styles.bookingSummaryRoute}>
                       {detailData.originArea} ➔ {detailData.destinationArea}
                     </Text>
@@ -1127,17 +1065,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
   },
-  verifiedDriverBadge: {
-    alignItems: 'center',
-    backgroundColor: colors.teal,
-    borderRadius: radius.pill,
-    bottom: -2,
-    height: 16,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: -2,
-    width: 16,
-  },
   driverNameRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1159,94 +1086,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  employerRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 2,
-  },
   employerName: {
     color: '#4b5563',
     fontSize: 12,
     fontWeight: '500',
-  },
-  ratingsRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 4,
-  },
-  starRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 2,
-  },
-  ratingNumber: {
-    color: colors.warm,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  ratingCount: {
-    color: '#6b7280',
-    fontSize: 11,
-  },
-  dotSeparator: {
-    color: '#d1d5db',
-  },
-  onTimeRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 3,
-  },
-  onTimeText: {
-    color: colors.teal,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  driverBadgeStack: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  fastReplyPill: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,105,107,0.1)',
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 2,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  fastReplyText: {
-    color: colors.teal,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  superCommuterPill: {
-    backgroundColor: 'rgba(67,30,190,0.08)',
-    borderRadius: radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  superCommuterText: {
-    color: colors.appPrimary,
-    fontSize: 9,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  quoteBox: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 16,
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-    padding: 10,
-  },
-  quoteText: {
-    color: '#374151',
-    flex: 1,
-    fontSize: 12,
-    fontStyle: 'italic',
-    lineHeight: 16,
   },
 
   // Route Timeline
@@ -1379,90 +1222,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  trafficPill: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  trafficText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '500',
-  },
 
   // Vehicle Details
-  sectionEyebrow: {
-    color: '#9ca3af',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  vehicleTitle: {
-    color: '#111827',
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  vehicleSubtitle: {
-    color: '#6b7280',
-    fontSize: 11,
-  },
-  carIconCircle: {
-    alignItems: 'center',
-    backgroundColor: '#eaedff',
-    borderRadius: 16,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  amenitiesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 10,
-  },
-  amenityItem: {
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    width: '48%',
-  },
-  amenityIcon: {
-    fontSize: 14,
-  },
-  amenityLabel: {
-    color: '#374151',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  ecoBadge: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,105,107,0.1)',
-    borderColor: 'rgba(0,105,107,0.2)',
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 8,
-    paddingVertical: 6,
-  },
-  ecoBadgeText: {
-    color: colors.teal,
-    fontSize: 11,
-    fontWeight: '700',
-  },
 
   // Vibes
-  verifiedTag: {
-    color: '#6b7280',
-    fontSize: 11,
-  },
   vibesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1658,19 +1421,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
-  guaranteePill: {
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 10,
-    padding: 8,
-  },
-  guaranteeText: {
-    color: '#6b7280',
-    fontSize: 10,
-  },
 
   // Safety Section
   safetyHeader: {
@@ -1703,10 +1453,6 @@ const styles = StyleSheet.create({
   safetyItemText: {
     color: '#374151',
     fontSize: 11,
-  },
-  safetyItemHighlight: {
-    color: colors.appPrimary,
-    fontWeight: '700',
   },
 
   // Sticky Bottom Bar
@@ -1946,18 +1692,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontSize: 13,
     textAlign: 'center',
-  },
-  retryBtn: {
-    backgroundColor: colors.appPrimary,
-    borderRadius: radius.pill,
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  retryBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
   },
   backBtn: {
     marginTop: 4,

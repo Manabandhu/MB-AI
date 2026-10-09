@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
-import { listEvents } from '@/modules/events/api';
+import { listEventCategories, listEvents } from '@/modules/events/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
@@ -37,15 +37,6 @@ const sp = {
   xxl: 32,
 };
 
-const EVENT_CATEGORIES = [
-  { id: 'all', label: 'All Events', icon: '✦' },
-  { id: 'cultural', label: '🎉 Festivals & Cultural', icon: '🎉' },
-  { id: 'tech', label: '💼 Tech & AI Meetups', icon: '💼' },
-  { id: 'sports', label: '🏏 Cricket & Sports', icon: '🏏' },
-  { id: 'food', label: '🍛 Food & Chai Socials', icon: '🍛' },
-  { id: 'family', label: '👶 Family & Kids', icon: '👶' },
-];
-
 export default function EventsHomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -55,19 +46,27 @@ export default function EventsHomeScreen() {
 
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [_filterModalVisible, _setFilterModalVisible] = useState(false);
-  const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
 
-  // Fetch live events from Spring / Supabase
+  // Fetch live events and their categories from the backend
   const {
     data: rawEvents = [],
     isLoading,
+    isError,
     refetch,
   } = useQuery({
     queryKey: ['events', 'list'],
     queryFn: listEvents,
     staleTime: 1000 * 60 * 2,
   });
+  const { data: categories = [] } = useQuery({
+    queryKey: ['events', 'categories'],
+    queryFn: listEventCategories,
+    staleTime: 1000 * 60 * 10,
+  });
+  const categoryName = useMemo(() => {
+    const map = new Map(categories.map((c) => [c.id, c.name]));
+    return (id?: string) => (id ? map.get(id) : undefined);
+  }, [categories]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -79,17 +78,21 @@ export default function EventsHomeScreen() {
     }
   }, [refetch]);
 
-  const toggleSaveEvent = (id: string) => {
-    setSavedEvents((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  // Upcoming events only, soonest first (events without a start time go last)
+  const upcomingEvents = useMemo(() => {
+    const now = Date.now();
+    return rawEvents
+      .filter((ev) => !ev.endAt || new Date(ev.endAt).getTime() >= now)
+      .slice()
+      .sort((a, b) => {
+        const ta = a.startAt ? new Date(a.startAt).getTime() : Number.POSITIVE_INFINITY;
+        const tb = b.startAt ? new Date(b.startAt).getTime() : Number.POSITIVE_INFINITY;
+        return ta - tb;
+      });
+  }, [rawEvents]);
 
   const filteredEvents = useMemo(() => {
-    return rawEvents.filter((ev) => {
+    return upcomingEvents.filter((ev) => {
       if (query.trim()) {
         const q = query.toLowerCase();
         const matchTitle = ev.title.toLowerCase().includes(q);
@@ -97,51 +100,14 @@ export default function EventsHomeScreen() {
         const matchDesc = (ev.description || '').toLowerCase().includes(q);
         if (!matchTitle && !matchLoc && !matchDesc) return false;
       }
-
-      if (selectedCategory !== 'all') {
-        const text = `${ev.title} ${ev.description} ${ev.location}`.toLowerCase();
-        if (selectedCategory === 'cultural') {
-          if (
-            !text.includes('diwali') &&
-            !text.includes('dasara') &&
-            !text.includes('bathukamma') &&
-            !text.includes('festival')
-          )
-            return false;
-        } else if (selectedCategory === 'tech') {
-          if (
-            !text.includes('tech') &&
-            !text.includes('mixer') &&
-            !text.includes('ai') &&
-            !text.includes('founder')
-          )
-            return false;
-        } else if (selectedCategory === 'sports') {
-          if (!text.includes('cricket') && !text.includes('sport') && !text.includes('league'))
-            return false;
-        } else if (selectedCategory === 'food') {
-          if (
-            !text.includes('chai') &&
-            !text.includes('food') &&
-            !text.includes('social') &&
-            !text.includes('potluck')
-          )
-            return false;
-        }
-      }
-
+      if (selectedCategory !== 'all' && ev.categoryId !== selectedCategory) return false;
       return true;
     });
-  }, [rawEvents, query, selectedCategory]);
+  }, [upcomingEvents, query, selectedCategory]);
 
-  const featuredEvent = useMemo(() => {
-    return rawEvents.find((e) => e.title.toLowerCase().includes('diwali')) || rawEvents[0];
-  }, [rawEvents]);
-
-  const regularEvents = useMemo(() => {
-    if (!featuredEvent) return filteredEvents;
-    return filteredEvents.filter((e) => e.id !== featuredEvent.id);
-  }, [filteredEvents, featuredEvent]);
+  // The spotlight is simply the next upcoming event that matches the current filters.
+  const featuredEvent = filteredEvents[0];
+  const regularEvents = filteredEvents.slice(1);
 
   const formatEventDate = (isoString?: string) => {
     if (!isoString) return 'Upcoming Date';
@@ -177,9 +143,9 @@ export default function EventsHomeScreen() {
               )}
             </View>
             <Text style={s.subtitleText} numberOfLines={1}>
-              {isCompact
-                ? `${rawEvents.length} Events`
-                : `Austin & Central TX · ${rawEvents.length} Events`}
+              {isLoading || isError
+                ? 'Community events'
+                : `${upcomingEvents.length} upcoming ${upcomingEvents.length === 1 ? 'event' : 'events'}`}
             </Text>
           </View>
         </View>
@@ -191,11 +157,6 @@ export default function EventsHomeScreen() {
             accessibilityLabel="Saved Events"
           >
             <Text style={s.iconButtonEmoji}>🔖</Text>
-            {savedEvents.size > 0 && (
-              <View style={s.savedBadge}>
-                <Text style={s.savedBadgeText}>{savedEvents.size}</Text>
-              </View>
-            )}
           </Pressable>
 
           <Pressable
@@ -229,7 +190,7 @@ export default function EventsHomeScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search Diwali mela, tech mixers, cricket, concerts..."
+            placeholder="Search events by name, place, or description..."
             placeholderTextColor={colors.inkSecondary}
             style={s.searchInput}
           />
@@ -247,7 +208,7 @@ export default function EventsHomeScreen() {
           contentContainerStyle={s.chipsScroll}
           style={s.chipsContainer}
         >
-          {EVENT_CATEGORIES.map((cat) => {
+          {[{ id: 'all', name: 'All Events' }, ...categories].map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
               <Pressable
@@ -255,64 +216,36 @@ export default function EventsHomeScreen() {
                 onPress={() => setSelectedCategory(cat.id)}
                 style={[s.chipPill, isSelected && s.chipPillActive]}
               >
-                <Text style={[s.chipText, isSelected && s.chipTextActive]}>{cat.label}</Text>
+                <Text style={[s.chipText, isSelected && s.chipTextActive]}>{cat.name}</Text>
               </Pressable>
             );
           })}
         </ScrollView>
 
-        {/* Featured Spotlight Hero Card */}
-        {featuredEvent && (
-          <View style={s.featuredCard}>
-            <View style={s.featuredHeaderBg}>
-              <View style={s.featuredBadgeRow}>
-                <View style={s.featuredTagPill}>
-                  <Text style={s.featuredTagText}>🎉 FEATURED COMMUNITY FESTIVAL</Text>
-                </View>
-                <Pressable
-                  onPress={() => toggleSaveEvent(featuredEvent.id)}
-                  style={s.featuredSaveBtn}
-                >
-                  <Text style={s.saveEmoji}>{savedEvents.has(featuredEvent.id) ? '❤️' : '🤍'}</Text>
-                </Pressable>
-              </View>
-
-              <Text style={s.featuredTitle}>{featuredEvent.title}</Text>
-              <Text style={s.featuredDate}>📅 {formatEventDate(featuredEvent.startAt)}</Text>
-              <Text style={s.featuredLocation}>📍 {featuredEvent.location}</Text>
-            </View>
-
-            <View style={s.featuredFooter}>
-              <View style={s.socialProofRow}>
-                <Text style={s.attendeeHighlight}>👥 Open Community RSVP</Text>
-                <Text style={s.freeEntryPill}>Free Community Entry</Text>
-              </View>
-
-              <Pressable
-                onPress={() => router.push(`/events/${featuredEvent.id}` as Href)}
-                style={s.rsvpSpotlightBtn}
-              >
-                <Text style={s.rsvpSpotlightBtnText}>RSVP Free Spot 🪔</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-
-        {/* Upcoming Section Header */}
-        <View style={s.sectionHeaderRow}>
-          <Text style={s.sectionTitle}>Upcoming in Austin Metro ({regularEvents.length})</Text>
-          <Text style={s.communityCountPill}>Verified Community</Text>
-        </View>
-
         {isLoading ? (
           <View style={s.loadingBox}>
-            <Text style={s.loadingText}>Loading Desi community events...</Text>
+            <Text style={s.loadingText}>Loading events...</Text>
           </View>
-        ) : regularEvents.length === 0 ? (
+        ) : isError ? (
+          <View style={s.emptyBox}>
+            <Text style={s.emptyEmoji}>⚠️</Text>
+            <Text style={s.emptyTitle}>Unable to load events</Text>
+            <Text style={s.emptySubtitle}>Check your connection and try again.</Text>
+            <Pressable onPress={() => refetch()} style={s.resetBtn}>
+              <Text style={s.resetBtnText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : !featuredEvent ? (
           <View style={s.emptyBox}>
             <Text style={s.emptyEmoji}>🎉</Text>
-            <Text style={s.emptyTitle}>No events found</Text>
-            <Text style={s.emptySubtitle}>Try searching for a different keyword or category.</Text>
+            <Text style={s.emptyTitle}>
+              {upcomingEvents.length === 0 ? 'No upcoming events yet' : 'No events found'}
+            </Text>
+            <Text style={s.emptySubtitle}>
+              {upcomingEvents.length === 0
+                ? 'Host one to get the community together.'
+                : 'Try searching for a different keyword or category.'}
+            </Text>
             <Pressable
               onPress={() => {
                 setQuery('');
@@ -324,80 +257,81 @@ export default function EventsHomeScreen() {
             </Pressable>
           </View>
         ) : (
-          <View style={s.eventsGrid}>
-            {regularEvents.map((event) => {
-              const isSaved = savedEvents.has(event.id);
-              const isTech =
-                event.title.toLowerCase().includes('tech') ||
-                event.title.toLowerCase().includes('ai');
-              const isSports = event.title.toLowerCase().includes('cricket');
-
-              return (
-                <View key={event.id} style={s.eventCard}>
-                  <View style={s.cardTopRow}>
-                    <View style={s.categoryTagPill}>
-                      <Text style={s.categoryTagText}>
-                        {isTech
-                          ? '💼 Tech & Networking'
-                          : isSports
-                            ? '🏏 Sports & League'
-                            : '🎉 Cultural Festival'}
-                      </Text>
-                    </View>
-                    <Pressable onPress={() => toggleSaveEvent(event.id)}>
-                      <Text style={s.saveEmoji}>{isSaved ? '❤️' : '🤍'}</Text>
-                    </Pressable>
-                  </View>
-
-                  <Pressable onPress={() => router.push(`/events/${event.id}` as Href)}>
-                    <Text style={s.cardTitle}>{event.title}</Text>
-                  </Pressable>
-
-                  <Text style={s.cardDate}>📅 {formatEventDate(event.startAt)}</Text>
-                  <Text style={s.cardLocation}>📍 {event.location}</Text>
-
-                  {/* Highlights / Badges */}
-                  <View style={s.eventBadgesRow}>
-                    <View style={s.eventPill}>
-                      <Text style={s.eventPillText}>
-                        {isTech
-                          ? '☕ Free Chai & Snacks'
-                          : isSports
-                            ? '🏆 Tennis Ball 12 Overs'
-                            : '🍛 Traditional Potluck'}
-                      </Text>
-                    </View>
-                    <View style={s.eventPill}>
-                      <Text style={s.eventPillText}>
-                        {isTech
-                          ? '🤝 120 Techies RSVPs'
-                          : isSports
-                            ? '45 Players Attending'
-                            : '350 Families Attending'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Action Bar */}
-                  <View style={s.cardActionsRow}>
-                    <Pressable
-                      onPress={() => router.push(`/events/${event.id}` as Href)}
-                      style={s.viewDetailsBtn}
-                    >
-                      <Text style={s.viewDetailsText}>View Details ↗</Text>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={() => router.push(`/events/${event.id}` as Href)}
-                      style={s.rsvpCardBtn}
-                    >
-                      <Text style={s.rsvpCardText}>RSVP Free Spot</Text>
-                    </Pressable>
+          <>
+            {/* Next upcoming event spotlight (first real event in the filtered list) */}
+            <View style={s.featuredCard}>
+              <View style={s.featuredHeaderBg}>
+                <View style={s.featuredBadgeRow}>
+                  <View style={s.featuredTagPill}>
+                    <Text style={s.featuredTagText}>
+                      🎉 NEXT UP
+                      {categoryName(featuredEvent.categoryId)
+                        ? ` • ${categoryName(featuredEvent.categoryId)?.toUpperCase()}`
+                        : ''}
+                    </Text>
                   </View>
                 </View>
-              );
-            })}
-          </View>
+
+                <Text style={s.featuredTitle}>{featuredEvent.title}</Text>
+                <Text style={s.featuredDate}>📅 {formatEventDate(featuredEvent.startAt)}</Text>
+                <Text style={s.featuredLocation}>📍 {featuredEvent.location}</Text>
+              </View>
+
+              <View style={s.featuredFooter}>
+                <Pressable
+                  onPress={() => router.push(`/events/${featuredEvent.id}` as Href)}
+                  style={s.rsvpSpotlightBtn}
+                >
+                  <Text style={s.rsvpSpotlightBtnText}>View & RSVP 🪔</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {regularEvents.length > 0 ? (
+              <>
+                <View style={s.sectionHeaderRow}>
+                  <Text style={s.sectionTitle}>More upcoming ({regularEvents.length})</Text>
+                </View>
+                <View style={s.eventsGrid}>
+                  {regularEvents.map((event) => {
+                    const category = categoryName(event.categoryId);
+                    return (
+                      <View key={event.id} style={s.eventCard}>
+                        {category ? (
+                          <View style={s.cardTopRow}>
+                            <View style={s.categoryTagPill}>
+                              <Text style={s.categoryTagText}>{category}</Text>
+                            </View>
+                          </View>
+                        ) : null}
+
+                        <Pressable onPress={() => router.push(`/events/${event.id}` as Href)}>
+                          <Text style={s.cardTitle}>{event.title}</Text>
+                        </Pressable>
+
+                        <Text style={s.cardDate}>📅 {formatEventDate(event.startAt)}</Text>
+                        <Text style={s.cardLocation}>📍 {event.location}</Text>
+                        {event.description ? (
+                          <Text numberOfLines={2} style={s.cardLocation}>
+                            {event.description}
+                          </Text>
+                        ) : null}
+
+                        <View style={s.cardActionsRow}>
+                          <Pressable
+                            onPress={() => router.push(`/events/${event.id}` as Href)}
+                            style={s.viewDetailsBtn}
+                          >
+                            <Text style={s.viewDetailsText}>View Details ↗</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
+          </>
         )}
 
         {/* Community Host Banner */}
@@ -406,8 +340,8 @@ export default function EventsHomeScreen() {
           <View style={s.hostPromptContent}>
             <Text style={s.hostPromptTitle}>Hosting a Community Event?</Text>
             <Text style={s.hostPromptSubtitle}>
-              Publish your festival puja, cricket match, garba night, or tech meetup for free to
-              25,000+ verified members in Central Texas.
+              Publish your festival puja, cricket match, garba night, or tech meetup for the
+              community.
             </Text>
           </View>
           <Pressable
@@ -509,23 +443,6 @@ const s = StyleSheet.create({
   iconButtonEmoji: {
     fontSize: 16,
   },
-  savedBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: colors.danger,
-    borderRadius: 999,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  savedBadgeText: {
-    color: colors.canvas,
-    fontSize: 10,
-    fontWeight: '700',
-  },
   hostButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -536,18 +453,10 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     flexShrink: 0,
   },
-  hostButtonCompact: {
-    paddingHorizontal: 8,
-    paddingVertical: 7,
-    gap: 4,
-  },
   hostButtonText: {
     color: colors.canvas,
     fontSize: 13,
     fontWeight: '700',
-  },
-  hostButtonTextCompact: {
-    fontSize: 11,
   },
   topBarCompact: {
     paddingHorizontal: 10,
@@ -673,12 +582,6 @@ const s = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  featuredSaveBtn: {
-    padding: 4,
-  },
-  saveEmoji: {
-    fontSize: 18,
-  },
   featuredTitle: {
     fontSize: 21,
     fontWeight: '900',
@@ -705,25 +608,6 @@ const s = StyleSheet.create({
     flexWrap: 'wrap',
     gap: sp.sm,
   },
-  socialProofRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.sm,
-  },
-  attendeeHighlight: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  freeEntryPill: {
-    backgroundColor: '#ecfdf5',
-    color: '#065f46',
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
   rsvpSpotlightBtn: {
     backgroundColor: '#ea580c',
     paddingHorizontal: sp.lg,
@@ -746,11 +630,6 @@ const s = StyleSheet.create({
     fontWeight: '800',
     color: colors.ink,
     letterSpacing: -0.3,
-  },
-  communityCountPill: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.accentBrand,
   },
   loadingBox: {
     padding: sp.xxl,
@@ -845,25 +724,6 @@ const s = StyleSheet.create({
     color: colors.inkSecondary,
     marginBottom: sp.sm,
   },
-  eventBadgesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: sp.md,
-  },
-  eventPill: {
-    backgroundColor: colors.canvasMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  eventPillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.inkSecondary,
-  },
   cardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -882,19 +742,6 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.ink,
-  },
-  rsvpCardBtn: {
-    flex: 1.5,
-    height: 40,
-    borderRadius: radius.control,
-    backgroundColor: colors.accentBrand,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rsvpCardText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.canvas,
   },
   hostPromptBanner: {
     marginTop: sp.xl,

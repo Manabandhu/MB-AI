@@ -1,8 +1,7 @@
 import { color, radius, space, typography } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,11 +11,16 @@ import {
   listAdminJobs,
   listAdminRides,
   listAdminRooms,
-  listAuditLog,
   listReports,
   listUsers,
+  resolveReport,
 } from '@/modules/admin/api';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+
+// Every count and queue item here comes from the admin APIs. There is no sample queue: an empty queue says so,
+// and a failed request shows an error with retry.
 
 const adminRoutes = [
   { label: 'Users', route: '/admin/users' },
@@ -29,34 +33,86 @@ const adminRoutes = [
   { label: 'Audit Log', route: '/admin/audit-log' },
 ];
 
-const QUEUE_TABS = [
-  'All Pending (7)',
-  'Suspected Broker (3)',
-  'ID Verification (2)',
-  'Reported Content (2)',
-];
+const QUEUE_LIMIT = 5;
+
+const isOpen = (status: string | null | undefined) => {
+  const value = (status ?? '').toUpperCase();
+  return value === 'OPEN' || value === 'IN_REVIEW' || value === 'PENDING';
+};
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
-  const [activeQueueTab, setActiveQueueTab] = useState(QUEUE_TABS[0]);
-  const [resolvedCards, setResolvedCards] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
 
-  const _usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: listUsers });
-  const _reportsQuery = useQuery({ queryKey: ['admin', 'reports'], queryFn: listReports });
-  const _roomsQuery = useQuery({ queryKey: ['admin', 'rooms'], queryFn: listAdminRooms });
-  const _ridesQuery = useQuery({ queryKey: ['admin', 'rides'], queryFn: listAdminRides });
-  const _communityQuery = useQuery({
+  const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: listUsers });
+  const reportsQuery = useQuery({ queryKey: ['admin', 'reports'], queryFn: listReports });
+  const roomsQuery = useQuery({ queryKey: ['admin', 'rooms'], queryFn: listAdminRooms });
+  const ridesQuery = useQuery({ queryKey: ['admin', 'rides'], queryFn: listAdminRides });
+  const communityQuery = useQuery({
     queryKey: ['admin', 'community'],
     queryFn: listAdminCommunityPosts,
   });
-  const _jobsQuery = useQuery({ queryKey: ['admin', 'jobs'], queryFn: listAdminJobs });
-  const _eventsQuery = useQuery({ queryKey: ['admin', 'events'], queryFn: listAdminEvents });
-  const _auditQuery = useQuery({ queryKey: ['admin', 'audit-log'], queryFn: listAuditLog });
+  const jobsQuery = useQuery({ queryKey: ['admin', 'jobs'], queryFn: listAdminJobs });
+  const eventsQuery = useQuery({ queryKey: ['admin', 'events'], queryFn: listAdminEvents });
 
-  const handleAction = (cardId: string, actionName: string) => {
-    Alert.alert('Moderation Action', `${actionName} executed successfully.`);
-    setResolvedCards((prev) => new Set([...prev, cardId]));
-  };
+  const resolve = useMutation({
+    mutationFn: resolveReport,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }),
+    onError: (err) => Alert.alert('Unable to resolve report', err.message),
+  });
+
+  const queries = [
+    usersQuery,
+    reportsQuery,
+    roomsQuery,
+    ridesQuery,
+    communityQuery,
+    jobsQuery,
+    eventsQuery,
+  ];
+  const isLoading = queries.some((q) => q.isLoading);
+  const hasError = queries.some((q) => q.isError);
+
+  const openReports = (reportsQuery.data ?? []).filter((r) => isOpen(r.status));
+  const flaggedListings =
+    (roomsQuery.data ?? []).filter((r) => r.reported).length +
+    (ridesQuery.data ?? []).filter((r) => r.reported).length +
+    (communityQuery.data ?? []).filter((p) => p.reported).length +
+    (jobsQuery.data ?? []).filter((j) => j.reported).length +
+    (eventsQuery.data ?? []).filter((e) => e.reported).length;
+  const listingCount =
+    (roomsQuery.data?.length ?? 0) +
+    (ridesQuery.data?.length ?? 0) +
+    (communityQuery.data?.length ?? 0) +
+    (jobsQuery.data?.length ?? 0) +
+    (eventsQuery.data?.length ?? 0);
+
+  const kpis = [
+    {
+      value: openReports.length,
+      label: 'Open Reports',
+      sub: 'Awaiting moderation',
+      tone: { border: '#fde68a', bg: '#fffbeb', fg: '#b45309' },
+    },
+    {
+      value: flaggedListings,
+      label: 'Flagged Listings',
+      sub: 'Rooms, rides, posts, jobs, events',
+      tone: { border: '#fecdd3', bg: '#fff1f2', fg: '#be123c' },
+    },
+    {
+      value: usersQuery.data?.length ?? 0,
+      label: 'Users',
+      sub: 'Registered accounts',
+      tone: { border: '#bbf7d0', bg: '#f0fdf4', fg: '#15803d' },
+    },
+    {
+      value: listingCount,
+      label: 'Listings',
+      sub: 'Across moderated modules',
+      tone: { border: '#e2e8f0', bg: '#ffffff', fg: color.primary },
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -66,160 +122,98 @@ export default function AdminDashboardScreen() {
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.adminBadge}>
-                <Text style={styles.adminBadgeText}>SUPER ADMIN • Austin & Dallas</Text>
+                <Text style={styles.adminBadgeText}>SUPER ADMIN</Text>
               </View>
               <Text style={styles.pageTitle}>Moderation & Trust Console</Text>
               <Text style={styles.pageSubtitle}>
-                Real-time safety telemetry, zero-brokerage enforcement, and diaspora verification.
+                Live counts and open reports from the moderation APIs.
               </Text>
             </View>
-            <Pressable style={styles.auditIconBtn} onPress={() => router.push('/admin/audit-log')}>
+            <Pressable
+              accessibilityLabel="Open audit log"
+              accessibilityRole="button"
+              style={styles.auditIconBtn}
+              onPress={() => router.push('/admin/audit-log')}
+            >
               <AppIcon name="shield" size={20} color={color.primary} />
             </Pressable>
           </View>
 
-          {/* 4 KPI Cards */}
-          <View style={styles.kpiRow}>
-            <View style={[styles.kpiCard, { borderColor: '#fde68a', backgroundColor: '#fffbeb' }]}>
-              <Text style={[styles.kpiValue, { color: '#b45309' }]}>7</Text>
-              <Text style={styles.kpiLabel}>Pending Queue</Text>
-              <Text style={styles.kpiSub}>3 urgent</Text>
-            </View>
-            <View style={[styles.kpiCard, { borderColor: '#bbf7d0', backgroundColor: '#f0fdf4' }]}>
-              <Text style={[styles.kpiValue, { color: '#15803d' }]}>24</Text>
-              <Text style={styles.kpiLabel}>Verified Today</Text>
-              <Text style={styles.kpiSub}>Dell & Apple</Text>
-            </View>
-            <View style={[styles.kpiCard, { borderColor: '#fecdd3', backgroundColor: '#fff1f2' }]}>
-              <Text style={[styles.kpiValue, { color: '#be123c' }]}>3</Text>
-              <Text style={styles.kpiLabel}>Flagged Brokers</Text>
-              <Text style={styles.kpiSub}>Multi-post detected</Text>
-            </View>
-            <View style={[styles.kpiCard, { borderColor: '#e2e8f0', backgroundColor: '#ffffff' }]}>
-              <Text style={[styles.kpiValue, { color: color.primary }]}>18m</Text>
-              <Text style={styles.kpiLabel}>Response SLA</Text>
-              <Text style={styles.kpiSub}>Target &lt; 25m</Text>
-            </View>
-          </View>
-
-          {/* Priority Moderation Queue */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Priority Action Queue</Text>
-
-            {/* Queue Filter Tabs */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow}>
-              {QUEUE_TABS.map((tab) => {
-                const isActive = activeQueueTab === tab;
-                return (
-                  <Pressable
-                    key={tab}
-                    style={[styles.tabPill, isActive && styles.tabPillActive]}
-                    onPress={() => setActiveQueueTab(tab)}
+          {isLoading ? (
+            <LoadingState label="Loading moderation data..." />
+          ) : hasError ? (
+            <ErrorState
+              title="Unable to load moderation data"
+              body="One or more admin lists could not be loaded."
+              retryLabel="Retry"
+              onRetry={() => {
+                for (const q of queries) if (q.isError) q.refetch();
+              }}
+            />
+          ) : (
+            <>
+              {/* KPI Cards */}
+              <View style={styles.kpiRow}>
+                {kpis.map((kpi) => (
+                  <View
+                    key={kpi.label}
+                    style={[
+                      styles.kpiCard,
+                      { borderColor: kpi.tone.border, backgroundColor: kpi.tone.bg },
+                    ]}
                   >
-                    <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            {/* Queue Item 1: Broker Violation */}
-            {!resolvedCards.has('broker-1') && (
-              <View style={styles.modItem}>
-                <View style={[styles.alertTag, { backgroundColor: '#fee2e2' }]}>
-                  <Text style={[styles.alertTagText, { color: '#991b1b' }]}>
-                    ⚠️ Commercial Brokerage Suspected (Multiple watermarked numbers)
-                  </Text>
-                </View>
-                <Text style={styles.modTitle}>Furnished 3B2B Condo in Frisco, TX ($2,400/mo)</Text>
-                <Text style={styles.modMeta}>
-                  Poster: Rajesh K. • Created today • 4 identical listings across Austin & Dallas •
-                  Zero community reviews
-                </Text>
-                <View style={styles.modActions}>
-                  <Pressable
-                    style={[styles.actionBtn, { backgroundColor: '#dc2626' }]}
-                    onPress={() => handleAction('broker-1', 'Ban & Remove')}
-                  >
-                    <Text style={styles.actionBtnText}>Ban & Remove</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.outlineActionBtn}
-                    onPress={() => handleAction('broker-1', 'Review Details')}
-                  >
-                    <Text style={styles.outlineActionText}>Review Details</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.outlineActionBtn, { borderColor: color.teal }]}
-                    onPress={() => handleAction('broker-1', 'Mark Safe')}
-                  >
-                    <Text style={[styles.outlineActionText, { color: color.teal }]}>Mark Safe</Text>
-                  </Pressable>
-                </View>
+                    <Text style={[styles.kpiValue, { color: kpi.tone.fg }]}>{kpi.value}</Text>
+                    <Text style={styles.kpiLabel}>{kpi.label}</Text>
+                    <Text style={styles.kpiSub}>{kpi.sub}</Text>
+                  </View>
+                ))}
               </View>
-            )}
 
-            {/* Queue Item 2: Employer Verification */}
-            {!resolvedCards.has('verify-1') && (
-              <View style={styles.modItem}>
-                <View style={[styles.alertTag, { backgroundColor: '#e6f4f4' }]}>
-                  <Text style={[styles.alertTagText, { color: color.teal }]}>
-                    🛡️ Dell Work Email & Texas DL Verification
-                  </Text>
-                </View>
-                <Text style={styles.modTitle}>
-                  Pooja Varma • Senior Software Engineer at Dell Round Rock
-                </Text>
-                <Text style={styles.modMeta}>
-                  Passport / DL Front + Work Email confirmed (@dell.com OTP passed) • Facial Match
-                  99.4%
-                </Text>
-                <View style={styles.modActions}>
-                  <Pressable
-                    style={[styles.actionBtn, { backgroundColor: color.primary }]}
-                    onPress={() => handleAction('verify-1', 'Approve Verified Bandhu')}
-                  >
-                    <Text style={styles.actionBtnText}>Approve Verified Bandhu ✓</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.outlineActionBtn}
-                    onPress={() => handleAction('verify-1', 'Request Re-upload')}
-                  >
-                    <Text style={styles.outlineActionText}>Request Re-upload</Text>
-                  </Pressable>
-                </View>
+              {/* Open reports queue */}
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Priority Action Queue</Text>
+                {openReports.length === 0 ? (
+                  <Text style={styles.modMeta}>No open reports. The queue is clear.</Text>
+                ) : (
+                  openReports.slice(0, QUEUE_LIMIT).map((report) => (
+                    <View key={report.id} style={styles.modItem}>
+                      <View style={[styles.alertTag, { backgroundColor: '#fee2e2' }]}>
+                        <Text style={[styles.alertTagText, { color: '#991b1b' }]}>
+                          {report.type || 'Report'} • {report.targetType}
+                        </Text>
+                      </View>
+                      <Text style={styles.modTitle}>{report.reason}</Text>
+                      <Text style={styles.modMeta}>
+                        Reporter: {report.reporterName} •{' '}
+                        {new Date(report.createdAt).toLocaleDateString()} • {report.status}
+                      </Text>
+                      <View style={styles.modActions}>
+                        <Pressable
+                          accessibilityRole="button"
+                          disabled={resolve.isPending}
+                          style={[styles.actionBtn, { backgroundColor: color.primary }]}
+                          onPress={() => resolve.mutate(report.id)}
+                        >
+                          <Text style={styles.actionBtnText}>
+                            {resolve.isPending && resolve.variables === report.id
+                              ? 'Resolving...'
+                              : 'Resolve'}
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          style={styles.outlineActionBtn}
+                          onPress={() => router.push('/admin/reports')}
+                        >
+                          <Text style={styles.outlineActionText}>Review all reports</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))
+                )}
               </View>
-            )}
-
-            {/* Queue Item 3: Marketplace Scam */}
-            {!resolvedCards.has('scam-1') && (
-              <View style={styles.modItem}>
-                <View style={[styles.alertTag, { backgroundColor: '#fef3c7' }]}>
-                  <Text style={[styles.alertTagText, { color: '#b45309' }]}>
-                    ⚠️ Duplicate Listing / Suspicious Pricing Flag
-                  </Text>
-                </View>
-                <Text style={styles.modTitle}>Brand New iPhone 16 Pro Max 256GB - $450</Text>
-                <Text style={styles.modMeta}>
-                  Reported by 2 Verified Bandhus: Refuses Patel Brothers daylight pickup, asks for
-                  wire transfer in WhatsApp
-                </Text>
-                <View style={styles.modActions}>
-                  <Pressable
-                    style={[styles.actionBtn, { backgroundColor: '#dc2626' }]}
-                    onPress={() => handleAction('scam-1', 'Block & Delist')}
-                  >
-                    <Text style={styles.actionBtnText}>Block & Delist</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.outlineActionBtn}
-                    onPress={() => handleAction('scam-1', 'Dismiss Flag')}
-                  >
-                    <Text style={styles.outlineActionText}>Dismiss Flag</Text>
-                  </Pressable>
-                </View>
-              </View>
-            )}
-          </View>
+            </>
+          )}
 
           {/* Module Admin Links */}
           <View style={styles.sectionCard}>

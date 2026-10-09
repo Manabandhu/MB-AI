@@ -67,3 +67,29 @@ export async function createMarketplaceListing(
     'Create marketplace listing',
   );
 }
+
+/** Mirrors backend `ListingFavorite`. */
+export type ListingFavorite = {
+  id: string;
+  listingId: string;
+  userId: string;
+  createdAt: string;
+};
+
+export async function listMarketplaceFavorites(): Promise<ListingFavorite[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/marketplace/favorites'), 'Marketplace favorites');
+}
+
+export async function favoriteMarketplaceListing(listingId: string): Promise<ListingFavorite> {
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/marketplace/listings/${listingId}/favorite`, { method: 'POST' }),
+    'Save listing',
+  );
+}
+
+export async function unfavoriteMarketplaceListing(listingId: string): Promise<void> {
+  const response = await apiFetch(`/api/v1/marketplace/listings/${listingId}/favorite`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error(`Remove saved listing failed: ${response.status}`);
+}

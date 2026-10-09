@@ -32,8 +32,8 @@ public class SafetyController {
     }
 
     @GetMapping("/center")
-    com.manabandhu.backend.foundation.CatalogScreenContent center() {
-        return contentService.center();
+    com.manabandhu.backend.foundation.CatalogScreenContent center(Authentication authentication) {
+        return contentService.center(Actor.from(authentication));
     }
 
     @GetMapping("/reports")

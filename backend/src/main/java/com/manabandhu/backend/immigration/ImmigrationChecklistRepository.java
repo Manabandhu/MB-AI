@@ -9,4 +9,8 @@ interface ImmigrationChecklistRepository extends JpaRepository<ImmigrationCheckl
     List<ImmigrationChecklist> findAllByOrderByCreatedAtDesc();
     List<ImmigrationChecklist> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
     List<ImmigrationChecklist> findByCategoryOrderByCreatedAtDesc(String category);
+
+    long countByOwnerId(UUID ownerId);
+
+    long countByOwnerIdAndCompletedAtIsNotNull(UUID ownerId);
 }

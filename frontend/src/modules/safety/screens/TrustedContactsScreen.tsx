@@ -1,5 +1,6 @@
 import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getTrustedContacts } from '@/modules/safety/api';
@@ -7,10 +8,10 @@ import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { AppButton } from '@/modules/shared/ui/AppButton';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function TrustedContactsScreen() {
+  const router = useRouter();
   const layout = useAdaptiveLayout();
   const contacts = useQuery({
     queryKey: ['safety', 'trusted-contacts'],
@@ -52,15 +53,13 @@ export function TrustedContactsScreen() {
           eyebrow="Safety"
           title="Trusted contacts"
           subtitle="People who can be notified during an emergency."
-          actionLabel="Add contact"
-          onAction={() => {}}
         />
         {data.length === 0 ? (
           <EmptyState
             title="No trusted contacts"
-            body="Add someone you trust so they can support you if needed."
-            actionLabel="Add contact"
-            onAction={() => {}}
+            body="You have not added any trusted contacts yet."
+            actionLabel="Back to Safety Center"
+            onAction={() => router.push('/safety')}
           />
         ) : (
           <View style={styles.list}>
@@ -78,14 +77,17 @@ export function TrustedContactsScreen() {
                 </View>
                 <View style={styles.details}>
                   <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.relationship}>{item.relationship}</Text>
-                  <Text style={styles.meta}>Added {item.addedAt}</Text>
+                  {item.relationship ? (
+                    <Text style={styles.relationship}>{item.relationship}</Text>
+                  ) : null}
+                  <Text style={styles.meta}>
+                    Added {new Date(item.createdAt).toLocaleDateString()}
+                  </Text>
                 </View>
               </View>
             ))}
           </View>
         )}
-        <AppButton label="Add trusted contact" route="/safety/trusted-contacts" />
       </View>
     </SafeAreaView>
   );

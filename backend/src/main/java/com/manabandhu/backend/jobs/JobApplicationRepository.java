@@ -9,4 +9,6 @@ interface JobApplicationRepository extends JpaRepository<JobApplication, UUID> {
     List<JobApplication> findByJobPostingIdOrderByAppliedAtDesc(UUID jobPostingId);
 
     List<JobApplication> findByApplicantIdOrderByAppliedAtDesc(UUID applicantId);
+
+    long countByApplicantId(UUID applicantId);
 }

@@ -1,7 +1,7 @@
 import { color as colors, radius, space, typography } from '@manabandhu/design-system';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,13 +17,14 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { createRideOffer } from '@/modules/rides/api';
+import { createRideOffer, getMyRides } from '@/modules/rides/api';
 import { RideLocationPicker } from '@/modules/rides/components/RideLocationPicker';
 import {
   fetchGoogleRoute,
   geocodeAddress,
   type RouteInfo,
 } from '@/modules/rides/services/googleMapsService';
+import type { RideListing, RideOffer } from '@/modules/rides/types';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const TRIP_MODES = [
@@ -60,30 +61,77 @@ const GENDER_OPTIONS = [
   { id: 'FEMALE_ONLY', label: 'Women Only' },
 ];
 
-const RECENT_TEMPLATES = [
-  {
-    id: 'coppell-dallas',
-    origin: 'Coppell, TX',
-    destination: 'Downtown Dallas, TX',
-    seats: 3,
-    price: '12',
-    isRecurring: true,
-    pattern: 'WEEKDAYS',
-    days: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
-    tollPref: 'AVOID_TOLLS',
-  },
-  {
-    id: 'plano-austin',
-    origin: 'Plano - Legacy West, TX',
-    destination: 'Austin - Domain Central, TX',
-    seats: 3,
-    price: '30',
-    isRecurring: false,
-    pattern: 'ONE_TIME',
-    days: [],
-    tollPref: 'TOLLS_INCLUDED',
-  },
-];
+type RideTemplate = {
+  id: string;
+  origin: string;
+  destination: string;
+  seats: number;
+  price: string;
+  isRecurring: boolean;
+  pattern: string;
+  days: string[];
+  tollPref: string;
+};
+
+/** Builds re-post templates from the driver's own previous offers (GET /api/v1/rides/mine). */
+function toTemplates(rides: Array<Partial<RideOffer & RideListing>>): RideTemplate[] {
+  const seen = new Set<string>();
+  const templates: RideTemplate[] = [];
+  for (const ride of rides) {
+    const origin = ride.originArea ?? ride.pickupArea;
+    const destination = ride.destinationArea ?? ride.destination;
+    if (!ride.id || !origin || !destination) continue;
+    const key = `${origin}|${destination}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    templates.push({
+      id: ride.id,
+      origin,
+      destination,
+      seats: ride.seatsTotal ?? 1,
+      price: String(ride.contribution ?? '').replace(/[^0-9.]/g, ''),
+      isRecurring: Boolean(ride.isRecurring),
+      pattern: ride.recurrencePattern ?? 'ONE_TIME',
+      days: ride.recurringDays ?? [],
+      tollPref: ride.tollPreference ?? 'AVOID_TOLLS',
+    });
+    if (templates.length >= 5) break;
+  }
+  return templates;
+}
+
+/**
+ * Parses the driver's departure inputs. Date accepts YYYY-MM-DD, "today" or "tomorrow";
+ * time accepts 24h "17:30" or "5:30 PM". Returns null when either part is not understood.
+ */
+export function parseDeparture(dateText: string, timeText: string, now = new Date()): Date | null {
+  const dateRaw = dateText.trim().toLowerCase();
+  let base: Date;
+  if (dateRaw === 'today') {
+    base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (dateRaw === 'tomorrow') {
+    base = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  } else {
+    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(dateRaw);
+    if (!m) return null;
+    base = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    if (base.getMonth() !== Number(m[2]) - 1) return null;
+  }
+  const t = /^(\d{1,2}):(\d{2})\s*(am|pm)?$/.exec(timeText.trim().toLowerCase());
+  if (!t) return null;
+  let hours = Number(t[1]);
+  const minutes = Number(t[2]);
+  if (minutes > 59) return null;
+  if (t[3]) {
+    if (hours < 1 || hours > 12) return null;
+    if (t[3] === 'pm' && hours !== 12) hours += 12;
+    if (t[3] === 'am' && hours === 12) hours = 0;
+  } else if (hours > 23) {
+    return null;
+  }
+  base.setHours(hours, minutes, 0, 0);
+  return base;
+}
 
 export function RideOfferScreen() {
   const router = useRouter();
@@ -100,17 +148,13 @@ export function RideOfferScreen() {
   }, [router]);
 
   // Form states
-  const [origin, setOrigin] = useState('Dallas - Frisco / Plano, TX');
-  const [originCoords, setOriginCoords] = useState<{ lat: number; lng: number } | null>({
-    lat: 33.1507,
-    lng: -96.8236,
-  });
+  const [origin, setOrigin] = useState('');
+  const [originCoords, setOriginCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  const [destination, setDestination] = useState('Austin - Downtown / Domain, TX');
-  const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | null>({
-    lat: 30.4015,
-    lng: -97.7247,
-  });
+  const [destination, setDestination] = useState('');
+  const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | null>(
+    null,
+  );
 
   // Toll Preference & Route Info
   const [tollPref, setTollPref] = useState<'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT'>(
@@ -123,12 +167,19 @@ export function RideOfferScreen() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrencePattern, setRecurrencePattern] = useState<string>('WEEKDAYS');
   const [selectedDays, setSelectedDays] = useState<string[]>(['MON', 'TUE', 'WED', 'THU', 'FRI']);
-  const [departureDate, setDepartureDate] = useState('Today / Tomorrow');
-  const [departureTime, setDepartureTime] = useState('5:30 PM');
+  const [departureDate, setDepartureDate] = useState('');
+  const [departureTime, setDepartureTime] = useState('');
 
   // Seats & Price
   const [seats, setSeats] = useState(3);
-  const [pricePerSeat, setPricePerSeat] = useState('28');
+  const [pricePerSeat, setPricePerSeat] = useState('');
+
+  // Re-post templates come from the driver's own previous offers, never from fixtures.
+  const { data: myRides } = useQuery({ queryKey: ['rides', 'mine'], queryFn: getMyRides });
+  const recentTemplates = useMemo(
+    () => toTemplates((myRides ?? []) as Array<Partial<RideOffer & RideListing>>),
+    [myRides],
+  );
 
   // Preferences
   const [luggageCapacity, setLuggageCapacity] = useState('MEDIUM');
@@ -161,7 +212,7 @@ export function RideOfferScreen() {
   }, [originCoords, destinationCoords, tollPref]);
 
   // Apply quick re-post template
-  const applyTemplate = async (template: (typeof RECENT_TEMPLATES)[0]) => {
+  const applyTemplate = async (template: RideTemplate) => {
     setOrigin(template.origin);
     setDestination(template.destination);
     setSeats(template.seats);
@@ -216,13 +267,26 @@ export function RideOfferScreen() {
     }
 
     const title = `${origin.split(',')[0].trim()} to ${destination.split(',')[0].trim()} Carpool`;
-    const numPrice = parseFloat(pricePerSeat) || 15;
+    const numPrice = Number.parseFloat(pricePerSeat);
+    if (!Number.isFinite(numPrice) || numPrice < 0) {
+      setErrorMsg('Please enter a contribution per seat (0 for free).');
+      return;
+    }
+    const departure = parseDeparture(departureDate, departureTime);
+    if (!departure) {
+      setErrorMsg('Enter the departure date as YYYY-MM-DD (or today/tomorrow) and time as HH:MM.');
+      return;
+    }
+    if (departure.getTime() <= Date.now()) {
+      setErrorMsg('Departure must be in the future.');
+      return;
+    }
 
     mutation.mutate({
       title,
       pickupArea: origin.trim(),
       destination: destination.trim(),
-      departureAt: new Date(Date.now() + 86400000).toISOString(),
+      departureAt: departure.toISOString(),
       seatsTotal: seats,
       contribution: numPrice,
       originLat: originCoords?.lat,
@@ -251,7 +315,7 @@ export function RideOfferScreen() {
           <Text style={s.successTitle}>Ride Offer Published! 🚗</Text>
           <Text style={s.successSubtitle}>
             Your carpool from {origin.split(',')[0].trim()} to {destination.split(',')[0].trim()} is
-            active in discovery feeds. Verified travelers can request seats.
+            active in discovery feeds. Travelers can request seats.
           </Text>
           <View style={s.successCard}>
             <Text style={s.successRouteText}>
@@ -309,36 +373,42 @@ export function RideOfferScreen() {
             <View style={{ width: 44 }} />
           </View>
 
-          {/* 1. Top Template Ribbon: Re-post Recent Trip */}
-          <View style={s.templateSection}>
-            <View style={s.sectionHeaderRow}>
-              <AppIcon name="sparks" size={16} color={colors.primary} />
-              <Text style={s.sectionEyebrow}>FAST RE-POST RECENT TRIPS</Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.templateScroll}
-            >
-              {RECENT_TEMPLATES.map((item) => (
-                <Pressable key={item.id} style={s.templateCard} onPress={() => applyTemplate(item)}>
-                  <View style={s.templateTop}>
-                    <Text style={s.templateBadge}>
-                      {item.isRecurring ? '🔄 Commute' : '⚡ One-Time'}
+          {/* 1. Re-post one of the driver's own previous trips (hidden when there are none) */}
+          {recentTemplates.length > 0 ? (
+            <View style={s.templateSection}>
+              <View style={s.sectionHeaderRow}>
+                <AppIcon name="sparks" size={16} color={colors.primary} />
+                <Text style={s.sectionEyebrow}>RE-POST ONE OF YOUR TRIPS</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.templateScroll}
+              >
+                {recentTemplates.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    style={s.templateCard}
+                    onPress={() => applyTemplate(item)}
+                  >
+                    <View style={s.templateTop}>
+                      <Text style={s.templateBadge}>
+                        {item.isRecurring ? '🔄 Commute' : '⚡ One-Time'}
+                      </Text>
+                      <Text style={s.templatePrice}>${item.price}/seat</Text>
+                    </View>
+                    <Text numberOfLines={1} style={s.templateRoute}>
+                      {item.origin.split(',')[0]} → {item.destination.split(',')[0]}
                     </Text>
-                    <Text style={s.templatePrice}>${item.price}/seat</Text>
-                  </View>
-                  <Text numberOfLines={1} style={s.templateRoute}>
-                    {item.origin.split(',')[0]} → {item.destination.split(',')[0]}
-                  </Text>
-                  <Text style={s.templateMeta}>
-                    {item.seats} seats •{' '}
-                    {item.tollPref === 'AVOID_TOLLS' ? 'No Tolls' : 'Tolls Inc.'}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
+                    <Text style={s.templateMeta}>
+                      {item.seats} seats •{' '}
+                      {item.tollPref === 'AVOID_TOLLS' ? 'No Tolls' : 'Tolls Inc.'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
 
           {/* 2. Route & Address Inputs with Autocomplete */}
           <View style={s.card}>
@@ -465,26 +535,31 @@ export function RideOfferScreen() {
                   })}
                 </View>
               </View>
-            ) : (
-              <View style={s.dateTimeRow}>
-                <View style={s.dateTimeBox}>
-                  <Text style={s.fieldLabel}>DEPARTURE DATE</Text>
-                  <TextInput
-                    style={s.textInput}
-                    value={departureDate}
-                    onChangeText={setDepartureDate}
-                  />
-                </View>
-                <View style={s.dateTimeBox}>
-                  <Text style={s.fieldLabel}>DEPARTURE TIME</Text>
-                  <TextInput
-                    style={s.textInput}
-                    value={departureTime}
-                    onChangeText={setDepartureTime}
-                  />
-                </View>
+            ) : null}
+            <View style={s.dateTimeRow}>
+              <View style={s.dateTimeBox}>
+                <Text style={s.fieldLabel}>
+                  {isRecurring ? 'FIRST DEPARTURE DATE' : 'DEPARTURE DATE'}
+                </Text>
+                <TextInput
+                  style={s.textInput}
+                  value={departureDate}
+                  onChangeText={setDepartureDate}
+                  placeholder="YYYY-MM-DD or tomorrow"
+                  autoCapitalize="none"
+                />
               </View>
-            )}
+              <View style={s.dateTimeBox}>
+                <Text style={s.fieldLabel}>DEPARTURE TIME</Text>
+                <TextInput
+                  style={s.textInput}
+                  value={departureTime}
+                  onChangeText={setDepartureTime}
+                  placeholder="17:30 or 5:30 PM"
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
           </View>
 
           {/* 5. Seats & Fuel Share Contribution */}

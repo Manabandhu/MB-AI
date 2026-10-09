@@ -13,4 +13,6 @@ interface ListingFavoriteRepository extends JpaRepository<ListingFavorite, UUID>
     void deleteByListingIdAndUserId(UUID listingId, UUID userId);
 
     void deleteByUserId(UUID userId);
+
+    long countByUserId(UUID userId);
 }

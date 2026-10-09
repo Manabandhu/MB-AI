@@ -3,8 +3,6 @@ import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,9 +12,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { getUtilitiesHome } from '@/modules/utilities/api';
+
+// The hub lists only what GET /api/v1/utilities/home returns. There is no built-in service directory, ratings, or
+// prices: those would be invented. Counts are not shown until the backend serves real ones per user.
 
 const C = {
   primary: '#431ebe',
@@ -34,131 +36,49 @@ const C = {
   inkMuted: '#6b6882',
 };
 
-interface ServiceItem {
-  id: string;
-  category: string;
-  title: string;
-  provider: string;
-  description: string;
-  rating: number;
-  reviewCount: number;
-  badge?: string;
-  price?: string;
-  phone?: string;
-  location: string;
-}
-
-const SERVICES_DATA: ServiceItem[] = [
-  {
-    id: 'tiffin-1',
-    category: 'Tiffin & Dabba',
-    title: 'Annapurna Homestyle Tiffin',
-    provider: 'Lakshmi Rao (Round Rock)',
-    description:
-      'Fresh rotis, South Indian dal, seasonal sabzi, sambar & curd rice. Delivered daily Mon-Fri.',
-    rating: 4.9,
-    reviewCount: 78,
-    badge: 'Popular',
-    price: '$190/mo',
-    phone: '+1 (512) 555-0192',
-    location: 'North Austin & Round Rock',
-  },
-  {
-    id: 'grocery-1',
-    category: 'Groceries',
-    title: 'Weekend Patel Brothers Shared Run',
-    provider: 'Austin Telugu Student Group',
-    description:
-      'Carpool & shared grocery pickup for bulky items (Atta bags, Sona Masoori rice, fresh spices).',
-    rating: 4.8,
-    reviewCount: 42,
-    badge: 'Departs Sat 10 AM',
-    price: 'Free Carpool',
-    location: 'West Campus to Subzi Mandi',
-  },
-  {
-    id: 'fiber-1',
-    category: 'Electricity & Wifi',
-    title: 'Texas Power to Choose & AT&T Fiber',
-    provider: 'ManaBandhu Utility Concierge',
-    description:
-      'Compare 12-month fixed rate electricity contracts (Gexa, TXU) + gigabit student fiber waiver.',
-    rating: 4.7,
-    reviewCount: 35,
-    badge: 'Save ~$45/mo',
-    price: 'Free Advisory',
-    location: 'Austin Metro & DFW',
-  },
-  {
-    id: 'temple-1',
-    category: 'Puja & Temples',
-    title: 'Austin Hindu Temple & Balaji Puja',
-    provider: 'AHT Priest Services',
-    description:
-      'Griha Pravesham, Satyanarayana Vratam, vehicle blessings & temple festival schedule.',
-    rating: 5.0,
-    reviewCount: 110,
-    badge: 'Verified',
-    price: 'Donation',
-    location: '9801 Decker Lake Rd, Austin',
-  },
-  {
-    id: 'courier-1',
-    category: 'Luggage & Courier',
-    title: 'India Check-In Baggage Share',
-    provider: 'Verified Community Travelers',
-    description:
-      'Share unutilized 23kg check-in allowance for non-commercial sweets, documents & apparel to HYD/BLR.',
-    rating: 4.8,
-    reviewCount: 29,
-    badge: 'ID Verified',
-    price: '$15/kg',
-    location: 'Austin (AUS) -> Hyderabad (HYD)',
-  },
-];
-
-const CATEGORIES = [
-  'All Services',
-  'Tiffin & Dabba',
-  'Groceries',
-  'Electricity & Wifi',
-  'Puja & Temples',
-  'Luggage & Courier',
-];
-
 export function UtilitiesHomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
-
-  const [activeCategory, setActiveCategory] = useState('All Services');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
 
   const home = useQuery({
     queryKey: ['utilities', 'home'],
     queryFn: getUtilitiesHome,
-    retry: false,
   });
 
   if (home.isLoading) {
     return (
       <SafeAreaView style={s.safe}>
         <View style={s.center}>
-          <LoadingState label="Loading utilities and diaspora services..." />
+          <LoadingState label="Loading utilities..." />
         </View>
       </SafeAreaView>
     );
   }
 
-  const filtered = SERVICES_DATA.filter((item) => {
-    const matchesCat = activeCategory === 'All Services' || item.category === activeCategory;
-    const matchesSearch =
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.provider.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesSearch;
-  });
+  if (home.isError || !home.data) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <View style={s.center}>
+          <ErrorState
+            title="Unable to load utilities"
+            body="Check your connection and try again."
+            retryLabel="Retry"
+            onRetry={() => home.refetch()}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const term = searchQuery.trim().toLowerCase();
+  const filtered = home.data.items.filter(
+    (item) =>
+      term.length === 0 ||
+      item.title.toLowerCase().includes(term) ||
+      item.body.toLowerCase().includes(term),
+  );
 
   return (
     <SafeAreaView style={s.safe}>
@@ -175,25 +95,26 @@ export function UtilitiesHomeScreen() {
           </Pressable>
           <View style={s.headerTextCol}>
             <View style={s.locationTag}>
-              <AppIcon name="map" size={12} color={C.teal} />
-              <Text style={s.locationText}>Austin & DFW Metro, TX</Text>
+              <Text style={s.locationText}>{home.data.eyebrow}</Text>
             </View>
-            <Text style={s.headerTitle}>Utilities & Diaspora Hub</Text>
+            <Text style={s.headerTitle}>{home.data.title}</Text>
           </View>
         </View>
+        {home.data.subtitle ? <Text style={s.serviceDesc}>{home.data.subtitle}</Text> : null}
 
         {/* Search Bar */}
         <View style={s.searchBar}>
           <AppIcon name="search" size={18} color={C.inkMuted} />
           <TextInput
-            placeholder="Search tiffin, grocery runs, wifi, pujas..."
+            accessibilityLabel="Search utilities"
+            placeholder="Search utilities..."
             placeholderTextColor={C.inkMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={s.searchInput}
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')}>
+            <Pressable accessibilityLabel="Clear search" onPress={() => setSearchQuery('')}>
               <Text style={{ fontSize: 16, color: C.inkMuted, fontWeight: '700' }}>✕</Text>
             </Pressable>
           )}
@@ -238,184 +159,40 @@ export function UtilitiesHomeScreen() {
           </Pressable>
         </View>
 
-        {/* Featured Community Banner */}
-        <View style={s.featuredBanner}>
-          <View style={s.featuredBadge}>
-            <Text style={s.featuredBadgeText}>COMMUNITY SPOTLIGHT</Text>
-          </View>
-          <Text style={s.featuredTitle}>Moving to Texas this Fall?</Text>
-          <Text style={s.featuredDesc}>
-            Setup your electricity with student deposit waivers, compare gigabit fiber providers,
-            and order daily Telugu tiffins in minutes.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="View Move-in Guide"
-            onPress={() => router.push('/utilities/packages' as Href)}
-            style={s.featuredBtn}
-          >
-            <Text style={s.featuredBtnText}>Explore Move-In Bundles</Text>
-            <AppIcon name="chevron-right" size={16} color="#ffffff" />
-          </Pressable>
-        </View>
-
-        {/* Category Pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.categoriesScroll}
-          contentContainerStyle={s.categoriesContent}
-        >
-          {CATEGORIES.map((cat) => {
-            const active = activeCategory === cat;
-            return (
-              <Pressable
-                key={cat}
-                accessibilityRole="button"
-                accessibilityLabel={cat}
-                onPress={() => setActiveCategory(cat)}
-                style={[s.categoryPill, active && s.categoryPillActive]}
-              >
-                <Text style={[s.categoryPillText, active && s.categoryPillTextActive]}>{cat}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* Services List */}
+        {/* Backend-provided entries */}
         <View style={s.servicesList}>
           {filtered.length === 0 ? (
             <View style={s.emptyBox}>
               <AppIcon name="search" size={32} color={C.inkMuted} />
-              <Text style={s.emptyTitle}>No services found</Text>
+              <Text style={s.emptyTitle}>Nothing found</Text>
               <Text style={s.emptySubtitle}>
-                Try adjusting your search terms or category filter.
+                {term.length > 0 ? 'Try a different search term.' : 'No utilities are listed yet.'}
               </Text>
             </View>
           ) : (
             filtered.map((item) => (
               <Pressable
                 key={item.id}
-                accessibilityRole="button"
+                accessibilityRole={item.route ? 'button' : undefined}
                 accessibilityLabel={item.title}
-                onPress={() => setSelectedService(item)}
+                disabled={!item.route}
+                onPress={() => item.route && router.push(item.route as Href)}
                 style={s.serviceCard}
               >
                 <View style={s.cardHeader}>
                   <View style={s.cardHeaderLeft}>
-                    <Text style={s.categoryLabel}>{item.category.toUpperCase()}</Text>
+                    {item.meta ? (
+                      <Text style={s.categoryLabel}>{item.meta.toUpperCase()}</Text>
+                    ) : null}
                     <Text style={s.serviceTitle}>{item.title}</Text>
-                    <Text style={s.providerName}>By {item.provider}</Text>
                   </View>
-                  {item.badge && (
-                    <View style={s.badgePill}>
-                      <Text style={s.badgePillText}>{item.badge}</Text>
-                    </View>
-                  )}
                 </View>
-
-                <Text style={s.serviceDesc} numberOfLines={2}>
-                  {item.description}
-                </Text>
-
-                <View style={s.cardFooter}>
-                  <View style={s.ratingRow}>
-                    <AppIcon name="star" size={14} color="#f59e0b" />
-                    <Text style={s.ratingText}>
-                      {item.rating.toFixed(1)}{' '}
-                      <Text style={s.reviewCount}>({item.reviewCount})</Text>
-                    </Text>
-                    <Text style={s.locationDot}>·</Text>
-                    <Text style={s.locationSmall} numberOfLines={1}>
-                      {item.location}
-                    </Text>
-                  </View>
-                  {item.price && <Text style={s.priceTag}>{item.price}</Text>}
-                </View>
+                <Text style={s.serviceDesc}>{item.body}</Text>
               </Pressable>
             ))
           )}
         </View>
       </ScrollView>
-
-      {/* Service Detail Modal */}
-      {selectedService && (
-        <Modal visible transparent animationType="slide">
-          <View style={s.modalOverlay}>
-            <View style={s.modalSheet}>
-              <View style={s.modalHandle} />
-              <View style={s.modalTop}>
-                <View style={s.badgePill}>
-                  <Text style={s.badgePillText}>{selectedService.category}</Text>
-                </View>
-                <Pressable onPress={() => setSelectedService(null)} style={s.closeBtn}>
-                  <Text style={{ fontSize: 18, color: C.ink, fontWeight: '700' }}>✕</Text>
-                </Pressable>
-              </View>
-
-              <Text style={s.modalTitle}>{selectedService.title}</Text>
-              <Text style={s.modalProvider}>Offered by {selectedService.provider}</Text>
-
-              <View style={s.modalDetailsRow}>
-                <View style={s.detailCol}>
-                  <Text style={s.detailLabel}>RATING</Text>
-                  <Text style={s.detailVal}>
-                    ★ {selectedService.rating.toFixed(1)} ({selectedService.reviewCount})
-                  </Text>
-                </View>
-                <View style={s.detailCol}>
-                  <Text style={s.detailLabel}>PRICE / FEE</Text>
-                  <Text style={[s.detailVal, { color: C.teal }]}>
-                    {selectedService.price ?? 'Free'}
-                  </Text>
-                </View>
-                <View style={s.detailCol}>
-                  <Text style={s.detailLabel}>SERVICE AREA</Text>
-                  <Text style={s.detailVal} numberOfLines={1}>
-                    {selectedService.location}
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={s.sectionSubtitle}>Overview & Inclusions</Text>
-              <Text style={s.modalDesc}>{selectedService.description}</Text>
-
-              <View style={s.modalActionRow}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Contact Provider"
-                  onPress={() => {
-                    Alert.alert(
-                      'Contact Request Sent',
-                      `The provider for ${selectedService.title} has been notified. They will message you via ManaBandhu Chat!`,
-                    );
-                    setSelectedService(null);
-                  }}
-                  style={s.contactBtn}
-                >
-                  <AppIcon name="message" size={18} color="#ffffff" />
-                  <Text style={s.contactBtnText}>Message Provider</Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Save Service"
-                  onPress={() => {
-                    Alert.alert(
-                      'Saved',
-                      `${selectedService.title} has been saved to your diaspora essentials.`,
-                    );
-                    setSelectedService(null);
-                  }}
-                  style={s.saveBtn}
-                >
-                  <AppIcon name="star" size={18} color={C.primary} />
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
     </SafeAreaView>
   );
 }

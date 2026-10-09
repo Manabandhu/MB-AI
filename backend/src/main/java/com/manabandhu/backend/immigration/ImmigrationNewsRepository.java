@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface ImmigrationNewsRepository extends JpaRepository<ImmigrationNews, UUID> {
     List<ImmigrationNews> findAllByOrderByCreatedAtDesc();
     List<ImmigrationNews> findByCategoryOrderByPublishedAtDesc(String category);
+
+    long countByPublishedAtAfter(java.time.Instant since);
 }

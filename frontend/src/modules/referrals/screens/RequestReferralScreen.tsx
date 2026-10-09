@@ -34,11 +34,15 @@ export function RequestReferralScreen() {
       setError('Please fill in all required fields.');
       return;
     }
+    if (!['low', 'medium', 'high'].includes(urgency.trim().toLowerCase())) {
+      setError('Urgency must be Low, Medium, or High.');
+      return;
+    }
     mutation.mutate({
       title: title.trim(),
       description: description.trim(),
       category: category.trim() || undefined,
-      urgency: urgency.trim(),
+      urgency: urgency.trim().toLowerCase(),
     });
   }
 

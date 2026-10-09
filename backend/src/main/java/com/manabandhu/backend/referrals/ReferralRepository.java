@@ -9,4 +9,8 @@ interface ReferralRepository extends JpaRepository<Referral, UUID> {
     List<Referral> findTop100ByOrderByCreatedAtDesc();
 
     List<Referral> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
+
+    long countByTypeAndStatusIn(String type, java.util.Collection<String> statuses);
+
+    long countByOwnerIdAndType(UUID ownerId, String type);
 }

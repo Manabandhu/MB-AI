@@ -58,7 +58,7 @@ public class SettlementService {
         }
         var status = input.status() != null ? input.status() : "completed";
         var settledAt = "completed".equals(status) ? (input.settledAt() != null ? input.settledAt() : Instant.now()) : null;
-        var currency = input.currency() != null ? input.currency() : group.getCurrency() != null ? group.getCurrency() : "USD";
+        var currency = ExpenseAccess.groupCurrency(group, input.currency());
         return repository.save(new Settlement(groupId, fromUserId, input.toUserId(), input.amount(), currency, status, settledAt));
     }
 

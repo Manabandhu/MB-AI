@@ -5,6 +5,7 @@ import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   BackHandler,
   Modal,
   Platform,
@@ -65,86 +66,48 @@ type RidesScreenProps = {
 };
 
 // ─── City Options ─────────────────────────────────────────────────────────────
+// Metro areas only set the shared location context; ride counts always come from the API.
 type CityOption = {
   id: string;
   name: string;
-  count: number;
-  corridors: string[];
+  latitude: number;
+  longitude: number;
 };
 
 const CITIES: CityOption[] = [
-  {
-    id: 'austin',
-    name: 'Austin, TX',
-    count: 240,
-    corridors: [
-      'Brushy Creek ➔ Apple Riata',
-      'Avery Ranch ➔ Google Hub',
-      'Domain ➔ DFW',
-      'SoCo ➔ UT Austin',
-    ],
-  },
-  {
-    id: 'dfw',
-    name: 'Dallas-Fort Worth, TX',
-    count: 410,
-    corridors: ['Frisco ➔ Las Colinas', 'Plano ➔ Downtown Dallas', 'Irving ➔ Legacy West'],
-  },
-  {
-    id: 'houston',
-    name: 'Houston, TX',
-    count: 320,
-    corridors: ['Katy ➔ Energy Corridor', 'Sugar Land ➔ Medical Center'],
-  },
-  {
-    id: 'bayarea',
-    name: 'Bay Area, CA',
-    count: 680,
-    corridors: ['Fremont ➔ Sunnyvale', 'San Jose ➔ Cupertino Apple Park'],
-  },
-  {
-    id: 'seattle',
-    name: 'Seattle, WA',
-    count: 390,
-    corridors: ['Bellevue ➔ South Lake Union', 'Redmond ➔ Downtown Seattle'],
-  },
+  { id: 'austin', name: 'Austin, TX', latitude: 30.2672, longitude: -97.7431 },
+  { id: 'dfw', name: 'Dallas-Fort Worth, TX', latitude: 32.7767, longitude: -96.797 },
+  { id: 'houston', name: 'Houston, TX', latitude: 29.7604, longitude: -95.3698 },
+  { id: 'bayarea', name: 'Bay Area, CA', latitude: 37.3382, longitude: -121.8863 },
+  { id: 'seattle', name: 'Seattle, WA', latitude: 47.6062, longitude: -122.3321 },
 ];
 
-// ─── Enhanced Ride Item Interface ─────────────────────────────────────────────
+// ─── Ride view model (only fields derived from the RideOffer API record) ────────
 export type EnrichedRide = RideOffer & {
   driverName: string;
-  driverAvatar?: string;
-  driverEmployer: string;
-  driverRating: number;
-  ridesGiven: number;
-  verifiedDriver: boolean;
-  vehicleModel: string;
-  vehicleTag: string;
   departureTimeDisplay: string;
-  returnTimeDisplay?: string;
-  vibes: string[];
-  commuteType: 'daily' | 'intercity' | 'weekend';
-  mapX: number; // percentage across map
-  mapY: number; // percentage down map
+  tags: string[];
+  commuteType: 'daily' | 'intercity' | 'one-time';
 };
+
+const INTERCITY_MILES = 50;
+
+// Departure window filter, applied to each ride's real departureAt.
+const WHEN_OPTIONS = ['Any time', 'Today', 'Tomorrow', 'Next 7 days'] as const;
 
 const filterCategories = [
   { id: 'all', label: '🚗 All Carpools' },
   { id: 'notolls', label: '🚫 No Tolls' },
-  { id: 'apple', label: '🏢 Apple / Riata' },
-  { id: 'google', label: '🔍 Google Downtown' },
   { id: 'daily', label: '🔁 Daily Commute' },
-  { id: 'intercity', label: '🛣️ Intercity (DFW / Houston)' },
+  { id: 'intercity', label: '🛣️ Intercity' },
   { id: 'women', label: '👩 Women Only' },
-  { id: 'ev', label: '⚡ Tesla / EV' },
   { id: 'luggage', label: '🧳 Luggage Space' },
-  { id: 'veg', label: '🥟 Pure Veg' },
 ];
 
 type SortOption = 'recommended' | 'price_low' | 'seats_most' | 'earliest';
 
 const SORT_OPTIONS: { id: SortOption; label: string; icon: string }[] = [
-  { id: 'recommended', label: 'Recommended', icon: '✦' },
+  { id: 'recommended', label: 'Soonest Departure', icon: '✦' },
   { id: 'price_low', label: 'Contribution: Low to High', icon: '↑' },
   { id: 'seats_most', label: 'Seats: Most Available', icon: '👥' },
   { id: 'earliest', label: 'Departure: Earliest', icon: '⚡' },
@@ -170,11 +133,8 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
     return {
       id: globalLocation.id,
       name: globalLocation.name,
-      count: 50,
-      corridors: [
-        `${globalLocation.cityName} Tech Hubs`,
-        `${globalLocation.cityName} Airport Express`,
-      ],
+      latitude: globalLocation.latitude,
+      longitude: globalLocation.longitude,
     };
   }, [globalLocation]);
 
@@ -184,8 +144,8 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
       name: city.name,
       cityName: city.name.split(',')[0]?.trim() || city.name,
       stateCode: city.name.split(',')[1]?.trim() || 'US',
-      latitude: 30.2672,
-      longitude: -97.7431,
+      latitude: city.latitude,
+      longitude: city.longitude,
     });
   };
   const [showCityModal, setShowCityModal] = useState(false);
@@ -220,7 +180,6 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
 
   // Filter selections
   const [filterWomenOnly, setFilterWomenOnly] = useState(false);
-  const [filterEvOnly, setFilterEvOnly] = useState(false);
   const [filterDailyOnly, setFilterDailyOnly] = useState(false);
   const [filterNoTolls, _setFilterNoTolls] = useState(false);
 
@@ -229,7 +188,6 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
   const [whenIndex, setWhenIndex] = useState(0);
   const [commuteModeIndex, setCommuteModeIndex] = useState(0);
 
-  const WHEN_OPTIONS = ['Today, 8:15 AM', 'Today, 5:30 PM', 'Tomorrow, 8:30 AM', 'Flexible'];
   const COMMUTE_OPTIONS = [
     { label: 'All Modes 🚙', dailyOnly: false },
     { label: 'Daily Commute 🔁', dailyOnly: true },
@@ -246,18 +204,17 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
     setFilterDailyOnly(COMMUTE_OPTIONS[nextIdx].dailyOnly);
   };
 
-  const handleCardChat = async (rideId: string, driverName: string) => {
+  const handleCardChat = async (rideId: string) => {
     try {
       setChatLoadingRideId(rideId);
       const conv = await provisionRideChat(rideId);
-      if (conv?.conversationId) {
-        router.push(`/chat/${conv.conversationId}` as Href);
-      } else {
-        router.push(`/chat?recipient=${encodeURIComponent(driverName)}` as Href);
-      }
+      if (!conv?.conversationId) throw new Error('No conversation was created for this ride.');
+      router.push(`/chat/${conv.conversationId}` as Href);
     } catch (e) {
-      console.error('Failed to provision ride chat:', e);
-      router.push(`/chat?recipient=${encodeURIComponent(driverName)}` as Href);
+      Alert.alert(
+        'Unable to open ride chat',
+        e instanceof Error ? e.message : 'Please try again in a moment.',
+      );
     } finally {
       setChatLoadingRideId(null);
     }
@@ -293,88 +250,80 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
     }
   }, [refetch]);
 
-  // Enrich raw rides with driver and presentation data
+  // Presentation fields derived only from the ride record (no invented ratings or profiles)
   const enrichedRides: EnrichedRide[] = useMemo(() => {
     if (!rawRides || rawRides.length === 0) return [];
-    return rawRides.map((ride, index) => {
-      const depTime = ride.departureAt
-        ? new Date(ride.departureAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : '8:30 AM';
-      const costNum = parseFloat(String(ride.contribution || '0').replace(/[^0-9.]/g, '')) || 6;
-
-      return {
-        ...ride,
-        driverName: ride.driverId
-          ? `Verified Driver (${ride.driverId.slice(0, 6)})`
-          : 'Verified Driver',
-        driverAvatar: undefined,
-        driverEmployer: 'Verified Member',
-        driverRating: 4.9,
-        ridesGiven: 15 + ((index * 3) % 20),
-        verifiedDriver: true,
-        vehicleModel: 'Commuter Carpool',
-        vehicleTag: 'Verified Carpool',
-        departureTimeDisplay: depTime,
-        returnTimeDisplay: undefined,
-        vibes: ['Community Carpool 🚗', 'Zero Brokerage'],
-        commuteType: costNum > 25 ? 'intercity' : 'daily',
-        mapX: 30 + ((index * 15) % 50),
-        mapY: 25 + ((index * 18) % 55),
-      };
+    return rawRides.map((ride) => {
+      const departureTimeDisplay = ride.departureAt
+        ? new Date(ride.departureAt).toLocaleString([], {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : 'Time not set';
+      const tags: string[] = [];
+      if (ride.genderPreference?.toUpperCase() === 'FEMALE_ONLY') tags.push('👩 Women only');
+      if (ride.luggageCapacity) {
+        tags.push(`🧳 Luggage: ${ride.luggageCapacity.toLowerCase().replace(/_/g, ' ')}`);
+      }
+      if (ride.distanceMiles) tags.push(`📏 ~${Math.round(ride.distanceMiles)} mi`);
+      const commuteType: EnrichedRide['commuteType'] = ride.isRecurring
+        ? 'daily'
+        : (ride.distanceMiles ?? 0) > INTERCITY_MILES
+          ? 'intercity'
+          : 'one-time';
+      return { ...ride, driverName: 'Driver', departureTimeDisplay, tags, commuteType };
     });
   }, [rawRides]);
 
   // Apply Client Filters & Sorting
   const filteredRides = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const whenLabel = WHEN_OPTIONS[whenIndex];
     return enrichedRides
-      .filter((ride, index) => {
-        // Hand-drawn boundary filter
+      .filter((ride) => {
+        // Hand-drawn boundary filter (only rides with real coordinates can match)
         if (drawnBoundary && drawnBoundary.length >= 3) {
-          const lat = Number(ride.originLat) || 30.2672 + (((index * 19) % 30) - 15) * 0.006;
-          const lng = Number(ride.originLng) || -97.7431 + (((index * 29) % 30) - 15) * 0.006;
-          if (!isPointInPolygon({ latitude: lat, longitude: lng }, drawnBoundary)) {
+          if (ride.originLat == null || ride.originLng == null) return false;
+          if (
+            !isPointInPolygon(
+              { latitude: Number(ride.originLat), longitude: Number(ride.originLng) },
+              drawnBoundary,
+            )
+          ) {
             return false;
           }
         }
 
+        // Departure window
+        const departs = new Date(ride.departureAt).getTime();
+        if (whenLabel === 'Today' && (departs < startOfToday || departs >= startOfToday + dayMs))
+          return false;
+        if (
+          whenLabel === 'Tomorrow' &&
+          (departs < startOfToday + dayMs || departs >= startOfToday + 2 * dayMs)
+        )
+          return false;
+        if (whenLabel === 'Next 7 days' && departs >= startOfToday + 7 * dayMs) return false;
+
         // Category filter
-        if (activeCategory === 'apple' && !ride.destinationArea.toLowerCase().includes('apple'))
-          return false;
-        if (activeCategory === 'google' && !ride.destinationArea.toLowerCase().includes('google'))
-          return false;
-        if (activeCategory === 'daily' && ride.commuteType !== 'daily') return false;
+        const womenOnly = ride.genderPreference?.toUpperCase() === 'FEMALE_ONLY';
+        if (activeCategory === 'daily' && !ride.isRecurring) return false;
         if (activeCategory === 'intercity' && ride.commuteType !== 'intercity') return false;
-        if (
-          activeCategory === 'women' &&
-          !ride.vibes.some((v) => v.toLowerCase().includes('women'))
-        )
-          return false;
-        if (
-          activeCategory === 'ev' &&
-          !ride.vehicleModel.toLowerCase().includes('ev') &&
-          !ride.vehicleModel.toLowerCase().includes('tesla')
-        )
-          return false;
+        if (activeCategory === 'women' && !womenOnly) return false;
         if (
           activeCategory === 'luggage' &&
-          !ride.vibes.some(
-            (v) => v.toLowerCase().includes('luggage') || v.toLowerCase().includes('trunk'),
-          )
+          !['MEDIUM', 'LARGE_SUITCASE'].includes(ride.luggageCapacity?.toUpperCase() ?? '')
         )
-          return false;
-        if (activeCategory === 'veg' && !ride.vibes.some((v) => v.toLowerCase().includes('veg')))
           return false;
 
         // Modal Filters
-        if (filterWomenOnly && !ride.vibes.some((v) => v.toLowerCase().includes('women')))
-          return false;
-        if (
-          filterEvOnly &&
-          !ride.vehicleModel.toLowerCase().includes('ev') &&
-          !ride.vehicleModel.toLowerCase().includes('tesla')
-        )
-          return false;
-        if (filterDailyOnly && ride.commuteType !== 'daily' && !ride.isRecurring) return false;
+        if (filterWomenOnly && !womenOnly) return false;
+        if (filterDailyOnly && !ride.isRecurring) return false;
         if (
           (activeCategory === 'notolls' || filterNoTolls) &&
           ride.tollPreference &&
@@ -389,19 +338,17 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
         const priceB = parseFloat(b.contribution.replace(/[^0-9.]/g, '')) || 0;
         if (sortBy === 'price_low') return priceA - priceB;
         if (sortBy === 'seats_most') return b.seatsAvailable - a.seatsAvailable;
-        if (sortBy === 'earliest')
-          return new Date(a.departureAt).getTime() - new Date(b.departureAt).getTime();
-        return b.driverRating - a.driverRating;
+        return new Date(a.departureAt).getTime() - new Date(b.departureAt).getTime();
       });
   }, [
     enrichedRides,
     activeCategory,
     filterWomenOnly,
-    filterEvOnly,
     filterDailyOnly,
     filterNoTolls,
     sortBy,
     drawnBoundary,
+    whenIndex,
   ]);
 
   function handleSwapRoute() {
@@ -444,7 +391,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
             >
               <AppIcon color={colors.appPrimary} name="compass" size={13} />
               <Text numberOfLines={1} style={styles.cityName}>
-                {selectedCity.name} · {selectedCity.count} Daily Carpools
+                {selectedCity.name}
               </Text>
               <AppIcon color={colors.inkSecondary} name="chevron-down" size={13} />
             </Pressable>
@@ -587,7 +534,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
               >
                 <AppIcon color={colors.appPrimary} name="calendar" size={16} />
                 <View>
-                  <Text style={styles.detailPillSmall}>When (Tap to change)</Text>
+                  <Text style={styles.detailPillSmall}>Departs (tap to change)</Text>
                   <Text style={styles.detailPillVal}>{WHEN_OPTIONS[whenIndex]}</Text>
                 </View>
               </Pressable>
@@ -612,13 +559,13 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
 
             {/* Find Rides Button */}
             <Pressable
-              accessibilityLabel="Find Verified Carpools"
+              accessibilityLabel="Find Carpools"
               accessibilityRole="button"
               onPress={() => refetch()}
               style={styles.findRidesBtn}
             >
               <AppIcon color={colors.surfaceContainerLowest} name="search" size={20} />
-              <Text style={styles.findRidesBtnText}>Find Verified Carpools</Text>
+              <Text style={styles.findRidesBtnText}>Find Carpools</Text>
             </Pressable>
           </View>
 
@@ -638,7 +585,9 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
               <Text
                 style={[styles.segmentBtnText, viewMode === 'list' && styles.segmentBtnTextActive]}
               >
-                Available Rides ({filteredRides.length})
+                {isLoading || isError
+                  ? 'Available Rides'
+                  : `Available Rides (${filteredRides.length})`}
               </Text>
             </Pressable>
             <Pressable
@@ -702,8 +651,8 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
               <AppIcon color={colors.teal} name="verified-user" size={18} />
             </View>
             <Text style={styles.trustText}>
-              <Text style={styles.trustTextBold}>100% Employer Verified Carpools</Text> · Zero Surge
-              Pricing · Safe Desi Commute Community.
+              <Text style={styles.trustTextBold}>Community carpools</Text> · Drivers set a fuel
+              contribution per seat. Review the route and chat with the driver before booking.
             </Text>
           </View>
 
@@ -711,7 +660,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator color={colors.appPrimary} size="large" />
-              <Text style={styles.loadingText}>Loading verified carpools from Austin...</Text>
+              <Text style={styles.loadingText}>Loading carpools...</Text>
             </View>
           ) : isError ? (
             <View style={styles.emptyContainer}>
@@ -726,18 +675,20 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
             /* ── Interactive Live Route Map View ─────────────────────────────── */
             <View style={[styles.mapCanvas, { padding: 0, overflow: 'hidden' }]}>
               {(() => {
-                const rideMarkers = filteredRides.map((ride, idx) => ({
-                  id: ride.id,
-                  latitude: Number(ride.originLat) || 30.2672 + (((idx * 19) % 30) - 15) * 0.006,
-                  longitude: Number(ride.originLng) || -97.7431 + (((idx * 29) % 30) - 15) * 0.006,
-                  title: `${ride.driverName} (${ride.originArea} ➔ ${ride.destinationArea})`,
-                  price: ride.contribution.split('/')[0].trim().replace('$', ''),
-                  subtitle: `${ride.originArea} ➔ ${ride.destinationArea}`,
-                  isSelected: selectedMapRideId === ride.id,
-                }));
+                const rideMarkers = filteredRides
+                  .filter((ride) => ride.originLat != null && ride.originLng != null)
+                  .map((ride) => ({
+                    id: ride.id,
+                    latitude: Number(ride.originLat),
+                    longitude: Number(ride.originLng),
+                    title: `${ride.originArea} ➔ ${ride.destinationArea}`,
+                    price: ride.contribution.split('/')[0].trim().replace('$', ''),
+                    subtitle: `${ride.originArea} ➔ ${ride.destinationArea}`,
+                    isSelected: selectedMapRideId === ride.id,
+                  }));
 
-                const initialLat = rideMarkers[0]?.latitude || 30.2672;
-                const initialLng = rideMarkers[0]?.longitude || -97.7431;
+                const initialLat = rideMarkers[0]?.latitude ?? selectedCity.latitude;
+                const initialLng = rideMarkers[0]?.longitude ?? selectedCity.longitude;
 
                 return (
                   <UniversalMapView
@@ -800,7 +751,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                         <View style={styles.mapPreviewHeader}>
                           <View>
                             <Text style={styles.mapPreviewTitle}>
-                              {ride.driverName} ({ride.driverEmployer})
+                              Departs {ride.departureTimeDisplay}
                             </Text>
                             <Text style={styles.mapPreviewRoute}>
                               {ride.originArea} ➔ {ride.destinationArea}
@@ -840,7 +791,6 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                       setDropoffQuery('');
                       setActiveCategory('all');
                       setFilterWomenOnly(false);
-                      setFilterEvOnly(false);
                       setFilterDailyOnly(false);
                     }}
                     style={styles.retryBtn}
@@ -879,12 +829,9 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                           >
                             {ride.driverName}
                           </Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                            <AppIcon color={colors.warm} name="star" size={10} />
-                            <Text style={{ fontSize: 11, color: colors.muted }}>
-                              {ride.driverRating.toFixed(1)}
-                            </Text>
-                          </View>
+                          <Text style={{ fontSize: 11, color: colors.muted }}>
+                            {ride.seatsTotal} {ride.seatsTotal === 1 ? 'seat' : 'seats'} offered
+                          </Text>
                         </View>
                       </View>
 
@@ -967,29 +914,18 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                           <View style={styles.avatarCircle}>
                             <Text style={styles.avatarInitial}>{ride.driverName.charAt(0)}</Text>
                           </View>
-                          {ride.verifiedDriver ? (
-                            <View style={styles.verifiedCheck}>
-                              <AppIcon
-                                color={colors.surfaceContainerLowest}
-                                name="check"
-                                size={10}
-                              />
-                            </View>
-                          ) : null}
                         </View>
 
                         <View>
                           <View style={styles.driverNameRow}>
                             <Text style={styles.driverName}>{ride.driverName}</Text>
-                            <View style={styles.ratingBadge}>
-                              <AppIcon color={colors.warm} name="star" size={11} />
-                              <Text style={styles.ratingText}>{ride.driverRating.toFixed(1)}</Text>
-                            </View>
                           </View>
                           <Text style={styles.driverSub}>
-                            <Text style={styles.driverEmployer}>{ride.driverEmployer}</Text>
-                            <Text> • </Text>
-                            <Text style={styles.ridesCount}>{ride.ridesGiven} rides given</Text>
+                            {ride.commuteType === 'daily'
+                              ? 'Recurring commute'
+                              : ride.commuteType === 'intercity'
+                                ? 'Intercity trip'
+                                : 'One-time trip'}
                           </Text>
                         </View>
                       </View>
@@ -999,7 +935,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                         <Text style={styles.priceAmount}>
                           {ride.contribution.split('/')[0].trim()}
                         </Text>
-                        <Text style={styles.pricePer}>/ ride</Text>
+                        <Text style={styles.pricePer}>/ seat</Text>
                       </View>
                     </View>
 
@@ -1017,7 +953,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                         <View style={styles.routeScheduleRow}>
                           <AppIcon color={colors.appPrimary} name="calendar" size={13} />
                           <Text style={styles.routeScheduleText}>
-                            Departs {ride.departureTimeDisplay} · {ride.returnTimeDisplay}
+                            Departs {ride.departureTimeDisplay}
                           </Text>
                         </View>
                       </View>
@@ -1035,7 +971,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                       <View style={styles.vehicleSpec}>
                         <AppIcon color={colors.appPrimary} name="car" size={16} />
                         <Text numberOfLines={1} style={styles.vehicleText}>
-                          {ride.vehicleModel}
+                          {ride.seatsTotal} {ride.seatsTotal === 1 ? 'seat' : 'seats'} offered
                         </Text>
                       </View>
                       <View style={styles.seatsLeftPill}>
@@ -1091,14 +1027,16 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                       </View>
                     </View>
 
-                    {/* Vibe Tags */}
-                    <View style={styles.vibesContainer}>
-                      {ride.vibes.map((vibe, idx) => (
-                        <View key={idx} style={styles.vibeTag}>
-                          <Text style={styles.vibeTagText}>{vibe}</Text>
-                        </View>
-                      ))}
-                    </View>
+                    {/* Ride attributes from the offer record */}
+                    {ride.tags.length > 0 ? (
+                      <View style={styles.vibesContainer}>
+                        {ride.tags.map((tag) => (
+                          <View key={tag} style={styles.vibeTag}>
+                            <Text style={styles.vibeTagText}>{tag}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
 
                     {/* Card Action Buttons */}
                     <View style={styles.cardActions}>
@@ -1117,7 +1055,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                         accessibilityLabel={`Chat with ${ride.driverName}`}
                         accessibilityRole="button"
                         disabled={chatLoadingRideId === ride.id}
-                        onPress={() => handleCardChat(ride.id, ride.driverName)}
+                        onPress={() => handleCardChat(ride.id)}
                         style={styles.chatBtn}
                       >
                         {chatLoadingRideId === ride.id ? (
@@ -1168,16 +1106,8 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                       >
                         {city.name}
                       </Text>
-                      <Text style={styles.cityCorridorsText}>
-                        {city.corridors.slice(0, 2).join(' • ')}
-                      </Text>
                     </View>
                     <View style={styles.cityItemRight}>
-                      <Text
-                        style={[styles.cityCountBadge, isSelected && styles.cityCountBadgeSelected]}
-                      >
-                        {city.count} carpools
-                      </Text>
                       {isSelected ? (
                         <AppIcon color={colors.appPrimary} name="check" size={18} />
                       ) : null}
@@ -1248,33 +1178,13 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                     <Text style={styles.toggleEmoji}>👩</Text>
                     <View>
                       <Text style={styles.toggleTitle}>Women Only Carpools</Text>
-                      <Text style={styles.toggleDesc}>
-                        Driver and all riders are verified women
-                      </Text>
+                      <Text style={styles.toggleDesc}>Rides the driver marked as women only</Text>
                     </View>
                   </View>
                   <View
                     style={[styles.toggleCheckbox, filterWomenOnly && styles.toggleCheckboxActive]}
                   >
                     {filterWomenOnly ? <AppIcon color="#fff" name="check" size={14} /> : null}
-                  </View>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setFilterEvOnly(!filterEvOnly)}
-                  style={[styles.toggleRow, filterEvOnly && styles.toggleRowActive]}
-                >
-                  <View style={styles.toggleRowLeft}>
-                    <Text style={styles.toggleEmoji}>⚡</Text>
-                    <View>
-                      <Text style={styles.toggleTitle}>Tesla & Electric Vehicles (EV)</Text>
-                      <Text style={styles.toggleDesc}>HOV fast lane speed and quiet ride</Text>
-                    </View>
-                  </View>
-                  <View
-                    style={[styles.toggleCheckbox, filterEvOnly && styles.toggleCheckboxActive]}
-                  >
-                    {filterEvOnly ? <AppIcon color="#fff" name="check" size={14} /> : null}
                   </View>
                 </Pressable>
 
@@ -1286,7 +1196,7 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
                     <Text style={styles.toggleEmoji}>🔁</Text>
                     <View>
                       <Text style={styles.toggleTitle}>Daily Work Commute Only</Text>
-                      <Text style={styles.toggleDesc}>Recurring Monday through Friday rides</Text>
+                      <Text style={styles.toggleDesc}>Rides the driver marked as recurring</Text>
                     </View>
                   </View>
                   <View
@@ -1303,7 +1213,6 @@ export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
               <Pressable
                 onPress={() => {
                   setFilterWomenOnly(false);
-                  setFilterEvOnly(false);
                   setFilterDailyOnly(false);
                   setSortBy('recommended');
                 }}
@@ -1787,17 +1696,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
   },
-  verifiedCheck: {
-    alignItems: 'center',
-    backgroundColor: colors.teal,
-    borderRadius: radius.pill,
-    bottom: -2,
-    height: 16,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: -2,
-    width: 16,
-  },
   driverNameRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1808,32 +1706,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  ratingBadge: {
-    alignItems: 'center',
-    backgroundColor: '#eaedff',
-    borderRadius: 6,
-    flexDirection: 'row',
-    gap: 2,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
-  ratingText: {
-    color: colors.appPrimary,
-    fontSize: 10,
-    fontWeight: '700',
-  },
   driverSub: {
     color: '#6b7280',
     fontSize: 11,
     marginTop: 1,
-  },
-  driverEmployer: {
-    color: '#374151',
-    fontWeight: '600',
-  },
-  ridesCount: {
-    color: colors.teal,
-    fontWeight: '600',
   },
   priceColumn: {
     alignItems: 'flex-end',
@@ -1995,10 +1871,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  mapGridLines: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#1f2937',
-  },
   highwayCorridor1: {
     backgroundColor: 'rgba(67,30,190,0.4)',
     height: 6,
@@ -2014,60 +1886,6 @@ const styles = StyleSheet.create({
     top: '60%',
     transform: [{ rotate: '35deg' }],
     width: '120%',
-  },
-  mapPinContainer: {
-    alignItems: 'center',
-    position: 'absolute',
-    transform: [{ translateX: -20 }, { translateY: -30 }],
-  },
-  mapPinContainerSelected: {
-    zIndex: 10,
-  },
-  mapPinBubble: {
-    backgroundColor: colors.appPrimary,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  mapPinBubbleSelected: {
-    backgroundColor: colors.warm,
-    transform: [{ scale: 1.1 }],
-  },
-  mapPinPrice: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  mapPinPriceSelected: {
-    color: '#ffffff',
-  },
-  mapPinPointer: {
-    borderLeftColor: 'transparent',
-    borderLeftWidth: 5,
-    borderRightColor: 'transparent',
-    borderRightWidth: 5,
-    borderTopColor: colors.appPrimary,
-    borderTopWidth: 6,
-    height: 0,
-    width: 0,
-  },
-  mapLegend: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: radius.pill,
-    bottom: 12,
-    left: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    position: 'absolute',
-  },
-  mapLegendText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '600',
   },
   mapPreviewSheet: {
     bottom: 12,
@@ -2176,28 +1994,10 @@ const styles = StyleSheet.create({
   cityNameTextSelected: {
     color: colors.appPrimary,
   },
-  cityCorridorsText: {
-    color: '#6b7280',
-    fontSize: 10,
-    marginTop: 2,
-  },
   cityItemRight: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
-  },
-  cityCountBadge: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: radius.pill,
-    color: '#4b5563',
-    fontSize: 10,
-    fontWeight: '600',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  cityCountBadgeSelected: {
-    backgroundColor: colors.appPrimary,
-    color: '#ffffff',
   },
 
   // Responsive Filter Modal (Bottom up on mobile, centered on desktop)

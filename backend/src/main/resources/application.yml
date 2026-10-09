@@ -23,6 +23,9 @@ spring:
   flyway:
     baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
     baseline-version: ${FLYWAY_BASELINE_VERSION:0}
+    # The hosted database has a V29 applied outside this repository (load-test seed). Tolerate applied
+    # migrations that have no local file instead of refusing to start; new migrations continue from V30.
+    ignore-migration-patterns: "*:missing"
   data:
     web:
       pageable:

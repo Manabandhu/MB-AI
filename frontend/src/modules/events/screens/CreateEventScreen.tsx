@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { createEvent } from '@/modules/events/api';
+import { createEvent, listEventCategories } from '@/modules/events/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
@@ -32,14 +32,6 @@ const C = {
   errorBg: '#fee2e2',
   errorText: '#ba1a1a',
 };
-
-const CATEGORIES = [
-  { id: 'cultural', label: 'Cultural & Festival' },
-  { id: 'tech', label: 'Tech & Career Mixer' },
-  { id: 'sports', label: 'Sports & Cricket' },
-  { id: 'food', label: 'Food & Potluck' },
-  { id: 'student', label: 'Student & Campus' },
-];
 
 const DATE_PRESETS = [
   { label: 'Upcoming Saturday', offsetDays: 6 },
@@ -60,11 +52,17 @@ export default function CreateEventScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  const [selectedCategory, setSelectedCategory] = useState('cultural');
+  // Categories come from the backend; the event is uncategorised until one is picked.
+  const { data: categories = [] } = useQuery({
+    queryKey: ['events', 'categories'],
+    queryFn: listEventCategories,
+    staleTime: 1000 * 60 * 10,
+  });
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dateTime, setDateTime] = useState(getDefaultDate(6));
-  const [location, setLocation] = useState('Austin, TX');
+  const [location, setLocation] = useState('');
   const [isVirtual, setIsVirtual] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,10 +74,8 @@ export default function CreateEventScreen() {
         description: description.trim(),
         startAt: parsedDate,
         endAt: parsedDate,
-        location: isVirtual ? 'Online (Zoom / Meet)' : location.trim(),
-        latitude: isVirtual ? 0 : 30.2672,
-        longitude: isVirtual ? 0 : -97.7431,
-        categoryId: selectedCategory,
+        location: isVirtual ? 'Online' : location.trim(),
+        categoryId: selectedCategory ?? undefined,
       });
     },
     onSuccess: () => {
@@ -154,18 +150,18 @@ export default function CreateEventScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={s.chipsRow}
               >
-                {CATEGORIES.map((cat) => {
+                {categories.map((cat) => {
                   const active = selectedCategory === cat.id;
                   return (
                     <Pressable
                       key={cat.id}
                       accessibilityRole="button"
-                      accessibilityLabel={cat.label}
-                      onPress={() => setSelectedCategory(cat.id)}
+                      accessibilityLabel={cat.name}
+                      onPress={() => setSelectedCategory(active ? null : cat.id)}
                       style={[s.categoryChip, active && s.categoryChipActive]}
                     >
                       <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>
-                        {cat.label}
+                        {cat.name}
                       </Text>
                     </Pressable>
                   );
@@ -278,7 +274,7 @@ export default function CreateEventScreen() {
             <View style={s.trustBox}>
               <AppIcon color={C.teal} name="verified-user" size={20} />
               <Text style={s.trustBoxText}>
-                Public events include free RSVP pass tracking and community seat capacity limits.
+                Members can RSVP from the event page. As the host, you can see who is going.
               </Text>
             </View>
 

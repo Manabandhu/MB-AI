@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { useAuthStore } from '@/lib/authStore';
 import {
   getReferralDetail,
   getReferralOffer,
@@ -29,6 +29,8 @@ export function ReferralDetailsScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const authStatus = useAuthStore((s) => s.status);
+  const signedIn = authStatus === 'authenticated';
 
   const [bookmarked, setBookmarked] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -44,7 +46,8 @@ export function ReferralDetailsScreen() {
   } = useQuery({
     queryKey: ['referrals', 'detail', referralId],
     queryFn: () => getReferralDetail(referralId),
-    enabled: Boolean(referralId),
+    // Referral details are for members; signed-out visitors are asked to sign in instead of seeing an error.
+    enabled: Boolean(referralId) && signedIn,
   });
 
   const { data: offerDetails } = useQuery({
@@ -59,7 +62,20 @@ export function ReferralDetailsScreen() {
     enabled: Boolean(referralId && referral?.type === 'request'),
   });
 
-  if (isLoading) {
+  if (authStatus === 'unauthenticated') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ErrorState
+          title="Sign in to view this referral"
+          body="Referral details and contact requests are available to ManaBandhu members."
+          retryLabel="Sign in"
+          onRetry={() => router.push('/sign-in')}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (isLoading || authStatus === 'loading') {
     return (
       <SafeAreaView style={styles.safeArea}>
         <LoadingState />
@@ -153,16 +169,14 @@ export function ReferralDetailsScreen() {
                 <Text style={[styles.companyLogoText, { color: company.color }]}>
                   {company.letter}
                 </Text>
-                <View style={styles.verifiedMiniBadge}>
-                  <AppIcon name="check" size={10} color="#FFFFFF" />
-                </View>
               </View>
 
               <View style={styles.roleInfo}>
                 <View style={styles.roleBadgesRow}>
                   <View style={styles.verifiedReferrerPill}>
-                    <AppIcon name="verified-user" size={11} color="#4338CA" />
-                    <Text style={styles.verifiedReferrerText}>Verified Referrer</Text>
+                    <Text style={styles.verifiedReferrerText}>
+                      {data.type === 'offer' ? 'Referral offer' : 'Referral request'}
+                    </Text>
                   </View>
                   <View style={styles.statusPill}>
                     <Text style={styles.statusPillText}>{data.status.toUpperCase()}</Text>
@@ -170,27 +184,15 @@ export function ReferralDetailsScreen() {
                 </View>
 
                 <Text style={styles.roleTitle}>{data.title}</Text>
-                <Text style={styles.roleLocation}>
-                  {data.category || 'Tech Referral'} • Austin, TX & Remote
-                </Text>
+                <Text style={styles.roleLocation}>{data.category || 'Referral'}</Text>
               </View>
             </View>
 
             {/* Meta Tags Row */}
             <View style={styles.metaPillsRow}>
-              <View style={styles.metaPill}>
-                <AppIcon name="sparks" size={12} color="#EA580C" />
-                <Text style={styles.metaPillText}>Avg reply &lt; 4 hrs</Text>
-              </View>
-              <View style={styles.metaPill}>
-                <AppIcon name="community" size={12} color="#4338CA" />
-                <Text style={styles.metaPillText}>Telugu Tech Network</Text>
-              </View>
               <View style={[styles.metaPill, { backgroundColor: '#ECFDF5' }]}>
                 <AppIcon name="shield" size={12} color="#059669" />
-                <Text style={[styles.metaPillText, { color: '#047857' }]}>
-                  Zero Brokerage • 100% Free
-                </Text>
+                <Text style={[styles.metaPillText, { color: '#047857' }]}>Free, no brokerage</Text>
               </View>
             </View>
           </View>
@@ -200,19 +202,15 @@ export function ReferralDetailsScreen() {
             <View style={styles.referrerProfileRow}>
               <View style={styles.avatarRing}>
                 <View style={styles.avatarInner}>
-                  <Text style={styles.avatarInitials}>{data.type === 'offer' ? 'VR' : 'MB'}</Text>
-                </View>
-                <View style={styles.avatarVerifiedCheck}>
-                  <AppIcon name="verified-user" size={11} color="#FFFFFF" />
+                  <Text style={styles.avatarInitials}>MB</Text>
                 </View>
               </View>
 
               <View style={styles.referrerInfo}>
                 <View style={styles.referrerNameRow}>
                   <Text style={styles.referrerName}>
-                    {data.type === 'offer' ? 'Verified Referrer' : 'Verified Requester'}
+                    {data.type === 'offer' ? 'Community referrer' : 'Community member'}
                   </Text>
-                  <AppIcon name="verified-user" size={14} color="#10B981" />
                 </View>
                 <Text style={styles.referrerRole}>{data.category || 'Professional Network'}</Text>
                 <Text style={styles.referrerChapter}>ManaBandhu Member Network</Text>
@@ -226,12 +224,14 @@ export function ReferralDetailsScreen() {
                 <Text style={styles.metricLabel}>Connection</Text>
               </View>
               <View style={styles.metricCell}>
-                <Text style={[styles.metricNumber, { color: '#EA580C' }]}>Active</Text>
+                <Text style={[styles.metricNumber, { color: '#EA580C' }]}>
+                  {data.status.charAt(0).toUpperCase() + data.status.slice(1)}
+                </Text>
                 <Text style={styles.metricLabel}>Status</Text>
               </View>
               <View style={styles.metricCell}>
-                <Text style={[styles.metricNumber, { color: '#10B981' }]}>100%</Text>
-                <Text style={styles.metricLabel}>Zero Brokerage</Text>
+                <Text style={[styles.metricNumber, { color: '#10B981' }]}>Free</Text>
+                <Text style={styles.metricLabel}>No brokerage</Text>
               </View>
             </View>
 
@@ -376,8 +376,8 @@ export function ReferralDetailsScreen() {
             <AppIcon name="verified-user" size={24} color="#EA580C" />
             <Text style={styles.pledgeTitle}>ManaBandhu Community Pledge</Text>
             <Text style={styles.pledgeText}>
-              100% Free & Direct. ManaBandhu members never charge or accept money for job referrals.
-              If anyone asks for payment, report immediately.
+              Free and direct. ManaBandhu members never charge or accept money for job referrals. If
+              anyone asks for payment, report immediately.
             </Text>
           </View>
         </View>
@@ -589,19 +589,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
   },
-  verifiedMiniBadge: {
-    position: 'absolute',
-    bottom: -3,
-    right: -3,
-    backgroundColor: '#10B981',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
   roleInfo: {
     flex: 1,
   },
@@ -697,19 +684,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
   },
-  avatarVerifiedCheck: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#10B981',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
   referrerInfo: {
     flex: 1,
   },
@@ -770,11 +744,6 @@ const styles = StyleSheet.create({
     color: '#334155',
     lineHeight: 18,
     fontStyle: 'italic',
-  },
-  quoteGreet: {
-    fontWeight: '700',
-    color: '#4338CA',
-    fontStyle: 'normal',
   },
   termsBox: {
     backgroundColor: '#FFFBEB',

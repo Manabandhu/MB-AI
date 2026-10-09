@@ -1,4 +1,5 @@
 import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import type { User } from '@supabase/supabase-js';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router } from 'expo-router';
@@ -31,6 +32,7 @@ import {
   useDynamicModules,
   useUserActivityStore,
 } from '@/modules/foundation/userActivityStore';
+import { getNotificationsInbox } from '@/modules/notifications/api';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
@@ -69,6 +71,16 @@ const shellApi: Record<ShellKind, () => Promise<HomeShellData>> = {
   community: getCommunityShell,
   profile: getProfileShell,
 };
+
+/** Shows the bell dot only when the inbox has unread items; nothing while loading or on error. */
+function UnreadNotificationDot() {
+  const { data } = useQuery({
+    queryKey: ['notifications', 'inbox'],
+    queryFn: getNotificationsInbox,
+  });
+  const hasUnread = (data?.items ?? []).some((item) => !item.read);
+  return hasUnread ? <View style={s.notifDot} /> : null;
+}
 
 // ─── Root shell ───────────────────────────────────────────────────────────────
 export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
@@ -127,7 +139,7 @@ export function StitchAppShellScreen({ kind }: { kind: ShellKind }) {
               style={s.headerIconBtn}
             >
               <AppIcon color={colors.appPrimary} name="bell" size={18} />
-              <View style={s.notifDot} />
+              <UnreadNotificationDot />
             </Pressable>
             <Pressable
               accessibilityLabel="Go to profile"
@@ -317,7 +329,7 @@ export function HomeShell({
               style={s.headerIconBtn}
             >
               <AppIcon color={colors.appPrimary} name="bell" size={18} />
-              <View style={s.notifDot} />
+              <UnreadNotificationDot />
             </Pressable>
             <Pressable
               accessibilityLabel="Go to profile"
@@ -946,26 +958,32 @@ export function CommunityShell({
 }
 
 // ─── PROFILE SHELL ────────────────────────────────────────────────────────────
-const profileBadges = [
-  {
-    label: 'ID Verified',
-    icon: 'shield' as AppIconName,
-    color: '#00696b',
-    bg: 'rgba(0,105,107,0.08)',
-  },
-  {
-    label: 'Community Member',
-    icon: 'community' as AppIconName,
-    color: '#431ebe',
-    bg: 'rgba(67,30,190,0.07)',
-  },
-  {
-    label: 'Safe Connect',
-    icon: 'heart' as AppIconName,
-    color: '#ff7e33',
-    bg: 'rgba(255,126,51,0.10)',
-  },
-];
+type ProfileBadge = { label: string; icon: AppIconName; color: string; bg: string };
+
+/**
+ * Badges derived only from the signed-in Supabase user: a confirmed email or phone. No badge is shown for checks
+ * the backend does not record (there is no ID verification yet).
+ */
+function profileBadgesFor(user: User | null): ProfileBadge[] {
+  const badges: ProfileBadge[] = [];
+  if (user?.email_confirmed_at) {
+    badges.push({
+      label: 'Email verified',
+      icon: 'mail',
+      color: '#00696b',
+      bg: 'rgba(0,105,107,0.08)',
+    });
+  }
+  if (user?.phone_confirmed_at) {
+    badges.push({
+      label: 'Phone verified',
+      icon: 'phone',
+      color: '#431ebe',
+      bg: 'rgba(67,30,190,0.07)',
+    });
+  }
+  return badges;
+}
 
 const profileLinks = [
   { label: 'My Listings', icon: 'home' as AppIconName, route: '/rooms' },
@@ -992,9 +1010,11 @@ export function ProfileShell({
 }) {
   const user = useAuthStore((s) => s.user);
   const name = user?.user_metadata?.full_name ?? displayName;
-  const email = user?.email ?? 'member@manabandhu.com';
+  const email = user?.email ?? user?.phone ?? null;
   const initial = (name?.[0] ?? 'U').toUpperCase();
+  // Metrics are rendered exactly as the backend sends them; an empty list renders nothing.
   const metrics = data?.metrics ?? [];
+  const badges = profileBadgesFor(user);
 
   return (
     <>
@@ -1003,7 +1023,7 @@ export function ProfileShell({
           <Text style={s.profileAvatarText}>{initial}</Text>
         </View>
         <Text style={s.profileName}>{name}</Text>
-        <Text style={s.profileEmail}>{email}</Text>
+        {email ? <Text style={s.profileEmail}>{email}</Text> : null}
         <View style={s.profileLocationRow}>
           <AppIcon color="rgba(255,255,255,0.8)" name="map" size={12} />
           <Text style={s.profileLocationText}>ManaBandhu Community Member</Text>
@@ -1020,17 +1040,19 @@ export function ProfileShell({
         ) : null}
       </View>
 
-      <View style={s.badgesSection}>
-        <Text style={s.badgesSectionTitle}>Trust Badges</Text>
-        <View style={s.badgesRow}>
-          {profileBadges.map((badge) => (
-            <View key={badge.label} style={[s.badge, { backgroundColor: badge.bg }]}>
-              <AppIcon color={badge.color} name={badge.icon} size={16} />
-              <Text style={[s.badgeText, { color: badge.color }]}>{badge.label}</Text>
-            </View>
-          ))}
+      {badges.length > 0 ? (
+        <View style={s.badgesSection}>
+          <Text style={s.badgesSectionTitle}>Trust Badges</Text>
+          <View style={s.badgesRow}>
+            {badges.map((badge) => (
+              <View key={badge.label} style={[s.badge, { backgroundColor: badge.bg }]}>
+                <AppIcon color={badge.color} name={badge.icon} size={16} />
+                <Text style={[s.badgeText, { color: badge.color }]}>{badge.label}</Text>
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
+      ) : null}
 
       <View style={s.settingsSection}>
         <Text style={s.settingsSectionTitle}>QUICK LINKS</Text>

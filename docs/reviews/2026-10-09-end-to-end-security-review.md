@@ -2,7 +2,7 @@
 
 ## Scope
 
-Whole repository: Spring backend (every controller, service, GraphQL resolver, `SecurityConfig`, Flyway V1–V29),
+Whole repository: Spring backend (every controller, service, GraphQL resolver, `SecurityConfig`, Flyway V1–V31),
 Expo frontend (every module `api.ts` and its screens), API contracts, GitHub workflows, tool configs, and scripts.
 Hosted Supabase projects were checked through the Supabase MCP; all were paused, so live advisors returned nothing.
 
@@ -20,7 +20,7 @@ Commit `663a178` (first pass, 208 files):
 - **Data rules.** Ride status casing violated `CHECK` constraints; seat counts could go negative or be reopened after
   cancellation; expense balances read unflushed data; referrals inserted placeholder user IDs into `auth.users` FKs;
   the notification dispatcher marked rows sent with no provider and had no HTTP timeouts.
-- **Database.** V29 enables RLS and revokes `anon`/`authenticated` on V28 tables, adds participant-only realtime
+- **Database.** V31 enables RLS and revokes `anon`/`authenticated` on V28 tables, adds participant-only realtime
   policies on `messages`, and pins `search_path` on the purge function.
 - **Frontend.** Removed a test login backdoor, direct Supabase table writes for expenses/community, the realtime
   hook listening to an unused table, SecureStore session truncation (chunked storage), and all lint warnings.
@@ -54,7 +54,7 @@ This commit (second pass):
 
 - `pnpm verify` (Biome, TypeScript, contracts, skills, routes, secrets): pass.
 - Frontend unit tests and Spring tests on Java 25: pass.
-- Fresh-database run of V1–V29 with Hibernate validation: pass.
+- Fresh-database run of V1–V31 with Hibernate validation: pass.
 - `authz-smoke.mjs` against the local stack: 81 pass, 0 fail.
 - OpenAPI lint (Redocly 1.34.5): 0 errors.
 
@@ -63,7 +63,7 @@ This commit (second pass):
 1. **Rotate** the Supabase access token and GitHub PAT from history, the database password, and confirm the Google
    Maps keys are restricted by app signature/referrer.
 2. Hosted Supabase projects are paused; run `get_advisors` (security and performance) after restoring one and
-   applying V29.
+   applying V31.
 3. Content services for Marketplace, Immigration, Referrals, and Rooms still return hard-coded marketing metrics
    (counts, ratings). They are not presented as personal data but should be derived or labelled.
 4. The AI assistant module is a placeholder with no backend.

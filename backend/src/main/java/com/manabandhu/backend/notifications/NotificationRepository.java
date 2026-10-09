@@ -21,9 +21,11 @@ interface NotificationRepository extends JpaRepository<Notification, UUID> {
     @Query(value = """
             SELECT * FROM public.notifications
             WHERE dispatched = false
+              AND dispatch_attempts < :maxAttempts
+              AND (next_dispatch_at IS NULL OR next_dispatch_at <= now())
             ORDER BY created_at ASC
             LIMIT :limit
             FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)
-    List<Notification> claimUndispatched(@Param("limit") int limit);
+    List<Notification> claimUndispatched(@Param("limit") int limit, @Param("maxAttempts") int maxAttempts);
 }

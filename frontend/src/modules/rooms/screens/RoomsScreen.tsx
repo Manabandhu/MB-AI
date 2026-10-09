@@ -440,6 +440,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const {
     data: listings,
     isLoading,
+    isError,
     refetch,
   } = useQuery({
     queryKey: ['rooms', 'listings', globalLocation.name],
@@ -493,7 +494,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         ...l,
         mapX,
         mapY,
-        verifiedHost: true,
+        verifiedHost: Boolean(l.isVerifiedHost),
       };
     });
   }, [listings, selectedCity]);
@@ -1129,10 +1130,12 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   <Text style={s.roomCardHeroPricePeriod}>/mo</Text>
                 </View>
 
-                {/* Verified Host pill floating bottom-right */}
-                <View style={s.roomCardHeroVerifiedBadge}>
-                  <Text style={s.roomCardHeroVerifiedText}>✓ Verified Host</Text>
-                </View>
+                {/* Verified Host pill (only when the listing's host is verified) */}
+                {room.verifiedHost ? (
+                  <View style={s.roomCardHeroVerifiedBadge}>
+                    <Text style={s.roomCardHeroVerifiedText}>✓ Verified Host</Text>
+                  </View>
+                ) : null}
               </View>
 
               {/* Card Body */}
@@ -1196,8 +1199,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                       <Text style={s.hostAvatarText}>{room.title[0] || 'M'}</Text>
                     </View>
                     <View>
-                      <Text style={s.hostName}>Verified Landlord</Text>
-                      <Text style={s.hostMeta}>Direct Contact · Quick Response</Text>
+                      <Text style={s.hostName}>
+                        {room.verifiedHost ? 'Verified host' : 'Community host'}
+                      </Text>
+                      <Text style={s.hostMeta}>Contact through inquiry</Text>
                     </View>
                   </View>
 
@@ -1331,9 +1336,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             <View style={s.sectionHeader}>
               <View>
                 <Text style={s.sectionTitle}>Available Rooms ({filteredRooms.length})</Text>
-                <Text style={s.sectionSub}>
-                  {`Verified housing & shared rooms in ${selectedCity.name}`}
-                </Text>
+                <Text style={s.sectionSub}>{`Housing & shared rooms in ${selectedCity.name}`}</Text>
               </View>
             </View>
 
@@ -1368,6 +1371,15 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               <View style={s.loadingBox}>
                 <ActivityIndicator size="large" color={colors.appPrimary} />
                 <Text style={s.loadingText}>Finding available rooms in {selectedCity.name}...</Text>
+              </View>
+            ) : isError ? (
+              <View style={s.emptyBox}>
+                <Text style={s.emptyEmoji}>⚠️</Text>
+                <Text style={s.emptyTitle}>Unable to load rooms</Text>
+                <Text style={s.emptySub}>Check your connection and try again.</Text>
+                <Pressable onPress={() => refetch()} style={s.resetFilterBtn}>
+                  <Text style={s.resetFilterBtnText}>Retry</Text>
+                </Pressable>
               </View>
             ) : filteredRooms.length === 0 ? (
               <View style={s.emptyBox}>
@@ -1479,7 +1491,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               <TextInput
                 value={citySearchInput}
                 onChangeText={setCitySearchInput}
-                placeholder="Search all 19,000+ US cities (e.g. Coppell, Frisco, Jonesboro)..."
+                placeholder="Search US cities (e.g. Coppell, Frisco, Jonesboro)..."
                 placeholderTextColor={colors.muted}
                 style={s.citySearchInput}
                 autoCorrect={false}
@@ -1997,7 +2009,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               <Pressable onPress={() => setFilterVerifiedOnly((prev) => !prev)} style={s.toggleRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.toggleLabel}>🛡️ Verified Hosts Only</Text>
-                  <Text style={s.toggleSub}>Employer & ID verified Desi hosts</Text>
+                  <Text style={s.toggleSub}>Hosts marked verified on their listing</Text>
                 </View>
                 <View style={[s.switchTrack, filterVerifiedOnly && s.switchTrackActive]}>
                   <View style={[s.switchThumb, filterVerifiedOnly && s.switchThumbActive]} />

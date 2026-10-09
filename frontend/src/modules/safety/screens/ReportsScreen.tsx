@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getReports } from '@/modules/safety/api';
+import { getReports, isOpenReport } from '@/modules/safety/api';
 import { Badge } from '@/modules/shared/components/Badge';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -12,9 +12,17 @@ import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 const statusVariants: Record<string, 'success' | 'warning' | 'info'> = {
-  open: 'warning',
-  reviewing: 'info',
-  resolved: 'success',
+  OPEN: 'warning',
+  IN_REVIEW: 'info',
+  RESOLVED: 'success',
+  DISMISSED: 'info',
+};
+
+const statusLabels: Record<string, string> = {
+  OPEN: 'Open',
+  IN_REVIEW: 'In review',
+  RESOLVED: 'Resolved',
+  DISMISSED: 'Dismissed',
 };
 
 export function ReportsScreen() {
@@ -25,7 +33,7 @@ export function ReportsScreen() {
 
   const filtered = useMemo(() => {
     if (filter === 'all') return data;
-    return data.filter((item) => item.status === filter);
+    return data.filter((item) => (filter === 'open' ? isOpenReport(item) : !isOpenReport(item)));
   }, [data, filter]);
 
   if (reports.isLoading) {
@@ -62,9 +70,7 @@ export function ReportsScreen() {
           <SectionHeader
             eyebrow="Safety"
             title="Reports"
-            subtitle="Track and update safety reports."
-            actionLabel="New report"
-            onAction={() => {}}
+            subtitle="Track the safety reports you have submitted."
           />
           <View style={styles.filters}>
             {(['all', 'open', 'resolved'] as const).map((value) => (
@@ -76,7 +82,7 @@ export function ReportsScreen() {
                 style={[styles.filterChip, filter === value && styles.filterChipActive]}
               >
                 <Text style={[styles.filterText, filter === value && styles.filterTextActive]}>
-                  {value === 'all' ? 'All' : value === 'open' ? 'Open' : 'Resolved'}
+                  {value === 'all' ? 'All' : value === 'open' ? 'Open' : 'Closed'}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -94,11 +100,16 @@ export function ReportsScreen() {
               {filtered.map((item) => (
                 <View key={item.id} style={styles.card}>
                   <View style={styles.cardHeader}>
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                    <Badge label={item.status} variant={statusVariants[item.status]} />
+                    <Text style={styles.cardTitle}>{item.category}</Text>
+                    <Badge
+                      label={statusLabels[item.status] ?? item.status}
+                      variant={statusVariants[item.status]}
+                    />
                   </View>
-                  <Text style={styles.cardBody}>{item.body}</Text>
-                  <Text style={styles.cardMeta}>{item.meta}</Text>
+                  <Text style={styles.cardBody}>{item.description}</Text>
+                  <Text style={styles.cardMeta}>
+                    {item.severity} severity • {new Date(item.createdAt).toLocaleDateString()}
+                  </Text>
                 </View>
               ))}
             </View>

@@ -21,30 +21,12 @@ import { createMarketplaceListing, listMarketplaceCategories } from '@/modules/m
 import type { CreateListingInput } from '@/modules/marketplace/types';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
-const CATEGORIES = [
-  { id: 'kitchen', label: 'Kitchen & Appliances', icon: 'utensils' },
-  { id: 'furniture', label: 'Furniture & Home', icon: 'home' },
-  { id: 'ethnic', label: 'Ethnic Wear & Jewelry', icon: 'sparkles' },
-  { id: 'sports', label: 'Cricket & Sports', icon: 'award' },
-  { id: 'puja', label: 'Puja & Festival Items', icon: 'flame' },
-  { id: 'electronics', label: 'Electronics', icon: 'laptop' },
-  { id: 'kids', label: 'Baby & Kids', icon: 'smile' },
-] as const;
-
 const CONDITIONS = [
   { id: 'Brand New', label: 'Brand New', subtext: 'Unopened, with tags/box' },
   { id: 'Like New', label: 'Like New', subtext: 'Used minimally, pristine condition' },
   { id: 'Gently Used', label: 'Gently Used', subtext: 'Normal wear, 100% functional' },
   { id: 'Fair', label: 'Fair', subtext: 'Noticeable wear, priced to move' },
 ] as const;
-
-const SAFE_PICKUP_SPOTS = [
-  'Patel Brothers (Round Rock)',
-  'H-E-B (University Blvd, Round Rock)',
-  'India Bazaar (Plano/Frisco)',
-  'Whole Foods (Domain, Austin)',
-  'Patel Brothers (Irving/MacArthur)',
-];
 
 const COMMUNITY_TAGS = [
   '110V US Voltage',
@@ -63,24 +45,16 @@ export function SellItemScreen() {
 
   // Form states
   const [title, setTitle] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('kitchen');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [condition, setCondition] = useState<string>('Like New');
   const [isFree, setIsFree] = useState(false);
-  const [price, setPrice] = useState('65');
-  const [originalPrice, _setOriginalPrice] = useState('135');
+  const [price, setPrice] = useState('');
   const [negotiable, setNegotiable] = useState(true);
-  const [location, setLocation] = useState('Round Rock / North Austin, TX');
-  const [safePickupSpot, setSafePickupSpot] = useState(SAFE_PICKUP_SPOTS[0]);
+  const [location, setLocation] = useState('');
+  const [safePickupSpot, setSafePickupSpot] = useState('');
   const [_publicSpotOnly, _setPublicSpotOnly] = useState(true);
-  const [description, setDescription] = useState(
-    'Works flawlessly on 110V US sockets without converter. 2 stainless steel jars (1.5L wet + 0.5L chutney) with spare coupler and original box.',
-  );
-  const [selectedTags, setSelectedTags] = useState<string[]>([
-    '110V US Voltage',
-    'Relocation Sale',
-    'Chutney / Batter Tested',
-  ]);
-  const [photoCount, setPhotoCount] = useState(2);
+  const [description, setDescription] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
 
@@ -114,16 +88,22 @@ export function SellItemScreen() {
       setErrorMsg('Please enter an item title');
       return;
     }
-    const numPrice = isFree ? 0.01 : parseFloat(price) || 1;
-    const catMatch = backendCategories.find(
-      (c) => c.slug === selectedCategory || c.name.toLowerCase().includes(selectedCategory),
-    );
-    const categoryId = catMatch?.id ?? '00000000-0000-0000-0000-000000000001';
+    const numPrice = isFree ? 0 : Number.parseFloat(price);
+    if (!Number.isFinite(numPrice) || numPrice < 0) {
+      setErrorMsg('Please enter a price, or choose Give for Free');
+      return;
+    }
+    const categoryId = selectedCategory;
+    if (!categoryId) {
+      setErrorMsg('Please choose a category');
+      return;
+    }
 
-    const fullDesc =
-      selectedTags.length > 0
-        ? `${description.trim()}\n\nTags: ${selectedTags.join(', ')}\nPickup: ${safePickupSpot}`
-        : `${description.trim()}\nPickup: ${safePickupSpot}`;
+    const extras = [
+      selectedTags.length > 0 ? `Tags: ${selectedTags.join(', ')}` : null,
+      safePickupSpot.trim() ? `Pickup: ${safePickupSpot.trim()}` : null,
+    ].filter(Boolean);
+    const fullDesc = [description.trim(), extras.join('\n')].filter(Boolean).join('\n\n');
 
     const payload: CreateListingInput = {
       categoryId,
@@ -148,13 +128,14 @@ export function SellItemScreen() {
           </View>
           <Text style={s.successTitle}>Item Listed on Marketplace! 🎉</Text>
           <Text style={s.successSubtitle}>
-            Your listing is now active and visible to verified Telugu and Indian community members
-            in {location}.
+            Your listing is now live in the community marketplace.
           </Text>
           <View style={s.successCard}>
             <Text style={s.successItemTitle}>{title}</Text>
             <Text style={s.successItemPrice}>{isFree ? 'FREE Giveaway' : `$${price}`}</Text>
-            <Text style={s.successItemSpot}>📍 Safe Daylight Pickup: {safePickupSpot}</Text>
+            {safePickupSpot.trim() ? (
+              <Text style={s.successItemSpot}>📍 Pickup: {safePickupSpot.trim()}</Text>
+            ) : null}
           </View>
           <View style={s.successActions}>
             <Pressable style={s.primaryBtn} onPress={() => router.replace('/marketplace')}>
@@ -185,14 +166,9 @@ export function SellItemScreen() {
           </Pressable>
           <View style={s.topBarCenter}>
             <Text style={s.topBarTitle}>Sell an Item</Text>
-            <Text style={s.topBarSubtitle}>100% Free • 0% Brokerage</Text>
+            <Text style={s.topBarSubtitle}>List an item for the community</Text>
           </View>
-          <Pressable
-            style={s.draftsBtn}
-            onPress={() => Alert.alert('Drafts', 'Listing draft saved.')}
-          >
-            <Text style={s.draftsBtnText}>Drafts (1)</Text>
-          </Pressable>
+          <View style={s.iconBtn} />
         </View>
 
         <ScrollView style={s.flex} contentContainerStyle={s.content}>
@@ -202,57 +178,18 @@ export function SellItemScreen() {
               <AppIcon name="shield" size={20} color={colors.teal} />
             </View>
             <View style={s.trustContent}>
-              <Text style={s.trustTitle}>Zero-Brokerage Community Marketplace</Text>
+              <Text style={s.trustTitle}>Community Marketplace</Text>
               <Text style={s.trustText}>
-                No fees, no middlemen. Connect directly with local verified Telugu & Desi Bandhus.
+                Buyers contact you directly through chat. Agree on price and pickup together.
               </Text>
             </View>
           </View>
 
-          {/* Photo Uploader Section */}
-          <View style={s.card}>
-            <View style={s.sectionHeaderRow}>
-              <Text style={s.sectionTitle}>Item Photos</Text>
-              <Text style={s.sectionCount}>({photoCount}/8 photos added)</Text>
-            </View>
-            <View style={s.tipBox}>
-              <Text style={s.tipText}>
-                💡 Clear, well-lit photos sell 3x faster in local community groups.
-              </Text>
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.photosRow}>
-              {/* Cover photo slot */}
-              <View style={s.photoSlotCover}>
-                <View style={s.coverBadge}>
-                  <Text style={s.coverBadgeText}>★ Cover Photo</Text>
-                </View>
-                <View style={s.mockImagePlaceholder}>
-                  <AppIcon name="package" size={32} color={colors.primary} />
-                  <Text style={s.mockImageLabel}>Preethi Eco Twin</Text>
-                </View>
-              </View>
-
-              {/* Photo 2 slot */}
-              <View style={s.photoSlotFilled}>
-                <View style={s.mockImagePlaceholder}>
-                  <AppIcon name="package" size={28} color={colors.muted} />
-                  <Text style={s.mockImageLabel}>Stainless Jars</Text>
-                </View>
-              </View>
-
-              {/* Add more button */}
-              <Pressable
-                style={s.photoSlotAdd}
-                onPress={() => {
-                  setPhotoCount((c) => Math.min(c + 1, 8));
-                  Alert.alert('Add Photo', 'Photo added from device library.');
-                }}
-              >
-                <AppIcon name="plus" size={24} color={colors.primary} />
-                <Text style={s.addPhotoText}>+ Add</Text>
-              </Pressable>
-            </ScrollView>
+          {/* Photos are not uploaded from this screen yet; say so instead of showing mock photos. */}
+          <View style={s.tipBox}>
+            <Text style={s.tipText}>
+              Photo upload is not available yet. Describe the item clearly.
+            </Text>
           </View>
 
           {/* Item Details Card */}
@@ -262,7 +199,7 @@ export function SellItemScreen() {
             <Text style={s.inputLabel}>Listing Title *</Text>
             <TextInput
               style={s.textInput}
-              placeholder="e.g. Preethi Eco Twin Mixer Grinder 550W (110V US Model)"
+              placeholder="e.g. Mixer grinder (110V US model)"
               placeholderTextColor={colors.muted}
               value={title}
               onChangeText={setTitle}
@@ -272,7 +209,7 @@ export function SellItemScreen() {
 
             <Text style={s.inputLabel}>Category *</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillsRow}>
-              {CATEGORIES.map((cat) => {
+              {backendCategories.map((cat) => {
                 const isSelected = selectedCategory === cat.id;
                 return (
                   <Pressable
@@ -281,7 +218,7 @@ export function SellItemScreen() {
                     onPress={() => setSelectedCategory(cat.id)}
                   >
                     <Text style={[s.catPillText, isSelected && s.catPillTextActive]}>
-                      {cat.label}
+                      {cat.name}
                     </Text>
                   </Pressable>
                 );
@@ -329,9 +266,7 @@ export function SellItemScreen() {
                 style={[s.segmentBtn, isFree && s.segmentBtnActive]}
                 onPress={() => setIsFree(true)}
               >
-                <Text style={[s.segmentText, isFree && s.segmentTextActive]}>
-                  🎁 Give for Free (Zero Waste)
-                </Text>
+                <Text style={[s.segmentText, isFree && s.segmentTextActive]}>🎁 Give for Free</Text>
               </Pressable>
             </View>
 
@@ -347,16 +282,11 @@ export function SellItemScreen() {
                     placeholder="0"
                   />
                 </View>
-                <View style={s.msrpBox}>
-                  <Text style={s.msrpLabel}>Original Retail: ${originalPrice}</Text>
-                  <Text style={s.discountBadge}>~52% Off</Text>
-                </View>
               </View>
             ) : (
               <View style={s.freeCallout}>
                 <Text style={s.freeCalloutText}>
-                  ✨ Thank you for giving back to the community! Free items are featured in the
-                  Zero-Waste diaspora circle.
+                  ✨ Thank you for giving back to the community!
                 </Text>
               </View>
             )}
@@ -373,7 +303,7 @@ export function SellItemScreen() {
 
           {/* Location & Safe Pickup Card */}
           <View style={s.card}>
-            <Text style={s.sectionTitle}>Location & Safe Desi Pickup</Text>
+            <Text style={s.sectionTitle}>Location & Pickup</Text>
 
             <Text style={s.inputLabel}>Neighborhood / Metro Area</Text>
             <View style={s.inputWithIcon}>
@@ -382,34 +312,21 @@ export function SellItemScreen() {
                 style={s.textInputInner}
                 value={location}
                 onChangeText={setLocation}
-                placeholder="e.g. Round Rock / North Austin, TX"
+                placeholder="e.g. Neighborhood, City, State"
               />
             </View>
 
-            <Text style={s.inputLabel}>Recommended Daylight Community Pickup Spot</Text>
+            <Text style={s.inputLabel}>Pickup Spot (optional)</Text>
             <View style={s.safeSpotCard}>
-              <View style={s.safeSpotHeader}>
-                <AppIcon name="shield" size={16} color={colors.teal} />
-                <Text style={s.safeSpotBadge}>✓ Verified Public Community Spot</Text>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillsRow}>
-                {SAFE_PICKUP_SPOTS.map((spot) => {
-                  const isSelected = safePickupSpot === spot;
-                  return (
-                    <Pressable
-                      key={spot}
-                      style={[s.spotPill, isSelected && s.spotPillActive]}
-                      onPress={() => setSafePickupSpot(spot)}
-                    >
-                      <Text style={[s.spotPillText, isSelected && s.spotPillTextActive]}>
-                        {spot}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+              <TextInput
+                style={s.textInput}
+                value={safePickupSpot}
+                onChangeText={setSafePickupSpot}
+                placeholder="Optional: a busy public place for pickup"
+                placeholderTextColor={colors.muted}
+              />
               <Text style={s.safeSpotHelper}>
-                We recommend meeting at well-lit Indian supermarkets or grocery parking lots.
+                We recommend meeting in daylight at a busy public place.
               </Text>
             </View>
           </View>
@@ -451,14 +368,13 @@ export function SellItemScreen() {
           {/* Seller Trust Banner */}
           <View style={s.sellerCard}>
             <View style={s.sellerAvatar}>
-              <Text style={s.sellerAvatarText}>{user?.user_metadata?.full_name?.[0] ?? 'S'}</Text>
+              <Text style={s.sellerAvatarText}>
+                {(user?.user_metadata?.full_name ?? user?.email ?? '?')[0]?.toUpperCase()}
+              </Text>
             </View>
             <View style={s.sellerInfo}>
               <Text style={s.sellerName}>
-                Posting as {user?.user_metadata?.full_name ?? 'Suresh Reddy'}
-              </Text>
-              <Text style={s.sellerSubtext}>
-                Verified Bandhu • Dell Corporate Email • Round Rock Community
+                Posting as {user?.user_metadata?.full_name ?? user?.email ?? 'your account'}
               </Text>
             </View>
           </View>
@@ -469,12 +385,6 @@ export function SellItemScreen() {
 
         {/* Fixed Bottom Action Bar */}
         <View style={s.bottomBar}>
-          <Pressable
-            style={s.saveDraftBtn}
-            onPress={() => Alert.alert('Saved', 'Saved to your drafts folder')}
-          >
-            <Text style={s.saveDraftText}>Save Draft</Text>
-          </Pressable>
           <Pressable
             style={[s.publishBtn, mutation.isPending && s.publishBtnDisabled]}
             onPress={handlePublish}
@@ -512,13 +422,6 @@ const s = StyleSheet.create({
   topBarCenter: { alignItems: 'center' },
   topBarTitle: { ...typography.h3, color: colors.ink, fontWeight: '800' },
   topBarSubtitle: { ...typography.caption, color: colors.teal, fontWeight: '700' },
-  draftsBtn: {
-    backgroundColor: colors.primarySoft,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x1,
-    borderRadius: radius.pill,
-  },
-  draftsBtnText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
 
   trustBanner: {
     flexDirection: 'row',
@@ -550,13 +453,7 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     gap: space.x3,
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   sectionTitle: { ...typography.h4, color: colors.ink, fontWeight: '800' },
-  sectionCount: { ...typography.caption, color: colors.muted },
 
   tipBox: {
     backgroundColor: '#fff9ed',
@@ -566,57 +463,6 @@ const s = StyleSheet.create({
     borderColor: '#fce4be',
   },
   tipText: { ...typography.caption, color: colors.warm, fontWeight: '600' },
-
-  photosRow: { flexDirection: 'row', gap: space.x2, marginTop: space.x1 },
-  photoSlotCover: {
-    width: 130,
-    height: 110,
-    borderRadius: radius.control,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  coverBadge: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    zIndex: 2,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  coverBadgeText: { color: '#ffffff', fontSize: 9, fontWeight: '800' },
-  mockImagePlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: space.x2,
-  },
-  mockImageLabel: { ...typography.caption, color: colors.ink, fontSize: 10, marginTop: 4 },
-  photoSlotFilled: {
-    width: 100,
-    height: 110,
-    borderRadius: radius.control,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  photoSlotAdd: {
-    width: 80,
-    height: 110,
-    borderRadius: radius.control,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#faf8ff',
-  },
-  addPhotoText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
 
   inputLabel: { ...typography.bodyStrong, color: colors.ink, fontSize: 13, marginTop: space.x1 },
   textInput: {
@@ -708,9 +554,6 @@ const s = StyleSheet.create({
   },
   currencyPrefix: { fontSize: 22, fontWeight: '800', color: colors.ink },
   priceInput: { flex: 1, fontSize: 22, fontWeight: '800', color: colors.ink, paddingVertical: 8 },
-  msrpBox: { alignItems: 'flex-end' },
-  msrpLabel: { ...typography.caption, color: colors.muted, textDecorationLine: 'line-through' },
-  discountBadge: { ...typography.caption, color: colors.teal, fontWeight: '800' },
   freeCallout: {
     backgroundColor: '#f2fbf6',
     padding: space.x3,
@@ -752,19 +595,6 @@ const s = StyleSheet.create({
     borderColor: '#d2e8e4',
     gap: space.x2,
   },
-  safeSpotHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  safeSpotBadge: { ...typography.caption, color: colors.teal, fontWeight: '800' },
-  spotPill: {
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  spotPillActive: { borderColor: colors.teal, backgroundColor: '#e2f4f2' },
-  spotPillText: { ...typography.caption, color: colors.ink, fontSize: 11 },
-  spotPillTextActive: { color: colors.teal, fontWeight: '800' },
   safeSpotHelper: { ...typography.caption, color: colors.muted, fontSize: 11 },
 
   textArea: {
@@ -811,7 +641,6 @@ const s = StyleSheet.create({
   sellerAvatarText: { color: '#ffffff', fontWeight: '800', fontSize: 16 },
   sellerInfo: { flex: 1 },
   sellerName: { ...typography.bodyStrong, color: colors.ink, fontSize: 13 },
-  sellerSubtext: { ...typography.caption, color: colors.teal, fontSize: 11 },
 
   errorText: { color: colors.error, ...typography.caption, textAlign: 'center' },
 
@@ -827,16 +656,6 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  saveDraftBtn: {
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveDraftText: { ...typography.bodyStrong, color: colors.ink, fontSize: 14 },
   publishBtn: {
     flex: 1,
     backgroundColor: colors.primary,

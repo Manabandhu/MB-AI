@@ -1,4 +1,4 @@
--- V29: security hardening.
+-- V31: security hardening.
 -- 1. Lock down tables V28 created without row level security (they were readable and writable by anyone
 --    holding the public Supabase key through PostgREST). The backend connects as the table owner and is
 --    unaffected; clients must go through the API.
@@ -82,6 +82,18 @@ $$;
 
 REVOKE ALL ON FUNCTION public.purge_expired_ride_chats() FROM PUBLIC;
 
+-- Supabase also grants EXECUTE on public functions to anon/authenticated directly, so revoking from PUBLIC alone
+-- leaves them callable through /rest/v1/rpc. rls_auto_enable() is created by the Supabase dashboard, not by Flyway.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+        REVOKE ALL ON FUNCTION public.purge_expired_ride_chats() FROM anon, authenticated;
+        IF to_regprocedure('public.rls_auto_enable()') IS NOT NULL THEN
+            REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated;
+        END IF;
+    END IF;
+END $$;
+
 -- 5. Realtime chat for participants ----------------------------------------------------------------
 -- Supabase-only pieces (auth.uid(), the realtime schema, the supabase_realtime publication) are guarded so
 -- this migration also runs on a plain Postgres used for local development and tests.
@@ -108,7 +120,7 @@ BEGIN
             );
         $body$
     $fn$;
-    REVOKE ALL ON FUNCTION public.is_conversation_participant(uuid) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.is_conversation_participant(uuid) FROM PUBLIC, anon;
     GRANT EXECUTE ON FUNCTION public.is_conversation_participant(uuid) TO authenticated;
 
     -- Participants may read their own conversations' messages; writes still go through the API.

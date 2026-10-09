@@ -66,4 +66,33 @@ class ExpenseAccess {
                 SELECT group_id FROM public.expense_group_members WHERE user_id = ?
                 """, UUID.class, userId, userId);
     }
+
+    /** Distinct people (owners and members) across every group the user belongs to, the user included. */
+    long memberCountAcrossGroupsOf(UUID userId) {
+        var count = jdbcTemplate.queryForObject("""
+                WITH mine AS (
+                    SELECT id FROM public.expense_groups WHERE owner_id = ?
+                    UNION
+                    SELECT group_id FROM public.expense_group_members WHERE user_id = ?
+                )
+                SELECT COUNT(DISTINCT person) FROM (
+                    SELECT m.user_id AS person FROM public.expense_group_members m JOIN mine ON m.group_id = mine.id
+                    UNION
+                    SELECT g.owner_id FROM public.expense_groups g JOIN mine ON g.id = mine.id
+                ) people
+                """, Long.class, userId, userId);
+        return count != null ? count : 0L;
+    }
+
+    /**
+     * Balances are computed per group without a currency dimension, so every expense and settlement must use the
+     * group's currency; mixing them would silently add, say, EUR amounts to a USD ledger.
+     */
+    static String groupCurrency(ExpenseGroup group, String requested) {
+        var currency = group.getCurrency() != null ? group.getCurrency() : "USD";
+        if (requested != null && !requested.isBlank() && !requested.equalsIgnoreCase(currency)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amounts in this group must be in " + currency);
+        }
+        return currency;
+    }
 }

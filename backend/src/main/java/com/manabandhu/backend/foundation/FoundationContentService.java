@@ -1,13 +1,22 @@
 package com.manabandhu.backend.foundation;
 
 import java.util.List;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import com.manabandhu.backend.auth.Actor;
+
 @Service
 public class FoundationContentService {
+
+    private static final Logger log = LoggerFactory.getLogger(FoundationContentService.class);
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -16,15 +25,19 @@ public class FoundationContentService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    private long countTable(String sql, long fallback) {
+    /** Runs a COUNT query; empty when there is no database or the query fails, so callers omit the metric. */
+    private java.util.OptionalLong count(String sql, Object... args) {
         if (jdbcTemplate == null) {
-            return fallback;
+            return java.util.OptionalLong.empty();
         }
         try {
-            Long count = jdbcTemplate.queryForObject(sql, Long.class);
-            return count != null ? count : fallback;
-        } catch (Exception e) {
-            return fallback;
+            Long count = args.length == 0
+                    ? jdbcTemplate.queryForObject(sql, Long.class)
+                    : jdbcTemplate.queryForObject(sql, Long.class, args);
+            return count != null ? java.util.OptionalLong.of(count) : java.util.OptionalLong.empty();
+        } catch (DataAccessException e) {
+            log.warn("Screen metric query failed: {}", e.getMessage());
+            return java.util.OptionalLong.empty();
         }
     }
 
@@ -71,101 +84,94 @@ public class FoundationContentService {
                                 "Sign In")));
     }
 
-    CatalogScreenContent screen(String screenId) {
+    /**
+     * Shell screens. Aggregate counts come from the database; personal counts (chat, saved) are computed for the
+     * signed-in viewer only. A count that cannot be read is left out rather than replaced with a made-up number.
+     */
+    CatalogScreenContent screen(String screenId, Optional<Actor> viewer) {
         return switch (screenId) {
-            case "home" -> {
-                long activeRooms = countTable("SELECT count(*) FROM room_listings WHERE status = 'active'", 12);
-                long activeRides = countTable("SELECT count(*) FROM ride_offers WHERE status = 'active'", 6);
-                yield new CatalogScreenContent(
-                        "Your day at a glance",
-                        "Rooms, rides, jobs, community, and chat updates tailored to your interests and location.",
-                        "Home",
-                        List.of(
-                                new CatalogMetric("Active rooms", String.valueOf(activeRooms)),
-                                new CatalogMetric("Active rides", String.valueOf(activeRides))),
-                        List.of(
-                                item("rooms", "Find a room", "Browse shared housing with privacy-aware location.", "Open rooms", "/rooms"),
-                                item("rides", "Offer a ride", "Post a ride with route, time, and seats.", "Open rides", "/rides/offer"),
-                                item("jobs", "Ask a question", "Join communities and chat safely.", "Open chat", "/community")));
-            }
-            case "chat" -> {
-                long totalConvs = countTable("SELECT count(*) FROM conversations", 8);
-                long totalMsgs = countTable("SELECT count(*) FROM messages", 3);
-                yield new CatalogScreenContent(
-                        "Stay in touch",
-                        "Your conversations, group chats, and support threads in one inbox.",
-                        "Chat",
-                        List.of(
-                                new CatalogMetric("Conversations", String.valueOf(totalConvs)),
-                                new CatalogMetric("Messages", String.valueOf(totalMsgs))),
-                        List.of(
-                                item("all", "All conversations", "Jump into any open chat thread.", "Inbox", "/chat"),
-                                item("groups", "Group chats", "Communities, rides, and rooms group chats.", "Groups", "/chat/new")));
-            }
-            case "community" -> {
-                long groups = countTable("SELECT count(*) FROM communities", 14);
-                long posts = countTable("SELECT count(*) FROM community_posts", 31);
-                yield new CatalogScreenContent(
-                        "Community hubs",
-                        "Join groups, read posts, and find help from people nearby.",
-                        "Community",
-                        List.of(
-                                new CatalogMetric("Groups", String.valueOf(groups)),
-                                new CatalogMetric("Posts", String.valueOf(posts))),
-                        List.of(
-                                item("discover", "Discover groups", "Find communities by interest, location, and need.", "Explore", "/community/discover"),
-                                item("posts", "Recent posts", "Read and reply to posts from joined communities.", "Feed", "/community")));
-            }
+            case "home" -> new CatalogScreenContent(
+                    "Your day at a glance",
+                    "Rooms, rides, jobs, community, and chat updates tailored to your interests and location.",
+                    "Home",
+                    metrics(
+                            metric("Active rooms", "SELECT count(*) FROM room_listings WHERE status = 'active'"),
+                            metric("Active rides", "SELECT count(*) FROM ride_offers WHERE lower(status) = 'active' AND departure_at > now()")),
+                    List.of(
+                            item("rooms", "Find a room", "Browse shared housing with privacy-aware location.", "Open rooms", "/rooms"),
+                            item("rides", "Offer a ride", "Post a ride with route, time, and seats.", "Open rides", "/rides/offer"),
+                            item("jobs", "Ask a question", "Join communities and chat safely.", "Open chat", "/community")));
+            case "chat" -> new CatalogScreenContent(
+                    "Stay in touch",
+                    "Your conversations, group chats, and support threads in one inbox.",
+                    "Chat",
+                    viewer.map(actor -> metrics(
+                            metric("Conversations", """
+                                    SELECT count(*) FROM conversation_participants
+                                    WHERE user_id = ? AND left_at IS NULL""", actor.id()),
+                            metric("Messages", """
+                                    SELECT count(*) FROM messages m
+                                    JOIN conversation_participants p ON p.conversation_id = m.conversation_id
+                                    WHERE p.user_id = ? AND p.left_at IS NULL""", actor.id())))
+                            .orElse(List.of()),
+                    List.of(
+                            item("all", "All conversations", "Jump into any open chat thread.", "Inbox", "/chat"),
+                            item("groups", "Group chats", "Communities, rides, and rooms group chats.", "Groups", "/chat/new")));
+            case "community" -> new CatalogScreenContent(
+                    "Community hubs",
+                    "Join groups, read posts, and find help from people nearby.",
+                    "Community",
+                    metrics(
+                            metric("Groups", "SELECT count(*) FROM communities"),
+                            metric("Posts", "SELECT count(*) FROM community_posts")),
+                    List.of(
+                            item("discover", "Discover groups", "Find communities by interest, location, and need.", "Explore", "/community/discover"),
+                            item("posts", "Recent posts", "Read and reply to posts from joined communities.", "Feed", "/community")));
             case "onboarding" -> new CatalogScreenContent(
                     "Set up your ManaBandhu space",
                     "Choose your city, interests, and safety preferences so the app feels useful from day one.",
                     "Getting Started",
-                    List.of(new CatalogMetric("Setup time", "2 min"), new CatalogMetric("Privacy steps", "3")),
+                    metrics(
+                            metric("Setup steps", "SELECT count(*) FROM onboarding_steps"),
+                            metric("Required steps", "SELECT count(*) FROM onboarding_steps WHERE is_required")),
                     List.of(
                             item("location", "Pick your local area", "Use a broad neighborhood or city so discovery works without exposing precise location.", "Location privacy first", "/explore"),
                             item("interests", "Select what you need", "Rooms, rides, jobs, events, community help, safety, and utilities can be tuned any time.", "Personalized modules", "/settings")));
-            case "explore" -> {
-                long totalRooms = countTable("SELECT count(*) FROM room_listings", 24);
-                long totalEvents = countTable("SELECT count(*) FROM events", 8);
-                yield new CatalogScreenContent(
-                        "Everything nearby, organized",
-                        "Jump into rooms, rides, jobs, events, services, and community posts from one discovery surface.",
-                        "Explore",
-                        List.of(
-                                new CatalogMetric("Rooms", String.valueOf(totalRooms)),
-                                new CatalogMetric("Events", String.valueOf(totalEvents))),
-                        List.of(
-                                item("rooms", "Rooms", "Find shared housing and trusted listings.", "Open rooms", "/rooms"),
-                                item("rides", "Rides", "Offer or request safe local and airport rides.", "Open rides", "/rides"),
-                                item("notifications", "Notifications", "See updates from your communities and saved searches.", "Open inbox", "/notifications")));
-            }
+            case "explore" -> new CatalogScreenContent(
+                    "Everything nearby, organized",
+                    "Jump into rooms, rides, jobs, events, services, and community posts from one discovery surface.",
+                    "Explore",
+                    metrics(
+                            metric("Rooms", "SELECT count(*) FROM room_listings WHERE status = 'active'"),
+                            metric("Events", "SELECT count(*) FROM events WHERE status = 'published' AND end_at > now()")),
+                    List.of(
+                            item("rooms", "Rooms", "Find shared housing and trusted listings.", "Open rooms", "/rooms"),
+                            item("rides", "Rides", "Offer or request safe local and airport rides.", "Open rides", "/rides"),
+                            item("notifications", "Notifications", "See updates from your communities and saved searches.", "Open inbox", "/notifications")));
             case "search" -> new CatalogScreenContent(
                     "Search across ManaBandhu",
                     "A unified search home for listings, rides, people, guides, events, and help requests.",
                     "Search",
-                    List.of(new CatalogMetric("Categories", "12"), new CatalogMetric("Recent searches", "5")),
+                    List.of(),
                     List.of(
                             item("query", "Start with a need", "Try room near Plano, airport ride, or job referral.", "Smart suggestions", "/rooms/search"),
                             item("filters", "Refine fast", "Filter by distance, price, availability, trust signals, and module.", "Cross-module filters", "/rides/filters")));
-            case "saved" -> {
-                long savedRooms = countTable("SELECT count(*) FROM room_favorites", 18);
-                long savedListings = countTable("SELECT count(*) FROM listing_favorites", 6);
-                yield new CatalogScreenContent(
-                        "Your saved things",
-                        "Saved rooms, rides, events, jobs, marketplace items, and resources live in one calm place.",
-                        "Saved",
-                        List.of(
-                                new CatalogMetric("Saved rooms", String.valueOf(savedRooms)),
-                                new CatalogMetric("Saved items", String.valueOf(savedListings))),
-                        List.of(
-                                item("room", "Sunny room in Irving", "Available next month with verified host notes.", "Room", "/rooms/demo-room-1"),
-                                item("ride", "DFW airport ride", "Saturday morning ride with two seats left.", "Ride", "/rides/search")));
-            }
+            case "saved" -> new CatalogScreenContent(
+                    "Your saved things",
+                    "Saved rooms, rides, events, jobs, marketplace items, and resources live in one calm place.",
+                    "Saved",
+                    viewer.map(actor -> metrics(
+                            metric("Saved rooms", "SELECT count(*) FROM room_favorites WHERE user_id = ?", actor.id()),
+                            metric("Saved items", "SELECT count(*) FROM listing_favorites WHERE user_id = ?", actor.id())))
+                            .orElse(List.of()),
+                    List.of(
+                            item("rooms", "Saved rooms", "Rooms you saved to compare or message about later.", "Rooms", "/rooms/saved"),
+                            item("marketplace", "Saved marketplace items", "Listings you saved in the marketplace.", "Marketplace", "/marketplace/saved")));
             case "profile" -> new CatalogScreenContent(
                     "Your community profile",
                     "Manage your visible name, trust signals, interests, and the ways others can safely contact you.",
                     "Profile",
-                    List.of(new CatalogMetric("Profile strength", "72%"), new CatalogMetric("Trust checks", "2")),
+                    List.of(),
                     List.of(
                             item("identity", "Identity and privacy", "Control your display name, pronouns, language, and location precision.", "Editable", "/settings"),
                             item("activity", "Recent activity", "Your posts, listings, rides, saves, and community contributions.", "Private by default", "/saved")));
@@ -173,12 +179,21 @@ public class FoundationContentService {
                     "Preferences and safety",
                     "Tune notifications, language, privacy, blocked users, security, and app appearance.",
                     "Settings",
-                    List.of(new CatalogMetric("Notification groups", "5"), new CatalogMetric("Privacy controls", "8")),
+                    List.of(),
                     List.of(
                             item("notifications", "Notification preferences", "Choose what reaches in-app, push, email, or SMS later.", "Review", "/notifications"),
                             item("privacy", "Privacy and safety", "Manage blocked users, trusted contacts, and sensitive data choices.", "Protected", "/profile")));
             default -> throw new UnknownCatalogScreenException(screenId);
         };
+    }
+
+    private Optional<CatalogMetric> metric(String label, String sql, Object... args) {
+        return count(sql, args).stream().mapToObj(value -> new CatalogMetric(label, String.valueOf(value))).findFirst();
+    }
+
+    @SafeVarargs
+    private static List<CatalogMetric> metrics(Optional<CatalogMetric>... metrics) {
+        return java.util.Arrays.stream(metrics).flatMap(Optional::stream).toList();
     }
 
     private static CatalogItem item(String id, String title, String body, String meta, String route) {

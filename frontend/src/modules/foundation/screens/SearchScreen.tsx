@@ -20,6 +20,8 @@ import { listMarketplaceListings } from '@/modules/marketplace/api';
 import type { MarketplaceListing } from '@/modules/marketplace/types';
 import { listRoomListings } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
 const C = {
@@ -61,22 +63,31 @@ export function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
 
-  const { data: rooms = [] } = useQuery<RoomListing[]>({
+  // Errors are surfaced below instead of being treated as "no results".
+  const roomsQuery = useQuery<RoomListing[]>({
     queryKey: ['rooms', 'search-pool'],
-    queryFn: () => listRoomListings().catch(() => []),
+    queryFn: () => listRoomListings(),
   });
-  const { data: events = [] } = useQuery<Event[]>({
+  const eventsQuery = useQuery<Event[]>({
     queryKey: ['events', 'search-pool'],
-    queryFn: () => listEvents().catch(() => []),
+    queryFn: () => listEvents(),
   });
-  const { data: market = [] } = useQuery<MarketplaceListing[]>({
+  const marketQuery = useQuery<MarketplaceListing[]>({
     queryKey: ['market', 'search-pool'],
-    queryFn: () => listMarketplaceListings().catch(() => []),
+    queryFn: () => listMarketplaceListings(),
   });
-  const { data: jobs = [] } = useQuery<JobPosting[]>({
+  const jobsQuery = useQuery<JobPosting[]>({
     queryKey: ['jobs', 'search-pool'],
-    queryFn: () => listJobPostings().catch(() => []),
+    queryFn: () => listJobPostings(),
   });
+
+  const rooms = roomsQuery.data;
+  const events = eventsQuery.data;
+  const market = marketQuery.data;
+  const jobs = jobsQuery.data;
+  const searchQueries = [roomsQuery, eventsQuery, marketQuery, jobsQuery];
+  const searchFailed = searchQueries.some((q) => q.isError);
+  const searchLoading = searchQueries.some((q) => q.isLoading);
 
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -92,13 +103,13 @@ export function SearchScreen() {
     }[] = [];
 
     if (activeCategory === 'all' || activeCategory === 'rooms') {
-      rooms.forEach((r: RoomListing) => {
-        const loc = r.broadLocation ?? 'Austin, TX';
+      (rooms ?? []).forEach((r: RoomListing) => {
+        const loc = r.broadLocation ?? '';
         if (r.title.toLowerCase().includes(q) || loc.toLowerCase().includes(q)) {
           results.push({
             id: `room-${r.id}`,
             title: r.title,
-            subtitle: `${loc} · $${r.price}/mo`,
+            subtitle: [loc, `$${r.price}/mo`].filter(Boolean).join(' · '),
             category: 'Rooms',
             route: `/rooms/${r.id}`,
             badge: '🏠 Room',
@@ -108,12 +119,19 @@ export function SearchScreen() {
     }
 
     if (activeCategory === 'all' || activeCategory === 'events') {
-      events.forEach((e: Event) => {
+      (events ?? []).forEach((e: Event) => {
         if (e.title.toLowerCase().includes(q) || (e.location ?? '').toLowerCase().includes(q)) {
           results.push({
             id: `event-${e.id}`,
             title: e.title,
-            subtitle: `${e.location} · ${e.date ? new Date(e.date).toLocaleDateString() : 'Upcoming'}`,
+            subtitle: [
+              e.location,
+              e.startAt || e.date
+                ? new Date((e.startAt ?? e.date) as string).toLocaleDateString()
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' · '),
             category: 'Events',
             route: `/events/${e.id}`,
             badge: '🎉 Event',
@@ -123,12 +141,12 @@ export function SearchScreen() {
     }
 
     if (activeCategory === 'all' || activeCategory === 'market') {
-      market.forEach((m: MarketplaceListing) => {
+      (market ?? []).forEach((m: MarketplaceListing) => {
         if (m.title.toLowerCase().includes(q) || (m.location ?? '').toLowerCase().includes(q)) {
           results.push({
             id: `market-${m.id}`,
             title: m.title,
-            subtitle: `${m.location ?? 'Austin'} · $${m.price}`,
+            subtitle: [m.location, `$${m.price}`].filter(Boolean).join(' · '),
             category: 'Market',
             route: `/marketplace/${m.id}`,
             badge: '🛍️ Market',
@@ -138,12 +156,12 @@ export function SearchScreen() {
     }
 
     if (activeCategory === 'all' || activeCategory === 'jobs') {
-      jobs.forEach((j: JobPosting) => {
+      (jobs ?? []).forEach((j: JobPosting) => {
         if (j.title.toLowerCase().includes(q) || (j.company ?? '').toLowerCase().includes(q)) {
           results.push({
             id: `job-${j.id}`,
             title: j.title,
-            subtitle: `${j.company ?? 'Tech Company'} · ${j.location ?? 'Austin, TX'}`,
+            subtitle: [j.company, j.location].filter(Boolean).join(' · '),
             category: 'Jobs',
             route: `/jobs/${j.id}`,
             badge: '💼 Job',
@@ -215,7 +233,18 @@ export function SearchScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {searchQuery.trim().length > 0 ? (
+          {searchQuery.trim().length > 0 && searchFailed ? (
+            <ErrorState
+              title="Search is unavailable"
+              body="Some listings could not be loaded, so results would be incomplete."
+              retryLabel="Retry"
+              onRetry={() => {
+                for (const q of searchQueries) if (q.isError) q.refetch();
+              }}
+            />
+          ) : searchQuery.trim().length > 0 && searchLoading ? (
+            <LoadingState label="Searching..." />
+          ) : searchQuery.trim().length > 0 ? (
             searchResults.length > 0 ? (
               <View style={s.resultsList}>
                 <Text style={s.sectionHeader}>
@@ -255,7 +284,7 @@ export function SearchScreen() {
             )
           ) : (
             <View style={s.suggestionsBox}>
-              <Text style={s.sectionHeader}>Popular in Telugu & Desi Community</Text>
+              <Text style={s.sectionHeader}>Try searching for</Text>
               <View style={s.popularGrid}>
                 {POPULAR_SEARCHES.map((item) => (
                   <Pressable

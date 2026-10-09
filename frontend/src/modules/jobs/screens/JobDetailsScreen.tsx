@@ -1,13 +1,15 @@
 import { color as baseColors, radius } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -16,6 +18,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { getJobPosting } from '@/modules/jobs/api';
+import { createReferralRequest } from '@/modules/referrals/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
@@ -44,11 +47,10 @@ export function JobDetailsScreen() {
   const isDesktop = width >= 768;
   const { session } = useAuthStore();
 
-  const [isBookmarked, setIsBookmarked] = useState(false);
   const [referralModalVisible, setReferralModalVisible] = useState(false);
-  const [resumeUrl, setResumeUrl] = useState('https://linkedin.com/in/my-profile');
+  const [resumeUrl, setResumeUrl] = useState('');
   const [personalNote, setPersonalNote] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
 
   // Load job details from live Spring / Supabase API
   const {
@@ -61,9 +63,30 @@ export function JobDetailsScreen() {
     enabled: Boolean(jobId),
   });
 
+  const referralMutation = useMutation({
+    mutationFn: () => {
+      if (!job) throw new Error('Job not loaded');
+      const note = personalNote.trim();
+      return createReferralRequest({
+        title: `Referral for ${job.title}${job.company ? ` at ${job.company}` : ''}`,
+        description: [`Profile: ${resumeUrl.trim()}`, note].filter(Boolean).join('\n\n'),
+        category: 'jobs',
+        details: `Job posting ${job.id}`,
+        urgency: 'medium',
+      });
+    },
+    onSuccess: () => {
+      setReferralModalVisible(false);
+      setResumeUrl('');
+      setPersonalNote('');
+      Alert.alert('Referral request posted', 'You can track it under My Referrals.');
+    },
+    onError: (err: Error) => setReferralError(err.message),
+  });
+
   const formatSalary = (min?: number, max?: number) => {
-    if (!min && !max) return '$160,000 - $220,000 / yr + RSUs';
-    if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()} / yr + RSUs`;
+    if (!min && !max) return 'Not listed';
+    if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()} / yr`;
     if (min) return `From $${min.toLocaleString()} / yr`;
     return `Up to $${(max ?? 0).toLocaleString()} / yr`;
   };
@@ -91,27 +114,46 @@ export function JobDetailsScreen() {
     );
   }
 
-  const companyInitial = (job.company || 'C').charAt(0).toUpperCase();
+  const companyLabel = job.company || 'Company not listed';
+  const companyInitial = (job.company || '?').charAt(0).toUpperCase();
   const salaryDisplay = formatSalary(job.salaryMin, job.salaryMax);
+  const metaParts = [job.employmentType, job.isRemote ? 'Remote OK' : null].filter(
+    (part): part is string => Boolean(part),
+  );
 
   const handleRequestReferral = () => {
     if (!session) {
       router.push('/sign-in' as Href);
       return;
     }
+    setReferralError(null);
     setReferralModalVisible(true);
   };
 
   const handleConfirmReferral = () => {
-    setIsSubmitted(true);
-    setTimeout(() => {
-      setReferralModalVisible(false);
-      setIsSubmitted(false);
-      Alert.alert(
-        'Referral Request Sent!',
-        `Your request and resume have been submitted for ${job.title} at ${job.company || 'the hiring company'}.`,
-      );
-    }, 1200);
+    setReferralError(null);
+    referralMutation.mutate();
+  };
+
+  const handleApply = async () => {
+    if (!job.applicationUrl) return;
+    try {
+      await Linking.openURL(job.applicationUrl);
+    } catch {
+      Alert.alert('Unable to open link', job.applicationUrl);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: job.applicationUrl
+          ? `${job.title} at ${companyLabel}: ${job.applicationUrl}`
+          : `${job.title} at ${companyLabel}`,
+      });
+    } catch (err) {
+      Alert.alert('Unable to share', err instanceof Error ? err.message : 'Please try again.');
+    }
   };
 
   return (
@@ -125,20 +167,7 @@ export function JobDetailsScreen() {
         <Text style={s.topBarTitle}>Job Details</Text>
 
         <View style={s.topBarRight}>
-          <Pressable
-            onPress={() => setIsBookmarked(!isBookmarked)}
-            style={s.iconButton}
-            accessibilityLabel="Bookmark job"
-          >
-            <Text style={s.actionEmoji}>{isBookmarked ? '🔖' : '🏷️'}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              Alert.alert('Share Link Copied', `Copied link for ${job.title} at ${job.company}`);
-            }}
-            style={s.iconButton}
-            accessibilityLabel="Share job"
-          >
+          <Pressable onPress={handleShare} style={s.iconButton} accessibilityLabel="Share job">
             <Text style={s.actionEmoji}>↗️</Text>
           </Pressable>
         </View>
@@ -153,13 +182,11 @@ export function JobDetailsScreen() {
             </View>
             <View style={s.companyMeta}>
               <View style={s.companyNameRow}>
-                <Text style={s.companyName}>{job.company || 'Tech Company'}</Text>
-                <Text style={s.verifiedIcon}>✓</Text>
+                <Text style={s.companyName}>{companyLabel}</Text>
               </View>
-              <Text style={s.campusLocation}>📍 {job.location || 'Austin, TX'}</Text>
-            </View>
-            <View style={s.featuredPill}>
-              <Text style={s.featuredPillText}>FEATURED</Text>
+              <Text style={s.campusLocation}>
+                📍 {job.location || (job.isRemote ? 'Remote' : 'Location not listed')}
+              </Text>
             </View>
           </View>
 
@@ -167,181 +194,42 @@ export function JobDetailsScreen() {
 
           {/* Compensation Card */}
           <View style={s.compHighlightCard}>
-            <Text style={s.compLabel}>TARGET COMPENSATION</Text>
+            <Text style={s.compLabel}>COMPENSATION</Text>
             <Text style={s.compValue}>{salaryDisplay}</Text>
           </View>
 
           {/* Meta Info */}
           <View style={s.jobMetaRow}>
+            {metaParts.length > 0 ? (
+              <>
+                <Text style={s.jobMetaItem}>{metaParts.join(' · ')}</Text>
+                <Text style={s.jobMetaDivider}>•</Text>
+              </>
+            ) : null}
             <Text style={s.jobMetaItem}>
-              {job.employmentType || 'Full-time'} · {job.isRemote ? 'Remote OK' : 'Hybrid'}
+              Posted {new Date(job.createdAt).toLocaleDateString()}
+              {job.status ? ` · ${job.status.toLowerCase()}` : ''}
             </Text>
-            <Text style={s.jobMetaDivider}>•</Text>
-            <Text style={s.jobMetaItem}>Active Role</Text>
-          </View>
-
-          {/* High-impact Visa & Perk Pills */}
-          <View style={s.visaPillsRow}>
-            <View style={[s.perkPill, s.perkPillGreen]}>
-              <Text style={[s.perkPillText, s.perkPillTextGreen]}>⚡ H-1B Transfer Ready</Text>
-            </View>
-            <View style={[s.perkPill, s.perkPillPurple]}>
-              <Text style={[s.perkPillText, s.perkPillTextPurple]}>🎓 STEM OPT Eligible</Text>
-            </View>
-            <View style={[s.perkPill, s.perkPillMint]}>
-              <Text style={[s.perkPillText, s.perkPillTextMint]}>🌱 Day 1 Green Card (PERM)</Text>
-            </View>
-            <View style={[s.perkPill, s.perkPillAmber]}>
-              <Text style={[s.perkPillText, s.perkPillTextAmber]}>🤝 $1,500 Referral Bonus</Text>
-            </View>
           </View>
         </View>
 
-        {/* Internal Referral Support Card */}
-        <View style={s.referrerSpotlightCard}>
-          <View style={s.referrerHeader}>
-            <Text style={s.referrerHeaderTag}>✦ COMMUNITY REFERRAL NETWORK</Text>
-            <View style={s.slaBadge}>
-              <Text style={s.slaText}>Verified Members</Text>
-            </View>
-          </View>
-
-          <View style={s.referrerProfileRow}>
-            <View style={[s.referrerAvatar, { backgroundColor: '#f0f3ff' }]}>
-              <Text style={s.referrerAvatarEmoji}>🤝</Text>
-            </View>
-            <View style={s.referrerProfileMeta}>
-              <Text style={s.referrerName}>
-                {job.company ? `${job.company} Employee Network` : 'Verified Employee Network'}
-              </Text>
-              <Text style={s.referrerRole}>ManaBandhu Referral Community</Text>
-              <Text style={s.emailTag}>🛡️ Verified Corporate Email Match</Text>
-            </View>
-          </View>
-
-          <View style={s.quoteBox}>
-            <Text style={s.quoteText}>
-              “Request an internal employee referral directly through the ManaBandhu network.
-              Verified alumni and team members review profiles and submit candidates directly to
-              internal hiring pipelines.”
-            </Text>
-          </View>
-
-          <Pressable
-            onPress={() => {
-              if (!session) router.push('/sign-in' as Href);
-              else router.push('/chat' as Href);
-            }}
-            style={s.chatReferrerBtn}
-          >
-            <Text style={s.chatReferrerBtnText}>💬 Ask a Question in Community Chat</Text>
-          </Pressable>
-        </View>
-
-        {/* Role Overview & Responsibilities */}
+        {/* Role Overview */}
         <View style={s.sectionCard}>
           <Text style={s.sectionTitle}>About the Role</Text>
           <Text style={s.descriptionText}>
-            {job.description ||
-              'We are seeking an experienced engineer to design, build, and scale next-generation distributed systems, cloud platforms, and developer tooling across high-volume production deployments.'}
+            {job.description || 'The poster has not added a description for this role.'}
           </Text>
-
-          <Text style={[s.sectionTitle, { marginTop: sp.lg }]}>Key Responsibilities</Text>
-          <View style={s.checklist}>
-            {[
-              'Architect, deploy, and scale high-throughput, fault-tolerant microservices.',
-              'Lead system reliability, container orchestration (Kubernetes), and cloud infra.',
-              'Drive technical roadmaps, architecture reviews, and mentor engineers.',
-              'Collaborate with US and global cross-functional engineering teams.',
-            ].map((resp, i) => (
-              <View key={i} style={s.checklistItem}>
-                <Text style={s.checkBullet}>✓</Text>
-                <Text style={s.checklistText}>{resp}</Text>
-              </View>
-            ))}
-          </View>
         </View>
 
-        {/* Technical Requirements & Tech Stack */}
+        {/* Community referral pointer */}
         <View style={s.sectionCard}>
-          <Text style={s.sectionTitle}>Technical Stack & Skills</Text>
-          <View style={s.skillsGrid}>
-            {[
-              'Go / Golang',
-              'Python',
-              'Java / Spring',
-              'Kubernetes',
-              'GCP / AWS Cloud',
-              'Terraform',
-              'Distributed Systems',
-              'Kafka / Event Streams',
-              'Docker',
-              'PostgreSQL',
-            ].map((skill) => (
-              <View key={skill} style={s.skillChip}>
-                <Text style={s.skillChipText}>{skill}</Text>
-              </View>
-            ))}
-          </View>
-
-          <Text style={[s.sectionTitle, { marginTop: sp.lg }]}>Candidate Eligibility</Text>
-          <View style={s.checklist}>
-            {[
-              '5+ years of production experience in backend or cloud infrastructure.',
-              'BS / MS in Computer Science or equivalent technical field.',
-              'H-1B transfer, STEM OPT, E-3, TN, or US PR candidates fully welcome.',
-            ].map((req, i) => (
-              <View key={i} style={s.checklistItem}>
-                <Text style={s.checkBullet}>✓</Text>
-                <Text style={s.checklistText}>{req}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Comprehensive Benefits Grid */}
-        <View style={s.sectionCard}>
-          <Text style={s.sectionTitle}>Compensation & Benefits</Text>
-          <View style={s.benefitsGrid}>
-            {[
-              { icon: '🏥', title: 'Comprehensive Health', desc: '100% medical, dental, & vision' },
-              { icon: '📈', title: '401(k) Match', desc: '50% employer match on contributions' },
-              { icon: '🌴', title: 'Flexible PTO', desc: 'Generous vacation & parental leave' },
-              {
-                icon: '⚖️',
-                title: 'Immigration Legal',
-                desc: 'Full H-1B transfer & PERM legal support',
-              },
-              {
-                icon: '🧘',
-                title: 'Wellness Stipend',
-                desc: '$2,000 annual health & fitness stipend',
-              },
-              {
-                icon: '🚌',
-                title: 'Austin Shuttle Pass',
-                desc: 'Free campus commuter shuttle & EV perks',
-              },
-            ].map((b) => (
-              <View key={b.title} style={s.benefitCard}>
-                <Text style={s.benefitIcon}>{b.icon}</Text>
-                <Text style={s.benefitTitle}>{b.title}</Text>
-                <Text style={s.benefitDesc}>{b.desc}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Community Trust Guarantee */}
-        <View style={s.guaranteeCard}>
-          <Text style={s.guaranteeEmoji}>🛡️</Text>
-          <View style={s.guaranteeContent}>
-            <Text style={s.guaranteeTitle}>100% Free Community Referral</Text>
-            <Text style={s.guaranteeSubtitle}>
-              No recruiter commissions, no placement fees, and no middleman cuts. Direct
-              peer-to-peer Indian tech network support powered by ManaBandhu Trust Protocol.
-            </Text>
-          </View>
+          <Text style={s.sectionTitle}>Looking for a referral?</Text>
+          <Text style={s.descriptionText}>
+            Send a referral request to the community, or browse open referral offers from members.
+          </Text>
+          <Pressable onPress={() => router.push('/referrals' as Href)} style={s.chatReferrerBtn}>
+            <Text style={s.chatReferrerBtnText}>Browse Referral Offers</Text>
+          </Pressable>
         </View>
       </ScrollView>
 
@@ -350,23 +238,16 @@ export function JobDetailsScreen() {
         <View style={s.bottomStickyLeft}>
           <Text style={s.bottomSalaryLabel}>Compensation</Text>
           <Text style={s.bottomSalaryValue}>
-            {job.salaryMin ? `$${Math.round(job.salaryMin / 1000)}k+` : 'Top Market'} / yr
+            {job.salaryMin ? `$${Math.round(job.salaryMin / 1000)}k+ / yr` : 'Not listed'}
           </Text>
         </View>
 
         <View style={s.bottomStickyRight}>
-          <Pressable
-            onPress={() => {
-              if (job.applicationUrl) {
-                Alert.alert('Redirecting', `Opening ${job.applicationUrl}`);
-              } else {
-                Alert.alert('Careers Portal', `Opening careers page for ${job.company}`);
-              }
-            }}
-            style={s.applySiteBtn}
-          >
-            <Text style={s.applySiteText}>Apply via Site</Text>
-          </Pressable>
+          {job.applicationUrl ? (
+            <Pressable onPress={handleApply} style={s.applySiteBtn}>
+              <Text style={s.applySiteText}>Apply via Site</Text>
+            </Pressable>
+          ) : null}
 
           <Pressable onPress={handleRequestReferral} style={s.requestReferralPrimaryBtn}>
             <Text style={s.requestReferralPrimaryText}>Request Referral 🤝</Text>
@@ -393,8 +274,8 @@ export function JobDetailsScreen() {
 
             <ScrollView style={s.modalBody} showsVerticalScrollIndicator={false}>
               <Text style={s.modalNote}>
-                A verified member from {job.company || 'the hiring company'} will review your
-                profile and submit your referral through the internal company portal.
+                Your request is posted to the community referrals board so members who can refer for{' '}
+                {companyLabel} can respond.
               </Text>
 
               <Text style={s.formLabel}>LinkedIn Profile or Resume Link *</Text>
@@ -417,14 +298,12 @@ export function JobDetailsScreen() {
                 style={[s.formInput, s.formTextArea]}
               />
 
-              <View style={s.modalTrustReminder}>
-                <Text style={s.reminderEmoji}>⚡</Text>
-                <Text style={s.reminderText}>
-                  Referral requests are shared directly with verified employees at{' '}
-                  {job.company || 'the organization'}. You will be notified in your ManaBandhu inbox
-                  once reviewed.
-                </Text>
-              </View>
+              {referralError ? (
+                <View style={s.modalTrustReminder}>
+                  <Text style={s.reminderEmoji}>⚠️</Text>
+                  <Text style={s.reminderText}>{referralError}</Text>
+                </View>
+              ) : null}
             </ScrollView>
 
             <View style={s.modalFooter}>
@@ -433,14 +312,14 @@ export function JobDetailsScreen() {
               </Pressable>
               <Pressable
                 onPress={handleConfirmReferral}
-                disabled={isSubmitted || !resumeUrl.trim()}
+                disabled={referralMutation.isPending || !resumeUrl.trim()}
                 style={[
                   s.modalSubmitBtn,
-                  (!resumeUrl.trim() || isSubmitted) && s.modalSubmitBtnDisabled,
+                  (!resumeUrl.trim() || referralMutation.isPending) && s.modalSubmitBtnDisabled,
                 ]}
               >
                 <Text style={s.modalSubmitText}>
-                  {isSubmitted ? 'Submitting...' : 'Submit Referral Request'}
+                  {referralMutation.isPending ? 'Submitting...' : 'Submit Referral Request'}
                 </Text>
               </Pressable>
             </View>
@@ -574,27 +453,10 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: colors.ink,
   },
-  verifiedIcon: {
-    fontSize: 12,
-    color: '#059669',
-    fontWeight: '800',
-  },
   campusLocation: {
     fontSize: 12,
     color: colors.inkSecondary,
     marginTop: 2,
-  },
-  featuredPill: {
-    backgroundColor: '#ede9fe',
-    paddingHorizontal: sp.sm,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  featuredPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: colors.accentBrand,
-    letterSpacing: 0.5,
   },
   jobTitle: {
     fontSize: 22,
@@ -637,129 +499,6 @@ const s = StyleSheet.create({
   jobMetaDivider: {
     color: colors.border,
   },
-  visaPillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  perkPill: {
-    paddingHorizontal: sp.sm,
-    paddingVertical: 5,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-  },
-  perkPillGreen: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#a7f3d0',
-  },
-  perkPillTextGreen: {
-    color: '#065f46',
-  },
-  perkPillPurple: {
-    backgroundColor: '#f5f3ff',
-    borderColor: '#ddd6fe',
-  },
-  perkPillTextPurple: {
-    color: '#6d28d9',
-  },
-  perkPillMint: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0',
-  },
-  perkPillTextMint: {
-    color: '#15803d',
-  },
-  perkPillAmber: {
-    backgroundColor: '#fefce8',
-    borderColor: '#fef08a',
-  },
-  perkPillTextAmber: {
-    color: '#854d0e',
-  },
-  perkPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  referrerSpotlightCard: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.card,
-    padding: sp.lg,
-    borderWidth: 1.5,
-    borderColor: '#c7d2fe',
-    marginBottom: sp.md,
-  },
-  referrerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: sp.md,
-  },
-  referrerHeaderTag: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.accentBrand,
-    letterSpacing: 0.5,
-  },
-  slaBadge: {
-    backgroundColor: '#ede9fe',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
-  slaText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.accentBrand,
-  },
-  referrerProfileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.md,
-    marginBottom: sp.md,
-  },
-  referrerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  referrerAvatarEmoji: {
-    fontSize: 24,
-  },
-  referrerProfileMeta: {
-    flex: 1,
-  },
-  referrerName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  referrerRole: {
-    fontSize: 12,
-    color: colors.inkSecondary,
-    marginTop: 1,
-  },
-  emailTag: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#059669',
-    marginTop: 2,
-  },
-  quoteBox: {
-    backgroundColor: '#f8f9fe',
-    borderRadius: radius.control,
-    padding: sp.md,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.accentBrand,
-    marginBottom: sp.md,
-  },
-  quoteText: {
-    fontSize: 12,
-    color: colors.ink,
-    lineHeight: 18,
-    fontStyle: 'italic',
-  },
   chatReferrerBtn: {
     backgroundColor: '#ede9fe',
     borderRadius: radius.control,
@@ -791,100 +530,6 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: colors.inkSecondary,
     lineHeight: 20,
-  },
-  checklist: {
-    gap: 8,
-  },
-  checklistItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  checkBullet: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#059669',
-    marginTop: 1,
-  },
-  checklistText: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.ink,
-    lineHeight: 18,
-  },
-  skillsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  skillChip: {
-    backgroundColor: colors.canvasMuted,
-    paddingHorizontal: sp.sm,
-    paddingVertical: 6,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  skillChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.ink,
-  },
-  benefitsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: sp.sm,
-  },
-  benefitCard: {
-    width: '48%',
-    backgroundColor: colors.canvasMuted,
-    borderRadius: radius.control,
-    padding: sp.md,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  benefitIcon: {
-    fontSize: 22,
-    marginBottom: 4,
-  },
-  benefitTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  benefitDesc: {
-    fontSize: 11,
-    color: colors.inkSecondary,
-    lineHeight: 15,
-  },
-  guaranteeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.md,
-    backgroundColor: '#eef2ff',
-    borderRadius: radius.card,
-    padding: sp.md,
-    borderWidth: 1,
-    borderColor: '#c7d2fe',
-    marginBottom: sp.md,
-  },
-  guaranteeEmoji: {
-    fontSize: 26,
-  },
-  guaranteeContent: {
-    flex: 1,
-  },
-  guaranteeTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#312e81',
-    marginBottom: 2,
-  },
-  guaranteeSubtitle: {
-    fontSize: 11,
-    color: '#4338ca',
-    lineHeight: 16,
   },
   bottomStickyBar: {
     position: 'absolute',

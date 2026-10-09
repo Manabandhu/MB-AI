@@ -1,14 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
 import { useMapPreferencesStore } from '@/modules/shared/stores/mapPreferencesStore';
@@ -36,12 +27,8 @@ export function SettingsScreen() {
   const signOut = useAuthStore((s) => s.signOut);
   const { provider: mapProvider, setProvider: setMapProvider } = useMapPreferencesStore();
 
-  const [pushNotifs, setPushNotifs] = useState(true);
-  const [rideAlerts, setRideAlerts] = useState(true);
-  const [roomMatches, setRoomMatches] = useState(true);
-
   const displayName = user?.user_metadata?.full_name ?? 'Community Member';
-  const email = user?.email ?? 'member@manabandhu.com';
+  const email = user?.email ?? user?.phone ?? null;
   const initial = displayName[0]?.toUpperCase() ?? 'M';
 
   const handleSignOut = async () => {
@@ -76,13 +63,15 @@ export function SettingsScreen() {
             </View>
             <View style={s.profileInfo}>
               <Text style={s.profileName}>{displayName}</Text>
-              <Text style={s.profileEmail}>{email}</Text>
-              <View style={s.badgeRow}>
-                <View style={s.trustBadge}>
-                  <AppIcon name="verified-user" size={12} color={C.secondary} />
-                  <Text style={s.trustBadgeText}>Verified Bandhu</Text>
+              {email ? <Text style={s.profileEmail}>{email}</Text> : null}
+              {user?.email_confirmed_at ? (
+                <View style={s.badgeRow}>
+                  <View style={s.trustBadge}>
+                    <AppIcon name="verified-user" size={12} color={C.secondary} />
+                    <Text style={s.trustBadgeText}>Email verified</Text>
+                  </View>
                 </View>
-              </View>
+              ) : null}
             </View>
           </View>
 
@@ -90,48 +79,19 @@ export function SettingsScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>Notifications</Text>
             <View style={s.cardGroup}>
-              <View style={s.settingRow}>
+              {/* Preferences are stored by the backend; edit them on the notification settings screen. */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Notification settings"
+                onPress={() => router.push('/notifications/settings')}
+                style={s.settingRow}
+              >
                 <View style={s.settingLabelGroup}>
-                  <Text style={s.settingLabel}>Push Notifications</Text>
-                  <Text style={s.settingSub}>Important updates and community alerts</Text>
+                  <Text style={s.settingLabel}>Notification Settings</Text>
+                  <Text style={s.settingSub}>Channels, module alerts, and quiet hours</Text>
                 </View>
-                <Switch
-                  value={pushNotifs}
-                  onValueChange={setPushNotifs}
-                  trackColor={{ false: '#D1D5DB', true: C.secondary }}
-                  thumbColor="#FFF"
-                />
-              </View>
-
-              <View style={s.divider} />
-
-              <View style={s.settingRow}>
-                <View style={s.settingLabelGroup}>
-                  <Text style={s.settingLabel}>Room & Housing Matches</Text>
-                  <Text style={s.settingSub}>Instant alerts when matching rooms are posted</Text>
-                </View>
-                <Switch
-                  value={roomMatches}
-                  onValueChange={setRoomMatches}
-                  trackColor={{ false: '#D1D5DB', true: C.secondary }}
-                  thumbColor="#FFF"
-                />
-              </View>
-
-              <View style={s.divider} />
-
-              <View style={s.settingRow}>
-                <View style={s.settingLabelGroup}>
-                  <Text style={s.settingLabel}>Carpool Ride Requests</Text>
-                  <Text style={s.settingSub}>Notifications for rides along your route</Text>
-                </View>
-                <Switch
-                  value={rideAlerts}
-                  onValueChange={setRideAlerts}
-                  trackColor={{ false: '#D1D5DB', true: C.secondary }}
-                  thumbColor="#FFF"
-                />
-              </View>
+                <AppIcon name="chevron-right" size={16} color={C.secondary} />
+              </Pressable>
             </View>
           </View>
 

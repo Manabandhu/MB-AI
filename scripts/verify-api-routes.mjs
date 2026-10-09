@@ -17,7 +17,8 @@ function walk(dir, predicate, out = []) {
 const routes = [];
 for (const file of walk('backend/src/main/java', (p) => p.endsWith('Controller.java'))) {
   const source = readFileSync(file, 'utf8');
-  const base = source.match(/@RequestMapping\("([^"]*)"\)/)?.[1] ?? '';
+  const base =
+    source.match(/@RequestMapping\(\s*(?:(?:value|path)\s*=\s*)?\{?\s*"([^"]*)"/)?.[1] ?? '';
   for (const match of source.matchAll(/@(Get|Post|Put|Patch|Delete)Mapping(?:\(([^)]*)\))?/g)) {
     const paths = match[2] ? [...match[2].matchAll(/"([^"]*)"/g)].map((m) => m[1]) : [''];
     for (const path of paths.length ? paths : ['']) {
@@ -29,6 +30,7 @@ for (const file of walk('backend/src/main/java', (p) => p.endsWith('Controller.j
 
 const missing = [];
 let calls = 0;
+let unchecked = 0;
 for (const file of walk('frontend/src', (p) => /\.tsx?$/.test(p))) {
   const source = readFileSync(file, 'utf8');
   const callPattern = /apiFetch\(\s*([`'])(\/api\/v1[^`']*)\1(\s*,\s*\{[^)]*?method:\s*'(\w+)')?/gs;
@@ -39,6 +41,10 @@ for (const file of walk('frontend/src', (p) => /\.tsx?$/.test(p))) {
     const known = routes.some((route) => route.method === method && route.regex.test(path));
     if (!known) missing.push(`${file}: ${method} ${match[2]}`);
   }
+  // Paths built outside the call (variables, helpers) cannot be checked statically; report how many there are.
+  for (const match of source.matchAll(/apiFetch\(\s*([^\s`'),][^,)]*)/g)) {
+    if (!match[1].startsWith('/')) unchecked += 1;
+  }
 }
 
 if (missing.length > 0) {
@@ -46,4 +52,7 @@ if (missing.length > 0) {
   for (const line of missing) console.error(`  ${line}`);
   process.exit(1);
 }
-console.log(`Verified ${calls} frontend API calls match ${routes.length} backend routes.`);
+console.log(
+  `Verified ${calls} frontend API calls match ${routes.length} backend routes` +
+    (unchecked ? ` (${unchecked} calls build their path dynamically and were not checked).` : '.'),
+);

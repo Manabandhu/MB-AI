@@ -52,4 +52,17 @@ interface RideOfferRepository extends JpaRepository<RideOffer, UUID> {
             Pageable pageable);
 
     List<RideOffer> findByChatExpiresAtNotNullAndChatExpiresAtLessThanEqual(Instant now);
+
+    /** Upcoming active offers, matching {@link #searchActive} with no filters. */
+    @Query("SELECT COUNT(r) FROM RideOffer r WHERE LOWER(r.status) = 'active' AND r.departureAt > :now")
+    long countOpen(@Param("now") Instant now);
+
+    @Query("SELECT COALESCE(SUM(r.seatsAvailable), 0) FROM RideOffer r WHERE LOWER(r.status) = 'active' AND r.departureAt > :now")
+    Long sumOpenSeats(@Param("now") Instant now);
+
+    @Query("SELECT COUNT(DISTINCT LOWER(r.originArea)) FROM RideOffer r WHERE LOWER(r.status) = 'active' AND r.departureAt > :now")
+    long countOpenPickupAreas(@Param("now") Instant now);
+
+    @Query("SELECT COUNT(DISTINCT LOWER(r.destinationArea)) FROM RideOffer r WHERE LOWER(r.status) = 'active' AND r.departureAt > :now")
+    long countOpenDestinations(@Param("now") Instant now);
 }

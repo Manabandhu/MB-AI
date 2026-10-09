@@ -15,4 +15,8 @@ interface JobPostingRepository extends JpaRepository<JobPosting, UUID> {
     List<JobPosting> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
 
     Page<JobPosting> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
+
+    long countByStatus(String status);
+
+    long countByOwnerId(UUID ownerId);
 }

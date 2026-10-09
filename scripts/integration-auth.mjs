@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321/auth/v1';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:8080';
@@ -148,7 +149,8 @@ function test(name, fn) {
 async function runTests() {
   const timestamp = Date.now();
   const testEmail = `integration-${timestamp}@manabandhu.test`;
-  const testPassword = 'TestPass123!';
+  // A fresh random password per run; the throwaway account is never reused.
+  const testPassword = `Aa1!${randomBytes(18).toString('base64url')}`;
 
   console.log('\n=== Email Authentication Integration Tests ===\n');
 

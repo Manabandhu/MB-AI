@@ -38,7 +38,12 @@ export function ReferralsScreen(_props: { screenId?: string }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const { data: rawReferrals, isLoading } = useQuery({
+  const {
+    data: rawReferrals,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['referrals', 'public'],
     queryFn: listPublicReferrals,
   });
@@ -111,10 +116,6 @@ export function ReferralsScreen(_props: { screenId?: string }) {
               <View style={styles.eyebrowRow}>
                 <View style={styles.teluguPill}>
                   <Text style={styles.teluguPillText}>మనోబంధు</Text>
-                </View>
-                <View style={styles.freePill}>
-                  <View style={styles.greenDot} />
-                  <Text style={styles.freePillText}>100% Free</Text>
                 </View>
               </View>
               <Text style={styles.headerTitle}>Referrals & Skill Exchange</Text>
@@ -195,14 +196,14 @@ export function ReferralsScreen(_props: { screenId?: string }) {
             <View style={styles.heroBadgeRow}>
               <View style={styles.heroVerifiedPill}>
                 <AppIcon name="verified-user" size={13} color="#FDE047" />
-                <Text style={styles.heroVerifiedText}>Verified Desi Referral Network</Text>
+                <Text style={styles.heroVerifiedText}>Community Referral Network</Text>
               </View>
             </View>
 
             <Text style={styles.heroTitle}>Connect & Grow with Bandhus in Tech & Beyond</Text>
             <Text style={styles.heroDescription}>
               Connect directly with Telugu & Indian professionals for company referrals, mock
-              interviews, and trusted introductions. Zero brokerages, 100% community goodwill.
+              interviews, and introductions.
             </Text>
 
             <View style={styles.heroActionsRow}>
@@ -237,10 +238,6 @@ export function ReferralsScreen(_props: { screenId?: string }) {
             <View style={styles.statBox}>
               <Text style={[styles.statNumber, { color: '#EA580C' }]}>{requests.length}</Text>
               <Text style={styles.statLabel}>Active Requests</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: '#10B981' }]}>100%</Text>
-              <Text style={styles.statLabel}>Free & Direct</Text>
             </View>
           </View>
 
@@ -319,19 +316,13 @@ export function ReferralsScreen(_props: { screenId?: string }) {
           <View style={styles.subHeaderRow}>
             <View>
               <Text style={styles.subHeaderTitle}>
-                {activeTab === 'offers'
-                  ? 'Verified Professional Offers'
-                  : 'Active Community Requests'}
+                {activeTab === 'offers' ? 'Referral Offers' : 'Community Requests'}
               </Text>
               <Text style={styles.subHeaderDesc}>
                 {activeTab === 'offers'
-                  ? 'Direct response from verified company employees'
+                  ? 'Offers posted by community members'
                   : 'Bandhus seeking referrals, guidance & legal recommendations'}
               </Text>
-            </View>
-            <View style={styles.verifiedTag}>
-              <AppIcon name="shield" size={12} color="#10B981" />
-              <Text style={styles.verifiedTagText}>Work Verified</Text>
             </View>
           </View>
 
@@ -340,6 +331,15 @@ export function ReferralsScreen(_props: { screenId?: string }) {
             <View style={styles.emptyContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.emptyTitle}>Loading referrals...</Text>
+            </View>
+          ) : isError ? (
+            <View style={styles.emptyContainer}>
+              <AppIcon name="warning" size={40} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>Unable to load referrals</Text>
+              <Text style={styles.emptyDesc}>Check your connection and try again.</Text>
+              <Pressable onPress={() => refetch()} style={styles.clearBtn}>
+                <Text style={styles.clearBtnText}>Retry</Text>
+              </Pressable>
             </View>
           ) : displayedItems.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -372,11 +372,8 @@ export function ReferralsScreen(_props: { screenId?: string }) {
                         <View style={styles.cardMetaRow}>
                           <Text style={styles.cardAuthorText}>
                             {activeTab === 'offers' ? 'Offered by' : 'Requested by'}{' '}
-                            <Text style={styles.cardAuthorBold}>
-                              {activeTab === 'offers' ? 'Verified Bandhu' : 'Community Member'}
-                            </Text>
+                            <Text style={styles.cardAuthorBold}>a community member</Text>
                           </Text>
-                          <AppIcon name="verified-user" size={13} color="#10B981" />
                         </View>
                       </View>
                     </View>
@@ -398,14 +395,13 @@ export function ReferralsScreen(_props: { screenId?: string }) {
                           {item.status.toUpperCase()}
                         </Text>
                       </View>
-                      <View style={[styles.tagPill, { backgroundColor: '#F8FAFC' }]}>
-                        <Text style={[styles.tagPillText, { color: '#64748B' }]}>100% Free</Text>
-                      </View>
                     </View>
 
                     {/* Card Action Row */}
                     <View style={styles.cardActionRow}>
-                      <Text style={styles.postedTime}>Active referral exchange</Text>
+                      <Text style={styles.postedTime}>
+                        Posted {new Date(item.createdAt).toLocaleDateString()}
+                      </Text>
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="View Referral Details"

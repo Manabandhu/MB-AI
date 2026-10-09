@@ -68,6 +68,9 @@ export async function getRideForOwner(rideId: string): Promise<OwnerRideListing>
 }
 
 export async function createRideOffer(input: CreateRideOfferInput): Promise<RideOffer> {
+  if (!input.departureAt?.includes('T')) {
+    throw new Error('Create ride offer: a departure date and time are required');
+  }
   const payload = {
     originArea: input.pickupArea || input.originArea,
     destinationArea: input.destination || input.destinationArea,
@@ -85,14 +88,10 @@ export async function createRideOffer(input: CreateRideOfferInput): Promise<Ride
     recurringDays: input.recurringDays ?? [],
     luggageCapacity: input.luggageCapacity || 'MEDIUM',
     genderPreference: input.genderPreference || 'ANY',
-    departureAt: input.departureAt?.includes('T')
-      ? input.departureAt
-      : new Date(Date.now() + 86400000).toISOString(),
+    departureAt: input.departureAt,
     seatsTotal: input.seatsTotal,
     contribution:
-      typeof input.contribution === 'number'
-        ? `$${input.contribution} / seat`
-        : input.contribution || '$6 / seat',
+      typeof input.contribution === 'number' ? `$${input.contribution} / seat` : input.contribution,
   };
   return parseJsonOrThrow(
     await apiFetch('/api/v1/rides/offers', { method: 'POST', body: JSON.stringify(payload) }),

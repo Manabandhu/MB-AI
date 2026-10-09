@@ -22,10 +22,12 @@ export type Event = {
   updatedAt?: string;
 };
 
+/** Mirrors backend `EventCategory`. */
 export type EventCategory = {
   id: string;
   name: string;
-  count: number;
+  description?: string | null;
+  createdAt?: string;
 };
 
 export type EventAttendee = {
@@ -41,6 +43,10 @@ export async function listEvents(): Promise<Event[]> {
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.content)) return data.content;
   return [];
+}
+
+export async function listEventCategories(): Promise<EventCategory[]> {
+  return parseJsonOrThrow(await apiFetch('/api/v1/events/categories'), 'Event categories');
 }
 
 export async function searchEvents(query: string): Promise<Event[]> {
@@ -86,4 +92,31 @@ export async function listMyEvents(): Promise<Event[]> {
   const data = await parseJson<Event[]>(response);
   if (Array.isArray(data)) return data;
   return [];
+}
+
+/** Mirrors backend `EventAttendance`. */
+export type EventAttendance = {
+  id: string;
+  eventId: string;
+  userId: string;
+  status: string;
+  createdAt: string;
+};
+
+/** Organizers and admins get every RSVP; other members get only their own row (or none). */
+export async function listEventAttendance(eventId: string): Promise<EventAttendance[]> {
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/events/${encodeURIComponent(eventId)}/attendance`),
+    'Event attendance',
+  );
+}
+
+export async function rsvpEvent(eventId: string, status = 'GOING'): Promise<EventAttendance> {
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/events/${encodeURIComponent(eventId)}/attendance`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    }),
+    'Event RSVP',
+  );
 }

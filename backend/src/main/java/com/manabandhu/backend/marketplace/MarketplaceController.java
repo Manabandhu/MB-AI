@@ -42,8 +42,8 @@ public class MarketplaceController {
     }
 
     @GetMapping("/screens/{screenId}")
-    CatalogScreenContent screen(@PathVariable String screenId) {
-        return contentService.screen(screenId);
+    CatalogScreenContent screen(Authentication authentication, @PathVariable String screenId) {
+        return contentService.screen(screenId, Actor.from(authentication));
     }
 
     @GetMapping("/categories")

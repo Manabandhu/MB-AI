@@ -5,11 +5,13 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Event } from '@/modules/events/api';
-import { listEvents } from '@/modules/events/api';
-import { listMarketplaceListings } from '@/modules/marketplace/api';
-import type { MarketplaceListing } from '@/modules/marketplace/types';
-import { listRoomListings } from '@/modules/rooms/api';
+import { listSavedEvents } from '@/modules/events/api';
+import { getSavedRides } from '@/modules/rides/api';
+import type { RideListing } from '@/modules/rides/types';
+import { getFavorites } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const C = {
@@ -27,7 +29,7 @@ const C = {
 const TABS = [
   { id: 'all', label: 'All Saved' },
   { id: 'rooms', label: 'Rooms 🏠' },
-  { id: 'market', label: 'Market 🛍️' },
+  { id: 'rides', label: 'Rides 🚗' },
   { id: 'events', label: 'Events 🎉' },
 ];
 
@@ -38,25 +40,27 @@ export function SavedScreen() {
 
   const [activeTab, setActiveTab] = useState('all');
 
-  const { data: rooms = [] } = useQuery<RoomListing[]>({
-    queryKey: ['rooms', 'saved-preview'],
-    queryFn: () => listRoomListings().catch(() => []),
+  // Only the caller's own saved items from the backend; failures are shown, never replaced with other listings.
+  const roomsQuery = useQuery<RoomListing[]>({
+    queryKey: ['rooms', 'favorites'],
+    queryFn: () => getFavorites(),
   });
-  const { data: events = [] } = useQuery<Event[]>({
-    queryKey: ['events', 'saved-preview'],
-    queryFn: () => listEvents().catch(() => []),
+  const ridesQuery = useQuery<RideListing[]>({
+    queryKey: ['rides', 'saved'],
+    queryFn: () => getSavedRides(),
   });
-  const { data: market = [] } = useQuery<MarketplaceListing[]>({
-    queryKey: ['market', 'saved-preview'],
-    queryFn: () => listMarketplaceListings().catch(() => []),
+  const eventsQuery = useQuery<Event[]>({
+    queryKey: ['events', 'saved'],
+    queryFn: () => listSavedEvents(),
   });
 
-  // For demonstration, showcase first available active items as saved
-  const savedRooms: RoomListing[] = rooms.slice(0, 2);
-  const savedMarket: MarketplaceListing[] = market.slice(0, 2);
-  const savedEvents: Event[] = events.slice(0, 1);
+  const savedRooms = roomsQuery.data ?? [];
+  const savedRides = ridesQuery.data ?? [];
+  const savedEvents = eventsQuery.data ?? [];
+  const isLoading = roomsQuery.isLoading || ridesQuery.isLoading || eventsQuery.isLoading;
+  const hasError = roomsQuery.isError || ridesQuery.isError || eventsQuery.isError;
 
-  const totalSavedCount = savedRooms.length + savedMarket.length + savedEvents.length;
+  const totalSavedCount = savedRooms.length + savedRides.length + savedEvents.length;
 
   return (
     <SafeAreaView style={s.safe}>
@@ -69,7 +73,11 @@ export function SavedScreen() {
             </Pressable>
             <View>
               <Text style={s.headerTitle}>Saved Items</Text>
-              <Text style={s.headerSub}>{totalSavedCount} bookmarked listings & events</Text>
+              {!isLoading && !hasError ? (
+                <Text style={s.headerSub}>
+                  {totalSavedCount} saved {totalSavedCount === 1 ? 'item' : 'items'}
+                </Text>
+              ) : null}
             </View>
           </View>
         </View>
@@ -124,7 +132,7 @@ export function SavedScreen() {
                         {r.title}
                       </Text>
                       <Text style={s.cardSub}>
-                        {r.broadLocation ?? 'Austin, TX'} · ${r.price}/mo
+                        {r.broadLocation ? `${r.broadLocation} · ` : ''}${r.price}/mo
                       </Text>
                     </View>
                   </View>
@@ -134,31 +142,32 @@ export function SavedScreen() {
             </View>
           )}
 
-          {/* Saved Marketplace Items */}
-          {(activeTab === 'all' || activeTab === 'market') && savedMarket.length > 0 && (
+          {/* Saved Rides */}
+          {(activeTab === 'all' || activeTab === 'rides') && savedRides.length > 0 && (
             <View style={s.section}>
               <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Saved Marketplace Deals</Text>
-                <Pressable onPress={() => router.push('/marketplace')}>
+                <Text style={s.sectionTitle}>Saved Rides</Text>
+                <Pressable onPress={() => router.push('/rides')}>
                   <Text style={s.seeMoreText}>Explore More →</Text>
                 </Pressable>
               </View>
-              {savedMarket.map((m) => (
+              {savedRides.map((ride) => (
                 <Pressable
-                  key={m.id}
-                  onPress={() => router.push(`/marketplace/${m.id}` as Href)}
+                  key={ride.id}
+                  onPress={() => router.push(`/rides/${ride.id}` as Href)}
                   style={s.card}
                 >
                   <View style={s.cardLeft}>
                     <View style={[s.cardIconBadge, { backgroundColor: '#DCFCE7' }]}>
-                      <Text style={s.cardEmoji}>🛍️</Text>
+                      <Text style={s.cardEmoji}>🚗</Text>
                     </View>
                     <View style={s.cardInfo}>
                       <Text style={s.cardTitle} numberOfLines={1}>
-                        {m.title}
+                        {ride.title}
                       </Text>
                       <Text style={s.cardSub}>
-                        {m.location ?? 'Austin'} · ${m.price} {m.negotiable ? '(Negotiable)' : ''}
+                        {ride.pickupArea} → {ride.destination} ·{' '}
+                        {new Date(ride.departureAt).toLocaleDateString()}
                       </Text>
                     </View>
                   </View>
@@ -192,7 +201,10 @@ export function SavedScreen() {
                         {e.title}
                       </Text>
                       <Text style={s.cardSub}>
-                        {e.location} · {e.date ? new Date(e.date).toLocaleDateString() : 'Upcoming'}
+                        {e.location}
+                        {e.startAt || e.date
+                          ? ` · ${new Date((e.startAt ?? e.date) as string).toLocaleDateString()}`
+                          : ''}
                       </Text>
                     </View>
                   </View>
@@ -202,14 +214,26 @@ export function SavedScreen() {
             </View>
           )}
 
-          {totalSavedCount === 0 && (
+          {isLoading ? <LoadingState label="Loading saved items..." /> : null}
+
+          {hasError ? (
+            <ErrorState
+              title="Unable to load saved items"
+              body="Some of your saved items could not be loaded."
+              retryLabel="Retry"
+              onRetry={() => {
+                roomsQuery.refetch();
+                ridesQuery.refetch();
+                eventsQuery.refetch();
+              }}
+            />
+          ) : null}
+
+          {!isLoading && !hasError && totalSavedCount === 0 && (
             <View style={s.emptyState}>
               <Text style={s.emptyEmoji}>🔖</Text>
               <Text style={s.emptyTitle}>No saved items yet</Text>
-              <Text style={s.emptySub}>
-                Tap the heart or bookmark icon on any room, marketplace listing, or festival to save
-                it here.
-              </Text>
+              <Text style={s.emptySub}>Save a room, ride, or event and it will appear here.</Text>
             </View>
           )}
         </ScrollView>

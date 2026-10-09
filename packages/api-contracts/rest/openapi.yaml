@@ -1845,15 +1845,15 @@ components:
           items: { $ref: '#/components/schemas/NotificationInboxItem' }
     NotificationInboxItem:
       type: object
-      required: [id, title, read]
+      required: [id, title, body, meta, read, createdAt]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
-        body: { type: [string, 'null'] }
-        meta: { type: [string, 'null'] }
+        body: { type: string }
+        meta: { type: string, description: Notification type, e.g. RIDE or CHAT }
         read: { type: boolean }
-        route: { type: [string, 'null'] }
-        createdAt: { type: [string, 'null'], format: date-time }
+        route: { type: [string, 'null'], description: In-app route to open, when the notification has one }
+        createdAt: { type: string, format: date-time }
     CatalogScreenContent:
       type: object
       additionalProperties: false

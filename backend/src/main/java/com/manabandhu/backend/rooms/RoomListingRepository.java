@@ -68,4 +68,12 @@ interface RoomListingRepository extends JpaRepository<RoomListing, UUID> {
 
     @Query(value = "SELECT l.* FROM room_listings l INNER JOIN room_favorites f ON l.id = f.listing_id WHERE f.user_id = :userId AND l.status IN ('active', 'paused') ORDER BY f.created_at DESC", nativeQuery = true)
     List<RoomListing> findSavedListingsByUserId(@Param("userId") UUID userId);
+
+    long countByStatus(String status);
+
+    long countByOwnerId(UUID ownerId);
+
+    /** Saved listings the user can still see; matches {@link #findSavedListingsByUserId}. */
+    @Query(value = "SELECT count(*) FROM room_listings l INNER JOIN room_favorites f ON l.id = f.listing_id WHERE f.user_id = :userId AND l.status IN ('active', 'paused')", nativeQuery = true)
+    long countSavedListingsByUserId(@Param("userId") UUID userId);
 }

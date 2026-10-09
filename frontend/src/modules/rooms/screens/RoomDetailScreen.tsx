@@ -410,7 +410,7 @@ export function RoomDetailScreen() {
             </View>
             <View style={s.zeroBrokerageTag}>
               <AppIcon color={colors.teal} name="shield" size={12} />
-              <Text style={s.zeroBrokerageTagText}>Direct Owner • Zero Brokerage</Text>
+              <Text style={s.zeroBrokerageTagText}>Listed by a community member</Text>
             </View>
           </View>
 
@@ -435,22 +435,26 @@ export function RoomDetailScreen() {
               <View style={s.priceCol}>
                 <Text style={s.priceColLabel}>Utilities</Text>
                 <Text style={s.priceColVal}>
-                  {room.utilitiesIncluded ? 'Included' : `+$${room.estUtilityMonthly ?? 60}/mo`}
+                  {room.utilitiesIncluded
+                    ? 'Included'
+                    : room.estUtilityMonthly != null
+                      ? `+$${room.estUtilityMonthly}/mo`
+                      : 'Not listed'}
                 </Text>
               </View>
               <View style={s.priceDivider} />
               <View style={s.priceCol}>
                 <Text style={s.priceColLabel}>Deposit</Text>
                 <Text style={s.priceColVal}>
-                  {room.securityDeposit ? `$${room.securityDeposit}` : '$0'}
+                  {room.securityDeposit != null ? `$${room.securityDeposit}` : 'Not listed'}
                 </Text>
               </View>
             </View>
             <View style={s.priceTagBottom}>
               <Text style={s.utilitiesText}>
                 {room.utilitiesIncluded
-                  ? '⚡ High-speed WiFi, electricity, water & trash included in rent'
-                  : '⚡ Electricity, water & internet split equally among flatmates'}
+                  ? '⚡ Utilities are included in rent'
+                  : '⚡ Utilities are paid separately from rent'}
               </Text>
             </View>
           </View>
@@ -464,16 +468,15 @@ export function RoomDetailScreen() {
             </View>
             <View style={s.hostCardInfo}>
               <View style={s.hostNameRow}>
-                <Text style={s.hostNameText}>Verified Resident Host</Text>
-                <View style={s.verifiedHostPill}>
-                  <AppIcon color={colors.teal} name="check" size={10} strokeWidth={3} />
-                  <Text style={s.verifiedHostPillText}>Verified Host</Text>
-                </View>
+                <Text style={s.hostNameText}>Community host</Text>
+                {room.isVerifiedHost ? (
+                  <View style={s.verifiedHostPill}>
+                    <AppIcon color={colors.teal} name="check" size={10} strokeWidth={3} />
+                    <Text style={s.verifiedHostPillText}>Verified Host</Text>
+                  </View>
+                ) : null}
               </View>
-              <Text style={s.hostWorkText}>Direct Community Member • ManaBandhu Network</Text>
-              <Text style={s.hostReplyText}>
-                ⚡ Instant Chat handshake upon inquiry • Zero Brokerage
-              </Text>
+              <Text style={s.hostWorkText}>Send an inquiry to start a chat with the host.</Text>
             </View>
           </View>
         </View>
@@ -947,11 +950,6 @@ const s = StyleSheet.create({
     color: colors.muted,
     fontSize: 12,
     fontWeight: '500',
-  },
-  hostReplyText: {
-    color: colors.appPrimary,
-    fontSize: 11,
-    fontWeight: '700',
   },
   sectionBlock: {
     gap: 8,

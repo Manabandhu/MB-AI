@@ -51,8 +51,7 @@ public class ExpenseService {
     @Transactional
     public Expense create(Actor actor, UUID groupId, CreateExpenseInput input) {
         var group = access.requireMember(actor, groupId);
-        var currency = input.currency() != null ? input.currency()
-                : group.getCurrency() != null ? group.getCurrency() : "USD";
+        var currency = ExpenseAccess.groupCurrency(group, input.currency());
         var title = input.title() != null && !input.title().isBlank() ? input.title().trim() : input.description();
         var expense = repository.save(new Expense(groupId, actor.id(), input.amount(), currency, title,
                 input.description(), input.category() != null ? input.category() : "GENERAL",

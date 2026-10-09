@@ -71,7 +71,9 @@ public class NotificationDispatcherService {
                 notification.markDispatched();
                 sent++;
             } catch (RuntimeException exception) {
-                log.warn("Failed to dispatch notification {}: {}", notification.getId(), exception.getMessage());
+                notification.recordDispatchFailure();
+                log.warn("Failed to dispatch notification {} (attempt {}): {}", notification.getId(),
+                        notification.getDispatchAttempts(), exception.getMessage());
             }
         }
         return sent;
