@@ -1,8 +1,8 @@
 package com.manabandhu.backend.rides;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -17,7 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.DefaultUriBuilderFactory;
+import org.springframework.web.util.DefaultUriBuilderFactory.EncodingMode;
 
 /**
  * Server-side proxy for Google Directions, Places Autocomplete, and Geocoding so the web-service key never
@@ -46,18 +47,22 @@ public class RideMapsController {
         requestFactory.setConnectTimeout(Duration.ofSeconds(5));
         requestFactory.setReadTimeout(Duration.ofSeconds(8));
         this.restTemplate = new RestTemplate(requestFactory);
+        // Strictly percent-encode every variable value so input such as "a&key=x" stays inside its parameter.
+        var uriFactory = new DefaultUriBuilderFactory();
+        uriFactory.setEncodingMode(EncodingMode.VALUES_ONLY);
+        this.restTemplate.setUriTemplateHandler(uriFactory);
     }
 
     @GetMapping("/route")
     RouteInfo route(@RequestParam double originLat, @RequestParam double originLng,
                     @RequestParam double destinationLat, @RequestParam double destinationLng,
                     @RequestParam(defaultValue = "false") boolean avoidTolls) {
-        var builder = UriComponentsBuilder.fromUriString(GOOGLE + "/directions/json")
-                .queryParam("origin", originLat + "," + originLng)
-                .queryParam("destination", destinationLat + "," + destinationLng)
-                .queryParam("mode", "driving");
-        if (avoidTolls) builder.queryParam("avoid", "tolls");
-        var data = call(builder);
+        if (!validCoordinate(originLat, originLng) || !validCoordinate(destinationLat, destinationLng)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Coordinates are out of range");
+        }
+        var data = call("/directions/json?origin={origin}&destination={destination}&mode=driving"
+                        + (avoidTolls ? "&avoid=tolls" : ""),
+                Map.of("origin", originLat + "," + originLng, "destination", destinationLat + "," + destinationLng));
         var routes = (List<?>) data.get("routes");
         if (!"OK".equals(data.get("status")) || routes == null || routes.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No route found");
@@ -80,10 +85,8 @@ public class RideMapsController {
     @GetMapping("/autocomplete")
     List<Prediction> autocomplete(@RequestParam("q") String query) {
         if (query.isBlank() || query.length() > 200) return List.of();
-        var data = call(UriComponentsBuilder.fromUriString(GOOGLE + "/place/autocomplete/json")
-                .queryParam("input", query)
-                .queryParam("components", "country:us")
-                .queryParam("types", "geocode|establishment"));
+        var data = call("/place/autocomplete/json?input={input}&components=country:us&types={types}",
+                Map.of("input", query, "types", "geocode|establishment"));
         if (!(data.get("predictions") instanceof List<?> predictions)) return List.of();
         return predictions.stream().map(item -> {
             var p = (Map<?, ?>) item;
@@ -99,7 +102,7 @@ public class RideMapsController {
         if (address.isBlank() || address.length() > 300) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Address is required");
         }
-        var data = call(UriComponentsBuilder.fromUriString(GOOGLE + "/geocode/json").queryParam("address", address));
+        var data = call("/geocode/json?address={address}", Map.of("address", address));
         if (!(data.get("results") instanceof List<?> results) || results.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Address not found");
         }
@@ -107,13 +110,22 @@ public class RideMapsController {
         return new LatLng(((Number) location.get("lat")).doubleValue(), ((Number) location.get("lng")).doubleValue());
     }
 
-    private Map<?, ?> call(UriComponentsBuilder builder) {
+    private static boolean validCoordinate(double lat, double lng) {
+        return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+    }
+
+    /**
+     * Calls a fixed Google Maps endpoint. Caller input is only ever bound to URI template variables, which
+     * RestTemplate percent-encodes, so it can change query values but never the host or path.
+     */
+    private Map<?, ?> call(String pathAndQueryTemplate, Map<String, String> variables) {
         if (apiKey.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Maps provider is not configured");
         }
-        URI uri = builder.queryParam("key", apiKey).encode().build().toUri();
+        var allVariables = new HashMap<>(variables);
+        allVariables.put("key", apiKey);
         try {
-            var body = restTemplate.getForObject(uri, Map.class);
+            var body = restTemplate.getForObject(GOOGLE + pathAndQueryTemplate + "&key={key}", Map.class, allVariables);
             if (body == null) throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Maps provider returned nothing");
             return body;
         } catch (RestClientException exception) {
