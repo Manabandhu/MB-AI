@@ -1,7 +1,5 @@
 package com.manabandhu.backend.jobs;
 
-import java.math.BigDecimal;
-
 import java.util.UUID;
 
 import jakarta.validation.constraints.Size;

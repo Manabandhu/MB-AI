@@ -44,8 +44,11 @@ export function jwks() {
 
 const b64url = (value) => Buffer.from(value).toString('base64url');
 
-/** Mints a Supabase-shaped access token for a local user id, valid for two hours. */
-export function mint(userId, roles = [], profile = {}) {
+/**
+ * Mints a Supabase-shaped access token for a local user id, valid for two hours. `claims` overrides payload fields
+ * (e.g. `exp`, `iss`, `aud`) so smoke tests can prove the backend rejects malformed tokens.
+ */
+export function mint(userId, roles = [], profile = {}, claims = {}) {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'ES256', typ: 'JWT', kid: 'local' };
   const payload = {
@@ -59,6 +62,7 @@ export function mint(userId, roles = [], profile = {}) {
     phone: profile.phone ?? '',
     app_metadata: { roles },
     user_metadata: profile.metadata ?? { full_name: `Test ${userId.slice(0, 4)}` },
+    ...claims,
   };
   const unsigned = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}`;
   const signature = sign('sha256', Buffer.from(unsigned), {

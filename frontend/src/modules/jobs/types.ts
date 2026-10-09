@@ -24,21 +24,6 @@ export type JobPosting = {
   updatedAt: string;
 };
 
-export type JobListing = {
-  id: string;
-  title: string;
-  company: string;
-  description: string;
-  location: string;
-  employmentType: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | string;
-  salaryMin?: number;
-  salaryMax?: number;
-  status: 'OPEN' | 'CLOSED' | 'DRAFT' | string;
-  savedByViewer?: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type CreateJobInput = {
   title: string;
   company: string;
@@ -50,8 +35,4 @@ export type CreateJobInput = {
   categoryId?: string;
   isRemote?: boolean;
   applicationUrl?: string;
-};
-
-export type UpdateJobInput = Partial<CreateJobInput> & {
-  status?: string;
 };

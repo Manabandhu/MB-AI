@@ -1,5 +1,5 @@
-import { StitchOnboardingScreen } from '@/modules/foundation/screens/StitchOnboardingScreen';
+import { OnboardingScreen } from '@/modules/foundation/screens/OnboardingScreen';
 
 export default function OnboardingCompleteRoute() {
-  return <StitchOnboardingScreen kind="complete" />;
+  return <OnboardingScreen kind="complete" />;
 }

@@ -1,5 +1,9 @@
 package com.manabandhu.backend.expenses;
 
+import static com.manabandhu.backend.foundation.CatalogContent.item;
+import static com.manabandhu.backend.foundation.CatalogContent.metric;
+import static com.manabandhu.backend.foundation.CatalogContent.personal;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -7,10 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.function.Function;
 
 import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.foundation.CatalogItem;
 import com.manabandhu.backend.foundation.CatalogMetric;
 import com.manabandhu.backend.foundation.CatalogScreenContent;
 import com.manabandhu.backend.foundation.UnknownCatalogScreenException;
@@ -38,7 +40,7 @@ class ExpensesContentService {
     @Transactional(readOnly = true)
     CatalogScreenContent screen(String screenId, Optional<Actor> viewer) {
         return switch (screenId) {
-            case "home" -> content(
+            case "home" -> new CatalogScreenContent(
                     "Split expenses with trust",
                     "Track shared expenses, balances, and settlements across groups and trips.",
                     "Expenses",
@@ -46,37 +48,37 @@ class ExpensesContentService {
                     List.of(
                             item("groups", "Your groups", "Open groups you belong to with live balances.", "Groups", "/expenses/groups"),
                             item("balances", "Who owes whom", "See net balances and settlement suggestions.", "Balances", "/expenses/balances")));
-            case "groups" -> content(
+            case "groups" -> new CatalogScreenContent(
                     "Expense groups",
                     "Create and join expense groups for trips, roommates, and community events.",
                     "Expenses",
                     personal(viewer, actor -> List.of(
-                            new CatalogMetric("Groups", String.valueOf(access.groupIdsFor(actor.id()).size())),
-                            new CatalogMetric("Members", String.valueOf(access.memberCountAcrossGroupsOf(actor.id()))))),
+                            metric("Groups", access.groupIdsFor(actor.id()).size()),
+                            metric("Members", access.memberCountAcrossGroupsOf(actor.id())))),
                     List.of(
                             item("create", "Create a group", "Start a group with name, members, and currency.", "Create", "/expenses/add"),
                             item("open", "Open groups", "View members, expenses, and settlement state.", "Groups", "/expenses/balances")));
-            case "balances" -> content(
+            case "balances" -> new CatalogScreenContent(
                     "Balances",
                     "See who owes whom across all groups with precise currency math.",
                     "Expenses",
                     personal(viewer, actor -> List.of(
-                            new CatalogMetric("Open balances", String.valueOf(balanceService.balancesFor(actor).size())),
+                            metric("Open balances", balanceService.balancesFor(actor).size()),
                             new CatalogMetric("Settled", money(settledTotals(actor))))),
                     List.of(
                             item("net", "Net balances", "Per-person net position across all groups.", "Balances", "/expenses/settlements"),
                             item("history", "Settlement history", "Track completed settlements and audit trail.", "History", "/expenses/groups")));
-            case "settlements" -> content(
+            case "settlements" -> new CatalogScreenContent(
                     "Settlements",
                     "Record and track payments between members with currency precision.",
                     "Expenses",
                     personal(viewer, actor -> List.of(
-                            new CatalogMetric("Pending", String.valueOf(settlementRepository.countForUserWithStatus(actor.id(), "pending"))),
-                            new CatalogMetric("Completed", String.valueOf(settlementRepository.countForUserWithStatus(actor.id(), "completed"))))),
+                            metric("Pending", settlementRepository.countForUserWithStatus(actor.id(), "pending")),
+                            metric("Completed", settlementRepository.countForUserWithStatus(actor.id(), "completed")))),
                     List.of(
                             item("record", "Record a settlement", "Mark a payment between two members as settled.", "Settle", "/expenses/balances"),
                             item("audit", "Audit trail", "Review settlement timestamps and amounts.", "History", "/expenses/groups")));
-            case "add" -> content(
+            case "add" -> new CatalogScreenContent(
                     "Add an expense",
                     "Record an expense with amount, currency, category, and participant splits.",
                     "Expenses",
@@ -100,7 +102,7 @@ class ExpensesContentService {
             }
         }
         return List.of(
-                new CatalogMetric("Active groups", String.valueOf(groups)),
+                metric("Active groups", groups),
                 new CatalogMetric("You owe", money(youOwe)),
                 new CatalogMetric("Owed to you", money(owedToYou)));
     }
@@ -124,18 +126,5 @@ class ExpensesContentService {
             parts.add("USD".equalsIgnoreCase(currency) ? "$" + value : currency.toUpperCase() + " " + value);
         });
         return String.join(", ", parts);
-    }
-
-    private static List<CatalogMetric> personal(Optional<Actor> viewer, Function<Actor, List<CatalogMetric>> metrics) {
-        return viewer.map(metrics).orElse(List.of());
-    }
-
-    private static CatalogScreenContent content(String title, String subtitle, String eyebrow,
-                                                List<CatalogMetric> metrics, List<CatalogItem> items) {
-        return new CatalogScreenContent(title, subtitle, eyebrow, metrics, items);
-    }
-
-    private static CatalogItem item(String id, String title, String body, String meta, String route) {
-        return new CatalogItem(id, title, body, meta, route, null);
     }
 }

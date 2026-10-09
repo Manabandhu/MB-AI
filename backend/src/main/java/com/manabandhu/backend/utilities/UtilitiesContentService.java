@@ -1,12 +1,12 @@
 package com.manabandhu.backend.utilities;
 
-import java.util.ArrayList;
+import static com.manabandhu.backend.foundation.CatalogContent.metrics;
+
 import java.util.List;
 import java.util.Optional;
 
 import com.manabandhu.backend.auth.Actor;
 import com.manabandhu.backend.foundation.CatalogItem;
-import com.manabandhu.backend.foundation.CatalogMetric;
 import com.manabandhu.backend.foundation.CatalogScreenContent;
 
 import org.springframework.stereotype.Service;
@@ -29,16 +29,15 @@ class UtilitiesContentService {
 
     @Transactional(readOnly = true)
     CatalogScreenContent home(Optional<Actor> viewer) {
-        var metrics = new ArrayList<CatalogMetric>();
-        viewer.ifPresent(actor -> metrics.add(
-                new CatalogMetric("Packages", String.valueOf(packageRepository.countByOwnerId(actor.id())))));
-        metrics.add(new CatalogMetric("Nearby", String.valueOf(nearbyRepository.count())));
-        metrics.add(new CatalogMetric("Emergency resources", String.valueOf(emergencyRepository.count())));
         return new CatalogScreenContent(
                 "Utilities",
                 "Track packages, find nearby services, and access emergency resources.",
                 "Utilities",
-                List.copyOf(metrics),
+                metrics()
+                        .addFor(viewer, "Packages", actor -> packageRepository.countByOwnerId(actor.id()))
+                        .add("Nearby", nearbyRepository.count())
+                        .add("Emergency resources", emergencyRepository.count())
+                        .build(),
                 List.of(
                         new CatalogItem("package", "Package tracking", "Track your shipments and delivery status.", "Packages", null, "active"),
                         new CatalogItem("nearby", "Nearby services", "Find nearby places and emergency resources.", "Services", null, "active")));

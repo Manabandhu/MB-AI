@@ -81,3 +81,4 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - Global Location Store Sync: Integrated `JobsHomeScreen.tsx` with `useLocationStore` (`frontend/src/lib/locationStore.ts`), ensuring selected tech hub reactively reflects the global app location chosen on the Home screen.
 - Security & correctness hardening (2026-10): Removed the unreachable `JobsGraphqlController` (no matching schema fields; it bypassed ownership checks). `listJobPostings` is typed instead of `any`; screens use typed `Href` routes.
 - Screen metrics are computed from the database (2026-10): `JobsContentService.screen(id, Optional<Actor>)` counts open job postings and, for signed-in callers, their applications and postings; filters, saved and post-form numbers were removed.
+- Cleanup: removed the unused `index.ts` barrel, `JobsSearchScreen.tsx`, `SavedJobsScreen.tsx`, and unused API/type exports.

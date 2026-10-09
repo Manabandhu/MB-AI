@@ -1,18 +1,8 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { walk } from './lib/files.mjs';
 
 // Every `apiFetch('/api/v1/...')` call in the frontend must match a Spring mapping. A mismatch means a screen
 // calls an endpoint that does not exist and can only ever show an error (or worse, a silent fallback).
-
-function walk(dir, predicate, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'node_modules') continue;
-    const path = join(dir, name);
-    if (statSync(path).isDirectory()) walk(path, predicate, out);
-    else if (predicate(path)) out.push(path);
-  }
-  return out;
-}
 
 const routes = [];
 for (const file of walk('backend/src/main/java', (p) => p.endsWith('Controller.java'))) {

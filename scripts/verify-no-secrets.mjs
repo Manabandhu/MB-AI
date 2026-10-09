@@ -1,5 +1,5 @@
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { trackedFiles } from './lib/files.mjs';
 
 // Fails when a tracked file contains something that looks like a real credential. Two leaks were found in this
 // repository (a database password in backend/.env.example and Supabase/GitHub tokens in .kilo/kilo.json); this
@@ -19,9 +19,7 @@ const patterns = [
 const placeholder =
   /^(|postgres|replace[-_].*|your[-_].*|changeme|example.*|<.*>|\$\{.*\}|\{env:.*\})$/i;
 
-const files = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
-  .split('\0')
-  .filter(Boolean);
+const files = trackedFiles();
 const findings = [];
 for (const file of files) {
   if (

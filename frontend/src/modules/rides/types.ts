@@ -40,16 +40,6 @@ export type OwnerRideListing = RideListing & {
   exactPickup?: string;
 };
 
-export type RideRequest = {
-  id: string;
-  rideId: string;
-  requesterId: string;
-  seatsRequested: number;
-  message?: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
-  createdAt: string;
-};
-
 export type RideParticipant = {
   id: string;
   rideId: string;
@@ -157,19 +147,6 @@ export type RideOffer = {
   createdAt: string;
   updatedAt: string;
   reported: boolean;
-};
-
-export type CreateRideBookingInput = {
-  seatsBooked: number;
-};
-
-export type RideBooking = {
-  id: string;
-  rideId: string;
-  userId: string;
-  seatsBooked: number;
-  status: string;
-  createdAt: string;
 };
 
 export type RideChatResponse = {

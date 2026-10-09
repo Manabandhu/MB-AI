@@ -1,25 +1,13 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 import type {
-  CreateBookingInput,
   CreateRoomListingInput,
-  CreateSavedSearchInput,
   OwnerRoomListing,
   RoomAmenityItem,
-  RoomAnalytics,
-  RoomBooking,
-  RoomImage,
   RoomInquiryInput,
   RoomInquiryResponse,
   RoomListing,
-  RoomReport,
-  SavedSearch,
   UpdateRoomListingInput,
 } from './types';
-
-export async function getRoomsScreen(screenId: string): Promise<CatalogScreenContent> {
-  return parseJsonOrThrow(await apiFetch(`/api/v1/rooms/screens/${screenId}`), 'Rooms screen');
-}
 
 export async function getRoomAmenities(): Promise<RoomAmenityItem[]> {
   const res = await apiFetch('/api/v1/rooms/amenities');
@@ -106,13 +94,6 @@ export async function pauseRoomListing(roomId: string): Promise<OwnerRoomListing
   );
 }
 
-export async function archiveRoomListing(roomId: string): Promise<OwnerRoomListing> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/${roomId}/archive`, { method: 'PATCH' }),
-    'Archive room listing',
-  );
-}
-
 export async function deleteRoomListing(roomId: string): Promise<void> {
   const response = await apiFetch(`/api/v1/rooms/${roomId}`, { method: 'DELETE' });
   if (!response.ok) throw new Error(`Delete room listing failed: ${response.status}`);
@@ -147,45 +128,6 @@ export async function unsaveRoom(roomId: string): Promise<void> {
   }
 }
 
-export async function getRoomImages(listingId: string): Promise<RoomImage[]> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/images`),
-    'Room images',
-  );
-}
-
-export async function addRoomImage(
-  listingId: string,
-  url: string,
-  sortOrder: number = 0,
-): Promise<RoomImage> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/images`, {
-      method: 'POST',
-      body: JSON.stringify({ url, sortOrder }),
-    }),
-    'Add room image',
-  );
-}
-
-export async function deleteRoomImage(imageId: string): Promise<void> {
-  const response = await apiFetch(`/api/v1/rooms/images/${imageId}`, { method: 'DELETE' });
-  if (!response.ok) throw new Error(`Delete room image failed: ${response.status}`);
-}
-
-export async function createBooking(
-  listingId: string,
-  input: CreateBookingInput,
-): Promise<RoomBooking> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/bookings`, {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
-    'Create booking',
-  );
-}
-
 export async function inquireRoom(
   roomId: string,
   input: RoomInquiryInput,
@@ -196,47 +138,5 @@ export async function inquireRoom(
       body: JSON.stringify(input),
     }),
     'Submit room inquiry',
-  );
-}
-
-export async function getSavedSearches(): Promise<SavedSearch[]> {
-  return parseJsonOrThrow(await apiFetch('/api/v1/rooms/saved-searches'), 'Saved searches');
-}
-
-export async function createSavedSearch(input: CreateSavedSearchInput): Promise<SavedSearch> {
-  return parseJsonOrThrow(
-    await apiFetch('/api/v1/rooms/saved-searches', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
-    'Create saved search',
-  );
-}
-
-export async function deleteSavedSearch(searchId: string): Promise<void> {
-  const response = await apiFetch(`/api/v1/rooms/saved-searches/${searchId}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error(`Delete saved search failed: ${response.status}`);
-}
-
-export async function reportRoom(
-  listingId: string,
-  reason: string,
-  description?: string,
-): Promise<RoomReport> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/report`, {
-      method: 'POST',
-      body: JSON.stringify({ reason, description }),
-    }),
-    'Report room',
-  );
-}
-
-export async function getRoomAnalytics(listingId: string): Promise<RoomAnalytics> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/analytics`),
-    'Room analytics',
   );
 }

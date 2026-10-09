@@ -10,7 +10,5 @@ interface RoomBookingRepository extends JpaRepository<RoomBooking, UUID> {
 
     List<RoomBooking> findByRequesterIdOrderByCreatedAtDesc(UUID requesterId);
 
-    List<RoomBooking> findByListingIdAndStatusOrderByCreatedAtDesc(UUID listingId, String status);
-
     boolean existsByListingIdAndRequesterIdAndStatus(UUID listingId, UUID requesterId, String status);
 }

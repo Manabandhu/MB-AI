@@ -43,7 +43,11 @@ const C = {
   goldText: '#b45309',
 };
 
-export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
+type MarketplaceScreenId = 'home' | 'search' | 'categories' | 'saved';
+
+/** `/marketplace/saved` shows only the signed-in member's favorites; the other routes show every listing. */
+export function MarketplaceHomeScreen({ screenId = 'home' }: { screenId?: MarketplaceScreenId }) {
+  const savedOnly = screenId === 'saved';
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isCompact = width < 360;
@@ -112,6 +116,7 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
           const matchLoc = (item.location ?? '').toLowerCase().includes(q);
           if (!matchTitle && !matchDesc && !matchLoc) return false;
         }
+        if (savedOnly && !savedIds.has(item.id)) return false;
         // Category
         if (selectedCategory !== 'all') {
           if (
@@ -139,6 +144,8 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
       });
   }, [
     listings,
+    savedOnly,
+    savedIds,
     searchQuery,
     selectedCategory,
     selectedCondition,
@@ -316,7 +323,11 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
               <AppIcon name="package" size={40} color={C.secondary} />
             </View>
             <Text style={s.emptyTitle}>
-              {listings.length === 0 ? 'No items listed yet' : 'No items match your criteria'}
+              {savedOnly && savedIds.size === 0
+                ? 'No saved items yet'
+                : listings.length === 0
+                  ? 'No items listed yet'
+                  : 'No items match your criteria'}
             </Text>
             <Text style={s.emptySub}>
               Try adjusting your category, price range, or search keywords.
@@ -529,8 +540,6 @@ export function MarketplaceHomeScreen(_props: { screenId?: string } = {}) {
     </View>
   );
 }
-
-export const MarketplaceScreen = MarketplaceHomeScreen;
 
 const s = StyleSheet.create({
   noPhoto: {

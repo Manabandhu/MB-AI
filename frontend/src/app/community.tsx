@@ -1,7 +1,7 @@
 import { useRequireAuth } from '@/lib/authStore';
-import { StitchAppShellScreen } from '@/modules/foundation/screens/StitchAppShellScreen';
+import { AppShellScreen } from '@/modules/foundation/screens/shell/AppShellScreen';
 
 export default function CommunityRoute() {
   useRequireAuth('/sign-in');
-  return <StitchAppShellScreen kind="community" />;
+  return <AppShellScreen kind="community" />;
 }

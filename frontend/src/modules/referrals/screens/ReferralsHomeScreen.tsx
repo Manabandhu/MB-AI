@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { listPublicReferrals } from '@/modules/referrals/api';
+import { getMyReferrals, listPublicReferrals } from '@/modules/referrals/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 type TabType = 'offers' | 'requests';
@@ -28,7 +28,9 @@ const FILTER_CHIPS = [
   { id: 'housing', label: 'Housing Help', icon: 'home' },
 ] as const;
 
-export function ReferralsScreen(_props: { screenId?: string }) {
+/** `/referrals` lists public referrals; `/referrals/mine` lists the signed-in user's own (`GET /api/v1/referrals`). */
+export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mine' }) {
+  const isMine = screenId === 'mine';
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -44,8 +46,8 @@ export function ReferralsScreen(_props: { screenId?: string }) {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['referrals', 'public'],
-    queryFn: listPublicReferrals,
+    queryKey: ['referrals', isMine ? 'mine' : 'public'],
+    queryFn: isMine ? getMyReferrals : listPublicReferrals,
   });
 
   const allReferrals = rawReferrals ?? [];
@@ -118,20 +120,24 @@ export function ReferralsScreen(_props: { screenId?: string }) {
                   <Text style={styles.teluguPillText}>మనోబంధు</Text>
                 </View>
               </View>
-              <Text style={styles.headerTitle}>Referrals & Skill Exchange</Text>
+              <Text style={styles.headerTitle}>
+                {isMine ? 'My Referrals' : 'Referrals & Skill Exchange'}
+              </Text>
             </View>
           </View>
 
-          <View style={styles.topRowRight}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="My Referrals"
-              onPress={() => router.push('/referrals/mine')}
-              style={styles.iconCircle}
-            >
-              <AppIcon name="user" size={18} color={colors.ink} />
-            </Pressable>
-          </View>
+          {isMine ? null : (
+            <View style={styles.topRowRight}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="My Referrals"
+                onPress={() => router.push('/referrals/mine')}
+                style={styles.iconCircle}
+              >
+                <AppIcon name="user" size={18} color={colors.ink} />
+              </Pressable>
+            </View>
+          )}
         </View>
 
         {/* Search Bar */}
@@ -346,7 +352,9 @@ export function ReferralsScreen(_props: { screenId?: string }) {
               <AppIcon name="briefcase" size={40} color="#94A3B8" />
               <Text style={styles.emptyTitle}>No referrals yet</Text>
               <Text style={styles.emptyDesc}>
-                Be the first to offer or request a referral in the community.
+                {isMine
+                  ? 'Referrals you offer or request will appear here.'
+                  : 'Be the first to offer or request a referral in the community.'}
               </Text>
               <Pressable onPress={() => router.push('/referrals/offer')} style={styles.clearBtn}>
                 <Text style={styles.clearBtnText}>Offer a Referral</Text>
@@ -372,7 +380,9 @@ export function ReferralsScreen(_props: { screenId?: string }) {
                         <View style={styles.cardMetaRow}>
                           <Text style={styles.cardAuthorText}>
                             {activeTab === 'offers' ? 'Offered by' : 'Requested by'}{' '}
-                            <Text style={styles.cardAuthorBold}>a community member</Text>
+                            <Text style={styles.cardAuthorBold}>
+                              {isMine ? 'you' : 'a community member'}
+                            </Text>
                           </Text>
                         </View>
                       </View>

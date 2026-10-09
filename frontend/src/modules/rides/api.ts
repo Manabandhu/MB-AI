@@ -1,6 +1,5 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
 import { supabase } from '@/lib/supabase';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 import type {
   CreateRideOfferInput,
   CreateRideRatingInput,
@@ -10,7 +9,6 @@ import type {
   RideOffer,
   RideParticipant,
   RideRating,
-  RideRequest,
   RideSeatRequest,
   UpdateRideOfferInput,
 } from './types';
@@ -53,10 +51,6 @@ export async function bookRideSeat(
     }),
     'Book ride seat',
   );
-}
-
-export async function getRidesScreen(screenId: string): Promise<CatalogScreenContent> {
-  return parseJsonOrThrow(await apiFetch(`/api/v1/rides/screens/${screenId}`), 'Rides screen');
 }
 
 export async function getRideDetail(rideId: string): Promise<RideListing> {
@@ -144,11 +138,6 @@ export async function updateRideOffer(
   );
 }
 
-export async function deleteRide(rideId: string): Promise<void> {
-  const response = await apiFetch(`/api/v1/rides/${rideId}`, { method: 'DELETE' });
-  if (!response.ok) throw new Error(`Delete ride failed: ${response.status}`);
-}
-
 export async function getMyRides(): Promise<OwnerRideListing[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/rides/mine'), 'My rides');
 }
@@ -171,10 +160,6 @@ export async function saveRide(rideId: string): Promise<RideListing> {
 export async function unsaveRide(rideId: string): Promise<void> {
   const response = await apiFetch(`/api/v1/rides/${rideId}/favorite`, { method: 'DELETE' });
   if (!response.ok) throw new Error(`Unsave ride failed: ${response.status}`);
-}
-
-export async function getMyRideRequests(): Promise<RideRequest[]> {
-  return parseJsonOrThrow(await apiFetch('/api/v1/rides/my-requests'), 'My ride requests');
 }
 
 export async function listSeatRequests(rideId: string): Promise<RideSeatRequest[]> {

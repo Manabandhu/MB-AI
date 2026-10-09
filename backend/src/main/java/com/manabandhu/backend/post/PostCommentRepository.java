@@ -7,6 +7,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface PostCommentRepository extends JpaRepository<PostComment, UUID> {
     List<PostComment> findByPostIdOrderByCreatedAtDesc(UUID postId);
-
-    List<PostComment> findByAuthorIdOrderByCreatedAtDesc(UUID authorId);
 }

@@ -117,10 +117,6 @@ export async function listUsers(): Promise<AdminUser[]> {
   return parseJson(await apiFetch('/api/v1/admin/users'));
 }
 
-export async function getUser(id: string): Promise<AdminUser> {
-  return parseJson(await apiFetch(`/api/v1/admin/users/${encodeURIComponent(id)}`));
-}
-
 export async function updateUserStatus(input: { id: string; status: string }): Promise<AdminUser> {
   return parseJson(
     await apiFetch(`/api/v1/admin/users/${encodeURIComponent(input.id)}/status`, {

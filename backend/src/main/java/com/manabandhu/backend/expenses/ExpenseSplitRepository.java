@@ -9,6 +9,4 @@ interface ExpenseSplitRepository extends JpaRepository<ExpenseSplit, UUID> {
     List<ExpenseSplit> findByExpenseId(UUID expenseId);
 
     List<ExpenseSplit> findByExpenseIdIn(List<UUID> expenseIds);
-
-    List<ExpenseSplit> findByExpenseIdAndUserId(UUID expenseId, UUID userId);
 }

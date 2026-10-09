@@ -62,17 +62,3 @@ export async function getParticipants(conversationId: string): Promise<Participa
     await apiFetch(`/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/participants`),
   );
 }
-
-export async function createConversation(input: {
-  type: 'DIRECT' | 'GROUP';
-  title?: string;
-  participantIds: string[];
-}): Promise<Conversation> {
-  return parseJsonOrThrow(
-    await apiFetch('/api/v1/chat/conversations', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
-    'CreateConversation',
-  );
-}

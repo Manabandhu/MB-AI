@@ -31,6 +31,7 @@ const adminRoutes = [
   { label: 'Jobs', route: '/admin/jobs' },
   { label: 'Events', route: '/admin/events' },
   { label: 'Audit Log', route: '/admin/audit-log' },
+  { label: 'Automations', route: '/admin/automations' },
 ];
 
 const QUEUE_LIMIT = 5;

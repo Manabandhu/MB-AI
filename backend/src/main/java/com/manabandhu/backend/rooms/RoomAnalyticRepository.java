@@ -7,6 +7,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface RoomAnalyticRepository extends JpaRepository<RoomAnalytic, UUID> {
     long countByListingIdAndEventType(UUID listingId, String eventType);
-
-    List<RoomAnalytic> findByListingIdAndEventTypeOrderByCreatedAtDesc(UUID listingId, String eventType);
 }

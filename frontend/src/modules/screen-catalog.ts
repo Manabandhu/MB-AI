@@ -1,4 +1,5 @@
-import { foundationRoutes } from '@/modules/foundation/foundationConstants';
+// Canonical product screen inventory (ADR 0004). `pnpm verify:screens` (scripts/verify-screen-catalog.mjs) fails when
+// a route here has no file under src/app or a route file is missing from this list, so keep routes as string literals.
 
 export type ScreenDefinition = {
   id: string;
@@ -21,16 +22,15 @@ export const screenCatalog = [
   {
     module: 'foundation',
     screens: [
-      screen('foundation', 'splash', 'Splash', foundationRoutes.root),
-      screen('foundation', 'welcome', 'Welcome', foundationRoutes.welcome),
+      screen('foundation', 'splash', 'Splash', '/'),
+      screen('foundation', 'welcome', 'Welcome', '/welcome'),
       screen('auth', 'sign-in', 'Sign In', '/sign-in'),
       screen('auth', 'sign-up', 'Sign Up', '/sign-up'),
       screen('auth', 'phone-login', 'Phone Login', '/phone-login'),
-      screen('auth', 'email-login', 'Email Login', '/email-login'),
       screen('auth', 'otp-verification', 'OTP Verification', '/otp-verification'),
       screen('auth', 'forgot-password', 'Forgot Password', '/forgot-password'),
       screen('auth', 'reset-password', 'Reset Password', '/reset-password'),
-      screen('auth', 'choose-login-method', 'Choose Login Method', '/choose-login-method'),
+      screen('auth', 'callback', 'Sign-in Callback', '/auth/callback'),
       screen('foundation', 'onboarding', 'Onboarding', '/onboarding'),
       screen(
         'foundation',
@@ -60,13 +60,20 @@ export const screenCatalog = [
         '/onboarding/trust-and-safety',
       ),
       screen('foundation', 'onboarding/complete', 'Onboarding Complete', '/onboarding/complete'),
-      screen('foundation', 'home', 'Home', foundationRoutes.home),
+      screen('foundation', 'home', 'Home', '/home'),
       screen('foundation', 'explore', 'Explore', '/explore'),
       screen('foundation', 'search', 'Global Search', '/search'),
       screen('foundation', 'saved', 'Saved', '/saved'),
-      screen('notifications', 'inbox', 'Notifications', '/notifications'),
       screen('foundation', 'profile', 'Profile', '/profile'),
       screen('foundation', 'settings', 'Settings', '/settings'),
+    ],
+  },
+  {
+    module: 'notifications',
+    screens: [
+      screen('notifications', 'inbox', 'Notifications', '/notifications'),
+      screen('notifications', 'details', 'Notification Details', '/notifications/[id]'),
+      screen('notifications', 'settings', 'Notification Settings'),
     ],
   },
   {
@@ -211,6 +218,14 @@ export const screenCatalog = [
     ],
   },
   {
+    module: 'assistant',
+    screens: [
+      screen('assistant', 'home', 'Assistant', '/assistant'),
+      screen('assistant', 'history', 'Assistant History'),
+      screen('assistant', 'citations', 'Assistant Citations'),
+    ],
+  },
+  {
     module: 'admin',
     screens: [
       screen('admin', 'dashboard', 'Dashboard', '/admin'),
@@ -221,6 +236,7 @@ export const screenCatalog = [
       screen('admin', 'community', 'Community Moderation'),
       screen('admin', 'jobs', 'Jobs Moderation'),
       screen('admin', 'events', 'Events Moderation'),
+      screen('admin', 'automations', 'Automations'),
       screen('admin', 'audit-log', 'Audit Log'),
     ],
   },

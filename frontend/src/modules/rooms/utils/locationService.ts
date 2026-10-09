@@ -192,7 +192,7 @@ export const ALL_USA_CITY: SearchCityResult = {
 /**
  * Calculates straight-line distance in miles between two coordinate points
  */
-export function getDistanceMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function getDistanceMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLat = (lat2 - lat1) * 0.017453292519943295;
   const dLon = (lon2 - lon1) * 0.017453292519943295;
   const a =
@@ -207,7 +207,7 @@ export function getDistanceMiles(lat1: number, lon1: number, lat2: number, lon2:
 /**
  * Finds the closest indexed US city to any GPS or IP coordinates
  */
-export function getClosestUSCity(latitude: number, longitude: number): SearchCityResult | null {
+function getClosestUSCity(latitude: number, longitude: number): SearchCityResult | null {
   const cities = getCachedUSCities();
   let closest: SearchCityResult | null = null;
   let minDist = Number.POSITIVE_INFINITY;

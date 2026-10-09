@@ -1,5 +1,5 @@
-import { StitchOnboardingScreen } from '@/modules/foundation/screens/StitchOnboardingScreen';
+import { OnboardingScreen } from '@/modules/foundation/screens/OnboardingScreen';
 
 export default function OnboardingWhatBringsYouHereRoute() {
-  return <StitchOnboardingScreen kind="goals" />;
+  return <OnboardingScreen kind="goals" />;
 }

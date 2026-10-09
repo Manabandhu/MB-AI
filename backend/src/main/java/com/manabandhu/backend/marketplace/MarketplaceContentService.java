@@ -1,5 +1,9 @@
 package com.manabandhu.backend.marketplace;
 
+import static com.manabandhu.backend.foundation.CatalogContent.item;
+import static com.manabandhu.backend.foundation.CatalogContent.metric;
+import static com.manabandhu.backend.foundation.CatalogContent.personal;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,7 +12,6 @@ import java.util.UUID;
 
 import com.manabandhu.backend.auth.Actor;
 import com.manabandhu.backend.foundation.CatalogItem;
-import com.manabandhu.backend.foundation.CatalogMetric;
 import com.manabandhu.backend.foundation.CatalogScreenContent;
 import com.manabandhu.backend.foundation.UnknownCatalogScreenException;
 
@@ -38,49 +41,47 @@ class MarketplaceContentService {
     @Transactional(readOnly = true)
     CatalogScreenContent screen(String screenId, Optional<Actor> viewer) {
         return switch (screenId) {
-            case "home" -> content(
+            case "home" -> new CatalogScreenContent(
                     "Buy and sell nearby",
                     "Discover local listings across categories with trust signals and safe handoff.",
                     "Marketplace",
                     List.of(
-                            new CatalogMetric("Active listings", String.valueOf(listingRepository.countByStatus(ACTIVE))),
-                            new CatalogMetric("Categories", String.valueOf(categoryRepository.count()))),
+                            metric("Active listings", listingRepository.countByStatus(ACTIVE)),
+                            metric("Categories", categoryRepository.count())),
                     List.of(
                             item("browse", "Browse categories", "Find items by category, condition, and location.", "Open", "/marketplace/categories"),
                             item("search", "Search listings", "Search by title, keywords, and price range.", "Search", "/marketplace/search")));
-            case "search" -> content(
+            case "search" -> new CatalogScreenContent(
                     "Search marketplace",
                     "Find items by title, category, price, condition, and location.",
                     "Marketplace",
-                    List.of(new CatalogMetric("Active listings", String.valueOf(listingRepository.countByStatus(ACTIVE)))),
+                    List.of(metric("Active listings", listingRepository.countByStatus(ACTIVE))),
                     List.of(
                             item("title", "Title and keywords", "Search by item name, description, or keywords.", "Core filter", "/marketplace"),
                             item("price", "Price and condition", "Filter by price range, negotiation, and item condition.", "Filters", "/marketplace/categories")));
-            case "categories" -> content(
+            case "categories" -> new CatalogScreenContent(
                     "Browse by category",
                     "Explore listings grouped by category with trust and safety signals.",
                     "Marketplace",
                     List.of(
-                            new CatalogMetric("Categories", String.valueOf(categoryRepository.count())),
-                            new CatalogMetric("Listings", String.valueOf(listingRepository.countByStatus(ACTIVE)))),
+                            metric("Categories", categoryRepository.count()),
+                            metric("Listings", listingRepository.countByStatus(ACTIVE))),
                     categoryItems());
-            case "sell" -> content(
+            case "sell" -> new CatalogScreenContent(
                     "Sell an item",
                     "Create a listing with photos, price, condition, and safe contact handoff.",
                     "Marketplace",
-                    viewer.map(actor -> List.of(
-                                    new CatalogMetric("Your listings", String.valueOf(listingRepository.countByOwnerId(actor.id())))))
-                            .orElse(List.of()),
+                    personal(viewer, actor -> List.of(metric("Your listings", listingRepository.countByOwnerId(actor.id())))),
                     List.of(
                             item("basics", "Basics", "Title, category, price, and condition.", "Step 1", "/marketplace"),
                             item("details", "Details", "Description, photos, location precision, and contact method.", "Step 2", "/marketplace/saved")));
-            case "saved" -> viewer.map(actor -> content(
+            case "saved" -> viewer.map(actor -> new CatalogScreenContent(
                             "Saved items",
                             "Track items you want to compare, revisit, or message about later.",
                             "Marketplace",
-                            List.of(new CatalogMetric("Saved", String.valueOf(favoriteRepository.countByUserId(actor.id())))),
+                            List.of(metric("Saved", favoriteRepository.countByUserId(actor.id()))),
                             List.of(item("search", "Find more items", "Save listings to compare them here.", "Search marketplace", "/marketplace/search"))))
-                    .orElseGet(() -> content(
+                    .orElseGet(() -> new CatalogScreenContent(
                             "Saved items",
                             "Track items you want to compare, revisit, or message about later.",
                             "Marketplace",
@@ -107,14 +108,5 @@ class MarketplaceContentService {
                             count + (count == 1 ? " listing" : " listings"), "/marketplace/search");
                 })
                 .toList();
-    }
-
-    private static CatalogScreenContent content(String title, String subtitle, String eyebrow,
-                                                List<CatalogMetric> metrics, List<CatalogItem> items) {
-        return new CatalogScreenContent(title, subtitle, eyebrow, metrics, items);
-    }
-
-    private static CatalogItem item(String id, String title, String body, String meta, String route) {
-        return new CatalogItem(id, title, body, meta, route, null);
     }
 }

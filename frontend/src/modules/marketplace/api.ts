@@ -1,18 +1,10 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 import type {
   CreateListingInput,
   ListingCategory,
   ListingImage,
   MarketplaceListing,
 } from './types';
-
-export async function getMarketplaceScreen(screenId: string): Promise<CatalogScreenContent> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/marketplace/screens/${screenId}`),
-    'Marketplace screen',
-  );
-}
 
 export async function listMarketplaceListings(): Promise<MarketplaceListing[]> {
   const data = await parseJsonOrThrow<{ content?: MarketplaceListing[] } | MarketplaceListing[]>(

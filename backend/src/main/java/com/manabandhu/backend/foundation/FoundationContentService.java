@@ -1,7 +1,12 @@
 package com.manabandhu.backend.foundation;
 
+import static com.manabandhu.backend.foundation.CatalogContent.item;
+import static com.manabandhu.backend.foundation.CatalogContent.metrics;
+import static com.manabandhu.backend.foundation.CatalogContent.personal;
+
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,18 +31,18 @@ public class FoundationContentService {
     }
 
     /** Runs a COUNT query; empty when there is no database or the query fails, so callers omit the metric. */
-    private java.util.OptionalLong count(String sql, Object... args) {
+    private OptionalLong count(String sql, Object... args) {
         if (jdbcTemplate == null) {
-            return java.util.OptionalLong.empty();
+            return OptionalLong.empty();
         }
         try {
             Long count = args.length == 0
                     ? jdbcTemplate.queryForObject(sql, Long.class)
                     : jdbcTemplate.queryForObject(sql, Long.class, args);
-            return count != null ? java.util.OptionalLong.of(count) : java.util.OptionalLong.empty();
+            return count != null ? OptionalLong.of(count) : OptionalLong.empty();
         } catch (DataAccessException e) {
             log.warn("Screen metric query failed: {}", e.getMessage());
-            return java.util.OptionalLong.empty();
+            return OptionalLong.empty();
         }
     }
 
@@ -94,9 +99,10 @@ public class FoundationContentService {
                     "Your day at a glance",
                     "Rooms, rides, jobs, community, and chat updates tailored to your interests and location.",
                     "Home",
-                    metrics(
-                            metric("Active rooms", "SELECT count(*) FROM room_listings WHERE status = 'active'"),
-                            metric("Active rides", "SELECT count(*) FROM ride_offers WHERE lower(status) = 'active' AND departure_at > now()")),
+                    metrics()
+                            .add("Active rooms", count("SELECT count(*) FROM room_listings WHERE status = 'active'"))
+                            .add("Active rides", count("SELECT count(*) FROM ride_offers WHERE lower(status) = 'active' AND departure_at > now()"))
+                            .build(),
                     List.of(
                             item("rooms", "Find a room", "Browse shared housing with privacy-aware location.", "Open rooms", "/rooms"),
                             item("rides", "Offer a ride", "Post a ride with route, time, and seats.", "Open rides", "/rides/offer"),
@@ -105,15 +111,15 @@ public class FoundationContentService {
                     "Stay in touch",
                     "Your conversations, group chats, and support threads in one inbox.",
                     "Chat",
-                    viewer.map(actor -> metrics(
-                            metric("Conversations", """
+                    personal(viewer, actor -> metrics()
+                            .add("Conversations", count("""
                                     SELECT count(*) FROM conversation_participants
-                                    WHERE user_id = ? AND left_at IS NULL""", actor.id()),
-                            metric("Messages", """
+                                    WHERE user_id = ? AND left_at IS NULL""", actor.id()))
+                            .add("Messages", count("""
                                     SELECT count(*) FROM messages m
                                     JOIN conversation_participants p ON p.conversation_id = m.conversation_id
-                                    WHERE p.user_id = ? AND p.left_at IS NULL""", actor.id())))
-                            .orElse(List.of()),
+                                    WHERE p.user_id = ? AND p.left_at IS NULL""", actor.id()))
+                            .build()),
                     List.of(
                             item("all", "All conversations", "Jump into any open chat thread.", "Inbox", "/chat"),
                             item("groups", "Group chats", "Communities, rides, and rooms group chats.", "Groups", "/chat/new")));
@@ -121,9 +127,10 @@ public class FoundationContentService {
                     "Community hubs",
                     "Join groups, read posts, and find help from people nearby.",
                     "Community",
-                    metrics(
-                            metric("Groups", "SELECT count(*) FROM communities"),
-                            metric("Posts", "SELECT count(*) FROM community_posts")),
+                    metrics()
+                            .add("Groups", count("SELECT count(*) FROM communities"))
+                            .add("Posts", count("SELECT count(*) FROM community_posts"))
+                            .build(),
                     List.of(
                             item("discover", "Discover groups", "Find communities by interest, location, and need.", "Explore", "/community/discover"),
                             item("posts", "Recent posts", "Read and reply to posts from joined communities.", "Feed", "/community")));
@@ -131,9 +138,10 @@ public class FoundationContentService {
                     "Set up your ManaBandhu space",
                     "Choose your city, interests, and safety preferences so the app feels useful from day one.",
                     "Getting Started",
-                    metrics(
-                            metric("Setup steps", "SELECT count(*) FROM onboarding_steps"),
-                            metric("Required steps", "SELECT count(*) FROM onboarding_steps WHERE is_required")),
+                    metrics()
+                            .add("Setup steps", count("SELECT count(*) FROM onboarding_steps"))
+                            .add("Required steps", count("SELECT count(*) FROM onboarding_steps WHERE is_required"))
+                            .build(),
                     List.of(
                             item("location", "Pick your local area", "Use a broad neighborhood or city so discovery works without exposing precise location.", "Location privacy first", "/explore"),
                             item("interests", "Select what you need", "Rooms, rides, jobs, events, community help, safety, and utilities can be tuned any time.", "Personalized modules", "/settings")));
@@ -141,9 +149,10 @@ public class FoundationContentService {
                     "Everything nearby, organized",
                     "Jump into rooms, rides, jobs, events, services, and community posts from one discovery surface.",
                     "Explore",
-                    metrics(
-                            metric("Rooms", "SELECT count(*) FROM room_listings WHERE status = 'active'"),
-                            metric("Events", "SELECT count(*) FROM events WHERE status = 'published' AND end_at > now()")),
+                    metrics()
+                            .add("Rooms", count("SELECT count(*) FROM room_listings WHERE status = 'active'"))
+                            .add("Events", count("SELECT count(*) FROM events WHERE status = 'published' AND end_at > now()"))
+                            .build(),
                     List.of(
                             item("rooms", "Rooms", "Find shared housing and trusted listings.", "Open rooms", "/rooms"),
                             item("rides", "Rides", "Offer or request safe local and airport rides.", "Open rides", "/rides"),
@@ -160,10 +169,10 @@ public class FoundationContentService {
                     "Your saved things",
                     "Saved rooms, rides, events, jobs, marketplace items, and resources live in one calm place.",
                     "Saved",
-                    viewer.map(actor -> metrics(
-                            metric("Saved rooms", "SELECT count(*) FROM room_favorites WHERE user_id = ?", actor.id()),
-                            metric("Saved items", "SELECT count(*) FROM listing_favorites WHERE user_id = ?", actor.id())))
-                            .orElse(List.of()),
+                    personal(viewer, actor -> metrics()
+                            .add("Saved rooms", count("SELECT count(*) FROM room_favorites WHERE user_id = ?", actor.id()))
+                            .add("Saved items", count("SELECT count(*) FROM listing_favorites WHERE user_id = ?", actor.id()))
+                            .build()),
                     List.of(
                             item("rooms", "Saved rooms", "Rooms you saved to compare or message about later.", "Rooms", "/rooms/saved"),
                             item("marketplace", "Saved marketplace items", "Listings you saved in the marketplace.", "Marketplace", "/marketplace/saved")));
@@ -185,18 +194,5 @@ public class FoundationContentService {
                             item("privacy", "Privacy and safety", "Manage blocked users, trusted contacts, and sensitive data choices.", "Protected", "/profile")));
             default -> throw new UnknownCatalogScreenException(screenId);
         };
-    }
-
-    private Optional<CatalogMetric> metric(String label, String sql, Object... args) {
-        return count(sql, args).stream().mapToObj(value -> new CatalogMetric(label, String.valueOf(value))).findFirst();
-    }
-
-    @SafeVarargs
-    private static List<CatalogMetric> metrics(Optional<CatalogMetric>... metrics) {
-        return java.util.Arrays.stream(metrics).flatMap(Optional::stream).toList();
-    }
-
-    private static CatalogItem item(String id, String title, String body, String meta, String route) {
-        return new CatalogItem(id, title, body, meta, route, null);
     }
 }

@@ -492,6 +492,25 @@ await status('upload path traversal rejected', 400, 'A', 'POST', '/api/v1/media/
   path: '../x.png',
 });
 
+console.log('== token validation');
+{
+  // Signature, expiry, issuer, and audience are all enforced by the backend's JWT decoder.
+  const now = Math.floor(Date.now() / 1000);
+  const bearer = async (label, jwt) => {
+    const res = await fetch(`${base}/api/v1/me`, { headers: { Authorization: `Bearer ${jwt}` } });
+    expect(label, res.status, 401);
+  };
+  const valid = mint(A);
+  const [head, body, sig] = valid.split('.');
+  const flipped = `${sig.slice(0, -2)}${sig.endsWith('AA') ? 'BB' : 'AA'}`;
+  await status('valid token reads /me', 200, 'A', 'GET', '/api/v1/me');
+  await status('missing token is rejected', 401, null, 'GET', '/api/v1/me');
+  await bearer('expired token is rejected', mint(A, [], {}, { iat: now - 7200, exp: now - 60 }));
+  await bearer('wrong issuer is rejected', mint(A, [], {}, { iss: 'https://attacker.example' }));
+  await bearer('wrong audience is rejected', mint(A, [], {}, { aud: 'service_role' }));
+  await bearer('tampered signature is rejected', `${head}.${body}.${flipped}`);
+}
+
 console.log('== admin');
 await status('non-admin blocked from admin API', 403, 'B', 'GET', '/api/v1/admin/rooms');
 await status('admin lists users', 200, 'D', 'GET', '/api/v1/admin/users');

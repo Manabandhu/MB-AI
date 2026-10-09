@@ -1,6 +1,5 @@
 package com.manabandhu.backend.rides;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 

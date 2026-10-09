@@ -13,5 +13,4 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
     List<Message> findByConversationIdOrderByCreatedAtDesc(UUID conversationId, Pageable pageable);
 
     Optional<Message> findFirstByConversationIdOrderByCreatedAtDesc(UUID conversationId);
-    List<Message> findByConversationIdAndSenderIdOrderByCreatedAtDesc(UUID conversationId, UUID senderId);
 }

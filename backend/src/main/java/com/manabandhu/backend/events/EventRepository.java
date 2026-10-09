@@ -14,8 +14,6 @@ interface EventRepository extends JpaRepository<Event, UUID> {
 
     List<Event> findByOrganizerIdOrderByCreatedAtDesc(UUID organizerId);
 
-    List<Event> findByCategoryIdOrderByStartAtAsc(UUID categoryId);
-
     Page<Event> findByStatusOrderByStartAtAsc(String status, Pageable pageable);
 
     @Query("SELECT e FROM Event e WHERE e.status = :status AND (LOWER(e.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(e.location) LIKE LOWER(CONCAT('%', :query, '%')))")

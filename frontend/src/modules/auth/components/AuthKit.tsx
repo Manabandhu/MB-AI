@@ -17,8 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-
-const brandLogo = require('../../../../assets/images/brand-logo.png');
+import { brandLogo } from '@/modules/shared/ui/brandAssets';
 
 /** Width at which the auth flow switches from a full-bleed phone layout to a centered card. */
 const CARD_BREAKPOINT = 600;

@@ -1,12 +1,4 @@
 import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/apiClient';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
-
-export async function getReferralsScreen(screenId: string): Promise<CatalogScreenContent> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/referrals/screens/${screenId}`),
-    'Referrals screen',
-  );
-}
 
 export type Referral = {
   id: string;

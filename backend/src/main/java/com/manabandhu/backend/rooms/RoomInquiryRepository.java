@@ -8,7 +8,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface RoomInquiryRepository extends JpaRepository<RoomInquiry, UUID> {
-    List<RoomInquiry> findByRoomIdOrderByCreatedAtDesc(UUID roomId);
-    List<RoomInquiry> findBySenderIdOrderByCreatedAtDesc(UUID senderId);
-    List<RoomInquiry> findByHostIdOrderByCreatedAtDesc(UUID hostId);
 }

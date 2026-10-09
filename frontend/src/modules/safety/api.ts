@@ -1,12 +1,7 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 
 // Types mirror the backend entities serialized by SafetyController (SafetyReport, BlockedUser, TrustedContact).
 // There is no sample or fallback data: callers surface errors and render empty states for empty lists.
-
-export async function getSafetyCenter(): Promise<CatalogScreenContent> {
-  return parseJsonOrThrow(await apiFetch('/api/v1/safety/center'), 'Safety center');
-}
 
 export async function getReports(): Promise<ReportItem[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/safety/reports'), 'Reports');
@@ -30,10 +25,10 @@ export async function getTrustedContacts(): Promise<TrustedContactItem[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/safety/trusted-contacts'), 'Trusted contacts');
 }
 
-export type ReportStatus = 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED';
+type ReportStatus = 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED';
 
 /** Statuses that still need attention; matches the backend's open-report count. */
-export const OPEN_REPORT_STATUSES: readonly ReportStatus[] = ['OPEN', 'IN_REVIEW'];
+const OPEN_REPORT_STATUSES: readonly ReportStatus[] = ['OPEN', 'IN_REVIEW'];
 
 export function isOpenReport(report: Pick<ReportItem, 'status'>): boolean {
   return OPEN_REPORT_STATUSES.includes(String(report.status).toUpperCase() as ReportStatus);

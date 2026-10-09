@@ -104,7 +104,7 @@ function toTemplates(rides: Array<Partial<RideOffer & RideListing>>): RideTempla
  * Parses the driver's departure inputs. Date accepts YYYY-MM-DD, "today" or "tomorrow";
  * time accepts 24h "17:30" or "5:30 PM". Returns null when either part is not understood.
  */
-export function parseDeparture(dateText: string, timeText: string, now = new Date()): Date | null {
+function parseDeparture(dateText: string, timeText: string, now = new Date()): Date | null {
   const dateRaw = dateText.trim().toLowerCase();
   let base: Date;
   if (dateRaw === 'today') {

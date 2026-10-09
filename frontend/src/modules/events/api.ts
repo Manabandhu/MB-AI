@@ -30,13 +30,6 @@ export type EventCategory = {
   createdAt?: string;
 };
 
-export type EventAttendee = {
-  id: string;
-  name: string;
-  avatar?: string;
-  status: string;
-};
-
 export async function listEvents(): Promise<Event[]> {
   const response = await apiFetch('/api/v1/events');
   const data = await parseJsonOrThrow<Event[] | { content?: Event[] }>(response, 'Events');

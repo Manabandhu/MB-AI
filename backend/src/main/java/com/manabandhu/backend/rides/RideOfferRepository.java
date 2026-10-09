@@ -26,13 +26,6 @@ interface RideOfferRepository extends JpaRepository<RideOffer, UUID> {
 
     List<RideOffer> findByDriverIdOrderByDepartureAtDesc(UUID driverId);
 
-    List<RideOffer> findByOriginAreaContainingIgnoreCaseAndStatusOrderByDepartureAtAsc(String origin, String status);
-
-    List<RideOffer> findByDestinationAreaContainingIgnoreCaseAndStatusOrderByDepartureAtAsc(String destination, String status);
-
-    List<RideOffer> findByStatusAndOriginAreaContainingIgnoreCaseAndDestinationAreaContainingIgnoreCaseOrderByDepartureAtAsc(
-            String status, String origin, String destination);
-
     Page<RideOffer> findByStatusOrderByDepartureAtAsc(String status, Pageable pageable);
 
     @Query("SELECT r FROM RideOffer r WHERE LOWER(r.status) = 'active' AND r.departureAt > :now " +
@@ -50,8 +43,6 @@ interface RideOfferRepository extends JpaRepository<RideOffer, UUID> {
             @Param("genderPreference") String genderPreference,
             @Param("isRecurring") Boolean isRecurring,
             Pageable pageable);
-
-    List<RideOffer> findByChatExpiresAtNotNullAndChatExpiresAtLessThanEqual(Instant now);
 
     /** Upcoming active offers, matching {@link #searchActive} with no filters. */
     @Query("SELECT COUNT(r) FROM RideOffer r WHERE LOWER(r.status) = 'active' AND r.departureAt > :now")

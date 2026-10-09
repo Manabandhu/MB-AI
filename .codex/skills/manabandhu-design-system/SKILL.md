@@ -17,3 +17,4 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 10. Tactile button interactions: `AppButton.tsx` upgraded with native-driven spring micro-animations (`onPressIn` scales down to 0.96 with friction 8, `onPressOut` springs back to 1.0) delivering instantaneous tactile physical feedback across all primary and secondary actions without input lag.
 
 11. Auth surfaces (2026-10) use `frontend/src/modules/auth/components/AuthKit.tsx`: 32pt left-aligned titles, 17pt body and input text, 52pt fields and buttons with 14pt radius, primary `#431ebe` buttons, black "Continue with Apple" above a white outlined Google button, sentence-case labels (no all-caps eyebrows), and a centered 460pt card at ≥600pt widths.
+- Added `tone` (surface containers, tints, pastel badge backgrounds) and `palette` (`color` + `tone`) so screens stop re-declaring hex values.

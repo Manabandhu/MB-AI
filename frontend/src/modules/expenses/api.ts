@@ -1,5 +1,4 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
 
 // All expense data goes through the backend, which enforces group membership. Errors are surfaced to the
 // screens instead of being replaced with sample data, so a failed save is never shown as a success.
@@ -75,13 +74,6 @@ const toExpense = (e: RawExpense): Expense => ({
   title: e.title || e.description || 'Expense',
 });
 const withAmount = <T>(row: RawAmount<T>): T => ({ ...row, amount: Number(row.amount) }) as T;
-
-export async function getExpensesScreen(screenId: string): Promise<CatalogScreenContent> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/expenses/screens/${screenId}`),
-    'Expenses screen',
-  );
-}
 
 export async function listExpenseGroups(): Promise<ExpenseGroup[]> {
   const groups = await parseJsonOrThrow<RawGroup[]>(

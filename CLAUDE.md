@@ -17,6 +17,7 @@ Claude-specific skills, agents, and review rules live in `.claude/` and `REVIEW.
 | Authorization smoke suite (needs the local stack) | `node scripts/local-dev/authz-smoke.mjs` |
 | Mint a local bearer token | `node scripts/local-dev/auth.mjs mint <uuid> [ADMIN]` |
 | Frontend calls vs backend routes | `pnpm verify:routes` |
+| Screen catalog vs route files | `pnpm verify:screens` |
 | Credential scan of tracked files | `pnpm verify:secrets` |
 
 In cloud sessions `.claude/hooks/session-start.sh` installs pnpm deps, Java 25, Maven deps, and PostgreSQL + PostGIS.

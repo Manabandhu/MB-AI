@@ -17,6 +17,45 @@ export const color = {
   skeleton: '#e5deff',
 } as const;
 
+/**
+ * Tonal surfaces and soft accent tints layered on `color` (light theme). Screens use `palette`, which merges both,
+ * instead of re-declaring these hex values locally.
+ */
+export const tone = {
+  surfaceContainerLowest: '#ffffff',
+  surfaceContainerLow: '#f2f3ff',
+  surfaceContainer: '#eaedff',
+  surfaceContainerHigh: '#e2e7ff',
+  /** Translucent fills behind primary, teal, and warm icons or chips. */
+  primaryTint: 'rgba(67,30,190,0.07)',
+  tealTint: 'rgba(0,105,107,0.08)',
+  warmTint: 'rgba(255,126,51,0.10)',
+  /** Opaque pastel backgrounds for badges and icon wells. */
+  tealBg: '#e6f4f4',
+  warmBg: '#fff0e8',
+  successBg: '#e6f7ed',
+  goldBg: '#fef3c7',
+  goldText: '#b45309',
+} as const;
+
+export const palette = { ...color, ...tone } as const;
+
+/** The warm saffron scheme used by search, saved items, and the community feed (separate from the indigo brand). */
+export const saffronPalette = {
+  primary: '#E05638',
+  secondary: '#0D5C75',
+  bg: '#FFFDF9',
+  cardBg: '#FFFFFF',
+  border: '#E8DEC8',
+  ink: '#151D21',
+  inkMuted: '#6B7280',
+  tealBg: '#E0F2FE',
+  saffronBg: '#FEE2E2',
+  goldBg: '#FEF3C7',
+  goldText: '#B45309',
+  emerald: '#16A34A',
+} as const;
+
 export const darkColor = {
   background: '#0f1525',
   ink: '#f1f5ff',
