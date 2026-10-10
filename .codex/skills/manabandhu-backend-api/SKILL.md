@@ -74,3 +74,4 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 - Rides: women/men-only enforcement at booking and request; locked seat-request accept with seat reservation and participant creation.
 - Rooms: `isVerifiedHost` removed from owner inputs; GraphQL `savedRoomListings` = caller's favorites; GraphQL `createRoomListing` = validated draft path.
 - Events: saved = caller's RSVPs or bookmarks (login required); RSVP status allowlist; malformed dates → 400.
+- Expenses: settlements need the recipient's confirmation; server-set `settledAt`; locked, explicit status transitions.

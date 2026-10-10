@@ -41,6 +41,14 @@ public class SettlementService {
         return settlement;
     }
 
+    static final String PENDING = "pending";
+    static final String COMPLETED = "completed";
+    static final String CANCELLED = "cancelled";
+
+    /**
+     * Records a payment. Only the recipient (or an admin) can mark money as received, so a payer's record is
+     * always {@code pending} until the recipient confirms it; that stops a debtor from clearing a debt alone.
+     */
     @Transactional
     public Settlement create(Actor actor, UUID groupId, CreateSettlementInput input) {
         var group = access.requireMember(actor, groupId);
@@ -56,18 +64,43 @@ public class SettlementService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Both people must be members of the group");
             }
         }
-        var status = input.status() != null ? input.status() : "completed";
-        var settledAt = "completed".equals(status) ? (input.settledAt() != null ? input.settledAt() : Instant.now()) : null;
+        var canConfirm = actor.admin() || actor.is(input.toUserId());
+        var requested = input.status() == null ? (canConfirm ? COMPLETED : PENDING) : input.status();
+        var status = COMPLETED.equals(requested) && canConfirm ? COMPLETED : PENDING;
+        if (PENDING.equals(status)
+                && repository.existsByGroupIdAndFromUserIdAndToUserIdAndStatus(groupId, fromUserId, input.toUserId(), PENDING)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A payment between these members is already waiting for confirmation");
+        }
+        var settledAt = COMPLETED.equals(status) ? Instant.now() : null;
         var currency = ExpenseAccess.groupCurrency(group, input.currency());
         return repository.save(new Settlement(groupId, fromUserId, input.toUserId(), input.amount(), currency, status, settledAt));
     }
 
+    /**
+     * Transitions on a row-locked settlement: {@code pending → completed} by the recipient or an admin,
+     * {@code pending → cancelled} by either party. Completed and cancelled are final.
+     */
     @Transactional
-    public Settlement updateStatus(Actor actor, UUID settlementId, String status, Instant settledAt) {
-        var settlement = requireSettlement(settlementId);
+    public Settlement updateStatus(Actor actor, UUID settlementId, String rawStatus) {
+        var status = rawStatus == null ? "" : rawStatus.trim().toLowerCase(java.util.Locale.ROOT);
+        var settlement = repository.findByIdForUpdate(settlementId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Settlement not found"));
         actor.requireAnyOf("Not authorized to update this settlement", settlement.getFromUserId(), settlement.getToUserId());
+        var current = settlement.getStatus() == null ? PENDING : settlement.getStatus().toLowerCase(java.util.Locale.ROOT);
+        if (status.equals(current)) {
+            return settlement;
+        }
+        if (!PENDING.equals(current) || PENDING.equals(status)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A " + current + " settlement cannot become " + status);
+        }
+        if (COMPLETED.equals(status)) {
+            actor.requireAnyOf("Only the person who received the payment can confirm it", settlement.getToUserId());
+            settlement.settledAt = Instant.now();
+        } else if (!CANCELLED.equals(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status must be completed or cancelled");
+        }
         settlement.status = status;
-        settlement.settledAt = "completed".equals(status) ? (settledAt != null ? settledAt : Instant.now()) : settledAt;
         return repository.save(settlement);
     }
 

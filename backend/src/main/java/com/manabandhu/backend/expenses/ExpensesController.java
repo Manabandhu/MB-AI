@@ -144,6 +144,6 @@ public class ExpensesController {
     @PatchMapping("/settlements/{settlementId}")
     Settlement updateSettlement(Authentication authentication, @PathVariable UUID settlementId,
                                 @Valid @RequestBody UpdateSettlementInput input) {
-        return settlementService.updateStatus(Actor.require(authentication), settlementId, input.status(), input.settledAt());
+        return settlementService.updateStatus(Actor.require(authentication), settlementId, input.status());
     }
 }

@@ -157,11 +157,28 @@ export async function recordSettlement(input: {
   const { groupId, ...body } = input;
   return withAmount<Settlement>(
     await parseJsonOrThrow<RawAmount<Settlement>>(
+      // The server decides the status: a payer's record stays pending until the recipient confirms it.
       await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/settlements`, {
         method: 'POST',
-        body: JSON.stringify({ ...body, status: 'completed' }),
+        body: JSON.stringify(body),
       }),
       'Record settlement',
+    ),
+  );
+}
+
+/** The recipient confirms (`completed`) a pending payment; either party may cancel it. */
+export async function updateSettlementStatus(
+  settlementId: string,
+  status: 'completed' | 'cancelled',
+): Promise<Settlement> {
+  return withAmount<Settlement>(
+    await parseJsonOrThrow<RawAmount<Settlement>>(
+      await apiFetch(`/api/v1/expenses/settlements/${encodeURIComponent(settlementId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+      'Update settlement',
     ),
   );
 }

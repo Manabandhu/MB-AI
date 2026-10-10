@@ -455,13 +455,54 @@ await status(
 );
 const owed = (await call('B', 'GET', `/api/v1/expenses/groups/${group?.id}/balances`)).body;
 expect('member owes their equal share', owed?.[0]?.amount, 50);
-await status(
-  'member settles 50',
+const settlement = await status(
+  'member records paying 50',
   201,
   'B',
   'POST',
   `/api/v1/expenses/groups/${group?.id}/settlements`,
+  { toUserId: A, amount: 50, status: 'completed', settledAt: '2000-01-01T00:00:00Z' },
+);
+expect("a payer's record waits for confirmation", settlement?.status, 'pending');
+expect('settledAt is never taken from the client', settlement?.settledAt, null);
+expect(
+  'pending payment does not clear the balance',
+  (await call('A', 'GET', `/api/v1/expenses/groups/${group?.id}/balances`)).body?.length,
+  1,
+);
+await status(
+  'second pending record for the same pair is rejected',
+  409,
+  'B',
+  'POST',
+  `/api/v1/expenses/groups/${group?.id}/settlements`,
   { toUserId: A, amount: 50 },
+);
+await status(
+  'payer cannot confirm their own payment',
+  403,
+  'B',
+  'PATCH',
+  `/api/v1/expenses/settlements/${settlement?.id}`,
+  { status: 'completed' },
+);
+await status(
+  'recipient confirms the payment',
+  200,
+  'A',
+  'PATCH',
+  `/api/v1/expenses/settlements/${settlement?.id}`,
+  {
+    status: 'completed',
+  },
+);
+await status(
+  'completed settlement cannot be reopened',
+  409,
+  'A',
+  'PATCH',
+  `/api/v1/expenses/settlements/${settlement?.id}`,
+  { status: 'pending' },
 );
 expect(
   'group balance is cleared',

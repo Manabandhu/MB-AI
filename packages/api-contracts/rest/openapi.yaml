@@ -1598,7 +1598,10 @@ paths:
     post:
       operationId: createSettlement
       summary: Create settlement
-      description: Records a payment between two members; the caller must be one of them.
+      description: >-
+        Records a payment between two members; the caller must be one of them. The server sets the status and
+        settledAt: the payer's record is pending until the recipient confirms it; a recipient (or admin) may record
+        a received payment as completed. Only one pending record per payer, recipient and group.
       parameters:
         - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -1612,11 +1615,37 @@ paths:
                 fromUserId: { type: string, format: uuid, description: Defaults to the caller }
                 toUserId: { type: string, format: uuid }
                 amount: { type: number, minimum: 0.01 }
-                status: { type: string, enum: [pending, completed, cancelled] }
+                status:
+                  type: string
+                  enum: [pending, completed]
+                  description: A request; completed is honoured only for the recipient or an admin
       responses:
         '201': { description: Recorded settlement }
         '400': { description: Parties are not both group members }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: A pending record between these members already exists }
+  /expenses/settlements/{settlementId}:
+    patch:
+      operationId: updateSettlementStatus
+      summary: Confirm or cancel a settlement
+      description: >-
+        pending → completed by the recipient or an admin (settledAt is set by the server); pending → cancelled by
+        either party. Completed and cancelled are final.
+      parameters:
+        - { name: settlementId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [pending, completed, cancelled] }
+      responses:
+        '200': { description: Updated settlement }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Transition not allowed }
   /posts/communities/{communityId}/join:
     post:
       operationId: joinCommunity

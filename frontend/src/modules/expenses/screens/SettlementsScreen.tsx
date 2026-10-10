@@ -1,9 +1,14 @@
-import { color, radius, space } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
+import { color, palette, radius, space } from '@manabandhu/design-system';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
-import { listSettlements, memberLabel, type Settlement } from '@/modules/expenses/api';
+import {
+  listSettlements,
+  memberLabel,
+  type Settlement,
+  updateSettlementStatus,
+} from '@/modules/expenses/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -14,8 +19,17 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const STATUS_LABEL: Record<Settlement['status'], string> = {
   completed: 'Settled',
-  pending: 'Pending',
+  pending: 'Awaiting confirmation',
   cancelled: 'Cancelled',
+};
+
+const STATUS_TONE: Record<
+  Settlement['status'],
+  { fg: string; bg: string; icon: 'check' | 'clock' | 'close' }
+> = {
+  completed: { fg: palette.success, bg: palette.successBg, icon: 'check' },
+  pending: { fg: palette.warning, bg: palette.goldBg, icon: 'clock' },
+  cancelled: { fg: palette.muted, bg: palette.surfaceContainerLow, icon: 'close' },
 };
 
 export function SettlementsScreen() {
@@ -26,6 +40,14 @@ export function SettlementsScreen() {
     queryFn: listSettlements,
   });
   const name = (userId: string) => memberLabel(userId, currentUserId);
+  const queryClient = useQueryClient();
+  const update = useMutation({
+    mutationFn: (v: { id: string; status: 'completed' | 'cancelled' }) =>
+      updateSettlementStatus(v.id, v.status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+    onError: (err) => Alert.alert('Unable to update settlement', err.message),
+  });
+  const busyId = update.isPending ? update.variables?.id : undefined;
 
   if (isLoading) {
     return (
@@ -70,9 +92,15 @@ export function SettlementsScreen() {
           {settlements.map((s) => (
             <View key={s.id} style={styles.card}>
               <View style={styles.cardTop}>
-                <View style={styles.statusBadge}>
-                  <AppIcon color="#16a34a" name="check" size={14} />
-                  <Text style={styles.statusText}>{STATUS_LABEL[s.status] ?? s.status}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: STATUS_TONE[s.status]?.bg }]}>
+                  <AppIcon
+                    color={STATUS_TONE[s.status]?.fg ?? palette.muted}
+                    name={STATUS_TONE[s.status]?.icon ?? 'check'}
+                    size={14}
+                  />
+                  <Text style={[styles.statusText, { color: STATUS_TONE[s.status]?.fg }]}>
+                    {STATUS_LABEL[s.status] ?? s.status}
+                  </Text>
                 </View>
                 <Text style={styles.dateText}>
                   {new Date(s.settledAt ?? s.createdAt).toLocaleDateString([], {
@@ -96,6 +124,26 @@ export function SettlementsScreen() {
                 </View>
                 <Text style={styles.amountText}>${s.amount.toFixed(2)}</Text>
               </View>
+
+              {s.status === 'pending' ? (
+                <View style={styles.pendingActions}>
+                  {s.toUserId === currentUserId ? (
+                    <AppButton
+                      label="Confirm received"
+                      loading={busyId === s.id}
+                      onPress={() => update.mutate({ id: s.id, status: 'completed' })}
+                    />
+                  ) : (
+                    <Text style={styles.subtext}>Waiting for {name(s.toUserId)} to confirm.</Text>
+                  )}
+                  <AppButton
+                    label="Cancel payment"
+                    loading={busyId === s.id}
+                    onPress={() => update.mutate({ id: s.id, status: 'cancelled' })}
+                    variant="secondary"
+                  />
+                </View>
+              ) : null}
             </View>
           ))}
         </View>
@@ -113,8 +161,9 @@ const styles = StyleSheet.create({
   strong: { fontWeight: '700' },
   list: { gap: space.x3, marginTop: space.x4 },
   actions: { marginTop: space.x6, gap: 12 },
+  pendingActions: { gap: space.x2 },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: palette.surface,
     borderColor: color.border,
     borderRadius: radius.card,
     borderWidth: 1,
@@ -130,13 +179,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(22,163,74,0.08)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  statusText: { fontSize: 11, fontWeight: '700', color: '#16a34a' },
-  dateText: { fontSize: 12, color: '#9ca3af' },
+  statusText: { fontSize: 11, fontWeight: '700' },
+  dateText: { fontSize: 12, color: palette.muted },
   contentRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -146,12 +194,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(67,30,190,0.08)',
+    backgroundColor: palette.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   details: { flex: 1 },
   participants: { fontSize: 14, color: color.ink },
-  subtext: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  amountText: { fontSize: 16, fontWeight: '800', color: '#16a34a' },
+  subtext: { fontSize: 12, color: palette.muted, marginTop: 2 },
+  amountText: { fontSize: 16, fontWeight: '800', color: palette.ink },
 });

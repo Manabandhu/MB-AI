@@ -35,12 +35,19 @@ export function BalancesScreen() {
         toUserId: b.toUserId,
         amount: b.amount,
       }),
-    onSuccess: (_settlement, b) => {
+    onSuccess: (settlement, b) => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      Alert.alert(
-        'Settled Up! 🎉',
-        `Payment of $${b.amount.toFixed(2)} between ${name(b.fromUserId)} and ${name(b.toUserId)} has been recorded.`,
-      );
+      if (settlement.status === 'completed') {
+        Alert.alert(
+          'Settled up',
+          `Payment of $${b.amount.toFixed(2)} from ${name(b.fromUserId)} to ${name(b.toUserId)} has been recorded.`,
+        );
+      } else {
+        Alert.alert(
+          'Waiting for confirmation',
+          `${name(b.toUserId)} needs to confirm they received $${b.amount.toFixed(2)}. The balance updates once they do.`,
+        );
+      }
     },
     onError: (err) => Alert.alert('Unable to record settlement', err.message),
   });
