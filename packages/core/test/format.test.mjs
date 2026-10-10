@@ -39,6 +39,7 @@ test('formatMoney uses currency formatting and absolute option', () => {
 
 test('formatSalaryRange covers each bound and returns null when unlisted', () => {
   assert.equal(formatSalaryRange(80000, 120000), '$80K – $120K / yr');
+  assert.equal(formatMoney(1250, 'USD', { compact: true }), '$1.3K');
   assert.equal(formatSalaryRange(90000, null), 'From $90K / yr');
   assert.equal(formatSalaryRange(null, 50000), 'Up to $50K / yr');
   assert.equal(formatSalaryRange(null, null), null);
@@ -54,4 +55,18 @@ test('formatRelative describes past and future', () => {
 test('formatCount is compact', () => {
   assert.equal(formatCount(1234), '1.2K');
   assert.equal(formatCount(12), '12');
+});
+
+test('formatRelative works without Intl.RelativeTimeFormat (Hermes)', () => {
+  const original = Intl.RelativeTimeFormat;
+  // biome-ignore lint/performance/noDelete: simulate an engine without the API
+  delete Intl.RelativeTimeFormat;
+  try {
+    const now = new Date('2026-03-05T12:00:00Z');
+    assert.equal(formatRelative(new Date('2026-03-05T09:00:00Z'), now), '3 hours ago');
+    assert.equal(formatRelative(new Date('2026-03-04T12:00:00Z'), now), 'yesterday');
+    assert.equal(formatRelative(new Date('2026-03-07T12:00:00Z'), now), 'in 2 days');
+  } finally {
+    Intl.RelativeTimeFormat = original;
+  }
 });

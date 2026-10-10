@@ -53,7 +53,7 @@ export function formatTimeRange(start: DateInput, end?: DateInput): string | nul
   return to ? `${from} – ${to}` : from;
 }
 
-const relativeUnits: [Intl.RelativeTimeFormatUnit, number][] = [
+const relativeUnits: [RelativeUnit, number][] = [
   ['year', 31_536_000],
   ['month', 2_592_000],
   ['week', 604_800],
@@ -62,17 +62,71 @@ const relativeUnits: [Intl.RelativeTimeFormatUnit, number][] = [
   ['minute', 60],
 ];
 
+type RelativeUnit = 'year' | 'month' | 'week' | 'day' | 'hour' | 'minute';
+
+/** English wording used where `Intl.RelativeTimeFormat` is missing (Hermes on iOS/Android does not ship it). */
+function relativeFallback(value: number, unit: RelativeUnit): string {
+  if (unit === 'day' && value === -1) return 'yesterday';
+  if (unit === 'day' && value === 1) return 'tomorrow';
+  const n = Math.abs(value);
+  const label = `${n} ${unit}${n === 1 ? '' : 's'}`;
+  return value < 0 ? `${label} ago` : `in ${label}`;
+}
+
 /** "3 hours ago", "in 2 days", or "just now" under a minute. */
 export function formatRelative(value: DateInput, now: DateInput = Date.now()): string | null {
   const date = toDate(value);
   const reference = toDate(now);
   if (!date || !reference) return null;
   const seconds = Math.round((date.getTime() - reference.getTime()) / 1000);
-  const formatter = new Intl.RelativeTimeFormat(activeLocale, { numeric: 'auto' });
+  const RelativeTimeFormat = typeof Intl !== 'undefined' ? Intl.RelativeTimeFormat : undefined;
+  const formatter =
+    typeof RelativeTimeFormat === 'function'
+      ? new RelativeTimeFormat(activeLocale, { numeric: 'auto' })
+      : null;
   for (const [unit, size] of relativeUnits) {
-    if (Math.abs(seconds) >= size) return formatter.format(Math.round(seconds / size), unit);
+    if (Math.abs(seconds) >= size) {
+      const amount = Math.round(seconds / size);
+      return formatter ? formatter.format(amount, unit) : relativeFallback(amount, unit);
+    }
   }
   return 'just now';
+}
+
+/** 1234 → "1.2K" without relying on `notation: 'compact'`, which some JS engines (Hermes) do not support. */
+function compactNumber(value: number): string {
+  const abs = Math.abs(value);
+  const units: [number, string][] = [
+    [1e9, 'B'],
+    [1e6, 'M'],
+    [1e3, 'K'],
+  ];
+  for (const [size, suffix] of units) {
+    if (abs >= size) return `${(value / size).toFixed(1).replace(/\.0$/, '')}${suffix}`;
+  }
+  return String(Math.round(value));
+}
+
+const knownSymbols: Record<string, string> = {
+  USD: '$',
+  INR: '₹',
+  EUR: '€',
+  GBP: '£',
+  CAD: 'CA$',
+  AUD: 'A$',
+};
+
+function currencySymbol(currency: string): string {
+  if (knownSymbols[currency]) return knownSymbols[currency];
+  try {
+    const parts = new Intl.NumberFormat(activeLocale, {
+      style: 'currency',
+      currency,
+    }).formatToParts(0);
+    return parts.find((part) => part.type === 'currency')?.value ?? `${currency} `;
+  } catch {
+    return `${currency} `;
+  }
 }
 
 export function formatMoney(
@@ -81,13 +135,17 @@ export function formatMoney(
   options: { absolute?: boolean; compact?: boolean } = {},
 ): string {
   const value = options.absolute ? Math.abs(amount) : amount;
+  if (options.compact) {
+    // Format the symbol with a plain currency formatter and the size with our own compact rule.
+    const symbol = currencySymbol(currency);
+    return value < 0 ? `-${symbol}${compactNumber(-value)}` : `${symbol}${compactNumber(value)}`;
+  }
   try {
     return new Intl.NumberFormat(activeLocale, {
       style: 'currency',
       currency,
-      notation: options.compact ? 'compact' : 'standard',
-      maximumFractionDigits: options.compact ? 1 : 2,
-      minimumFractionDigits: options.compact ? 0 : 2,
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
     }).format(value);
   } catch {
     // Unknown currency codes still render rather than crash.
@@ -112,8 +170,5 @@ export function formatSalaryRange(
 
 /** 1234 → "1.2K". */
 export function formatCount(value: number): string {
-  return new Intl.NumberFormat(activeLocale, {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value);
+  return compactNumber(value);
 }
