@@ -14,7 +14,12 @@ if (!baseRef) {
   process.exit(2);
 }
 const ranks = { low: 1, moderate: 2, high: 3, critical: 4 };
-const threshold = ranks[process.env.AUDIT_LEVEL ?? 'moderate'];
+const level = process.env.AUDIT_LEVEL || 'moderate';
+const threshold = ranks[level];
+if (!threshold) {
+  console.error(`AUDIT_LEVEL must be one of ${Object.keys(ranks).join(', ')}; got "${level}".`);
+  process.exit(2);
+}
 
 function advisories(ref) {
   const dir = mkdtempSync(join(tmpdir(), 'audit-'));
@@ -52,7 +57,7 @@ const introduced = [...after].filter(([key]) => !before.has(key)).map(([, a]) =>
 const fixed = [...before.keys()].filter((key) => !after.has(key)).length;
 
 console.log(
-  `Advisories at or above ${process.env.AUDIT_LEVEL ?? 'moderate'}: base ${before.size}, head ${after.size}, fixed ${fixed}.`,
+  `Advisories at or above ${level}: base ${before.size}, head ${after.size}, fixed ${fixed}.`,
 );
 for (const a of introduced) {
   console.error(

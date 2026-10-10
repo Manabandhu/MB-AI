@@ -49,8 +49,9 @@ if (!env.DATABASE_PASSWORD || env.DATABASE_PASSWORD.startsWith('replace-with')) 
   );
   process.exit(1);
 }
+// Connection details come from the environment and may embed credentials, so they are never printed.
 console.log(
-  `Backend → Supabase ${env.DATABASE_URL.replace(/\?.*/, '')} as ${env.DATABASE_USERNAME} (migrations: ${env.SPRING_FLYWAY_ENABLED === 'true' ? 'on' : 'off'})`,
+  `Starting backend against Supabase (migrations ${env.SPRING_FLYWAY_ENABLED === 'true' ? 'on' : 'off'}).`,
 );
 
 const child = spawn('./backend/mvnw', ['-f', 'backend/pom.xml', 'spring-boot:run'], {
