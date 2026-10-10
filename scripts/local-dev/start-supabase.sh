@@ -2,14 +2,14 @@
 # Starts the backend and the Expo web app against the hosted Supabase project instead of local PostgreSQL:
 #   Supabase Postgres (through the connection pooler) + Supabase Auth JWKS -> backend on :8080 -> web app on :8081
 #
-# Usage: scripts/local-dev/start-supabase.sh [--no-migrate] [--build]
-#   --no-migrate  start without running Flyway, so the hosted schema is left untouched
-#   --build       rebuild the backend jar even if one exists
+# Usage: scripts/local-dev/start-supabase.sh [--migrate] [--build]
+#   --migrate  also apply pending Flyway migrations to the hosted database (off by default: local and sandbox runs
+#              leave the hosted schema alone; the deployed backend and the `migrate` workflow apply migrations)
+#   --build    rebuild the backend jar even if one exists
 # Required env:  DATABASE_PASSWORD                    (environment secret; never commit it)
 #                EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY (publishable key, safe for clients)
 # Optional env:  SUPABASE_PROJECT_REF (lpzaioyurvgdysdfktzc)  SUPABASE_POOLER_HOST (aws-0-us-east-2.pooler.supabase.com)
 #
-# Starting without --no-migrate applies any pending Flyway migrations to the hosted database.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -17,10 +17,11 @@ STATE="$ROOT/.local-dev"
 mkdir -p "$STATE"
 REF="${SUPABASE_PROJECT_REF:-lpzaioyurvgdysdfktzc}"
 POOLER="${SUPABASE_POOLER_HOST:-aws-0-us-east-2.pooler.supabase.com}"
-MIGRATE=true BUILD=false
+MIGRATE=false BUILD=false
 for arg in "$@"; do
   case "$arg" in
-    --no-migrate) MIGRATE=false ;;
+    --migrate) MIGRATE=true ;;
+    --no-migrate) MIGRATE=false ;; # the default; accepted for older instructions
     --build) BUILD=true ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
@@ -53,7 +54,7 @@ if curl -sf http://localhost:8080/api/v1/health >/dev/null 2>&1; then
   exit 1
 fi
 
-# Session-mode pooler (port 5432) keeps prepared statements working for Hibernate and Flyway.
+# Session-mode pooler (port 5432) keeps prepared statements working for Hibernate (and Flyway with --migrate).
 DATABASE_URL="jdbc:postgresql://$POOLER:5432/postgres?sslmode=require" \
 DATABASE_USERNAME="postgres.$REF" \
 SPRING_FLYWAY_ENABLED="$MIGRATE" \

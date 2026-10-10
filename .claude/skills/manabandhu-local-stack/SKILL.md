@@ -1,17 +1,27 @@
 ---
 name: manabandhu-local-stack
-description: Run ManaBandhu end to end without Supabase — PostgreSQL + PostGIS, a local JWKS/token minter, the Spring backend, and the Expo web app — then exercise it with real users and screenshots. Use when asked to run, start, demo, smoke-test, or screenshot the app, or to prove a backend or UI change works for real.
+description: Run ManaBandhu end to end against the hosted Supabase database (the default), or optionally on an offline PostgreSQL stack for the authorization smoke test — then exercise it with real users and screenshots. Use when asked to run, start, demo, smoke-test, or screenshot the app, or to prove a backend or UI change works for real.
 ---
 
 # Run ManaBandhu locally
 
-Everything runs on one machine. No Supabase project, real credentials, or network access to Supabase is needed:
-the backend trusts a local signing key, and the database gets small stand-ins for Supabase's `auth` schema.
+**Default: hosted Supabase.** Local and sandbox runs connect straight to the Supabase database with Flyway off; no
+local PostgreSQL is installed. See "Against the hosted Supabase project" below (`pnpm dev:backend` or
+`scripts/local-dev/start-supabase.sh`). Never migrate the hosted database from a laptop or sandbox: the deployed
+backend applies pending migrations on startup and the `migrate` workflow is the manual path. If a branch adds a
+migration the hosted database lacks, Hibernate validation fails at startup; ask the user before applying it (the
+Supabase MCP can apply it, but record the matching `flyway_schema_history` row with Flyway's exact checksum, verified
+against a Flyway-applied copy, or production startup fails validation).
 
-## 1. Backend + database
+**Optional: offline stack** for the authorization smoke test, which needs locally minted logins that Supabase rejects.
+It needs PostgreSQL 16 + PostGIS, which cloud sessions no longer install automatically
+(`sudo apt-get install -y postgresql-16 postgresql-16-postgis-3`). The backend trusts a local signing key, and the
+database gets small stand-ins for Supabase's `auth` schema.
+
+## 1. Offline backend + database
 
 ```bash
-sudo service postgresql start          # PostgreSQL 16 with PostGIS (installed by the cloud session hook)
+sudo service postgresql start          # PostgreSQL 16 with PostGIS (install it first; see above)
 scripts/local-dev/start.sh --reset     # add --build after backend code changes
 ```
 
@@ -71,11 +81,12 @@ you can drive the real flow (welcome → sign up → onboarding → home) with P
 
 ## Against the hosted Supabase project
 
-`scripts/local-dev/start-supabase.sh [--no-migrate] [--build]` runs the backend (:8080) and web app (:8081) against the
-real Supabase database and Auth. It needs network access to `*.supabase.co` and `*.pooler.supabase.com`, the
+`scripts/local-dev/start-supabase.sh [--build]` runs the backend (:8080) and web app (:8081) against the real Supabase
+database and Auth with Flyway off (`--migrate` opts in; ask the user first). `pnpm dev:backend` does the same for the
+backend alone, reading `DATABASE_PASSWORD` from `backend/.env`. It needs network access to `*.supabase.co` and `*.pooler.supabase.com`, the
 `DATABASE_PASSWORD` environment secret, and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (fetch it with the Supabase MCP
-`get_publishable_keys`; never commit it). Without `--no-migrate` pending Flyway migrations are applied to the hosted
-database, so say so before running it. Sign in with real accounts; never mint local tokens against Supabase. If the
+`get_publishable_keys`; never commit it). Sign in with real accounts; never mint local tokens against Supabase. Cloud sandboxes need outbound TCP to the pooler
+(port 5432); if DNS or the connection fails, the environment's network policy blocks it. If the
 pooler host differs, set `SUPABASE_POOLER_HOST` (for example `aws-1-us-east-2.pooler.supabase.com`).
 
 ## Sharing a live link

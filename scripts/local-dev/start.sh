@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# OPTIONAL offline stack, used only for the authorization smoke test (authz-smoke.mjs needs locally minted logins
+# that Supabase rejects). Day-to-day development runs against Supabase: `pnpm dev:backend` or start-supabase.sh.
 # Starts the full backend stack locally without Supabase:
 #   PostgreSQL (must already be running, with PostGIS installed) -> database + Supabase stand-ins + test users
 #   local JWKS server -> Spring Boot backend on :8080 (all Flyway migrations apply on startup)
@@ -23,6 +25,12 @@ for arg in "$@"; do
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
+
+if ! command -v psql >/dev/null 2>&1; then
+  echo "PostgreSQL is not installed. It is only needed for this optional offline stack;" >&2
+  echo "install postgresql-16 and postgresql-16-postgis-3 (sudo apt-get install -y ...) or use start-supabase.sh." >&2
+  exit 1
+fi
 
 # The backend targets Java 25; fall back to a Java 25 install when JAVA_HOME points at an older JDK.
 java_major() { "${1:+$1/bin/}java" -version 2>&1 | sed -nE 's/.*version "([0-9]+).*/\1/p' | head -1; }

@@ -13,14 +13,17 @@ Claude-specific skills, agents, and review rules live in `.claude/` and `REVIEW.
 | Everything CI checks (lint, types, contracts, skills, routes, secrets) | `pnpm verify` |
 | Frontend tests | `pnpm --filter @manabandhu/frontend test` |
 | Backend tests (Java 25) | `cd backend && ./mvnw -q -B test` |
-| Start backend + local DB without Supabase | `scripts/local-dev/start.sh [--reset] [--build]` |
-| Authorization smoke suite (needs the local stack) | `node scripts/local-dev/authz-smoke.mjs` |
+| Run backend (+ web app) against hosted Supabase | `pnpm dev:backend` or `scripts/local-dev/start-supabase.sh [--build]` |
+| Optional offline stack (needs local PostgreSQL) | `scripts/local-dev/start.sh [--reset] [--build]` |
+| Authorization smoke suite (needs the offline stack) | `node scripts/local-dev/authz-smoke.mjs` |
 | Mint a local bearer token | `node scripts/local-dev/auth.mjs mint <uuid> [ADMIN]` |
 | Frontend calls vs backend routes | `pnpm verify:routes` |
 | Screen catalog vs route files | `pnpm verify:screens` |
 | Credential scan of tracked files | `pnpm verify:secrets` |
 
-In cloud sessions `.claude/hooks/session-start.sh` installs pnpm deps, Java 25, Maven deps, and PostgreSQL + PostGIS.
+In cloud sessions `.claude/hooks/session-start.sh` installs pnpm deps, Java 25, and Maven deps. Local and sandbox runs use
+the hosted Supabase database directly with Flyway off; never run migrations from a laptop or sandbox. Migrations reach
+Supabase through the deployed backend's startup or the `migrate` workflow.
 
 ## Non-negotiable rules (each one fixed a real bug in this repo)
 
@@ -43,6 +46,7 @@ In cloud sessions `.claude/hooks/session-start.sh` installs pnpm deps, Java 25, 
 ## Before you hand off
 
 1. `pnpm verify` and the relevant tests pass.
-2. For backend authorization or data changes: run the local stack and `authz-smoke.mjs`; add a check for the new rule.
+2. For backend authorization or data changes: add a service test for the new rule and a check in `authz-smoke.mjs`; run
+   the offline stack and the smoke suite when PostgreSQL is available.
 3. `pnpm review:commit` is clean (module skills updated).
 4. Review the diff against `REVIEW.md`.

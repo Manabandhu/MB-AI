@@ -58,20 +58,26 @@ For Android emulators, replace `localhost` in `frontend/.env.local` with `10.0.2
 
 ## Start the backend
 
-Copy `backend/.env.example` to `backend/.env`, set the database password, then start the backend. The database password must never be committed. Shell environment variables override values from `backend/.env`.
+Local and sandbox runs connect straight to the hosted Supabase database; no local PostgreSQL is needed. Copy
+`backend/.env.example` to `backend/.env`, set `DATABASE_PASSWORD` (Supabase → Project Settings → Database), then start
+the backend. The password must never be committed. Shell environment variables override values from `backend/.env`.
 
 ```bash
 cp backend/.env.example backend/.env
 pnpm dev:backend
 ```
 
-Flyway baselines existing Supabase schemas at version `0`, then applies repository migrations starting with `V1`.
+Local runs never migrate the hosted database (`SPRING_FLYWAY_ENABLED=false`). New `V<n>__*.sql` migrations reach
+Supabase when the deployed backend starts (Flyway baselines at version `0` and applies pending migrations) or through
+the `migrate` workflow. If the pooler host differs for your project, set `SUPABASE_POOLER_HOST`.
 
 For production or serverless deployments, prefer Supabase's transaction pooler connection string instead of the direct database host and keep the Hikari pool small.
 
-## Run the backend against a local database
+## Optional: offline database for the security smoke test
 
-Without a Supabase project you can run everything on a local PostgreSQL 16 with PostGIS:
+Day-to-day development uses Supabase. The offline stack exists only for the authorization smoke test, which needs
+locally minted logins that Supabase rejects. It requires PostgreSQL 16 with PostGIS (`scripts/local-dev/start.sh`
+automates the steps below):
 
 ```bash
 createdb manabandhu
