@@ -70,3 +70,13 @@ test('formatRelative works without Intl.RelativeTimeFormat (Hermes)', () => {
     Intl.RelativeTimeFormat = original;
   }
 });
+
+test('compact numbers promote to the next unit instead of reaching 1000', () => {
+  assert.equal(formatCount(999), '999');
+  assert.equal(formatCount(999.6), '1K');
+  assert.equal(formatCount(999_999), '1M');
+  assert.equal(formatCount(1_250_000), '1.3M');
+  assert.equal(formatCount(999_999_999_999), '1T');
+  assert.equal(formatCount(-1500), '-1.5K');
+  assert.equal(formatMoney(999_999, 'USD', { compact: true }), '$1M');
+});

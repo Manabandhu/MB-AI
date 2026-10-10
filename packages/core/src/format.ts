@@ -95,16 +95,28 @@ export function formatRelative(value: DateInput, now: DateInput = Date.now()): s
 
 /** 1234 → "1.2K" without relying on `notation: 'compact'`, which some JS engines (Hermes) do not support. */
 function compactNumber(value: number): string {
+  const sign = value < 0 ? '-' : '';
   const abs = Math.abs(value);
   const units: [number, string][] = [
-    [1e9, 'B'],
-    [1e6, 'M'],
+    [1, ''],
     [1e3, 'K'],
+    [1e6, 'M'],
+    [1e9, 'B'],
+    [1e12, 'T'],
   ];
-  for (const [size, suffix] of units) {
-    if (abs >= size) return `${(value / size).toFixed(1).replace(/\.0$/, '')}${suffix}`;
+  // Largest unit not above the value; if rounding reaches 1000 of it (999,999 → "1000K"), promote one unit.
+  let index = 0;
+  while (index < units.length - 1 && abs >= (units[index + 1]?.[0] ?? Infinity)) index += 1;
+  const roundTo = (i: number) => {
+    const size = units[i]?.[0] ?? 1;
+    return i === 0 ? Math.round(abs) : Math.round((abs / size) * 10) / 10;
+  };
+  let rounded = roundTo(index);
+  if (rounded >= 1000 && index < units.length - 1) {
+    index += 1;
+    rounded = roundTo(index);
   }
-  return String(Math.round(value));
+  return `${sign}${String(rounded).replace(/\.0$/, '')}${units[index]?.[1] ?? ''}`;
 }
 
 const knownSymbols: Record<string, string> = {
