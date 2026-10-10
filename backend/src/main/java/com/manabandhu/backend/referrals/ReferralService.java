@@ -20,16 +20,37 @@ public class ReferralService {
         this.repository = repository;
     }
 
-    /** The 100 newest referrals, without contact details. */
+    /** The 100 newest open referrals, without contact details. */
     @Transactional(readOnly = true)
     public List<ReferralView> listPublic() {
-        return repository.findTop100ByOrderByCreatedAtDesc().stream().map(r -> ReferralView.of(r, false)).toList();
+        return repository.findTop100ByStatusInOrderByCreatedAtDesc(ReferralsContentService.OPEN_STATUSES).stream()
+                .map(r -> ReferralView.of(r, false)).toList();
     }
 
     @Transactional(readOnly = true)
     public ReferralView viewFor(Actor actor, UUID id) {
-        var referral = require(id);
+        var referral = requireVisible(actor, id);
         return ReferralView.of(referral, actor.admin() || actor.is(referral.getOwnerId()));
+    }
+
+    /**
+     * Open referrals are visible to every signed-in member; closed ones only to the owner, the recipient and admins.
+     * Hidden referrals read as 404 so their existence is not revealed.
+     */
+    @Transactional(readOnly = true)
+    public Referral requireVisible(Actor actor, UUID id) {
+        var referral = require(id);
+        if (!canView(actor, referral)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Referral not found");
+        }
+        return referral;
+    }
+
+    static boolean canView(Actor actor, Referral referral) {
+        if (actor.admin() || actor.is(referral.getOwnerId())) return true;
+        if (referral.getRecipientId() != null && actor.is(referral.getRecipientId())) return true;
+        var status = referral.getStatus() == null ? "" : referral.getStatus().toLowerCase(java.util.Locale.ROOT);
+        return ReferralsContentService.OPEN_STATUSES.contains(status);
     }
 
     /** Fails with 403 unless the caller owns the referral or is an admin. */
@@ -58,7 +79,7 @@ public class ReferralService {
     @Transactional
     public Referral updateStatus(Actor actor, UUID id, String status) {
         var referral = requireOwned(actor, id);
-        referral.status = status;
+        referral.status = status.trim().toLowerCase(java.util.Locale.ROOT);
         referral.updatedAt = java.time.Instant.now();
         return repository.save(referral);
     }

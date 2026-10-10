@@ -65,3 +65,8 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 - Onboarding data (2026-10): V33 removes duplicate `onboarding_options` rows (seeded by V23, V27, and the hosted load-test seed) and adds a unique index on `(step_key, option_key)`; V34 adds the missing `profile-photo` and `complete` rows to `onboarding_steps` (their absence made the `current_step` foreign key reject step 5 saves and onboarding completion) and removes "verified" promises from onboarding copy.
 - Cleanup: `/screens/{screenId}` content services share `foundation/CatalogContent` (real counts only; unreadable counts are omitted). Removed unused input records, repositories, and query methods (immigration/utilities create inputs, `DeviceRegistration*`, `RoomModeration*`).
 - Local and sandbox runs use the hosted Supabase database directly with Flyway off (`pnpm dev:backend` and `start-supabase.sh` default `SPRING_FLYWAY_ENABLED=false`; `--migrate` opts in). Production still migrates on startup and via the `migrate` workflow. V31–V34 were applied to the hosted project on 2026-10-10 through the Supabase MCP, with `flyway_schema_history` rows whose checksums match Flyway exactly, so the hosted schema is at V34. Cloud sessions no longer install PostgreSQL; the offline stack (`start.sh`) is optional and only needed for `authz-smoke.mjs`.
+
+## P0 security hardening log (2026-10-10)
+
+- Immigration: exact public paths replace the wildcard; checklists are caller-owned (`ImmigrationChecklistService.findForOwner`).
+- Referrals: `ReferralService.requireVisible` gates referral, request and offer reads (open → members; closed → owner/recipient/admin; 404 otherwise).

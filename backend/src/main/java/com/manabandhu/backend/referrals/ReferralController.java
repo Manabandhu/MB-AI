@@ -73,8 +73,8 @@ public class ReferralController {
     }
 
     @GetMapping("/{referralId}/request")
-    ReferralRequest request(@PathVariable UUID referralId) {
-        return requestService.findByReferralId(referralId)
+    ReferralRequest request(Authentication authentication, @PathVariable UUID referralId) {
+        return requestService.findForViewer(Actor.require(authentication), referralId)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Referral request not found"));
     }
@@ -87,8 +87,8 @@ public class ReferralController {
     }
 
     @GetMapping("/{referralId}/offer")
-    ReferralOffer offer(@PathVariable UUID referralId) {
-        return offerService.findByReferralId(referralId)
+    ReferralOffer offer(Authentication authentication, @PathVariable UUID referralId) {
+        return offerService.findForViewer(Actor.require(authentication), referralId)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Referral offer not found"));
     }

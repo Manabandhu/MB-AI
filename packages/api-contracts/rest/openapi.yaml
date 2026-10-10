@@ -1691,7 +1691,7 @@ paths:
     get:
       operationId: listPublicReferrals
       summary: List public referrals
-      description: Newest 100 referrals without contact details. Public.
+      description: Newest 100 open (pending, open, active) referrals without contact details. Public.
       security: []
       responses:
         '200': { description: Referrals (contactInfo is always null) }
@@ -1702,6 +1702,30 @@ paths:
       description: Creates an "offer" referral owned by the caller.
       responses:
         '201': { description: Created referral }
+  /referrals/{referralId}/request:
+    get:
+      operationId: getReferralRequestDetails
+      summary: Get referral request details
+      description: >-
+        Open referrals are visible to every signed-in member; closed ones only to the owner, the recipient and
+        admins (404 otherwise).
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Request details }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Not found or not visible to the caller }
+  /referrals/{referralId}/offer:
+    get:
+      operationId: getReferralOfferDetails
+      summary: Get referral offer details
+      description: Same visibility rule as the request details.
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Offer details }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Not found or not visible to the caller }
   /notifications/settings:
     get:
       operationId: getNotificationSettings
@@ -1852,9 +1876,9 @@ components:
         id: { type: string, format: uuid }
         title: { type: string }
         body: { type: string }
-        meta: { type: string, description: Notification type, e.g. RIDE or CHAT }
+        meta: { type: string, description: 'Notification type, e.g. RIDE or CHAT' }
         read: { type: boolean }
-        route: { type: [string, 'null'], description: In-app route to open, when the notification has one }
+        route: { type: [string, 'null'], description: 'In-app route to open, when the notification has one' }
         createdAt: { type: string, format: date-time }
     CatalogScreenContent:
       type: object

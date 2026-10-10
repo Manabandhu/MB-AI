@@ -416,6 +416,44 @@ await status(
   `/api/v1/referrals/${referral?.id}/status`,
   { status: 'closed' },
 );
+await status(
+  'member reads open referral request details',
+  200,
+  'C',
+  'GET',
+  `/api/v1/referrals/${referral?.id}/request`,
+);
+await status(
+  'anonymous cannot read referral request details',
+  401,
+  null,
+  'GET',
+  `/api/v1/referrals/${referral?.id}/request`,
+);
+await status(
+  'owner closes the referral',
+  200,
+  'A',
+  'PATCH',
+  `/api/v1/referrals/${referral?.id}/status`,
+  {
+    status: 'Closed',
+  },
+);
+await status(
+  'stranger cannot read closed referral details',
+  404,
+  'C',
+  'GET',
+  `/api/v1/referrals/${referral?.id}/request`,
+);
+await status(
+  'owner still reads closed referral details',
+  200,
+  'A',
+  'GET',
+  `/api/v1/referrals/${referral?.id}/request`,
+);
 await status('offer-referral endpoint works', 201, 'B', 'POST', '/api/v1/referrals/offer', {
   title: 'I can refer',
   serviceType: 'referral',
