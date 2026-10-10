@@ -134,3 +134,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Each business module exposes `module.ts` (`moduleMeta`: key, label, summary, route, icon, tone, category, defaultRank, surfaces) and a public `index.ts`. Cross-module imports go through `index.ts` only.
 - `app.json`: `orientation: default`, `ios.supportsTablet`, brand adaptive-icon colour, dark splash, web manifest name/theme colour. `app.config.js` adds iOS associated domains and Android App Links when `APP_LINK_DOMAIN` is set.
 - `metro.config.js` enables Expo production tree shaking (`EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH`, `EXPO_UNSTABLE_TREE_SHAKING`, `experimentalImportSupport`, `inlineRequires`). The web entry bundle went from 7.6 MB to 5.2 MB. Import large libraries by subpath where they offer it.
+- 3D: `three@0.186.1` and `@react-three/fiber@9.8.1` are used on web only through the lazily loaded `shared/ui/hero/BrandScene.web.tsx`; native builds never import them.

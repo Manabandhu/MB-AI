@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useShellContent } from '@/modules/foundation/shell/shellApi';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { CountUp } from '@/modules/shared/ui/motion/CountUp';
 import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
@@ -36,9 +37,7 @@ function CommunityPulse() {
             paddingHorizontal="$x3"
             paddingVertical="$x1"
           >
-            <AppText tone="primary" variant="bodyStrong">
-              {metric.value}
-            </AppText>
+            <CountUp tone="primary" value={metric.value} variant="bodyStrong" />
             <AppText tone="muted" variant="caption">
               {metric.label}
             </AppText>

@@ -32,3 +32,7 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 ## History
 - Stitch "ManaBandhu Modern Vibrant" (`assets/18105029676315711182`, project `9663298292574415459`) set the palette: primary `#431ebe`, primaryContainer `#5b3fd6`, teal `#00696b`, warm `#ff7e33`, background `#faf8ff`, surface `#ffffff`.
 - Auth surfaces use `frontend/src/modules/auth/components/AuthKit.tsx` (32pt titles, 52pt fields/buttons, 14pt radius, 460pt card at ≥600pt) with `BrandMark` as the logo.
+## Motion and 3D (2026-10)
+- Motion primitives in `shared/ui/motion/`: `FadeIn` (staggered entrance), `AnimatedBrandMark` (tile springs in, saffron dot drops, gentle float), `CountUp` (animates real numeric metrics only). All are static with reduced motion.
+- `shared/ui/hero/BrandHero3D`: on web, a lazily imported three.js / react-three-fiber scene (`BrandScene.web.tsx`: extruded logo tile, white arches, orbiting community spheres, pointer parallax; `flat` to keep brand colours). It renders only when `richMotion` is on and WebGL is available, and shows `AnimatedBrandMark` while loading or otherwise. Native uses `AnimatedBrandMark` until an `expo-gl` scene is verified on devices. three.js is fetched only when a hero is shown.
+- Deliberately not added: Lottie (needs licensed assets and a separate web player) and Skia (CanvasKit adds about 3 MB of wasm on web). SVG gradients (`GradientSurface`) and Reanimated cover the same effects at no extra cost. Revisit if a design needs them.
