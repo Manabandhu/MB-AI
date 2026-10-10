@@ -1,4 +1,4 @@
-import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import { color as baseColors, palette, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,16 +25,16 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
   ...baseColors,
-  appPrimary: '#431ebe',
-  teal: '#00696b',
+  appPrimary: palette.primary,
+  teal: palette.teal,
   tealSoft: 'rgba(0,105,107,0.08)',
-  ink: '#131b2e',
-  background: '#faf8ff',
+  ink: palette.ink,
+  background: palette.background,
   surface: '#ffffff',
-  surfaceContainerLow: '#f2f3ff',
-  border: '#e2e8f0',
-  muted: '#625f6e',
-  danger: '#ba1a1a',
+  surfaceContainerLow: palette.surfaceContainerLow,
+  border: palette.border,
+  muted: palette.muted,
+  danger: palette.error,
   dangerSoft: '#ffdad6',
 };
 

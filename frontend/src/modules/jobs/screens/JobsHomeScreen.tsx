@@ -1,5 +1,5 @@
 import { formatSalaryRange } from '@manabandhu/core';
-import { color as baseColors, radius } from '@manabandhu/design-system';
+import { color as baseColors, breakpoint, palette, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -25,9 +25,9 @@ const colors = {
   ...baseColors,
   canvas: '#ffffff',
   canvasMuted: '#f8f9fe',
-  accentBrand: '#431ebe',
+  accentBrand: palette.primary,
   inkSecondary: baseColors.muted,
-  borderSubtle: '#e2e8f0',
+  borderSubtle: palette.border,
   danger: '#ef4444',
 };
 
@@ -75,7 +75,7 @@ const QUICK_TAGS = [
 export function JobsHomeScreen(_props: { screenId?: string }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
   const { session } = useAuthStore();
 
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);

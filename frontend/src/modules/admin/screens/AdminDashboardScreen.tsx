@@ -1,4 +1,4 @@
-import { color, radius, space, typography } from '@manabandhu/design-system';
+import { color, palette, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -93,7 +93,7 @@ export default function AdminDashboardScreen() {
       value: openReports.length,
       label: 'Open Reports',
       sub: 'Awaiting moderation',
-      tone: { border: '#fde68a', bg: '#fffbeb', fg: '#b45309' },
+      tone: { border: '#fde68a', bg: '#fffbeb', fg: palette.goldText },
     },
     {
       value: flaggedListings,
@@ -111,7 +111,7 @@ export default function AdminDashboardScreen() {
       value: listingCount,
       label: 'Listings',
       sub: 'Across moderated modules',
-      tone: { border: '#e2e8f0', bg: '#ffffff', fg: color.primary },
+      tone: { border: palette.border, bg: '#ffffff', fg: color.primary },
     },
   ];
 

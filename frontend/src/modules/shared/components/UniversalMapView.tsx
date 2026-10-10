@@ -1,4 +1,4 @@
-import { color as colors } from '@manabandhu/design-system';
+import { color as colors, palette } from '@manabandhu/design-system';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: palette.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 22,
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: palette.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.18,
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: palette.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,

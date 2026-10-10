@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -26,10 +27,10 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
 const C = {
-  primary: '#431ebe',
-  secondary: '#00696b',
-  accent: '#ff7e33',
-  bg: '#faf8ff',
+  primary: palette.primary,
+  secondary: palette.teal,
+  accent: palette.warm,
+  bg: palette.background,
   cardBg: '#FFFFFF',
   border: '#E8E5F2',
   ink: '#1B1829',
@@ -39,14 +40,14 @@ const C = {
   crimson: '#DC2626',
   crimsonBg: '#FEE2E2',
   tealBg: '#E0F5F5',
-  saffronBg: '#FFF0E8',
+  saffronBg: palette.warmBg,
 };
 
 export function SafetyCenterScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const _isCompact = width < 360;
-  const isDesktop = width >= 768;
+  const _isCompact = width < breakpoint.narrow;
+  const isDesktop = width >= breakpoint.medium;
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -115,8 +116,8 @@ export function SafetyCenterScreen() {
       title: 'Safety Reports',
       subtitle: 'Track your submitted incident reports and community moderation updates',
       route: '/safety/reports',
-      bg: '#FEF3C7',
-      iconColor: '#B45309',
+      bg: palette.goldBg,
+      iconColor: palette.goldText,
     },
     {
       id: 'blocked',

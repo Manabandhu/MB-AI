@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,22 +7,22 @@ import { useMapPreferencesStore } from '@/modules/shared/stores/mapPreferencesSt
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const C = {
-  primary: '#431ebe', // Royal Indigo
-  secondary: '#00696b', // Deep Teal
-  bg: '#faf8ff', // Soft pristine canvas
+  primary: palette.primary, // Royal Indigo
+  secondary: palette.teal, // Deep Teal
+  bg: palette.background, // Soft pristine canvas
   cardBg: '#ffffff',
-  border: '#e2e8f0',
-  ink: '#131b2e',
-  inkMuted: '#625f6e',
-  tealBg: '#e6f4f4',
-  saffronBg: '#fff0e8',
-  danger: '#ba1a1a',
+  border: palette.border,
+  ink: palette.ink,
+  inkMuted: palette.muted,
+  tealBg: palette.tealBg,
+  saffronBg: palette.warmBg,
+  danger: palette.error,
 };
 
 export function SettingsScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
 
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);

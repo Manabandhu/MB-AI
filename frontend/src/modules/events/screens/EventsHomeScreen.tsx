@@ -1,5 +1,5 @@
 import { formatDate } from '@manabandhu/core';
-import { color as baseColors, radius } from '@manabandhu/design-system';
+import { color as baseColors, breakpoint, palette, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -22,10 +22,10 @@ const colors = {
   ...baseColors,
   canvas: '#ffffff',
   canvasMuted: '#f8f9fe',
-  accentBrand: '#431ebe',
-  warm: '#ff7e33',
+  accentBrand: palette.primary,
+  warm: palette.warm,
   inkSecondary: baseColors.muted,
-  borderSubtle: '#e2e8f0',
+  borderSubtle: palette.border,
   danger: '#ef4444',
 };
 
@@ -41,8 +41,8 @@ const sp = {
 export default function EventsHomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isCompact = width < 360;
-  const _isDesktop = width >= 768;
+  const isCompact = width < breakpoint.narrow;
+  const _isDesktop = width >= breakpoint.medium;
   const { session } = useAuthStore();
 
   const [query, setQuery] = useState('');

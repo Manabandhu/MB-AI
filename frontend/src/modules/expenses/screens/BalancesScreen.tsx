@@ -1,4 +1,4 @@
-import { color, radius, space } from '@manabandhu/design-system';
+import { color, palette, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -142,7 +142,7 @@ export function BalancesScreen() {
                     onPress={() => settle.mutate(b)}
                     style={styles.settleBtn}
                   >
-                    <AppIcon color="#431ebe" name="check" size={14} />
+                    <AppIcon color={palette.primary} name="check" size={14} />
                     <Text style={styles.settleBtnText}>
                       {isSettling ? 'Settling...' : 'Settle Up'}
                     </Text>

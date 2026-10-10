@@ -164,3 +164,5 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected`.
 - `savedRoomsStore` persists through the shared `persistentStorage` adapter (`frontend/src/lib/persistentStorage.ts`).
 - Public API: `rooms/index.ts` exports `moduleMeta` and `RoomsHomeWidget` (four newest listings in the member's chosen city via `listRoomListings({ size: 4, city, state })`, or nationwide).
 - The Home widget query sets `meta: persistMeta` (public listings only) so it survives app restarts for 24 h.
+- Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.
+- `screens/RoomListScreens.tsx` was split into `RoomFavoritesScreen.tsx` and `RoomMyListingsScreen.tsx` (shared `roomListStyles.ts`); `RoomForm` moved to `components/RoomForm.tsx` because it is not a screen.

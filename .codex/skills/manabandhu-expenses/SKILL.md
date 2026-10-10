@@ -92,3 +92,4 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 - Amounts render with `formatMoney(amount, currency, { absolute: true })` from `@manabandhu/core`; the sign is conveyed by the surrounding "+" / "You owe" copy.
 - Review follow-up: `ExpensesHomeScreen` uses the `color.warm` design-system token instead of a hard-coded `#ff7e33`, and `formatDate(…, "short")` from `@manabandhu/core` for settlement dates.
 - Public API: `expenses/index.ts` exports `moduleMeta` (launcher entry).
+- Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.

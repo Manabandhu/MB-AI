@@ -36,5 +36,7 @@ jobs:
         run: node scripts/verify-contracts.mjs
       - name: Verify frontend calls match backend routes
         run: node scripts/verify-api-routes.mjs
+      - name: Verify design-system ratchet
+        run: node scripts/verify-design-system.mjs
       - name: Scan tracked files for credentials
         run: node scripts/verify-no-secrets.mjs

@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -20,17 +21,17 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
 const C = {
-  primary: '#431ebe',
-  secondary: '#00696b',
-  bg: '#faf8ff',
+  primary: palette.primary,
+  secondary: palette.teal,
+  bg: palette.background,
   cardBg: '#ffffff',
-  border: '#e2e8f0',
-  ink: '#131b2e',
-  inkMuted: '#625f6e',
-  emerald: '#1b873f',
-  emeraldBg: '#e6f7ed',
-  tealBg: '#e6f4f4',
-  saffronBg: '#fff0e8',
+  border: palette.border,
+  ink: palette.ink,
+  inkMuted: palette.muted,
+  emerald: palette.success,
+  emeraldBg: palette.successBg,
+  tealBg: palette.tealBg,
+  saffronBg: palette.warmBg,
 };
 
 function getCategoryIcon(title: string): { icon: AppIconName; bg: string; color: string } {
@@ -42,7 +43,7 @@ function getCategoryIcon(title: string): { icon: AppIconName; bg: string; color:
     return { icon: 'car', bg: '#CCFBF1', color: '#0F766E' };
   }
   if (t.includes('job') || t.includes('referral') || t.includes('interview')) {
-    return { icon: 'briefcase', bg: '#FEF3C7', color: '#B45309' };
+    return { icon: 'briefcase', bg: palette.goldBg, color: palette.goldText };
   }
   if (t.includes('event') || t.includes('festival') || t.includes('meetup')) {
     return { icon: 'calendar', bg: '#FEE2E2', color: '#DC2626' };
@@ -56,8 +57,8 @@ function getCategoryIcon(title: string): { icon: AppIconName; bg: string; color:
 export function NotificationsInboxScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const _isCompact = width < 360;
-  const isDesktop = width >= 768;
+  const _isCompact = width < breakpoint.narrow;
+  const isDesktop = width >= breakpoint.medium;
 
   const [query, setQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread'>('all');

@@ -1,5 +1,5 @@
 import { formatDate, formatTimeRange } from '@manabandhu/core';
-import { color as baseColors, radius } from '@manabandhu/design-system';
+import { color as baseColors, palette, radius } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,10 +18,10 @@ const colors = {
   ...baseColors,
   canvas: '#ffffff',
   canvasMuted: '#f8f9fe',
-  accentBrand: '#431ebe',
-  warm: '#ff7e33',
+  accentBrand: palette.primary,
+  warm: palette.warm,
   inkSecondary: baseColors.muted,
-  borderSubtle: '#e2e8f0',
+  borderSubtle: palette.border,
   danger: '#ef4444',
 };
 

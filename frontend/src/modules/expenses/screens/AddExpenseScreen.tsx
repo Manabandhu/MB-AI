@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -19,12 +20,12 @@ import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const C = {
-  primary: '#431ebe',
+  primary: palette.primary,
   primarySoft: 'rgba(67,30,190,0.08)',
-  teal: '#00696b',
+  teal: palette.teal,
   tealSoft: 'rgba(0,105,107,0.08)',
-  accent: '#ff7e33',
-  bg: '#faf8ff',
+  accent: palette.warm,
+  bg: palette.background,
   cardBg: '#ffffff',
   border: '#e8e5f2',
   ink: '#1b1829',
@@ -45,7 +46,7 @@ const CATEGORIES = [
 export function AddExpenseScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
 
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -173,7 +174,7 @@ export function AddExpenseScreen() {
           {/* Error Banner */}
           {error ? (
             <View style={s.errorBanner}>
-              <AppIcon color="#ba1a1a" name="warning" size={18} />
+              <AppIcon color={palette.error} name="warning" size={18} />
               <Text style={s.errorBannerText}>{error}</Text>
             </View>
           ) : null}
@@ -359,7 +360,7 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   errorBannerText: {
-    color: '#ba1a1a',
+    color: palette.error,
     fontSize: 13,
     fontWeight: '600',
     flex: 1,

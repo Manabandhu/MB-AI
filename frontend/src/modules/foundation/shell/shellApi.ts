@@ -26,5 +26,7 @@ export function useShellContent(kind: ShellKind) {
     queryKey: shellQueryKey(kind),
     queryFn: () => getShellContent(kind),
     staleTime: 60_000,
+    // Public aggregate counts may be kept on the device; personal shells (chat, saved, profile) never are.
+    meta: kind === 'home' || kind === 'community' || kind === 'explore' ? persistMeta : undefined,
   });
 }

@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -21,15 +22,15 @@ import { getUtilitiesHome } from '@/modules/utilities/api';
 // prices: those would be invented. Counts are not shown until the backend serves real ones per user.
 
 const C = {
-  primary: '#431ebe',
+  primary: palette.primary,
   primaryMuted: '#ece8ff',
-  teal: '#00696b',
+  teal: palette.teal,
   tealMuted: '#e0f5f5',
-  accent: '#ff7e33',
-  accentMuted: '#fff0e8',
+  accent: palette.warm,
+  accentMuted: palette.warmBg,
   emerald: '#16a34a',
   emeraldMuted: '#dcfce7',
-  bg: '#faf8ff',
+  bg: palette.background,
   cardBg: '#ffffff',
   border: '#e8e5f2',
   ink: '#1b1829',
@@ -39,7 +40,7 @@ const C = {
 export function UtilitiesHomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
   const [searchQuery, setSearchQuery] = useState('');
 
   const home = useQuery({

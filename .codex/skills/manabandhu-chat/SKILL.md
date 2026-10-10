@@ -93,3 +93,4 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 - Chat list no longer carries presence/verification fields or badge rendering; they return when the backend tracks them.
 - Cleanup: deleted the unused `ChatListScreen.tsx`; the `/chat` tab is `foundation/screens/shell/ChatShell.tsx`. Removed unused chat API exports and repository methods.
 - Public API: `chat/index.ts` exports `moduleMeta` and `listConversations`/`Conversation` for the foundation Chat tab.
+- Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.

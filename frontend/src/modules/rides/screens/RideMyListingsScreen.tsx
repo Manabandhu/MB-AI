@@ -1,6 +1,7 @@
 import {
   color as colors,
   contentWidth,
+  palette,
   radius,
   space,
   typography,
@@ -262,7 +263,7 @@ export function RideMyListingsScreen() {
                         ]}
                       >
                         {statusUpdatingId === ride.id ? (
-                          <ActivityIndicator size="small" color="#431ebe" />
+                          <ActivityIndicator size="small" color={palette.primary} />
                         ) : (
                           <Text
                             style={[
@@ -412,14 +413,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#faf8ff',
+    backgroundColor: palette.background,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     marginTop: 4,
     marginBottom: 4,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
   },
   statusPillWrap: {
     flexDirection: 'row',

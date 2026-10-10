@@ -85,7 +85,14 @@ export function paletteFor(scheme: ColorScheme) {
   return scheme === 'dark' ? darkPalette : palette;
 }
 
-export const breakpoint = { compact: 0, medium: 600, expanded: 1024, wide: 1440 } as const;
+/** Window classes start at these widths. `narrow` marks cover screens and very small phones inside `compact`. */
+export const breakpoint = {
+  compact: 0,
+  narrow: 360,
+  medium: 600,
+  expanded: 1024,
+  wide: 1440,
+} as const;
 export const contentWidth = { compact: 560, medium: 880, expanded: 1200, wide: 1320 } as const;
 export const space = {
   x1: 4,

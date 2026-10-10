@@ -85,3 +85,4 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - Salaries render with `formatSalaryRange` from `@manabandhu/core` (compact on the list, full amounts on the detail screen); an unlisted salary shows "Salary not listed" / "Not listed", never an invented label.
 - Public API: `jobs/index.ts` exports `moduleMeta` and `JobsHomeWidget` (three newest postings).
 - The Home widget query sets `meta: persistMeta` (public listings only) so it survives app restarts for 24 h.
+- Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.

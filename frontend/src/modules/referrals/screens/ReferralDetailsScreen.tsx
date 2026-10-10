@@ -1,4 +1,4 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
+import { breakpoint, color as colors, palette, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -28,7 +28,7 @@ export function ReferralDetailsScreen() {
   const { referralId } = useLocalSearchParams<{ referralId: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
   const authStatus = useAuthStore((s) => s.status);
   const signedIn = authStatus === 'authenticated';
 
@@ -100,9 +100,9 @@ export function ReferralDetailsScreen() {
 
   function getCompanyInitials(title: string): { letter: string; color: string; bg: string } {
     const lower = title.toLowerCase();
-    if (lower.includes('google')) return { letter: 'G', color: '#2563EB', bg: '#EFF6FF' };
+    if (lower.includes('google')) return { letter: 'G', color: palette.info, bg: '#EFF6FF' };
     if (lower.includes('microsoft')) return { letter: 'M', color: '#0284C7', bg: '#F0F9FF' };
-    if (lower.includes('amazon')) return { letter: 'A', color: '#D97706', bg: '#FFFBEB' };
+    if (lower.includes('amazon')) return { letter: 'A', color: palette.warning, bg: '#FFFBEB' };
     if (lower.includes('apple')) return { letter: '', color: '#1E1B4B', bg: '#F8FAFC' };
     if (lower.includes('meta')) return { letter: 'M', color: '#0866FF', bg: '#EFF6FF' };
     return { letter: title.charAt(0).toUpperCase() || 'R', color: colors.primary, bg: '#EEF2FF' };
@@ -325,8 +325,8 @@ export function ReferralDetailsScreen() {
           {/* Bento Card 4: What to Prepare */}
           <View style={styles.bentoCard}>
             <View style={styles.sectionTitleRow}>
-              <View style={[styles.sectionIconCircle, { backgroundColor: '#FEF3C7' }]}>
-                <AppIcon name="book" size={15} color="#D97706" />
+              <View style={[styles.sectionIconCircle, { backgroundColor: palette.goldBg }]}>
+                <AppIcon name="book" size={15} color={palette.warning} />
               </View>
               <Text style={styles.sectionTitle}>What to Prepare Before Requesting</Text>
             </View>
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   headerBar: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: palette.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
     padding: space.x4,
     gap: space.x3,
   },
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
     position: 'relative',
   },
   companyLogoText: {
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     gap: 5,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 8,
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
     paddingVertical: 10,
     alignItems: 'center',
   },
@@ -755,7 +755,7 @@ const styles = StyleSheet.create({
   termsLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#B45309',
+    color: palette.goldText,
   },
   termsValue: {
     fontSize: 12,
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: space.x3,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
   },
   criteriaBullet: {
     width: 28,
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
   },
   criteriaContent: {
     flex: 1,
@@ -877,7 +877,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: palette.border,
     paddingHorizontal: space.x4,
     paddingVertical: space.x3,
   },
@@ -900,7 +900,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: radius.control,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
   },
   secondaryActionBtnText: {
     fontSize: 14,

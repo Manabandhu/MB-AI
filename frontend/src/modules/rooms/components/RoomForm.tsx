@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import { color as baseColors, palette, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import type { Href } from 'expo-router';
@@ -42,17 +42,17 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
   ...baseColors,
-  appPrimary: '#431ebe',
-  primarySoft: '#e5deff',
-  teal: '#00696b',
+  appPrimary: palette.primary,
+  primarySoft: palette.primarySoft,
+  teal: palette.teal,
   tealSoft: 'rgba(0,105,107,0.08)',
-  ink: '#131b2e',
-  background: '#faf8ff',
+  ink: palette.ink,
+  background: palette.background,
   surface: '#ffffff',
-  surfaceContainerLow: '#f2f3ff',
-  border: '#e2e8f0',
-  muted: '#625f6e',
-  danger: '#ba1a1a',
+  surfaceContainerLow: palette.surfaceContainerLow,
+  border: palette.border,
+  muted: palette.muted,
+  danger: palette.error,
   dangerSoft: '#ffdad6',
 };
 
@@ -856,7 +856,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: space.x3,
-    shadowColor: '#431ebe',
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,

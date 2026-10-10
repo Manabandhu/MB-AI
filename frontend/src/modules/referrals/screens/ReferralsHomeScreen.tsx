@@ -1,4 +1,4 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
+import { breakpoint, color as colors, palette, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -33,7 +33,7 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
   const isMine = screenId === 'mine';
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
 
   const [activeTab, setActiveTab] = useState<TabType>('offers');
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
@@ -92,9 +92,9 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
 
   function getCompanyInitials(title: string): { letter: string; color: string; bg: string } {
     const lower = title.toLowerCase();
-    if (lower.includes('google')) return { letter: 'G', color: '#2563EB', bg: '#EFF6FF' };
+    if (lower.includes('google')) return { letter: 'G', color: palette.info, bg: '#EFF6FF' };
     if (lower.includes('microsoft')) return { letter: 'M', color: '#0284C7', bg: '#F0F9FF' };
-    if (lower.includes('amazon')) return { letter: 'A', color: '#D97706', bg: '#FFFBEB' };
+    if (lower.includes('amazon')) return { letter: 'A', color: palette.warning, bg: '#FFFBEB' };
     if (lower.includes('apple')) return { letter: '', color: '#1E1B4B', bg: '#F8FAFC' };
     if (lower.includes('meta')) return { letter: 'M', color: '#0866FF', bg: '#EFF6FF' };
     return { letter: title.charAt(0).toUpperCase() || 'R', color: colors.primary, bg: '#EEF2FF' };
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   headerArea: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: palette.border,
     paddingTop: space.x2,
   },
   topRow: {
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   teluguPillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#D97706',
+    color: palette.warning,
   },
   freePill: {
     flexDirection: 'row',
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.x3,
     height: 42,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
     gap: space.x2,
   },
   searchInput: {
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.control,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: radius.pill,
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
     paddingVertical: space.x3,
     alignItems: 'center',
   },
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: palette.border,
     borderRadius: radius.control,
     padding: 3,
     gap: 4,
@@ -839,7 +839,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
     padding: space.x4,
     gap: space.x3,
   },
@@ -855,7 +855,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
   },
   companyAvatarText: {
     fontSize: 18,
@@ -1026,7 +1026,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
   },
   modalOptionBtnActive: {
     backgroundColor: '#EEF2FF',

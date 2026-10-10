@@ -1,4 +1,4 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
+import { color as colors, palette, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -427,7 +427,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.x3,
-    backgroundColor: '#e6f4f4',
+    backgroundColor: palette.tealBg,
     padding: space.x3,
     borderRadius: radius.card,
     borderWidth: 1,

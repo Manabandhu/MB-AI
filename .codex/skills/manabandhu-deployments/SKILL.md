@@ -21,3 +21,4 @@ description: Maintain ManaBandhu build, CI/CD, environments, releases, migration
 14. The `migrate` workflow also passes `-ignoreMigrationPatterns='*:missing'` because the hosted database has a V29 applied outside the repository.
 - `CI · Dependency Review` checks whether the dependency graph is enabled; if so it runs `actions/dependency-review-action`, otherwise it warns and runs `scripts/audit-new-vulnerabilities.mjs <base> <head>`, which fails only on pnpm advisories (moderate and above) the PR introduces. Maven dependencies are only reviewed once the dependency graph is on.
 - `CI · Frontend` also triggers on `packages/core/**` and runs `pnpm test:packages` (shared package tests) before the frontend tests.
+- `CI · Governance` runs `scripts/verify-design-system.mjs` (design-system ratchet) after the route check.

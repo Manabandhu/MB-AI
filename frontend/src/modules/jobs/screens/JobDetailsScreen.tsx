@@ -1,5 +1,5 @@
 import { formatSalaryRange } from '@manabandhu/core';
-import { color as baseColors, radius } from '@manabandhu/design-system';
+import { color as baseColors, breakpoint, palette, radius } from '@manabandhu/design-system';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,9 +26,9 @@ const colors = {
   ...baseColors,
   canvas: '#ffffff',
   canvasMuted: '#f8f9fe',
-  accentBrand: '#431ebe',
+  accentBrand: palette.primary,
   inkSecondary: baseColors.muted,
-  borderSubtle: '#e2e8f0',
+  borderSubtle: palette.border,
   danger: '#ef4444',
 };
 
@@ -45,7 +45,7 @@ export function JobDetailsScreen() {
   const router = useRouter();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
   const { session } = useAuthStore();
 
   const [referralModalVisible, setReferralModalVisible] = useState(false);
@@ -478,7 +478,7 @@ const s = StyleSheet.create({
   compValue: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#431ebe',
+    color: palette.primary,
   },
   jobMetaRow: {
     flexDirection: 'row',

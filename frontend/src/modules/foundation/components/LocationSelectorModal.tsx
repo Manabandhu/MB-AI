@@ -1,4 +1,4 @@
-import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import { color as baseColors, palette, radius, space } from '@manabandhu/design-system';
 import { useMemo, useState } from 'react';
 import {
   FlatList,
@@ -20,9 +20,9 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
   ...baseColors,
-  appPrimary: '#431ebe',
-  surfaceContainerLow: '#f2f3ff',
-  teal: '#00696b',
+  appPrimary: palette.primary,
+  surfaceContainerLow: palette.surfaceContainerLow,
+  teal: palette.teal,
 };
 
 interface LocationSelectorModalProps {

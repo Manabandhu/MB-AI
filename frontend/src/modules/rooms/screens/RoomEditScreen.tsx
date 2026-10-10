@@ -3,9 +3,9 @@ import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getRoomForOwner } from '@/modules/rooms/api';
+import { RoomForm } from '@/modules/rooms/components/RoomForm';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { RoomForm } from './RoomForm';
 
 export function RoomEditScreen() {
   const { roomId } = useLocalSearchParams<{ roomId: string }>();

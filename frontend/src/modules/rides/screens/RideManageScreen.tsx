@@ -1,4 +1,4 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
+import { color as colors, palette, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -311,13 +311,13 @@ export function RideManageScreen() {
                       onPress={handleToggleDeactivate}
                     >
                       {actionLoading === 'toggle' ? (
-                        <ActivityIndicator color="#431ebe" size="small" />
+                        <ActivityIndicator color={palette.primary} size="small" />
                       ) : (
                         <>
                           <AppIcon
                             name={isActive ? 'warning' : 'check'}
                             size={16}
-                            color={isActive ? '#ba1a1a' : '#16a34a'}
+                            color={isActive ? palette.error : '#16a34a'}
                           />
                           <Text
                             style={[
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   },
   toggleDeactivateBtnActive: {
     backgroundColor: 'rgba(186,26,26,0.06)',
-    borderColor: '#ba1a1a',
+    borderColor: palette.error,
   },
   toggleDeactivateBtnInactive: {
     backgroundColor: 'rgba(22,163,74,0.08)',
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   toggleDeactivateTextDanger: {
-    color: '#ba1a1a',
+    color: palette.error,
   },
   toggleDeactivateTextSuccess: {
     color: '#16a34a',

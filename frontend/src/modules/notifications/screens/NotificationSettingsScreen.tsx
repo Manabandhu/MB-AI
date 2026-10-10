@@ -1,4 +1,4 @@
-import { radius, space } from '@manabandhu/design-system';
+import { breakpoint, palette, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -22,20 +22,20 @@ import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
 // Visual Design Tokens
 const C = {
-  primary: '#431ebe',
-  secondary: '#00696b',
-  bg: '#faf8ff',
+  primary: palette.primary,
+  secondary: palette.teal,
+  bg: palette.background,
   surface: '#ffffff',
   surfaceSubtle: '#f4f2ff',
   border: '#e8e5f5',
-  ink: '#131b2e',
-  inkMuted: '#625f6e',
-  emerald: '#1b873f',
-  emeraldBg: '#e6f7ed',
-  teal: '#00696b',
-  tealBg: '#e6f4f4',
-  amber: '#b45309',
-  amberBg: '#fef3c7',
+  ink: palette.ink,
+  inkMuted: palette.muted,
+  emerald: palette.success,
+  emeraldBg: palette.successBg,
+  teal: palette.teal,
+  tealBg: palette.tealBg,
+  amber: palette.goldText,
+  amberBg: palette.goldBg,
   rose: '#dc2626',
   roseBg: '#fee2e2',
   purple: '#6d28d9',
@@ -148,7 +148,7 @@ export function NotificationSettingsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
 
   // Local optimistic preference state
   const [preferences, setPreferences] = useState<Record<string, boolean>>({
@@ -432,7 +432,7 @@ export function NotificationSettingsScreen() {
                         disabled={ch.locked || !preferences.allNotifications}
                         onValueChange={(val) => handleToggle(ch.key, val)}
                         thumbColor="#ffffff"
-                        trackColor={{ false: '#e2e8f0', true: C.secondary }}
+                        trackColor={{ false: palette.border, true: C.secondary }}
                         value={isEnabled}
                       />
                     </View>
@@ -487,7 +487,7 @@ export function NotificationSettingsScreen() {
                         disabled={item.locked || !preferences.allNotifications}
                         onValueChange={(val) => handleToggle(item.key, val)}
                         thumbColor="#ffffff"
-                        trackColor={{ false: '#e2e8f0', true: C.primary }}
+                        trackColor={{ false: palette.border, true: C.primary }}
                         value={isEnabled}
                       />
                     </View>
@@ -523,7 +523,7 @@ export function NotificationSettingsScreen() {
                   accessibilityLabel="Quiet Hours"
                   onValueChange={(val) => handleToggle('quietHours', val)}
                   thumbColor="#ffffff"
-                  trackColor={{ false: '#e2e8f0', true: C.purple }}
+                  trackColor={{ false: palette.border, true: C.purple }}
                   value={preferences.quietHours ?? true}
                 />
               </View>
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     top: Platform.OS === 'ios' ? 56 : 16,
     alignSelf: 'center',
     zIndex: 9999,
-    backgroundColor: '#131b2e',
+    backgroundColor: palette.ink,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#e6f7ed',
+    backgroundColor: palette.successBg,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radius.pill,

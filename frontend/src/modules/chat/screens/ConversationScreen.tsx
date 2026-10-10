@@ -1,4 +1,4 @@
-import { color } from '@manabandhu/design-system';
+import { color, palette } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { type Href, router, useLocalSearchParams } from 'expo-router';
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   bubbleMe: { alignSelf: 'flex-end' },
   bubbleOther: { alignSelf: 'flex-start' },
   imageBubble: { borderRadius: 16, padding: 6, overflow: 'hidden' },
-  bgMe: { backgroundColor: '#431ebe' },
+  bgMe: { backgroundColor: palette.primary },
   bgOther: { backgroundColor: '#f3f4f6' },
   msgImage: { width: 220, height: 160, borderRadius: 12 },
   bubbleTime: { fontSize: 10, marginTop: 4, textAlign: 'right' },

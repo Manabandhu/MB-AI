@@ -86,3 +86,4 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 - Trust copy (2026-10): the Safety Center no longer claims hosts/drivers/referrers pass ID verification; it states that posting requires a signed-in member and anyone can be reported or blocked.
 - Cleanup: removed unused API exports; content service uses `CatalogContent`.
 - Public API: `safety/index.ts` exports `moduleMeta` (launcher entry).
+- Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.

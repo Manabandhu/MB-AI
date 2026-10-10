@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,25 +26,25 @@ import {
 } from '../api';
 
 const C = {
-  primary: '#431ebe', // Royal Indigo
-  secondary: '#00696b', // Deep Teal
-  bg: '#faf8ff', // Soft pristine canvas
+  primary: palette.primary, // Royal Indigo
+  secondary: palette.teal, // Deep Teal
+  bg: palette.background, // Soft pristine canvas
   cardBg: '#ffffff',
-  border: '#e2e8f0',
-  ink: '#131b2e',
-  inkMuted: '#625f6e',
-  emerald: '#1b873f',
-  emeraldBg: '#e6f7ed',
-  goldBg: '#fef3c7',
-  goldText: '#b45309',
-  tealBg: '#e6f4f4',
-  saffronBg: '#fff0e8',
+  border: palette.border,
+  ink: palette.ink,
+  inkMuted: palette.muted,
+  emerald: palette.success,
+  emeraldBg: palette.successBg,
+  goldBg: palette.goldBg,
+  goldText: palette.goldText,
+  tealBg: palette.tealBg,
+  saffronBg: palette.warmBg,
 };
 
 export function ListingDetailsScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);

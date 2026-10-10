@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -25,8 +26,8 @@ const C = {
   inkMuted: '#6B7280',
   tealBg: '#E0F2FE',
   saffronBg: '#FEE2E2',
-  goldBg: '#FEF3C7',
-  goldText: '#B45309',
+  goldBg: palette.goldBg,
+  goldText: palette.goldText,
   emerald: '#16A34A',
 };
 
@@ -34,7 +35,7 @@ export function PostDetailsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
   const { postId } = useLocalSearchParams<{ postId: string }>();
 
   const [commentText, setCommentText] = useState('');

@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -36,7 +37,7 @@ const TABS = [
 export function SavedScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
 
   const [activeTab, setActiveTab] = useState('all');
 
@@ -193,7 +194,7 @@ export function SavedScreen() {
                   style={s.card}
                 >
                   <View style={s.cardLeft}>
-                    <View style={[s.cardIconBadge, { backgroundColor: '#FEF3C7' }]}>
+                    <View style={[s.cardIconBadge, { backgroundColor: palette.goldBg }]}>
                       <Text style={s.cardEmoji}>🎉</Text>
                     </View>
                     <View style={s.cardInfo}>

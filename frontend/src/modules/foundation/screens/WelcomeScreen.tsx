@@ -1,4 +1,4 @@
-import { color, space } from '@manabandhu/design-system';
+import { color, palette, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#131b2e',
+    shadowColor: palette.ink,
     shadowOpacity: 0.1,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    shadowColor: '#131b2e',
+    shadowColor: palette.ink,
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },

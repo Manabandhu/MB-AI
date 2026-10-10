@@ -1,4 +1,4 @@
-import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import { color as baseColors, breakpoint, palette, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Link, router, useLocalSearchParams } from 'expo-router';
@@ -31,15 +31,15 @@ import { isPointInPolygon } from '@/modules/shared/utils/geoPolygon';
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
 const colors = {
   ...baseColors,
-  appPrimary: '#431ebe',
+  appPrimary: palette.primary,
   primaryDim: '#32149b',
-  primaryContainer: '#5b3fd6',
-  surfaceContainer: '#eaedff',
-  surfaceContainerLow: '#f2f3ff',
+  primaryContainer: palette.primaryContainer,
+  surfaceContainer: palette.surfaceContainer,
+  surfaceContainerLow: palette.surfaceContainerLow,
   surfaceContainerLowest: '#ffffff',
   inkSecondary: baseColors.muted,
-  warm: '#ff7e33',
-  teal: '#00696b',
+  warm: palette.warm,
+  teal: palette.teal,
   tealSoft: 'rgba(0,105,107,0.08)',
   indigoSoft: 'rgba(67,30,190,0.07)',
   orangeSoft: 'rgba(255,126,51,0.10)',
@@ -115,8 +115,8 @@ const SORT_OPTIONS: { id: SortOption; label: string; icon: string }[] = [
 
 export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
-  const isLargeDesktop = width >= 1024;
+  const isDesktop = width >= breakpoint.medium;
+  const isLargeDesktop = width >= breakpoint.expanded;
   const insets = useSafeAreaInsets();
 
   // Search & Filter State (Global Location sync)
@@ -1335,14 +1335,14 @@ const styles = StyleSheet.create({
   },
   myRidesBtn: {
     alignItems: 'center',
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     borderRadius: radius.pill,
     flexDirection: 'row',
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
   },
   myRidesBtnText: {
     color: colors.appPrimary,
@@ -1496,7 +1496,7 @@ const styles = StyleSheet.create({
 
   // Segmented View Control
   segmentedContainer: {
-    backgroundColor: '#eaedff',
+    backgroundColor: palette.surfaceContainer,
     borderRadius: 16,
     flexDirection: 'row',
     gap: 4,
@@ -1563,7 +1563,7 @@ const styles = StyleSheet.create({
   },
   filterTriggerBtn: {
     alignItems: 'center',
-    backgroundColor: '#eaedff',
+    backgroundColor: palette.surfaceContainer,
     borderRadius: radius.pill,
     flexDirection: 'row',
     gap: 4,
@@ -1855,7 +1855,7 @@ const styles = StyleSheet.create({
   },
   chatBtn: {
     alignItems: 'center',
-    backgroundColor: '#eaedff',
+    backgroundColor: palette.surfaceContainer,
     borderRadius: 14,
     height: 38,
     justifyContent: 'center',
@@ -1984,7 +1984,7 @@ const styles = StyleSheet.create({
     padding: space.x3,
   },
   cityItemSelected: {
-    backgroundColor: '#eaedff',
+    backgroundColor: palette.surfaceContainer,
   },
   cityNameText: {
     color: '#1f2937',
@@ -2063,7 +2063,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   sortPillSelected: {
-    backgroundColor: '#eaedff',
+    backgroundColor: palette.surfaceContainer,
     borderColor: colors.appPrimary,
   },
   sortIcon: {
@@ -2093,7 +2093,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   toggleRowActive: {
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     borderColor: colors.appPrimary,
   },
   toggleRowLeft: {
@@ -2165,7 +2165,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: palette.border,
     overflow: 'hidden',
     marginTop: space.x3,
   },
@@ -2176,7 +2176,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.x3,
     paddingHorizontal: space.x4,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: palette.border,
   },
   tableHeaderCell: {
     fontSize: 12,

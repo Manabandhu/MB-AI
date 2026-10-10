@@ -96,3 +96,4 @@ Owns Community Home, Discover, Joined Communities, Community Details, Create Pos
 - Cleanup: deleted the unused `CommunityHomeScreen.tsx`; the `/community` tab is `foundation/screens/shell/CommunityShell.tsx`. Removed unused `PostCommentRepository` methods.
 - Public API: `community/index.ts` exports `moduleMeta`, `CommunityHomeWidget` (three latest posts), and `listPosts`/`Post` for the foundation Community tab.
 - The Home widget query sets `meta: persistMeta` (public listings only) so it survives app restarts for 24 h.
+- Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.

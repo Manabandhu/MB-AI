@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,18 +22,18 @@ import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
 const C = {
-  primary: '#431ebe',
+  primary: palette.primary,
   primarySoft: 'rgba(67,30,190,0.08)',
-  teal: '#00696b',
+  teal: palette.teal,
   tealSoft: 'rgba(0,105,107,0.08)',
-  accent: '#ff7e33',
-  bg: '#faf8ff',
+  accent: palette.warm,
+  bg: palette.background,
   cardBg: '#ffffff',
   border: '#e8e5f2',
   ink: '#1b1829',
   inkMuted: '#6b6882',
   errorBg: '#fee2e2',
-  errorText: '#ba1a1a',
+  errorText: palette.error,
 };
 
 const CATEGORIES = [
@@ -58,7 +59,7 @@ export function CreatePostScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
 
   const { communityId } = useLocalSearchParams<{ communityId: string }>();
   const [selectedCategory, setSelectedCategory] = useState('General Discussion');

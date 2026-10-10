@@ -1,4 +1,4 @@
-import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import { color as baseColors, breakpoint, palette, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -55,14 +55,14 @@ const TOLL_LABELS: Record<string, string> = {
 
 const colors = {
   ...baseColors,
-  appPrimary: '#431ebe',
-  primaryContainer: '#5b3fd6',
-  surfaceContainer: '#eaedff',
-  surfaceContainerLow: '#f2f3ff',
+  appPrimary: palette.primary,
+  primaryContainer: palette.primaryContainer,
+  surfaceContainer: palette.surfaceContainer,
+  surfaceContainerLow: palette.surfaceContainerLow,
   surfaceContainerLowest: '#ffffff',
   inkSecondary: baseColors.muted,
-  warm: '#ff7e33',
-  teal: '#00696b',
+  warm: palette.warm,
+  teal: palette.teal,
   tealSoft: 'rgba(0,105,107,0.08)',
   indigoSoft: 'rgba(67,30,190,0.07)',
 };
@@ -70,7 +70,7 @@ const colors = {
 export function RideDetailScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   staffBadge: {
-    backgroundColor: '#eaedff',
+    backgroundColor: palette.surfaceContainer,
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -1232,7 +1232,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   vibePill: {
-    backgroundColor: '#eaedff',
+    backgroundColor: palette.surfaceContainer,
     borderRadius: radius.pill,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -1287,7 +1287,7 @@ const styles = StyleSheet.create({
     width: '48%',
   },
   seatSlotSelected: {
-    backgroundColor: '#eaedff',
+    backgroundColor: palette.surfaceContainer,
     borderColor: colors.appPrimary,
     borderStyle: 'solid',
   },
@@ -1500,7 +1500,7 @@ const styles = StyleSheet.create({
   },
   bottomBarChatBtn: {
     alignItems: 'center',
-    backgroundColor: '#eaedff',
+    backgroundColor: palette.surfaceContainer,
     borderRadius: 16,
     height: 44,
     justifyContent: 'center',

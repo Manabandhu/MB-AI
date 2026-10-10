@@ -96,3 +96,4 @@ Owns referral discovery, requests, offers, details, status tracking, user-owned 
 - Cleanup: removed the unused `index.ts` barrel, `MyReferralsScreen.tsx`, and unused API exports.
 - Public API: `referrals/index.ts` exports `moduleMeta` and `ReferralsHomeWidget` (three latest public referrals).
 - The Home widget query sets `meta: persistMeta` (public listings only) so it survives app restarts for 24 h.
+- Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.

@@ -1,4 +1,4 @@
-import { color as baseColors, space } from '@manabandhu/design-system';
+import { color as baseColors, palette, space } from '@manabandhu/design-system';
 import { type Href, router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -26,19 +26,19 @@ import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
 const colors = {
   ...baseColors,
-  primary: '#431ebe',
-  primarySoft: '#e5deff',
-  primaryContainer: '#5b3fd6',
+  primary: palette.primary,
+  primarySoft: palette.primarySoft,
+  primaryContainer: palette.primaryContainer,
   surface: '#ffffff',
-  background: '#faf8ff',
-  ink: '#131b2e',
-  muted: '#625f6e',
-  teal: '#00696b',
-  warm: '#ff7e33',
-  border: '#e2e8f0',
+  background: palette.background,
+  ink: palette.ink,
+  muted: palette.muted,
+  teal: palette.teal,
+  warm: palette.warm,
+  border: palette.border,
   surfaceContainerLow: '#f4f2fb',
   surfaceContainerHigh: '#e8e4f5',
-  skeleton: '#e5deff',
+  skeleton: palette.primarySoft,
 };
 
 export type OnboardingStepKey =
@@ -1468,7 +1468,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  saveError: { color: '#ba1a1a', fontSize: 14, lineHeight: 20, marginBottom: space.x2 },
+  saveError: { color: palette.error, fontSize: 14, lineHeight: 20, marginBottom: space.x2 },
   bottomBar: {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,

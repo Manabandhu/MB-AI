@@ -1,5 +1,5 @@
 import { formatDate, formatMoney } from '@manabandhu/core';
-import { color, radius, space } from '@manabandhu/design-system';
+import { color, palette, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -41,9 +41,9 @@ const GROUP_STYLE: Record<
   ExpenseGroupType,
   { icon: AppIconName; bg: string; fg: string; label: string }
 > = {
-  APARTMENT: { icon: 'home', bg: '#e6e8ff', fg: '#431ebe', label: 'Apartment' },
-  TRIP: { icon: 'map', bg: '#e6f4f4', fg: '#00696b', label: 'Trip' },
-  CARPOOL: { icon: 'car', bg: '#e6f4f4', fg: '#00696b', label: 'Carpool' },
+  APARTMENT: { icon: 'home', bg: '#e6e8ff', fg: palette.primary, label: 'Apartment' },
+  TRIP: { icon: 'map', bg: palette.tealBg, fg: palette.teal, label: 'Trip' },
+  CARPOOL: { icon: 'car', bg: palette.tealBg, fg: palette.teal, label: 'Carpool' },
   EVENT: { icon: 'community', bg: '#fff7ed', fg: color.warm, label: 'Event' },
 };
 
@@ -244,7 +244,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
 
                   <View style={s.breakdownCardOrange}>
                     <View style={s.breakdownHeader}>
-                      <AppIcon name="wallet" size={14} color="#b45309" />
+                      <AppIcon name="wallet" size={14} color={palette.goldText} />
                       <Text style={s.breakdownTitleOrange}>You owe</Text>
                     </View>
                     <Text style={s.breakdownAmountOrange}>
@@ -263,7 +263,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                     onPress={() => router.push('/expenses/add')}
                     accessibilityRole="button"
                   >
-                    <AppIcon name="plus" size={16} color="#431ebe" />
+                    <AppIcon name="plus" size={16} color={palette.primary} />
                     <Text style={s.heroActionPrimaryText}>Add Expense</Text>
                   </Pressable>
 
@@ -496,7 +496,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#faf8ff' },
+  safe: { flex: 1, backgroundColor: palette.background },
   scrollContent: { padding: space.x4, flexGrow: 1 },
   container: { width: '100%', alignSelf: 'center', gap: space.x4 },
 
@@ -514,7 +514,7 @@ const s = StyleSheet.create({
     borderRadius: 6,
   },
   badgePillText: {
-    color: '#431ebe',
+    color: palette.primary,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -522,19 +522,19 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#131b2e',
+    color: palette.ink,
     letterSpacing: -0.4,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: '#625f6e',
+    color: palette.muted,
     lineHeight: 18,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#431ebe',
+    backgroundColor: palette.primary,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radius.pill,
@@ -546,11 +546,11 @@ const s = StyleSheet.create({
   },
 
   heroCard: {
-    backgroundColor: '#431ebe',
+    backgroundColor: palette.primary,
     borderRadius: 20,
     padding: space.x4,
     gap: space.x3,
-    shadowColor: '#431ebe',
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.22,
     shadowRadius: 16,
@@ -644,17 +644,17 @@ const s = StyleSheet.create({
     gap: 2,
   },
   breakdownTitleOrange: {
-    color: '#b45309',
+    color: palette.goldText,
     fontSize: 11,
     fontWeight: '700',
   },
   breakdownAmountOrange: {
-    color: '#b45309',
+    color: palette.goldText,
     fontSize: 18,
     fontWeight: '900',
   },
   breakdownSub: {
-    color: '#625f6e',
+    color: palette.muted,
     fontSize: 10,
     marginTop: 2,
   },
@@ -675,7 +675,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
   },
   heroActionPrimaryText: {
-    color: '#431ebe',
+    color: palette.primary,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -720,10 +720,10 @@ const s = StyleSheet.create({
   tabText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#625f6e',
+    color: palette.muted,
   },
   tabTextActive: {
-    color: '#431ebe',
+    color: palette.primary,
     fontWeight: '800',
   },
 
@@ -735,9 +735,9 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
     gap: 12,
-    shadowColor: '#431ebe',
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
@@ -762,11 +762,11 @@ const s = StyleSheet.create({
   groupTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#131b2e',
+    color: palette.ink,
   },
   groupMeta: {
     fontSize: 11,
-    color: '#625f6e',
+    color: palette.muted,
     marginTop: 2,
   },
   groupBadgeOwed: {
@@ -804,19 +804,19 @@ const s = StyleSheet.create({
   },
 
   groupDetailsBox: {
-    backgroundColor: '#faf8ff',
+    backgroundColor: palette.background,
     padding: 10,
     borderRadius: 10,
     gap: 4,
   },
   groupDetailsText: {
     fontSize: 12,
-    color: '#131b2e',
+    color: palette.ink,
     fontWeight: '600',
   },
   groupTagsText: {
     fontSize: 11,
-    color: '#625f6e',
+    color: palette.muted,
   },
 
   groupFooter: {
@@ -829,15 +829,15 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
   },
   groupActionBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#625f6e',
+    color: palette.muted,
   },
   groupSettleBtn: {
-    backgroundColor: '#431ebe',
+    backgroundColor: palette.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -855,7 +855,7 @@ const s = StyleSheet.create({
     padding: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
     gap: 12,
   },
   balanceAvatar: {
@@ -864,12 +864,12 @@ const s = StyleSheet.create({
     borderRadius: 21,
     backgroundColor: '#e6e8ff',
     borderWidth: 1.5,
-    borderColor: '#431ebe',
+    borderColor: palette.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   balanceAvatarText: {
-    color: '#431ebe',
+    color: palette.primary,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -879,11 +879,11 @@ const s = StyleSheet.create({
   balanceName: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#131b2e',
+    color: palette.ink,
   },
   balanceReason: {
     fontSize: 12,
-    color: '#625f6e',
+    color: palette.muted,
     marginTop: 2,
   },
   balanceRightCol: {
@@ -920,13 +920,13 @@ const s = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
   },
   activityDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#431ebe',
+    backgroundColor: palette.primary,
   },
   activityBody: {
     flex: 1,
@@ -934,11 +934,11 @@ const s = StyleSheet.create({
   activityTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#131b2e',
+    color: palette.ink,
   },
   activityMeta: {
     fontSize: 11,
-    color: '#625f6e',
+    color: palette.muted,
     marginTop: 2,
   },
 

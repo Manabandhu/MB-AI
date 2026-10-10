@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -34,7 +35,7 @@ const C = {
   inkMuted: '#6B7280',
   tealBg: '#E0F2FE',
   saffronBg: '#FEE2E2',
-  goldBg: '#FEF3C7',
+  goldBg: palette.goldBg,
 };
 
 const CATEGORIES = [
@@ -57,8 +58,8 @@ const POPULAR_SEARCHES = [
 export function SearchScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isCompact = width < 360; // Narrow fold cover screen
-  const isDesktop = width >= 768; // Tablet / unfolded fold / desktop
+  const isCompact = width < breakpoint.narrow; // Narrow fold cover screen
+  const isDesktop = width >= breakpoint.medium; // Tablet / unfolded fold / desktop
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -309,21 +310,21 @@ export function SearchScreen() {
                     icon: 'home',
                     route: '/rooms',
                     bg: '#e8e4fb',
-                    color: '#431ebe',
+                    color: palette.primary,
                   },
                   {
                     label: 'Carpool Rides',
                     icon: 'car',
                     route: '/rides',
                     bg: '#d9f5f5',
-                    color: '#00696b',
+                    color: palette.teal,
                   },
                   {
                     label: 'Tech Jobs',
                     icon: 'briefcase',
                     route: '/jobs',
                     bg: '#fff0e6',
-                    color: '#ff7e33',
+                    color: palette.warm,
                   },
                   {
                     label: 'Festivals & Mela',
@@ -344,7 +345,7 @@ export function SearchScreen() {
                     icon: 'shield',
                     route: '/safety',
                     bg: '#ffeaea',
-                    color: '#ba1a1a',
+                    color: palette.error,
                   },
                 ].map((q) => (
                   <Pressable

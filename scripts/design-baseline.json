@@ -1,0 +1,183 @@
+{
+  "admin/screens/AdminAutomationsScreen.tsx": {
+    "colorLiteral": 4
+  },
+  "admin/screens/AdminDashboardScreen.tsx": {
+    "colorLiteral": 13
+  },
+  "auth/components/AuthKit.tsx": {
+    "colorLiteral": 12
+  },
+  "auth/screens/OtpVerificationScreen.tsx": {
+    "colorLiteral": 2
+  },
+  "auth/screens/PhoneLoginScreen.tsx": {
+    "colorLiteral": 3
+  },
+  "chat/screens/ConversationInfoScreen.tsx": {
+    "colorLiteral": 22
+  },
+  "chat/screens/ConversationScreen.tsx": {
+    "colorLiteral": 15
+  },
+  "community/screens/CommunityDetailsScreen.tsx": {
+    "colorLiteral": 5
+  },
+  "community/screens/CreatePostScreen.tsx": {
+    "colorLiteral": 11,
+    "localPalette": 1
+  },
+  "community/screens/PostDetailsScreen.tsx": {
+    "colorLiteral": 23,
+    "localPalette": 1
+  },
+  "events/screens/CreateEventScreen.tsx": {
+    "colorLiteral": 8,
+    "localPalette": 1
+  },
+  "events/screens/EventDetailsScreen.tsx": {
+    "colorLiteral": 17,
+    "localPalette": 1
+  },
+  "events/screens/EventsHomeScreen.tsx": {
+    "colorLiteral": 25,
+    "localPalette": 1
+  },
+  "expenses/screens/AddExpenseScreen.tsx": {
+    "colorLiteral": 11,
+    "localPalette": 1
+  },
+  "expenses/screens/BalancesScreen.tsx": {
+    "colorLiteral": 16
+  },
+  "expenses/screens/ExpensesHomeScreen.tsx": {
+    "colorLiteral": 43
+  },
+  "expenses/screens/SettlementsScreen.tsx": {
+    "colorLiteral": 8
+  },
+  "foundation/components/LocationSelectorModal.tsx": {
+    "colorLiteral": 15,
+    "localPalette": 1
+  },
+  "foundation/home/HomeHero.tsx": {
+    "colorLiteral": 8
+  },
+  "foundation/screens/OnboardingScreen.tsx": {
+    "colorLiteral": 3,
+    "localPalette": 1
+  },
+  "foundation/screens/SavedScreen.tsx": {
+    "colorLiteral": 12,
+    "localPalette": 1
+  },
+  "foundation/screens/SearchScreen.tsx": {
+    "colorLiteral": 19,
+    "localPalette": 1
+  },
+  "foundation/screens/SettingsScreen.tsx": {
+    "colorLiteral": 8,
+    "localPalette": 1
+  },
+  "foundation/screens/WelcomeScreen.tsx": {
+    "colorLiteral": 9
+  },
+  "jobs/screens/JobDetailsScreen.tsx": {
+    "colorLiteral": 16,
+    "localPalette": 1
+  },
+  "jobs/screens/JobsHomeScreen.tsx": {
+    "colorLiteral": 22,
+    "localPalette": 1
+  },
+  "marketplace/screens/ListingDetailsScreen.tsx": {
+    "colorLiteral": 15,
+    "localPalette": 1
+  },
+  "marketplace/screens/MarketplaceHomeScreen.tsx": {
+    "colorLiteral": 26,
+    "localPalette": 1
+  },
+  "marketplace/screens/SellItemScreen.tsx": {
+    "colorLiteral": 17
+  },
+  "notifications/screens/NotificationDetailScreen.tsx": {
+    "colorLiteral": 3
+  },
+  "notifications/screens/NotificationSettingsScreen.tsx": {
+    "colorLiteral": 30,
+    "localPalette": 1
+  },
+  "notifications/screens/NotificationsInboxScreen.tsx": {
+    "colorLiteral": 14,
+    "localPalette": 1
+  },
+  "referrals/screens/ReferralDetailsScreen.tsx": {
+    "colorLiteral": 90
+  },
+  "referrals/screens/ReferralsHomeScreen.tsx": {
+    "colorLiteral": 98
+  },
+  "rides/components/RideLocationPicker.tsx": {
+    "colorLiteral": 4
+  },
+  "rides/screens/RideDetailScreen.tsx": {
+    "colorLiteral": 88,
+    "localPalette": 1
+  },
+  "rides/screens/RideHistoryScreen.tsx": {
+    "colorLiteral": 5
+  },
+  "rides/screens/RideManageScreen.tsx": {
+    "colorLiteral": 23
+  },
+  "rides/screens/RideMyListingsScreen.tsx": {
+    "colorLiteral": 21
+  },
+  "rides/screens/RideOfferScreen.tsx": {
+    "colorLiteral": 36
+  },
+  "rides/screens/RidesScreen.tsx": {
+    "colorLiteral": 110,
+    "localPalette": 1
+  },
+  "rooms/components/RoomForm.tsx": {
+    "colorLiteral": 11,
+    "localPalette": 1
+  },
+  "rooms/screens/RoomDetailScreen.tsx": {
+    "colorLiteral": 26,
+    "localPalette": 1
+  },
+  "rooms/screens/RoomFavoritesScreen.tsx": {
+    "colorLiteral": 2
+  },
+  "rooms/screens/RoomInquiryScreen.tsx": {
+    "colorLiteral": 4,
+    "localPalette": 1
+  },
+  "rooms/screens/RoomMyListingsScreen.tsx": {
+    "colorLiteral": 2
+  },
+  "rooms/screens/RoomsScreen.tsx": {
+    "colorLiteral": 142,
+    "localPalette": 1
+  },
+  "rooms/screens/roomListStyles.ts": {
+    "colorLiteral": 60
+  },
+  "safety/screens/SafetyCenterScreen.tsx": {
+    "colorLiteral": 24,
+    "localPalette": 1
+  },
+  "shared/components/UniversalMapView.tsx": {
+    "colorLiteral": 21
+  },
+  "shared/components/UniversalMapView.web.tsx": {
+    "colorLiteral": 29
+  },
+  "utilities/screens/UtilitiesHomeScreen.tsx": {
+    "colorLiteral": 16,
+    "localPalette": 1
+  }
+}

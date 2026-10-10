@@ -1,4 +1,4 @@
-import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import { color as baseColors, breakpoint, palette, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -29,12 +29,12 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
 const colors = {
   ...baseColors,
-  appPrimary: '#431ebe',
-  primaryContainer: '#5b3fd6',
-  surfaceContainer: '#eaedff',
-  surfaceContainerLow: '#f2f3ff',
-  warm: '#ff7e33',
-  teal: '#00696b',
+  appPrimary: palette.primary,
+  primaryContainer: palette.primaryContainer,
+  surfaceContainer: palette.surfaceContainer,
+  surfaceContainerLow: palette.surfaceContainerLow,
+  warm: palette.warm,
+  teal: palette.teal,
   tealSoft: 'rgba(0,105,107,0.08)',
   indigoSoft: 'rgba(67,30,190,0.07)',
   orangeSoft: 'rgba(255,126,51,0.10)',
@@ -80,7 +80,7 @@ export function RoomDetailScreen() {
   const status = useAuthStore((state) => state.status);
   const isAuthenticated = status === 'authenticated';
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= breakpoint.medium;
   const insets = useSafeAreaInsets();
 
   const carouselScrollRef = useRef<ScrollView>(null);
@@ -272,7 +272,7 @@ export function RoomDetailScreen() {
             accessibilityLabel="Save Room"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <AppIcon color={isSaved ? '#ba1a1a' : colors.muted} name="star" size={18} />
+            <AppIcon color={isSaved ? palette.error : colors.muted} name="star" size={18} />
           </Pressable>
           <Pressable
             onPress={handleShare}
@@ -662,7 +662,7 @@ const s = StyleSheet.create({
     backgroundColor: '#0f172a',
     position: 'relative',
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
   },
   gallerySlide: {
     height: 240,
@@ -779,7 +779,7 @@ const s = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#f1f5f9',
     borderWidth: 2,
-    borderColor: '#e2e8f0',
+    borderColor: palette.border,
     overflow: 'hidden',
   },
   photoThumbItemActive: {

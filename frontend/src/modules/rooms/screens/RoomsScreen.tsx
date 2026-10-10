@@ -1,4 +1,4 @@
-import { color as baseColors, radius, space } from '@manabandhu/design-system';
+import { color as baseColors, breakpoint, palette, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import type { Href } from 'expo-router';
@@ -37,12 +37,12 @@ import { isPointInPolygon } from '@/modules/shared/utils/geoPolygon';
 // ─── Theme Colors ─────────────────────────────────────────────────────────────
 const colors = {
   ...baseColors,
-  appPrimary: '#431ebe',
-  primaryContainer: '#5b3fd6',
-  surfaceContainer: '#eaedff',
-  surfaceContainerLow: '#f2f3ff',
-  warm: '#ff7e33',
-  teal: '#00696b',
+  appPrimary: palette.primary,
+  primaryContainer: palette.primaryContainer,
+  surfaceContainer: palette.surfaceContainer,
+  surfaceContainerLow: palette.surfaceContainerLow,
+  warm: palette.warm,
+  teal: palette.teal,
   tealSoft: 'rgba(0,105,107,0.08)',
   indigoSoft: 'rgba(67,30,190,0.07)',
   orangeSoft: 'rgba(255,126,51,0.10)',
@@ -203,8 +203,8 @@ const SORT_OPTIONS: { id: SortOption; label: string; icon: string; description: 
 
 export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
-  const isDualPane = width >= 1024;
+  const isDesktop = width >= breakpoint.medium;
+  const isDualPane = width >= breakpoint.expanded;
   const insets = useSafeAreaInsets();
 
   // State (Global Location sync)
@@ -2037,7 +2037,7 @@ const s = StyleSheet.create({
   safeArea: { backgroundColor: colors.background, flex: 1 },
   header: {
     backgroundColor: '#fff',
-    borderBottomColor: '#eaedff',
+    borderBottomColor: palette.surfaceContainer,
     borderBottomWidth: 1,
     paddingHorizontal: space.x4,
     paddingTop: space.x2,
@@ -2058,7 +2058,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -2067,12 +2067,12 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
     flexShrink: 1,
     minWidth: 0,
     overflow: 'hidden',
@@ -2093,7 +2093,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#431ebe',
+    backgroundColor: palette.primary,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: radius.pill,
@@ -2108,7 +2108,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -2207,7 +2207,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
     flexShrink: 0,
   },
   toolbarSortBtnText: {
@@ -2314,7 +2314,7 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: '#f6f7fb',
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
   },
   categoryChipActive: {
     backgroundColor: colors.appPrimary,
@@ -2475,9 +2475,9 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: space.x4,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
     gap: space.x3,
-    shadowColor: '#431ebe',
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -2491,7 +2491,7 @@ const s = StyleSheet.create({
     width: 86,
     height: 86,
     borderRadius: 14,
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -2566,7 +2566,7 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   badgePrivateBath: {
-    backgroundColor: '#00696b',
+    backgroundColor: palette.teal,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -2577,7 +2577,7 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   badgeFurnished: {
-    backgroundColor: '#431ebe',
+    backgroundColor: palette.primary,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -2617,7 +2617,7 @@ const s = StyleSheet.create({
   },
   featureChip: {
     backgroundColor: '#f6f7fb',
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -2634,7 +2634,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: space.x2,
     borderTopWidth: 1,
-    borderTopColor: '#f2f3ff',
+    borderTopColor: palette.surfaceContainerLow,
   },
   hostInfo: {
     flexDirection: 'row',
@@ -2669,7 +2669,7 @@ const s = StyleSheet.create({
     gap: 8,
   },
   inquireBtn: {
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     borderWidth: 1.5,
     borderColor: colors.appPrimary,
     paddingHorizontal: 12,
@@ -2811,7 +2811,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: palette.border,
     shadowColor: '#000',
     shadowOffset: { width: -2, height: 4 },
     shadowOpacity: 0.18,
@@ -2836,7 +2836,7 @@ const s = StyleSheet.create({
     borderRadius: 10,
   },
   appleMapStyleOptionSelected: {
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
   },
   appleMapStyleIcon: {
     fontSize: 16,
@@ -2960,7 +2960,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.98)',
     borderRadius: radius.pill,
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: palette.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.18,
@@ -3014,7 +3014,7 @@ const s = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
   },
   cardDragBarContainer: {
     position: 'absolute',
@@ -3039,7 +3039,7 @@ const s = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 12,
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -3201,7 +3201,7 @@ const s = StyleSheet.create({
   citySelectPillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#431ebe',
+    color: palette.primary,
   },
   cityEmptyResults: {
     paddingVertical: 24,
@@ -3246,7 +3246,7 @@ const s = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3287,7 +3287,7 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   cityCountPill: {
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: radius.pill,
@@ -3310,7 +3310,7 @@ const s = StyleSheet.create({
     width: '100%',
     maxWidth: 580,
     gap: space.x4,
-    shadowColor: '#431ebe',
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.18,
     shadowRadius: 24,
@@ -3443,7 +3443,7 @@ const s = StyleSheet.create({
   dualPaneLeft: {
     flex: 1,
     borderRightWidth: 1,
-    borderRightColor: '#eaedff',
+    borderRightColor: palette.surfaceContainer,
     backgroundColor: '#fff',
   },
   dualPaneRight: {
@@ -3474,9 +3474,9 @@ const s = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
     overflow: 'hidden',
-    shadowColor: '#431ebe',
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -3490,7 +3490,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     borderBottomWidth: 1,
-    borderBottomColor: '#eaedff',
+    borderBottomColor: palette.surfaceContainer,
   },
   roomCardHeroGraphic: {
     alignItems: 'center',
@@ -3585,9 +3585,9 @@ const s = StyleSheet.create({
     borderRadius: 14,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#eaedff',
+    borderColor: palette.surfaceContainer,
     gap: 10,
-    shadowColor: '#431ebe',
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
@@ -3598,7 +3598,7 @@ const s = StyleSheet.create({
     width: 66,
     height: 66,
     borderRadius: 12,
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -3678,7 +3678,7 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
   badgeFurnishedSmall: {
-    backgroundColor: '#d97706',
+    backgroundColor: palette.warning,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 5,
@@ -3689,14 +3689,14 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
   featureChipSmall: {
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 5,
   },
   featureChipTextSmall: {
     fontSize: 9,
-    color: '#431ebe',
+    color: palette.primary,
     fontWeight: '600',
   },
   roomListRightCol: {
@@ -3712,7 +3712,7 @@ const s = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#f2f3ff',
+    backgroundColor: palette.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },

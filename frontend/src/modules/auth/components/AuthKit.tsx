@@ -1,4 +1,4 @@
-import { color, radius, space } from '@manabandhu/design-system';
+import { color, palette, radius, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { forwardRef, type ReactNode, useState } from 'react';
 import {
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     borderColor: color.border,
     paddingHorizontal: space.x8,
     paddingVertical: space.x8,
-    shadowColor: '#131b2e',
+    shadowColor: palette.ink,
     shadowOpacity: 0.08,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },

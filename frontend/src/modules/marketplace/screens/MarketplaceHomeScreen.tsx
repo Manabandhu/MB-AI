@@ -1,3 +1,4 @@
+import { breakpoint, palette } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -28,19 +29,19 @@ import type { MarketplaceListing } from '../types';
 
 // Palette tokens aligned with ManaBandhu Modern Vibrant design system
 const C = {
-  primary: '#431ebe', // Royal Indigo
-  secondary: '#00696b', // Deep Teal
-  bg: '#faf8ff', // Soft pristine canvas
+  primary: palette.primary, // Royal Indigo
+  secondary: palette.teal, // Deep Teal
+  bg: palette.background, // Soft pristine canvas
   cardBg: '#ffffff',
-  border: '#e2e8f0',
-  ink: '#131b2e',
-  inkMuted: '#625f6e',
-  emerald: '#1b873f',
-  emeraldBg: '#e6f7ed',
-  saffronBg: '#fff0e8',
-  tealBg: '#e6f4f4',
-  goldBg: '#fef3c7',
-  goldText: '#b45309',
+  border: palette.border,
+  ink: palette.ink,
+  inkMuted: palette.muted,
+  emerald: palette.success,
+  emeraldBg: palette.successBg,
+  saffronBg: palette.warmBg,
+  tealBg: palette.tealBg,
+  goldBg: palette.goldBg,
+  goldText: palette.goldText,
 };
 
 type MarketplaceScreenId = 'home' | 'search' | 'categories' | 'saved';
@@ -50,8 +51,8 @@ export function MarketplaceHomeScreen({ screenId = 'home' }: { screenId?: Market
   const savedOnly = screenId === 'saved';
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isCompact = width < 360;
-  const isDesktop = width >= 768;
+  const isCompact = width < breakpoint.narrow;
+  const isDesktop = width >= breakpoint.medium;
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
