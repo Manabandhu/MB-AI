@@ -1,5 +1,5 @@
-import { formatMoney } from '@manabandhu/core';
-import { radius, space } from '@manabandhu/design-system';
+import { formatDate, formatMoney } from '@manabandhu/core';
+import { color, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -44,7 +44,7 @@ const GROUP_STYLE: Record<
   APARTMENT: { icon: 'home', bg: '#e6e8ff', fg: '#431ebe', label: 'Apartment' },
   TRIP: { icon: 'map', bg: '#e6f4f4', fg: '#00696b', label: 'Trip' },
   CARPOOL: { icon: 'car', bg: '#e6f4f4', fg: '#00696b', label: 'Carpool' },
-  EVENT: { icon: 'community', bg: '#fff7ed', fg: '#ff7e33', label: 'Event' },
+  EVENT: { icon: 'community', bg: '#fff7ed', fg: color.warm, label: 'Event' },
 };
 
 const SETTLEMENT_STATUS: Record<Settlement['status'], string> = {
@@ -369,7 +369,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                           </Pressable>
                           {netInGroup <= -0.005 && (
                             <Pressable
-                              style={[s.groupSettleBtn, { backgroundColor: '#ff7e33' }]}
+                              style={[s.groupSettleBtn, { backgroundColor: color.warm }]}
                               onPress={() => router.push('/expenses/balances')}
                               accessibilityRole="button"
                             >
@@ -405,10 +405,10 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                           <View
                             style={[
                               s.balanceAvatar,
-                              !owedToMe && { backgroundColor: '#fff7ed', borderColor: '#ff7e33' },
+                              !owedToMe && { backgroundColor: '#fff7ed', borderColor: color.warm },
                             ]}
                           >
-                            <Text style={[s.balanceAvatarText, !owedToMe && { color: '#ff7e33' }]}>
+                            <Text style={[s.balanceAvatarText, !owedToMe && { color: color.warm }]}>
                               {name(other).slice(0, 2).toUpperCase()}
                             </Text>
                           </View>
@@ -470,10 +470,8 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                           </Text>
                           <Text style={s.activityMeta}>
                             {groupsById.get(settlement.groupId)?.name ?? 'Expense group'} •{' '}
-                            {new Date(
-                              settlement.settledAt ?? settlement.createdAt,
-                            ).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
-                            • {SETTLEMENT_STATUS[settlement.status] ?? settlement.status}
+                            {formatDate(settlement.settledAt ?? settlement.createdAt, 'short')} •{' '}
+                            {SETTLEMENT_STATUS[settlement.status] ?? settlement.status}
                           </Text>
                         </View>
                       </View>
@@ -903,7 +901,7 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   balancePayBtn: {
-    backgroundColor: '#ff7e33',
+    backgroundColor: color.warm,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,

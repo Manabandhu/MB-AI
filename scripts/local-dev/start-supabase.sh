@@ -37,7 +37,7 @@ fi
 
 # The backend talks to Postgres through the pooler over TCP 5432, which an HTTPS-only network blocks even when the
 # Auth check above passes; fail here with a clear message instead of a JDBC stack trace.
-if ! timeout 8 bash -c "exec 3<>/dev/tcp/$POOLER/5432" 2>/dev/null; then
+if ! timeout 8 bash -c 'exec 3<>/dev/tcp/$1/5432' _ "$POOLER" 2>/dev/null; then
   echo "Cannot open a connection to $POOLER:5432. Check SUPABASE_POOLER_HOST (Supabase → Connect) and that the network" >&2
   echo "allows outbound TCP to *.pooler.supabase.com." >&2
   exit 1

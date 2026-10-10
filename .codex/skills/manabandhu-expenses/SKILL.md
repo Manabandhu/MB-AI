@@ -90,3 +90,4 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 - Currency guard (2026-10): expenses and settlements must use the group's currency (`ExpenseAccess.groupCurrency`, 400 otherwise) because balances have no currency dimension.
 - Cleanup: removed the unused `index.ts` barrel and unused API exports; content service uses `CatalogContent`.
 - Amounts render with `formatMoney(amount, currency, { absolute: true })` from `@manabandhu/core`; the sign is conveyed by the surrounding "+" / "You owe" copy.
+- Review follow-up: `ExpensesHomeScreen` uses the `color.warm` design-system token instead of a hard-coded `#ff7e33`, and `formatDate(…, "short")` from `@manabandhu/core` for settlement dates.

@@ -126,3 +126,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Use `formatDate`, `formatTimeRange`, `formatRelative`, `formatMoney`, `formatSalaryRange`, and `formatCount` from `@manabandhu/core` instead of module-local helpers or inline `toLocaleDateString`. They return `null` for missing input so screens pick an honest label.
 - Persisted Zustand stores use `persistentStorage` from `frontend/src/lib/persistentStorage.ts` (localStorage on web, SecureStore on native, memory fallback); do not copy the adapter into stores.
 - The web export needs the public env vars; run it with the same placeholders as CI (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) and `--clear` after changing them, because Metro caches inlined env values.
+- `start-supabase.sh` passes the pooler host to its TCP reachability check as a positional argument, so `SUPABASE_POOLER_HOST` is never re-parsed as shell syntax.
