@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
   FlatList,
-  Image,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
@@ -17,7 +16,7 @@ import { useRedirectIfAuthenticated } from '@/lib/authStore';
 import { AuthButton } from '@/modules/auth/components/AuthKit';
 import type { AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { brandLogo } from '@/modules/shared/ui/brandAssets';
+import { BrandMark } from '@/modules/shared/ui/BrandLogo';
 
 type Slide = {
   key: string;
@@ -115,7 +114,7 @@ export function WelcomeScreen() {
           renderItem={({ item }) => (
             <View
               style={[styles.page, { width: pageWidth }]}
-              accessibilityLabel={`${item.title}. ${item.body}`}
+              aria-label={`${item.title}. ${item.body}`}
             >
               <SlideArt slide={item} size={artSize} />
               <Text style={styles.slideTitle}>{item.title}</Text>
@@ -127,13 +126,13 @@ export function WelcomeScreen() {
       <View
         style={styles.dots}
         accessibilityRole="adjustable"
-        accessibilityLabel={`Page ${index + 1} of ${SLIDES.length}`}
+        aria-label={`Page ${index + 1} of ${SLIDES.length}`}
       >
         {SLIDES.map((slide, i) => (
           <Pressable
             key={slide.key}
-            accessibilityRole="button"
-            accessibilityLabel={`Show ${slide.title}`}
+            role="button"
+            aria-label={`Show ${slide.title}`}
             hitSlop={10}
             onPress={() => goTo(i)}
             style={[styles.dot, i === index && styles.dotActive]}
@@ -166,7 +165,7 @@ export function WelcomeScreen() {
         <View style={styles.wideInner}>
           <View style={styles.wideIntro}>
             <Brand />
-            <Text accessibilityRole="header" style={styles.headline}>
+            <Text role="heading" style={styles.headline}>
               Your community, wherever you go.
             </Text>
             <Text style={styles.lead}>
@@ -195,8 +194,8 @@ export function WelcomeScreen() {
 
 function Brand() {
   return (
-    <View style={styles.brand} accessibilityRole="header">
-      <Image source={brandLogo} style={styles.logo} accessibilityIgnoresInvertColors />
+    <View style={styles.brand} role="heading">
+      <BrandMark size={32} />
       <Text style={styles.brandName}>ManaBandhu</Text>
     </View>
   );
@@ -207,8 +206,7 @@ function SlideArt({ slide, size }: { slide: Slide; size: number }) {
   return (
     <View
       style={[styles.art, { width: size, height: size, backgroundColor: slide.tint }]}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
+      aria-hidden
     >
       <View
         style={[styles.artHalo, { width: ring * 1.7, height: ring * 1.7, borderRadius: ring }]}
@@ -234,7 +232,6 @@ const styles = StyleSheet.create({
   rootWide: { backgroundColor: color.background, justifyContent: 'center' },
   header: { paddingHorizontal: space.x6, height: 44, justifyContent: 'center' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  logo: { width: 32, height: 32, borderRadius: 8 },
   brandName: { color: color.ink, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
   pager: { flex: 1, justifyContent: 'center' },
   // Size the list to its slides so the art, copy, and dots stay grouped in the middle of tall phones.

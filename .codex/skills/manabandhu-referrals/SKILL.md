@@ -94,3 +94,4 @@ Owns referral discovery, requests, offers, details, status tracking, user-owned 
 - Screen metrics are computed from the database (2026-10): `ReferralsContentService.screen(id, Optional<Actor>)` counts open (`pending|open|active`) request and offer referrals for `home`, and the caller's own requests/offers for `mine` (empty for anonymous viewers).
 - Referral details (2026-10): signed-out visitors get a sign-in prompt instead of a 401 "removed" error; removed invented "Verified Referrer", location, reply-time and network labels; status comes from the record.
 - Cleanup: removed the unused `index.ts` barrel, `MyReferralsScreen.tsx`, and unused API exports.
+- Public API: `referrals/index.ts` exports `moduleMeta` and `ReferralsHomeWidget` (three latest public referrals).

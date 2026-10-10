@@ -85,3 +85,4 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 - Screen metrics are computed from the database (2026-10): `SafetyContentService.center(Optional<Actor>)` counts the caller's open reports (`OPEN`/`IN_REVIEW`), blocked users and trusted contacts with repository `count…` queries; anonymous viewers of the public `/center` route get an empty `metrics` list.
 - Trust copy (2026-10): the Safety Center no longer claims hosts/drivers/referrers pass ID verification; it states that posting requires a signed-in member and anyone can be reported or blocked.
 - Cleanup: removed unused API exports; content service uses `CatalogContent`.
+- Public API: `safety/index.ts` exports `moduleMeta` (launcher entry).

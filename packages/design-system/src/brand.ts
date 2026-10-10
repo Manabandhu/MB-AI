@@ -20,5 +20,5 @@ export const brand = {
     themeDark: '#0f1525',
   },
   /** Gradient stops used by the logo tile, hero backgrounds, and the app icon (top-left to bottom-right). */
-  gradient: ['#5b3fd6', '#431ebe', '#2a0f8a'] as const,
+  gradient: ['#7c5cf0', '#431ebe', '#2a0f8a'] as const,
 } as const;

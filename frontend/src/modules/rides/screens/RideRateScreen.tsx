@@ -10,7 +10,7 @@ import type { CreateRideRatingInput } from '@/modules/rides/types';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { StarRating } from '@/modules/shared/components/StarRating';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { TextField } from '@/modules/shared/ui/TextField';
 
 export function RideRateScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
@@ -121,13 +121,11 @@ export function RideRateScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Comments (optional)</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder="Share more details about your experience"
-                  value={comment}
-                  onChangeText={setComment}
-                />
-              </Input>
+              <TextField
+                placeholder="Share more details about your experience"
+                value={comment}
+                onChangeText={setComment}
+              />
             </View>
 
             <View style={styles.actions}>

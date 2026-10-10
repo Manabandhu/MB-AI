@@ -11,7 +11,7 @@ import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { TextArea } from '@/modules/shared/components/TextArea';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { TextField } from '@/modules/shared/ui/TextField';
 
 const jobSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -75,23 +75,17 @@ export function PostJobScreen() {
       <View style={styles.form}>
         <View style={styles.field}>
           <Text style={styles.label}>Title</Text>
-          <Input>
-            <InputField placeholder="Job title" {...control.register('title')} />
-          </Input>
+          <TextField placeholder="Job title" {...control.register('title')} />
           {errors.title ? <Text style={styles.error}>{errors.title.message}</Text> : null}
         </View>
         <View style={styles.field}>
           <Text style={styles.label}>Company</Text>
-          <Input>
-            <InputField placeholder="Company name" {...control.register('company')} />
-          </Input>
+          <TextField placeholder="Company name" {...control.register('company')} />
           {errors.company ? <Text style={styles.error}>{errors.company.message}</Text> : null}
         </View>
         <View style={styles.field}>
           <Text style={styles.label}>Location</Text>
-          <Input>
-            <InputField placeholder="City or remote" {...control.register('location')} />
-          </Input>
+          <TextField placeholder="City or remote" {...control.register('location')} />
           {errors.location ? <Text style={styles.error}>{errors.location.message}</Text> : null}
         </View>
         <View style={styles.field}>

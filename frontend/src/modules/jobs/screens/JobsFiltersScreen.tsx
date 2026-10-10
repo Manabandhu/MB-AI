@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { TextField } from '@/modules/shared/ui/TextField';
 
 export function JobsFiltersScreen() {
   const [location, setLocation] = useState('');
@@ -16,19 +16,15 @@ export function JobsFiltersScreen() {
       <View style={styles.form}>
         <View style={styles.field}>
           <Text style={styles.label}>Location</Text>
-          <Input>
-            <InputField placeholder="City or remote" value={location} onChangeText={setLocation} />
-          </Input>
+          <TextField placeholder="City or remote" value={location} onChangeText={setLocation} />
         </View>
         <View style={styles.field}>
           <Text style={styles.label}>Job type</Text>
-          <Input>
-            <InputField
-              placeholder="Full-time, part-time, contract"
-              value={type}
-              onChangeText={setType}
-            />
-          </Input>
+          <TextField
+            placeholder="Full-time, part-time, contract"
+            value={type}
+            onChangeText={setType}
+          />
         </View>
         <View style={styles.actions}>
           <AppButton label="Apply filters" route="/jobs/search" />

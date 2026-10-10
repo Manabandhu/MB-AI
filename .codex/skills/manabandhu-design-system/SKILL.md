@@ -1,25 +1,34 @@
 ---
 name: manabandhu-design-system
-description: Maintain ManaBandhu's shared visual language, responsive tokens, accessibility rules, and cross-platform component foundations. Use for colors, typography, spacing, breakpoints, motion, themes, icons, components, or Stitch-to-product design translation.
+description: Maintain ManaBandhu's shared visual language, responsive tokens, accessibility rules, and cross-platform component foundations. Use for colors, typography, spacing, breakpoints, motion, themes, icons, brand assets, components, or Stitch-to-product design translation.
 ---
 
 # Design system
 
-1. Read Stitch design-system sources and `packages/design-system/src/index.ts`.
-2. Put platform-neutral tokens in `packages/design-system`; keep native/web implementation details in client components.
-3. Put reusable Expo/RN UI primitives in `frontend/src/modules/shared/ui`; prefer Gluestack-backed primitives such as `AppButton`, generated components under `shared/ui/gluestack`, and `AppIcon` over screen-local controls. `AppIcon` wraps `iconoir-react-native` so icon choice and sizing stay centralized.
-4. Support compact, medium, expanded, and wide windows; large text; safe areas; keyboard/pointer/touch; reduced motion; and WCAG contrast.
-5. Use semantic tokens. Avoid screen-local hardcoded colors, spacing, and breakpoints.
-6. Test representative phone, tablet/foldable, and browser widths.
-7. Update this skill when tokens, breakpoints, component conventions, icon libraries, or accessibility rules change.
-8. Current implementation: tokens exported from `packages/design-system/src/index.ts` as const objects (`color`, `darkColor`, `space`, `radius`, `shadow`, `typography`, `duration`, `iconography`, `accessibility`, `breakpoint`, `contentWidth`). Components use Gluestack-backed wrappers under `frontend/src/modules/shared/ui` and `frontend/src/modules/shared/components`.
-9. Stitch design system alignment: registered `assets/18105029676315711182` (ManaBandhu Modern Vibrant) under project `9663298292574415459`. Tokens synchronized: primary `#431ebe`, primaryContainer `#5b3fd6`, teal `#00696b`, warm `#ff7e33`, pearl background `#faf8ff`, and surface `#ffffff`. Centered vector-style infinity-hands community brand emblem deployed in `frontend/assets/images/brand-logo.png`.
-10. Tactile button interactions: `AppButton.tsx` upgraded with native-driven spring micro-animations (`onPressIn` scales down to 0.96 with friction 8, `onPressOut` springs back to 1.0) delivering instantaneous tactile physical feedback across all primary and secondary actions without input lag.
+## Sources of truth
+1. Tokens: `packages/design-system/src/` — `tokens.ts` (colors, `tone`, `palette`, `darkColor`, `darkTone`, `darkPalette`, `paletteFor(scheme)`, space, radius, shadow, typography, breakpoints, `contentWidth`, accessibility), `brand.ts` (`brand` name, tagline, colors, gradient stops), `motion.ts` (`spring` presets `snappy`/`gentle`/`bouncy`, `motion` press/hover/stagger values, `MotionPreference`). `index.ts` re-exports all three. `darkTone` mirrors every `tone` key.
+2. `pnpm --filter @manabandhu/design-system tokens:json` writes `dist/tokens.json` (gitignored) for non-JS clients (future SwiftUI watch, Android for Cars, TV).
+3. Toolkit: Tamagui 2.7.7 in runtime mode (no compiler). `frontend/src/theme/tamagui.config.ts` is built only from the tokens: themes `light`/`dark` plus sub-themes `primary`, `teal`, `warm`, `danger`; media `medium`/`expanded`/`wide`/`compactOnly`/`belowExpanded`/`pointerFine`/`hoverable`; font sizes named after typography (`$h1`, `$body`, …); space `$x1`…`$x16`; radius `$control`/`$card`/`$panel`/`$pill`; size `$touch` (44) and `$control` (52). Animations: `theme/animations.ts` (web, `@tamagui/animations-css`, compositor-driven) and `theme/animations.native.ts` (`@tamagui/animations-reanimated`, springs from `spring` tokens) expose the same keys (`quick`, `gentle`, `bouncy`, `fast`, `normal`, `slow`); the prop is `transition`. Tamagui 2 uses web-standard accessibility props (`role`, `aria-label`, `aria-selected`, `aria-live`, …), not `accessibility*`.
+4. Theme choice: `AppThemeProvider` + `useAppearanceStore` (`system | light | dark`, motion `full | reduced | off`, device-local). `useAppearance()` returns `{ scheme, palette, reduceMotion, richMotion }`.
 
-11. Auth surfaces (2026-10) use `frontend/src/modules/auth/components/AuthKit.tsx`: 32pt left-aligned titles, 17pt body and input text, 52pt fields and buttons with 14pt radius, primary `#431ebe` buttons, black "Continue with Apple" above a white outlined Google button, sentence-case labels (no all-caps eyebrows), and a centered 460pt card at ≥600pt widths.
-- Added `tone` (surface containers, tints, pastel badge backgrounds) and `palette` (`color` + `tone`) so screens stop re-declaring hex values.
-## Token package layout (2026-10)
-- `packages/design-system/src/` is split into `tokens.ts` (colors, `tone`, `palette`, `darkColor`, `darkTone`, `darkPalette`, `paletteFor(scheme)`, spacing, radius, shadow, typography, breakpoints, accessibility), `brand.ts` (`brand` name, tagline, brand colors, gradient stops), and `motion.ts` (`spring` presets `snappy`/`gentle`/`bouncy`, `motion` press/hover/stagger values, `MotionPreference`). `index.ts` re-exports all three.
-- `darkTone` mirrors every `tone` key so `darkPalette` and `palette` have identical keys. The unused `saffronPalette` was removed.
-- `pnpm --filter @manabandhu/design-system tokens:json` writes `dist/tokens.json` (gitignored) for non-JS clients such as future SwiftUI watch, Android for Cars, or TV code.
-- The Tamagui config in `frontend/src/theme/tamagui.config.ts` is built only from these tokens (themes `light`/`dark` plus `primary`, `teal`, `warm`, `danger` sub-themes; media `medium`/`expanded`/`wide` from `breakpoint`).
+## Brand
+- Mark: two arches sharing one leg (an "M", and open arms around a friend) in white on the violet gradient `#7c5cf0 → #431ebe → #2a0f8a`, with a saffron `#ff7e33` dot. Sources: `frontend/assets/brand/logo-mark.svg`, `logo-glyph.svg` (Android adaptive foreground), `logo-mono.svg` (themed/notification icon), `icon-background.svg`, `logo-wordmark.svg`.
+- `pnpm brand:icons` (`scripts/brand/render-icons.mjs`, `sharp`) renders `icon.png`, Android adaptive layers, `splash-icon.png`, `favicon.png`, and PWA icons in `frontend/public/`. Re-run it after editing any brand SVG; never hand-edit the PNGs.
+- In app code use `BrandMark` / `BrandLogo variant="wordmark"` (`shared/ui/BrandLogo.tsx`, react-native-svg); keep its paths in sync with `logo-mark.svg`.
+
+## Components (`frontend/src/modules/shared/ui`, barrel `index.ts`)
+- `AppText`/`Heading` (variants `display h1 h2 h3 h4 lead body bodyStrong label caption overline`, tones `default muted primary onPrimary danger success warm teal`, font scale capped at `accessibility.maxFontScale`), `AppButton` (`primary secondary ghost danger`, sizes `sm md lg`, haptic on native, press scale from `motion.pressScale`), `Card` (`outlined elevated filled tinted`; `href`/`onPress` makes it pressable with hover lift), `ListRow` (standard listing row), `Chip`, `Avatar` (photo or initials), `IconButton` (44pt, required label), `TextField` (label/helper/error), `SegmentedControl`, `Skeleton`/`SkeletonCard`, `Section`, `Screen` (safe areas, max content width, pull-to-refresh), `ResponsiveGrid` (columns per window class), `GradientSurface`, `FadeIn` (Reanimated entrance), `AppIcon`.
+- `AppIcon` maps semantic names to Lucide icons imported one file each (`lucide-react-native/icons/<name>`, so unused icons never ship) plus Google/Apple marks, and defaults to the theme text colour. Add names there; never import an icon library elsewhere.
+- Shared states in `shared/components`: `LoadingState` (`spinner`/`skeleton`), `ErrorState` and `EmptyState` (optional action, `compact` for cards), `WidgetFrame` (Home widget chrome).
+- Gluestack was removed (2026-10). Screens not yet migrated still use `StyleSheet` + design-system constants or Uniwind classes; migrate them to these primitives during each module's review.
+
+## Rules
+1. Use semantic tokens and theme values (`$primary`, `palette.primary`); no hex literals, local colour objects, or numeric breakpoints in screens.
+2. Support compact, medium, expanded, and wide windows; large text; safe areas; keyboard/pointer/touch/remote focus (`focusable` + `focusVisibleStyle`); reduced motion; WCAG AA contrast. Icon-only controls need labels.
+3. Every animation checks `useAppearance().reduceMotion`; decorative loops and 3D only run when `richMotion` is true.
+4. Test phone (390), tablet (820), landscape tablet (1180), and desktop (1440) widths in light and dark.
+5. Update this skill when tokens, breakpoints, component conventions, icon libraries, brand assets, or accessibility rules change.
+
+## History
+- Stitch "ManaBandhu Modern Vibrant" (`assets/18105029676315711182`, project `9663298292574415459`) set the palette: primary `#431ebe`, primaryContainer `#5b3fd6`, teal `#00696b`, warm `#ff7e33`, background `#faf8ff`, surface `#ffffff`.
+- Auth surfaces use `frontend/src/modules/auth/components/AuthKit.tsx` (32pt titles, 52pt fields/buttons, 14pt radius, 460pt card at ≥600pt) with `BrandMark` as the logo.

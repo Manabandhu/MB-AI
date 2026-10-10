@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { TextField } from '@/modules/shared/ui/TextField';
 
 /**
  * Riders find a driver going their way and request a seat on that ride. (Open "ride wanted" posts are not
@@ -45,24 +45,20 @@ export function RideRequestScreen() {
             <View style={styles.form}>
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Pickup area</Text>
-                <Input className="min-h-14 rounded-xl bg-secondary/70">
-                  <InputField
-                    placeholder="Broad area (e.g. Irving)"
-                    value={pickupArea}
-                    onChangeText={setPickupArea}
-                  />
-                </Input>
+                <TextField
+                  placeholder="Broad area (e.g. Irving)"
+                  value={pickupArea}
+                  onChangeText={setPickupArea}
+                />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Destination</Text>
-                <Input className="min-h-14 rounded-xl bg-secondary/70">
-                  <InputField
-                    placeholder="Where do you need to go?"
-                    value={destination}
-                    onChangeText={setDestination}
-                  />
-                </Input>
+                <TextField
+                  placeholder="Where do you need to go?"
+                  value={destination}
+                  onChangeText={setDestination}
+                />
               </View>
 
               <View style={styles.actions}>

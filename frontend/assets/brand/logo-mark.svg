@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="ManaBandhu">
+  <!-- ManaBandhu mark: two arches sharing one leg read as an M and as open arms around a friend (the saffron dot). -->
+  <defs>
+    <linearGradient id="mb-tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c5cf0"/>
+      <stop offset="0.45" stop-color="#431ebe"/>
+      <stop offset="1" stop-color="#2a0f8a"/>
+    </linearGradient>
+    <radialGradient id="mb-glow" cx="0.5" cy="0.2" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="232" fill="url(#mb-tile)"/>
+  <rect width="1024" height="1024" rx="232" fill="url(#mb-glow)"/>
+  <g transform="translate(0 -12)">
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="96">
+      <path d="M276 756V530a118 118 0 0 1 236 0v226"/>
+      <path d="M512 756V530a118 118 0 0 1 236 0v226"/>
+    </g>
+    <circle cx="512" cy="292" r="62" fill="#ff7e33"/>
+  </g>
+</svg>

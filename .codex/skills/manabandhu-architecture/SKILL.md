@@ -17,3 +17,4 @@ description: Maintain ManaBandhu's system architecture, module boundaries, cross
 10. Give every business module its own folder, `MODULE.md`, and coupled skill rule. The canonical screen inventory lives in `frontend/src/modules/screen-catalog.ts`.
 11. Run `pnpm verify:skills`.
 12. `packages/core` (`@manabandhu/core`) holds platform-free TypeScript every client can share: the HTTP client, response parsers, error types, formatters, and the `ModuleMeta`/`ClientSurface` types. It must not import React, React Native, Expo, Supabase, or Tamagui; `pnpm verify:core` (part of `pnpm lint`) enforces this, and its tests run with `pnpm test:packages`.
+13. Cross-module imports go through the target module's `index.ts` (its public API). Each business module declares its launcher entry in `module.ts` (`ModuleMeta` from `@manabandhu/core`); Home widgets are exported by the owning module and arranged by `foundation/home/registry.ts`.

@@ -21,9 +21,11 @@
     "review:commit": "node scripts/review-commit.mjs",
     "review:history": "node scripts/review-skill-history.mjs",
     "test:packages": "pnpm --filter @manabandhu/core test",
-    "verify:core": "pnpm --filter @manabandhu/core check:platform-free"
+    "verify:core": "pnpm --filter @manabandhu/core check:platform-free",
+    "brand:icons": "node scripts/brand/render-icons.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.8"
+    "@biomejs/biome": "2.5.8",
+    "sharp": "0.35.5"
   }
 }

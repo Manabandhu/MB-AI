@@ -8,7 +8,7 @@ import { listParticipants } from '@/modules/rides/api';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Avatar, AvatarFallbackText } from '@/modules/shared/ui/gluestack/avatar';
+import { Avatar } from '@/modules/shared/ui/Avatar';
 
 export function RideParticipantsScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
@@ -51,11 +51,7 @@ export function RideParticipantsScreen() {
           {data && data.length > 0 ? (
             data.map((participant) => (
               <View key={participant.id} style={styles.card}>
-                <Avatar className="h-12 w-12 bg-primary">
-                  <AvatarFallbackText className="text-primary-foreground">
-                    {participant.name.slice(0, 2).toUpperCase()}
-                  </AvatarFallbackText>
-                </Avatar>
+                <Avatar name={participant.name} size="lg" />
                 <View style={styles.cardBody}>
                   <Text style={styles.cardTitle}>{participant.name}</Text>
                   <Text style={styles.cardMeta}>

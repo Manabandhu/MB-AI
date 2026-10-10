@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { createReferralOffer } from '@/modules/referrals/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { TextField } from '@/modules/shared/ui/TextField';
 
 export function OfferReferralScreen() {
   const router = useRouter();
@@ -74,33 +74,27 @@ export function OfferReferralScreen() {
           <View style={styles.form}>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>What can you refer?</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder="e.g. Referral at Google for SWE"
-                  value={title}
-                  onChangeText={setTitle}
-                />
-              </Input>
+              <TextField
+                placeholder="e.g. Referral at Google for SWE"
+                value={title}
+                onChangeText={setTitle}
+              />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Description</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder="Describe the opportunity and requirements"
-                  value={description}
-                  onChangeText={setDescription}
-                />
-              </Input>
+              <TextField
+                placeholder="Describe the opportunity and requirements"
+                value={description}
+                onChangeText={setDescription}
+              />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Service type</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder="e.g. Tech, Healthcare, Legal"
-                  value={serviceType}
-                  onChangeText={setServiceType}
-                />
-              </Input>
+              <TextField
+                placeholder="e.g. Tech, Healthcare, Legal"
+                value={serviceType}
+                onChangeText={setServiceType}
+              />
             </View>
             <View style={styles.actions}>
               <AppButton label="Submit offer" onPress={handleSubmit} loading={mutation.isPending} />

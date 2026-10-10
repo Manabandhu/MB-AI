@@ -26,7 +26,7 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { TextField } from '@/modules/shared/ui/TextField';
 
 export function RideManageScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
@@ -215,7 +215,7 @@ export function RideManageScreen() {
         <View style={styles.container}>
           <View style={styles.headerBar}>
             <Pressable
-              accessibilityLabel="Back to My Rides"
+              aria-label="Back to My Rides"
               onPress={() => router.back()}
               style={styles.backBtn}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -388,25 +388,21 @@ export function RideManageScreen() {
           <View style={styles.form}>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Seats Available</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder={`Current: ${data.seatsAvailable}`}
-                  keyboardType="number-pad"
-                  value={seats}
-                  onChangeText={setSeats}
-                />
-              </Input>
+              <TextField
+                placeholder={`Current: ${data.seatsAvailable}`}
+                keyboardType="number-pad"
+                value={seats}
+                onChangeText={setSeats}
+              />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Contribution ($)</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder={data.contribution ? `$${data.contribution}` : 'Optional'}
-                  keyboardType="decimal-pad"
-                  value={contribution}
-                  onChangeText={setContribution}
-                />
-              </Input>
+              <TextField
+                placeholder={data.contribution ? `$${data.contribution}` : 'Optional'}
+                keyboardType="decimal-pad"
+                value={contribution}
+                onChangeText={setContribution}
+              />
             </View>
             <View style={styles.actions}>
               <AppButton label="Save changes" onPress={handleSubmit} loading={mutation.isPending} />

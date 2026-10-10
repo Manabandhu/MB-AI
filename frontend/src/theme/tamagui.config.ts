@@ -7,22 +7,14 @@ import {
   space as spaceTokens,
   typography,
 } from '@manabandhu/design-system';
-import { createAnimations } from '@tamagui/animations-reanimated';
+import { Platform } from 'react-native';
 import { createFont, createTamagui, createTokens } from 'tamagui';
+import { animations } from './animations';
 
 /**
  * The one Tamagui config for every ManaBandhu module. Values come from `@manabandhu/design-system`; never add hex
  * values here that are not tokens there. Media keys mirror `platform/adaptive.ts` window classes.
  */
-
-const animations = createAnimations({
-  quick: { type: 'spring', damping: 18, stiffness: 320, mass: 0.6 },
-  gentle: { type: 'spring', damping: 20, stiffness: 180, mass: 0.9 },
-  bouncy: { type: 'spring', damping: 10, stiffness: 200, mass: 0.8 },
-  fast: { type: 'timing', duration: 120 },
-  normal: { type: 'timing', duration: 220 },
-  slow: { type: 'timing', duration: 320 },
-});
 
 const space = {
   0: 0,
@@ -59,8 +51,13 @@ const pick = <K extends 'fontSize' | 'lineHeight' | 'letterSpacing' | 'fontWeigh
     ['true', typography.body[key]],
   ]) as Record<keyof typeof typography | 'true', (typeof typography)['body'][K]>;
 
+// Native uses the platform UI font (SF Pro / Roboto); web uses the same faces through the system font stack, so
+// nothing is downloaded before first paint.
 const systemFont = createFont({
-  family: 'System',
+  family:
+    Platform.OS === 'web'
+      ? 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif'
+      : 'System',
   size: pick('fontSize'),
   lineHeight: pick('lineHeight'),
   letterSpacing: pick('letterSpacing'),
@@ -89,7 +86,8 @@ function baseTheme(p: Palette, dark: boolean) {
     placeholderColor: p.muted,
     outlineColor: p.primary,
     shadowColor: dark ? '#000000' : '#131b2e',
-    onPrimary: '#ffffff',
+    // Dark primary is a light violet, so text on it must be dark to keep WCAG AA contrast.
+    onPrimary: dark ? '#160b3d' : '#ffffff',
   };
 }
 

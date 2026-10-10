@@ -141,3 +141,4 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 - Ride details show only ride-record facts (2026-10): date, recurrence, distance, duration, seats, luggage, rider preference and tolls. Removed invented driver ratings, carpool counts, on-time rates, "verified driver"/employer/vehicle claims, amenities, the guarantee banner, the WhatsApp notification claim and the $6 default price; safety copy is advice, not verification claims.
 - Maps proxy (2026-10): `RideMapsController` binds caller input only to RestTemplate URI variables with `EncodingMode.VALUES_ONLY`, so input can never change the Google host, path, or other parameters (CodeQL SSRF); coordinates are range-checked.
 - Cleanup: removed unused API/type exports and repository/GraphQL helpers.
+- Public API: `rides/index.ts` exports `moduleMeta` and `RidesHomeWidget` (next three future offers with open seats).

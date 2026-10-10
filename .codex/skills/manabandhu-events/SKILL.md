@@ -84,3 +84,4 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - Real events only (2026-10): the featured card is the first upcoming event from the live list (hidden when there are none); the hard-coded Diwali feature, attendee/capacity numbers and festival schedule were removed from the home, details and create screens.
 - Cleanup: removed unused API exports and repository/GraphQL helpers.
 - Event dates and times render with `formatDate` (`weekdayTime` on lists, `long` on detail) and `formatTimeRange` from `@manabandhu/core`.
+- Public API: `events/index.ts` exports `moduleMeta` and `EventsHomeWidget` (next three upcoming events).

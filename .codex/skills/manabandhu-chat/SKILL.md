@@ -92,3 +92,4 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 - Sample data removal (2026-10 review): `ChatListScreen` no longer prepends `SAMPLE_INQUIRIES` or shows fake online/verified indicators; it renders only conversations returned by `/api/v1/chat/conversations`.
 - Chat list no longer carries presence/verification fields or badge rendering; they return when the backend tracks them.
 - Cleanup: deleted the unused `ChatListScreen.tsx`; the `/chat` tab is `foundation/screens/shell/ChatShell.tsx`. Removed unused chat API exports and repository methods.
+- Public API: `chat/index.ts` exports `moduleMeta` and `listConversations`/`Conversation` for the foundation Chat tab.

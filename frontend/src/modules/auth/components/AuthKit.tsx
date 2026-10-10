@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { forwardRef, type ReactNode, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { brandLogo } from '@/modules/shared/ui/brandAssets';
+import { BrandMark } from '@/modules/shared/ui/BrandLogo';
 
 /** Width at which the auth flow switches from a full-bleed phone layout to a centered card. */
 const CARD_BREAKPOINT = 600;
@@ -56,8 +55,8 @@ export function AuthScreen({
       <View style={styles.topBar}>
         {showBack ? (
           <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
+            role="button"
+            aria-label="Go back"
             hitSlop={8}
             onPress={goBack}
             style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
@@ -67,14 +66,14 @@ export function AuthScreen({
         ) : (
           <View style={styles.backPlaceholder} />
         )}
-        {wide ? null : (
-          <Image source={brandLogo} style={styles.topLogo} accessibilityIgnoresInvertColors />
-        )}
+        {wide ? null : <BrandMark size={32} />}
       </View>
       {wide ? (
-        <Image source={brandLogo} style={styles.cardLogo} accessibilityIgnoresInvertColors />
+        <View style={styles.cardLogo}>
+          <BrandMark size={52} />
+        </View>
       ) : null}
-      <Text accessibilityRole="header" style={styles.title}>
+      <Text role="heading" style={styles.title}>
         {title}
       </Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -147,7 +146,7 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
         {leading}
         <TextInput
           ref={ref}
-          accessibilityLabel={label}
+          aria-label={label}
           placeholderTextColor="#8e8a99"
           secureTextEntry={password ? !revealed : inputProps.secureTextEntry}
           style={[styles.input, style]}
@@ -163,8 +162,8 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
         />
         {password ? (
           <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={revealed ? 'Hide password' : 'Show password'}
+            role="button"
+            aria-label={revealed ? 'Hide password' : 'Show password'}
             hitSlop={10}
             onPress={() => setRevealed((value) => !value)}
             style={styles.reveal}
@@ -174,7 +173,7 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
         ) : null}
       </View>
       {error ? (
-        <Text accessibilityRole="alert" style={styles.fieldError}>
+        <Text role="alert" style={styles.fieldError}>
           {error}
         </Text>
       ) : hint ? (
@@ -210,8 +209,8 @@ export function AuthButton({
   ];
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
+      role="button"
+      aria-label={label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
       disabled={inactive}
@@ -273,11 +272,7 @@ export function SocialButtons({
 
 export function AuthDivider({ label = 'or' }: { label?: string }) {
   return (
-    <View
-      style={styles.divider}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
+    <View style={styles.divider} aria-hidden>
       <View style={styles.dividerLine} />
       <Text style={styles.dividerText}>{label}</Text>
       <View style={styles.dividerLine} />
@@ -294,7 +289,7 @@ export function AuthNotice({
 }) {
   return (
     <View
-      accessibilityRole="alert"
+      role="alert"
       style={[
         styles.notice,
         tone === 'error' && styles.noticeError,
@@ -325,7 +320,7 @@ export function AuthSwitch({
   return (
     <View style={styles.switchRow}>
       <Text style={styles.switchPrompt}>{prompt}</Text>
-      <Pressable accessibilityRole="link" hitSlop={10} onPress={onPress}>
+      <Pressable role="link" hitSlop={10} onPress={onPress}>
         <Text style={styles.switchAction}>{action}</Text>
       </Pressable>
     </View>
@@ -372,8 +367,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backPlaceholder: { width: 44, height: 44 },
-  topLogo: { width: 32, height: 32, borderRadius: 8 },
-  cardLogo: { width: 52, height: 52, borderRadius: 14, marginBottom: space.x4 },
+  cardLogo: { marginBottom: space.x4 },
   title: {
     marginTop: space.x4,
     color: color.ink,

@@ -111,3 +111,4 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 - Editorial content (2026-10): guides and resources may have a null `owner_id` (V30) for platform-published content. Guides, official resources (uscis.gov, travel.state.gov, studyinthestates.dhs.gov, ssa.gov, irs.gov, ceac.state.gov, fmjfee.com) and FAQ items live in the database; the app never hard-codes immigration content, dates, or visa bulletin values.
 - Cleanup: removed the unused `index.ts` barrel, unused API exports, and unused backend create-input records.
 - Dates render with `formatDate` from `@manabandhu/core`.
+- Public API: `immigration/index.ts` exports `moduleMeta` (launcher entry).

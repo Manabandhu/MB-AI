@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { createReferralRequest } from '@/modules/referrals/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Input, InputField } from '@/modules/shared/ui/gluestack/input';
+import { TextField } from '@/modules/shared/ui/TextField';
 
 export function RequestReferralScreen() {
   const router = useRouter();
@@ -80,43 +80,35 @@ export function RequestReferralScreen() {
           <View style={styles.form}>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>What do you need?</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder="e.g. Job referral at Acme Corp"
-                  value={title}
-                  onChangeText={setTitle}
-                />
-              </Input>
+              <TextField
+                placeholder="e.g. Job referral at Acme Corp"
+                value={title}
+                onChangeText={setTitle}
+              />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Description</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder="Describe what you're looking for"
-                  value={description}
-                  onChangeText={setDescription}
-                />
-              </Input>
+              <TextField
+                placeholder="Describe what you're looking for"
+                value={description}
+                onChangeText={setDescription}
+              />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Category (optional)</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder="e.g. Tech, Healthcare, Legal"
-                  value={category}
-                  onChangeText={setCategory}
-                />
-              </Input>
+              <TextField
+                placeholder="e.g. Tech, Healthcare, Legal"
+                value={category}
+                onChangeText={setCategory}
+              />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Urgency</Text>
-              <Input className="min-h-14 rounded-xl bg-secondary/70">
-                <InputField
-                  placeholder="e.g. High, Medium, Low"
-                  value={urgency}
-                  onChangeText={setUrgency}
-                />
-              </Input>
+              <TextField
+                placeholder="e.g. High, Medium, Low"
+                value={urgency}
+                onChangeText={setUrgency}
+              />
             </View>
             <View style={styles.actions}>
               <AppButton

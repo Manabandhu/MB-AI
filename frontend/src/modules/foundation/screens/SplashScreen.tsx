@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -15,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/lib/authStore';
 import { routeAfterAuth } from '@/modules/auth/postAuth';
-import { brandLogo } from '@/modules/shared/ui/brandAssets';
+import { BrandMark } from '@/modules/shared/ui/BrandLogo';
 
 export function SplashScreen() {
   const rootNavigationState = useRootNavigationState();
@@ -138,8 +137,8 @@ export function SplashScreen() {
   return (
     <SafeAreaView style={styles.splash}>
       <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Advance splash screen"
+        role="button"
+        aria-label="Advance splash screen"
         onPress={navigateToWelcome}
         style={styles.splashInner}
       >
@@ -161,11 +160,7 @@ export function SplashScreen() {
             ]}
           >
             <View style={styles.glowRingInner}>
-              <Image
-                accessibilityIgnoresInvertColors
-                source={brandLogo}
-                style={styles.splashLogo}
-              />
+              <BrandMark size={140} />
             </View>
           </Animated.View>
         </Animated.View>
@@ -242,11 +237,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 24,
     elevation: 8,
-  },
-  splashLogo: {
-    borderRadius: 80,
-    height: 140,
-    width: 140,
   },
   brandBlock: {
     alignItems: 'center',
