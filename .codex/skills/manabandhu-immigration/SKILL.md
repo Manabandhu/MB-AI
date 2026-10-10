@@ -112,3 +112,4 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 - Cleanup: removed the unused `index.ts` barrel, unused API exports, and unused backend create-input records.
 - Dates render with `formatDate` from `@manabandhu/core`.
 - Public API: `immigration/index.ts` exports `moduleMeta` (launcher entry).
+- P0 privacy fix (2026-10-10): `SecurityConfig` no longer opens `/api/v1/immigration/**`; only published content is public (`screens/{screenId}`, `resources`, `resources/{resourceId}`, `guides`, `faq`, `news`). `GET /api/v1/immigration/checklists` requires a JWT and returns only the caller's checklists (newest 200, optional `category`) through `ImmigrationChecklistService.findForOwner`; completing a checklist requires ownership. `ChecklistsScreen` shows a sign-in prompt to signed-out visitors. Unknown `resourceType` values on `POST /resources` return 400 (case-insensitive match).

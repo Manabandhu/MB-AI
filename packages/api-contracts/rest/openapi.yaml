@@ -196,10 +196,12 @@ paths:
   /immigration/checklists:
     get:
       operationId: listImmigrationChecklists
-      summary: List immigration checklists
+      summary: List the caller's own immigration checklists (newest 200)
       responses:
+        '401':
+          description: Sign-in required
         '200':
-          description: Immigration checklists
+          description: Immigration checklists owned by the caller
           content:
             application/json:
               schema:

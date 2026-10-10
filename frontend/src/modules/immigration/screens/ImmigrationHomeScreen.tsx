@@ -5,6 +5,7 @@ import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/lib/authStore';
 import {
   type ImmigrationChecklist,
   type ImmigrationFaqItem,
@@ -431,15 +432,30 @@ function ResourcesList() {
 }
 
 function ChecklistsList() {
+  const router = useRouter();
+  const authStatus = useAuthStore((st) => st.status);
   const query = useQuery({
     queryKey: ['immigration', 'checklists'],
     queryFn: () => listImmigrationChecklists(),
+    // Checklists are personal; the endpoint requires a signed-in member.
+    enabled: authStatus === 'authenticated',
   });
+  if (authStatus === 'unauthenticated') {
+    return (
+      <EmptyState
+        title="Sign in to see your checklists"
+        body="Checklists are private to your account."
+        actionLabel="Sign in"
+        onAction={() => router.push('/sign-in' as Href)}
+      />
+    );
+  }
+  if (authStatus === 'loading') return <LoadingState label="Loading checklists..." />;
   return (
     <QueryList
       query={query}
       noun="checklists"
-      emptyBody="Checklists will appear here once they are published."
+      emptyBody="Checklists you create will appear here."
       render={(checklist) => <ChecklistCard key={checklist.id} checklist={checklist} />}
     />
   );

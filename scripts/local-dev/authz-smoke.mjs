@@ -79,6 +79,32 @@ await status('graphql needs login', 401, null, 'POST', '/graphql', {
   query: '{ rideOffers { id } }',
 });
 
+console.log('== immigration');
+await status('immigration guides are public', 200, null, 'GET', '/api/v1/immigration/guides');
+await status('immigration news is public', 200, null, 'GET', '/api/v1/immigration/news');
+await status(
+  'anonymous cannot list checklists',
+  401,
+  null,
+  'GET',
+  '/api/v1/immigration/checklists',
+);
+{
+  const lists = await call('C', 'GET', '/api/v1/immigration/checklists');
+  expect(
+    'checklists list only the caller',
+    lists.status === 200 && Array.isArray(lists.body) && lists.body.every((c) => c.ownerId === C),
+    true,
+  );
+}
+await status('unknown resource type is a 400', 400, 'A', 'POST', '/api/v1/immigration/resources', {
+  title: 'Bad type',
+  description: 'x',
+  category: 'OPT',
+  url: 'https://www.uscis.gov',
+  resourceType: 'NOT_A_TYPE',
+});
+
 console.log('== rides');
 const departureAt = new Date(Date.now() + 2 * 86400000).toISOString();
 const offer = await status('driver creates offer', 201, 'A', 'POST', '/api/v1/rides/offers', {

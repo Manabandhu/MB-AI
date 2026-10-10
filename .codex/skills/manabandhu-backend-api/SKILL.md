@@ -15,7 +15,7 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 8. Add tests for authorization, validation, failure behavior, and persistence boundaries.
 8a. Security model (2026-10 hardening, authoritative over older notes below):
    - Resolve the caller with `com.manabandhu.backend.auth.Actor` (`Actor.require` → 401, `Actor.from` for optional viewers) and enforce ownership/membership inside services (`actor.requireOwner`, `requireAnyOf`, module helpers such as `RideAccess`, `ExpenseAccess`, `ConversationParticipantService.requireParticipant`) so REST and GraphQL share one rule.
-   - `SecurityConfig` public GETs are an explicit list of read-only browse routes; never add `/**` wildcards over modules that also serve user data (immigration content is the only wildcard). `/error` and `/actuator/info` are public; other actuator endpoints are admin-only.
+   - `SecurityConfig` public GETs are an explicit list of read-only browse routes; never add `/**` wildcards over modules that also serve user data (no module is opened with a wildcard; immigration lists its published paths explicitly). `/error` and `/actuator/info` are public; other actuator endpoints are admin-only.
    - CORS allows credentials `false` (bearer tokens only); dev LAN patterns come from `CORS_ALLOWED_ORIGIN_PATTERNS` and should be empty in production.
    - `ApiExceptionHandler` (REST) and `GraphqlExceptionResolver` map errors to 400/401/403/404/409 and never return exception messages or SQL for 5xx.
    - Only community, rooms, rides and events have GraphQL controllers; do not add resolvers for fields that are not in the schema.
