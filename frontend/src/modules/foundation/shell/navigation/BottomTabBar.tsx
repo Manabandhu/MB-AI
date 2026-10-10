@@ -19,9 +19,10 @@ export function BottomTabBar(props: BottomTabBarProps) {
       backgroundColor="$surface"
       borderTopColor="$borderColor"
       borderTopWidth={1}
-      paddingBottom={Math.max(props.insets.bottom, 8)}
+      // Closer to the native iOS tab bar: the home-indicator inset already provides breathing room.
+      paddingBottom={Math.max(props.insets.bottom - 6, 8)}
       paddingHorizontal="$x2"
-      paddingTop="$x2"
+      paddingTop={6}
     >
       {primaryTabs.map((tab) => {
         const selected = tab.name === active;

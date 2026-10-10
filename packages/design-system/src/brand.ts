@@ -16,6 +16,10 @@ export const brand = {
     accent: '#ff7e33',
     teal: '#00a3a6',
     onPrimary: '#ffffff',
+    /** Secondary text and icons on the brand gradient. */
+    onPrimaryMuted: 'rgba(255,255,255,0.78)',
+    /** Translucent fill for buttons that sit on the brand gradient. */
+    onPrimaryGlass: 'rgba(255,255,255,0.16)',
     themeLight: '#faf8ff',
     themeDark: '#0f1525',
   },

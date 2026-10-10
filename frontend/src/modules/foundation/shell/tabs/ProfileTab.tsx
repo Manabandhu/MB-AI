@@ -1,8 +1,10 @@
 import type { User } from '@supabase/supabase-js';
 import Head from 'expo-router/head';
+import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
+import { NicknameSheet } from '@/modules/foundation/home/NicknameSheet';
 import { AppearanceSettings } from '@/modules/foundation/settings/AppearanceSettings';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import type { AppIconName } from '@/modules/shared/ui/AppIcon';
@@ -45,6 +47,9 @@ export function ProfileTab() {
   const name = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'Member';
   const contact = user?.email ?? user?.phone ?? null;
   const badges = badgesFor(user);
+  const nickname =
+    typeof user?.user_metadata?.nickname === 'string' ? user.user_metadata.nickname : null;
+  const [nicknameOpen, setNicknameOpen] = useState(false);
 
   return (
     <Screen>
@@ -62,6 +67,23 @@ export function ProfileTab() {
           <YStack flex={1} gap="$x1">
             <AppText variant="h3">{name}</AppText>
             {contact ? <AppText tone="muted">{contact}</AppText> : null}
+            <XStack
+              alignItems="center"
+              alignSelf="flex-start"
+              aria-label={t('nickname.row')}
+              cursor="pointer"
+              gap="$x1"
+              minHeight={32}
+              onPress={() => setNicknameOpen(true)}
+              role="button"
+            >
+              <AppText tone="muted" variant="caption">
+                {t('nickname.row')}:
+              </AppText>
+              <AppText tone="primary" variant="label">
+                {nickname ?? t('nickname.notSet')}
+              </AppText>
+            </XStack>
             {badges.length > 0 ? (
               <XStack flexWrap="wrap" gap="$x2" marginTop="$x1">
                 {badges.map((badge) => (

@@ -42,6 +42,8 @@ interface AuthActions {
   verifyOtp: (emailOrPhone: string, token: string, type: 'email' | 'sms') => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
+  /** Saves the name we greet the member by (auth user metadata `nickname`). Throws on failure. */
+  updateNickname: (nickname: string) => Promise<void>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
   loadIdentity: () => Promise<void>;
@@ -296,6 +298,13 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       set({ error: message, isLoading: false });
       throw err;
     }
+  },
+
+  updateNickname: async (nickname) => {
+    // Does not touch `isLoading`/`status`: a profile edit must never look like a sign-in transition.
+    const { data, error } = await supabase.auth.updateUser({ data: { nickname } });
+    if (error) throw error;
+    if (data.user) set({ user: data.user });
   },
 
   signOut: async () => {

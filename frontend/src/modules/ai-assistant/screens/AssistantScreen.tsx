@@ -1,5 +1,6 @@
 import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,7 +20,9 @@ export function AssistantScreen() {
   const queryClient = useQueryClient();
   const messages = useQuery({ queryKey: ['assistant', 'messages'], queryFn: getAssistantMessages });
   const data = messages.data ?? [];
-  const [text, setText] = useState('');
+  // Home quick prompts open the assistant pre-filled; the member still reviews and sends it.
+  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
+  const [text, setText] = useState(typeof prompt === 'string' ? prompt : '');
   const [offline, setOffline] = useState(false);
 
   const sendMutation = useMutation({

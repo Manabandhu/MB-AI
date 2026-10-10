@@ -144,3 +144,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Sharing: `lib/share.ts` (`linkTo`, `shareLink`) uses the native share sheet, the Web Share API, or the clipboard; set `EXPO_PUBLIC_WEB_URL` so links use the public domain. Home ends with an `InviteCard`.
 - `pnpm verify` now also runs `verify:design` (design-system ratchet). `frontend/AGENTS.md` points at the Expo SDK 57 docs.
 - `frontend/.env.example` documents `EXPO_PUBLIC_WEB_URL` (public origin for shared links) and `APP_LINK_DOMAIN` (universal/App Links domain for `app.config.js`); both are optional and empty by default.
+- `BottomTabBar` padding is 6 at the top and `max(insets.bottom − 6, 8)` at the bottom, closer to the native iOS tab bar. Verify notch and home-indicator layouts by temporarily wrapping the root in `SafeAreaInsetsContext.Provider` with `{ top: 59, bottom: 34 }` on web; never commit that shim.

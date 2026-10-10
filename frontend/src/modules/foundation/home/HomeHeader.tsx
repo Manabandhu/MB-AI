@@ -1,0 +1,149 @@
+import { brand } from '@manabandhu/design-system';
+import { router, useFocusEffect } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { XStack, YStack } from 'tamagui';
+import { useT } from '@/i18n';
+import { useAuthStore } from '@/lib/authStore';
+import { useLocationStore } from '@/lib/locationStore';
+import { LocationSelectorModal } from '@/modules/foundation/components/LocationSelectorModal';
+import { UnreadNotificationDot } from '@/modules/foundation/shell/UnreadNotificationDot';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Avatar } from '@/modules/shared/ui/Avatar';
+import { GradientSurface } from '@/modules/shared/ui/GradientSurface';
+import { useFormFactor } from '@/platform/formFactor';
+import { greetingName } from './greetingName';
+
+function greetingKey(hour: number) {
+  if (hour < 5) return 'greeting.evening' as const;
+  if (hour < 12) return 'greeting.morning' as const;
+  if (hour < 17) return 'greeting.afternoon' as const;
+  return 'greeting.evening' as const;
+}
+
+const onBrand = brand.color.onPrimary;
+const onBrandMuted = brand.color.onPrimaryMuted;
+const glass = brand.color.onPrimaryGlass;
+
+function HeaderIcon({
+  icon,
+  label,
+  onPress,
+  badge,
+}: {
+  icon: 'bell';
+  label: string;
+  onPress: () => void;
+  badge?: boolean;
+}) {
+  return (
+    <YStack
+      alignItems="center"
+      aria-label={label}
+      backgroundColor={glass}
+      borderRadius="$pill"
+      cursor="pointer"
+      height={40}
+      justifyContent="center"
+      onPress={onPress}
+      pressStyle={{ opacity: 0.7 }}
+      role="button"
+      width={40}
+    >
+      <AppIcon color={onBrand} name={icon} size={19} />
+      {badge ? <UnreadNotificationDot /> : null}
+    </YStack>
+  );
+}
+
+/**
+ * Thin brand strip that runs edge to edge under the status bar / notch: avatar, greeting with the member's name,
+ * city, and notifications (search lives in the Ask card). Light status-bar icons while Home is focused.
+ */
+export function HomeHeader() {
+  const t = useT();
+  const insets = useSafeAreaInsets();
+  const user = useAuthStore((s) => s.user);
+  const location = useLocationStore((s) => s.currentLocation);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [focused, setFocused] = useState(true);
+  const { navigationStyle, maxContentWidth } = useFormFactor();
+  const name = greetingName(user?.user_metadata);
+  const fullName =
+    (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'Member';
+  const phoneChrome = navigationStyle === 'bottom';
+
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+
+  const greeting = t(greetingKey(new Date().getHours()));
+  return (
+    <GradientSurface corners="bottom" padding={0} radius={24}>
+      {focused ? <StatusBar style="light" /> : null}
+      <YStack
+        alignSelf="center"
+        gap="$x2"
+        maxWidth={maxContentWidth + 48}
+        paddingBottom={40}
+        paddingHorizontal={phoneChrome ? '$x4' : '$x6'}
+        paddingTop={insets.top + 8}
+        width="100%"
+      >
+        <XStack alignItems="center" gap="$x3">
+          {phoneChrome ? (
+            <YStack
+              aria-label={t('shell.openProfile')}
+              cursor="pointer"
+              onPress={() => router.push('/profile')}
+              role="button"
+            >
+              <Avatar
+                imageUrl={user?.user_metadata?.avatar_url as string | undefined}
+                name={fullName}
+                size="md"
+              />
+            </YStack>
+          ) : null}
+          <YStack flex={1} gap={2}>
+            <AppText color={onBrand} numberOfLines={1} role="heading" variant="h4">
+              {name ? `${greeting}, ${name} 👋` : `${greeting} 👋`}
+            </AppText>
+            <XStack
+              alignItems="center"
+              alignSelf="flex-start"
+              aria-label={`${location.name}. ${t('home.changeCity')}`}
+              cursor="pointer"
+              gap={4}
+              hitSlop={8}
+              minHeight={28}
+              onPress={() => setLocationOpen(true)}
+              pressStyle={{ opacity: 0.7 }}
+              role="button"
+            >
+              <AppIcon color={onBrandMuted} name="map-pin" size={14} />
+              <AppText color={onBrandMuted} maxWidth={220} numberOfLines={1} variant="label">
+                {location.name}
+              </AppText>
+              <AppIcon color={onBrandMuted} name="chevron-down" size={14} />
+            </XStack>
+          </YStack>
+          {phoneChrome ? (
+            <HeaderIcon
+              badge
+              icon="bell"
+              label={t('shell.notifications')}
+              onPress={() => router.push('/notifications')}
+            />
+          ) : null}
+        </XStack>
+      </YStack>
+      <LocationSelectorModal onClose={() => setLocationOpen(false)} visible={locationOpen} />
+    </GradientSurface>
+  );
+}

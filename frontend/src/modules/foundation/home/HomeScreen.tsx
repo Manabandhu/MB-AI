@@ -3,6 +3,8 @@ import Head from 'expo-router/head';
 import { useCallback, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
+import { useAuthStore } from '@/lib/authStore';
+import { AssistantEntry } from '@/modules/ai-assistant';
 import { useShellContent } from '@/modules/foundation/shell/shellApi';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { CountUp } from '@/modules/shared/ui/motion/CountUp';
@@ -10,8 +12,12 @@ import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { Section } from '@/modules/shared/ui/Section';
-import { HomeHero } from './HomeHero';
+import { useAppearanceStore } from '@/theme/themePreferenceStore';
+import { greetingName } from './greetingName';
+import { HomeHeader } from './HomeHeader';
 import { InviteCard } from './InviteCard';
+import { NicknameNudge } from './NicknameNudge';
+import { NicknameSheet } from './NicknameSheet';
 import { QuickAccess } from './QuickAccess';
 import { homeWidgets } from './registry';
 import { WidgetBoundary } from './WidgetBoundary';
@@ -70,14 +76,21 @@ export function HomeScreen() {
     }
   }, [queryClient]);
 
+  const user = useAuthStore((s) => s.user);
+  const nudgeDismissed = useAppearanceStore((s) => s.nicknamePromptDismissed);
+  const [nicknameOpen, setNicknameOpen] = useState(false);
+  const showNudge = !nudgeDismissed && greetingName(user?.user_metadata) === null;
+
   return (
-    <Screen bottomInset={0} onRefresh={onRefresh} refreshing={refreshing}>
+    <Screen hero={<HomeHeader />} onRefresh={onRefresh} refreshing={refreshing}>
       <Head>
         <title>Home · ManaBandhu</title>
       </Head>
-      <FadeIn>
-        <HomeHero />
-      </FadeIn>
+      {/* The Ask card overlaps the bottom of the brand strip. */}
+      <YStack marginTop={-28} position="relative" zIndex={2}>
+        <AssistantEntry />
+      </YStack>
+      {showNudge ? <NicknameNudge onSet={() => setNicknameOpen(true)} /> : null}
       <FadeIn index={1}>
         <Section title={t('home.quickAccess')}>
           <QuickAccess />
@@ -96,6 +109,7 @@ export function HomeScreen() {
         ))}
       </ResponsiveGrid>
       <InviteCard />
+      <NicknameSheet onClose={() => setNicknameOpen(false)} visible={nicknameOpen} />
     </Screen>
   );
 }
