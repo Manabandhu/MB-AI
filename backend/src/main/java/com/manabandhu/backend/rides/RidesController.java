@@ -300,7 +300,7 @@ public class RidesController {
     @PostMapping("/offers/{offerId}/requests")
     ResponseEntity<RideRequest> createRequest(@PathVariable UUID offerId, Authentication authentication,
                                               @Valid @RequestBody CreateRideRequestInput input) {
-        var request = requestService.create(offerId, actorId(authentication), input);
+        var request = requestService.create(offerId, Actor.require(authentication), input);
         return ResponseEntity.created(URI.create("/api/v1/rides/requests/" + request.getId())).body(request);
     }
 
@@ -351,7 +351,7 @@ public class RidesController {
     @PostMapping("/offers/{offerId}/bookings")
     ResponseEntity<RideBooking> createBooking(@PathVariable UUID offerId, Authentication authentication,
                                                @Valid @RequestBody CreateRideBookingInput input) {
-        var booking = bookingService.create(offerId, actorId(authentication), input);
+        var booking = bookingService.create(offerId, Actor.require(authentication), input);
         return ResponseEntity.created(URI.create("/api/v1/rides/bookings/" + booking.getId())).body(booking);
     }
 

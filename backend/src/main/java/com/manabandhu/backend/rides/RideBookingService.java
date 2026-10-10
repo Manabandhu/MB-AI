@@ -72,11 +72,13 @@ public class RideBookingService {
     }
 
     @Transactional
-    public RideBooking create(UUID rideId, UUID userId, CreateRideBookingInput input) {
+    public RideBooking create(UUID rideId, Actor actor, CreateRideBookingInput input) {
+        var userId = actor.id();
         var offer = lockOffer(rideId);
         if (offer.getDriverId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "You cannot book a seat on your own ride");
         }
+        access.requireEligibleRider(actor, offer);
         if (!"active".equalsIgnoreCase(offer.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This ride is not accepting bookings");
         }
@@ -85,6 +87,9 @@ public class RideBookingService {
         }
         if (repository.existsByRideIdAndUserIdAndStatusNot(rideId, userId, CANCELLED)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have a booking on this ride");
+        }
+        if (access.hasAcceptedRequest(userId, rideId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Your seat request on this ride was already accepted");
         }
         if (offer.getSeatsAvailable() < input.seatsBooked()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Not enough seats available");

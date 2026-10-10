@@ -1,5 +1,6 @@
 package com.manabandhu.backend.rides;
 
+import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -47,6 +48,30 @@ class RideAccess {
         return bookingRepository.existsByRideIdAndUserIdAndStatusNot(rideId, userId, RideBookingService.CANCELLED)
                 || requestRepository.existsByRideIdAndRiderIdAndStatus(rideId, userId, "accepted")
                 || participantRepository.existsByRideIdAndUserId(rideId, userId);
+    }
+
+    /**
+     * Women-only ({@code FEMALE_ONLY}) and men-only ({@code MALE_ONLY}) rides accept only riders whose gender is
+     * verified in the token's {@code app_metadata}; self-declared profile data never counts. Any other preference
+     * is open to everyone.
+     */
+    void requireEligibleRider(Actor actor, RideOffer offer) {
+        var preference = offer.getGenderPreference() == null ? "" : offer.getGenderPreference().trim().toUpperCase(Locale.ROOT);
+        var required = switch (preference) {
+            case "FEMALE_ONLY", "WOMEN_ONLY" -> "female";
+            case "MALE_ONLY", "MEN_ONLY" -> "male";
+            default -> null;
+        };
+        if (required != null && !required.equals(actor.verifiedGender())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "female".equals(required)
+                            ? "This ride is for verified women riders only"
+                            : "This ride is for verified men riders only");
+        }
+    }
+
+    boolean hasAcceptedRequest(UUID userId, UUID rideId) {
+        return requestRepository.existsByRideIdAndRiderIdAndStatus(rideId, userId, RideRequestService.ACCEPTED);
     }
 
     /** Driver, confirmed passengers, and admins form the ride's private circle. */

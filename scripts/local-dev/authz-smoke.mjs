@@ -13,7 +13,14 @@ const A = '11111111-1111-1111-1111-111111111111'; // driver / group owner
 const B = '22222222-2222-2222-2222-222222222222'; // rider / group member
 const C = '33333333-3333-3333-3333-333333333333'; // stranger
 const D = '44444444-4444-4444-4444-444444444444'; // admin
-const token = { A: mint(A), B: mint(B), C: mint(C), D: mint(D, ['ADMIN']) };
+const E = '55555555-5555-5555-5555-555555555555'; // rider with verified gender (app_metadata.gender = female)
+const token = {
+  A: mint(A),
+  B: mint(B),
+  C: mint(C),
+  D: mint(D, ['ADMIN']),
+  E: mint(E, [], {}, { app_metadata: { roles: [], gender: 'female' } }),
+};
 
 let pass = 0;
 let fail = 0;
@@ -172,9 +179,9 @@ const booking2 = await status(
   { seatsBooked: 1 },
 );
 const request = await status(
-  'rider requests a seat with a note',
+  'second rider requests a seat with a note',
   201,
-  'B',
+  'E',
   'POST',
   `/api/v1/rides/offers/${rideId}/requests`,
   { seatsRequested: 1, message: 'call me' },
@@ -199,7 +206,7 @@ expect(
 await status(
   'rider cannot accept own request',
   403,
-  'B',
+  'E',
   'PATCH',
   `/api/v1/rides/requests/${request?.id}/status`,
   { status: 'accepted' },
@@ -207,6 +214,73 @@ await status(
 await status('driver accepts', 200, 'A', 'PATCH', `/api/v1/rides/requests/${request?.id}/status`, {
   status: 'ACCEPTED',
 });
+expect('accepting reserves the requested seat', await seats(), 1);
+expect(
+  'accepted rider becomes a participant',
+  (await call('E', 'GET', `/api/v1/rides/offers/${rideId}/participants`)).status,
+  200,
+);
+await status(
+  'accepted request cannot go back to pending',
+  409,
+  'A',
+  'PATCH',
+  `/api/v1/rides/requests/${request?.id}/status`,
+  { status: 'pending' },
+);
+{
+  const big = await call('C', 'POST', `/api/v1/rides/offers/${rideId}/requests`, {
+    seatsRequested: 2,
+  });
+  await status(
+    'accepting more seats than remain is rejected',
+    409,
+    'A',
+    'PATCH',
+    `/api/v1/rides/requests/${big.body?.id}/status`,
+    { status: 'accepted' },
+  );
+  expect('seats unchanged after a rejected accept', await seats(), 1);
+}
+const womenOnly = await status(
+  'driver creates a women-only offer',
+  201,
+  'A',
+  'POST',
+  '/api/v1/rides/offers',
+  {
+    originArea: 'Irving',
+    destinationArea: 'Frisco',
+    departureAt,
+    seatsTotal: 2,
+    contribution: '$8',
+    genderPreference: 'FEMALE_ONLY',
+  },
+);
+await status(
+  'unverified rider cannot book a women-only ride',
+  403,
+  'B',
+  'POST',
+  `/api/v1/rides/offers/${womenOnly?.id}/bookings`,
+  { seatsBooked: 1 },
+);
+await status(
+  'unverified rider cannot request a women-only ride',
+  403,
+  'B',
+  'POST',
+  `/api/v1/rides/offers/${womenOnly?.id}/requests`,
+  { seatsRequested: 1 },
+);
+await status(
+  'verified woman books a women-only ride',
+  201,
+  'E',
+  'POST',
+  `/api/v1/rides/offers/${womenOnly?.id}/bookings`,
+  { seatsBooked: 1 },
+);
 await status(
   'stranger cannot read a booking',
   403,

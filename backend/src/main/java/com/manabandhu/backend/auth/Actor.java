@@ -1,5 +1,6 @@
 package com.manabandhu.backend.auth;
 
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -8,15 +9,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
  * The verified caller of a request. Identity always comes from the JWT subject, never from client input.
  * Services take an {@code Actor} so REST and GraphQL share one authorization path.
  */
-public record Actor(UUID id, boolean admin, boolean superAdmin) {
+public record Actor(UUID id, boolean admin, boolean superAdmin, String verifiedGender) {
 
     private static final Set<String> ADMIN_ROLES = Set.of("ROLE_ADMIN", "ROLE_SUPER_ADMIN");
+
+    public Actor(UUID id, boolean admin, boolean superAdmin) {
+        this(id, admin, superAdmin, null);
+    }
 
     /** Resolves the caller or fails with 401 when the request is anonymous. */
     public static Actor require(Authentication authentication) {
@@ -41,7 +47,18 @@ public record Actor(UUID id, boolean admin, boolean superAdmin) {
         var authorities = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
         var admin = authorities.stream().anyMatch(ADMIN_ROLES::contains);
         var superAdmin = authorities.contains("ROLE_SUPER_ADMIN");
-        return Optional.of(new Actor(id, admin, superAdmin));
+        return Optional.of(new Actor(id, admin, superAdmin, verifiedGender(authentication)));
+    }
+
+    /**
+     * Gender from the token's {@code app_metadata.gender}, lowercased. {@code app_metadata} is writable only with
+     * the service role, so users cannot set it themselves ({@code user_metadata} would be self-declared).
+     */
+    private static String verifiedGender(Authentication authentication) {
+        if (!(authentication instanceof JwtAuthenticationToken token)) return null;
+        var metadata = token.getToken().getClaimAsMap("app_metadata");
+        if (metadata == null || !(metadata.get("gender") instanceof String gender) || gender.isBlank()) return null;
+        return gender.trim().toLowerCase(Locale.ROOT);
     }
 
     public boolean is(UUID userId) {

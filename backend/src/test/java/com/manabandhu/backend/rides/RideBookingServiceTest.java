@@ -64,7 +64,7 @@ class RideBookingServiceTest {
 
     @Test
     void createDecrementsAvailableSeats() {
-        var booking = service.create(offer.getId(), riderId, new CreateRideBookingInput(2));
+        var booking = service.create(offer.getId(), user(riderId), new CreateRideBookingInput(2));
         assertThat(booking.getSeatsBooked()).isEqualTo(2);
         assertThat(booking.getUserId()).isEqualTo(riderId);
         assertThat(offer.getSeatsAvailable()).isEqualTo(1);
@@ -72,20 +72,20 @@ class RideBookingServiceTest {
 
     @Test
     void createRejectsOverbooking() {
-        assertThatThrownBy(() -> service.create(offer.getId(), riderId, new CreateRideBookingInput(4)))
+        assertThatThrownBy(() -> service.create(offer.getId(), user(riderId), new CreateRideBookingInput(4)))
                 .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
     }
 
     @Test
     void driverCannotBookOwnRide() {
-        assertThatThrownBy(() -> service.create(offer.getId(), driverId, new CreateRideBookingInput(1)))
+        assertThatThrownBy(() -> service.create(offer.getId(), user(driverId), new CreateRideBookingInput(1)))
                 .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
     }
 
     @Test
     void cannotBookACancelledRide() {
         offer.setStatus("cancelled");
-        assertThatThrownBy(() -> service.create(offer.getId(), riderId, new CreateRideBookingInput(1)))
+        assertThatThrownBy(() -> service.create(offer.getId(), user(riderId), new CreateRideBookingInput(1)))
                 .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
     }
 
@@ -147,5 +147,40 @@ class RideBookingServiceTest {
 
         assertThat(offer.getSeatsAvailable()).isEqualTo(3);
         verify(bookingRepository).delete(booking);
+    }
+
+    @Test
+    void womenOnlyRideRejectsRidersWithoutVerifiedGender() {
+        offer.setGenderPreference("FEMALE_ONLY");
+
+        assertThatThrownBy(() -> service.create(offer.getId(), user(riderId), new CreateRideBookingInput(1)))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
+        assertThat(offer.getSeatsAvailable()).isEqualTo(3);
+    }
+
+    @Test
+    void womenOnlyRideRejectsVerifiedMen() {
+        offer.setGenderPreference("FEMALE_ONLY");
+
+        assertThatThrownBy(() -> service.create(offer.getId(), new Actor(riderId, false, false, "male"), new CreateRideBookingInput(1)))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void womenOnlyRideAcceptsVerifiedWomen() {
+        offer.setGenderPreference("FEMALE_ONLY");
+
+        var booking = service.create(offer.getId(), new Actor(riderId, false, false, "female"), new CreateRideBookingInput(1));
+
+        assertThat(booking.getStatus()).isEqualTo("confirmed");
+        assertThat(offer.getSeatsAvailable()).isEqualTo(2);
+    }
+
+    @Test
+    void riderWithAnAcceptedRequestCannotAlsoBook() {
+        when(requestRepository.existsByRideIdAndRiderIdAndStatus(offer.getId(), riderId, "accepted")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.create(offer.getId(), user(riderId), new CreateRideBookingInput(1)))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
     }
 }

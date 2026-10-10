@@ -233,6 +233,10 @@ export function RideDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ['rides', 'offers'] });
       queryClient.invalidateQueries({ queryKey: ['rides', 'saved'] });
     },
+    // Women-only rides, full rides and duplicate bookings are refused by the server; say why.
+    onError: (err) => {
+      Alert.alert('Booking not completed', (err as Error)?.message || 'Please try again.');
+    },
   });
 
   function toggleSeat(slotNum: number) {

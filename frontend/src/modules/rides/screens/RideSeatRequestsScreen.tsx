@@ -1,7 +1,7 @@
 import { color as colors, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { listSeatRequests, updateSeatRequestStatus } from '@/modules/rides/api';
@@ -20,16 +20,26 @@ export function RideSeatRequestsScreen() {
     enabled: Boolean(rideId),
   });
 
+  // Accepting reserves seats on the ride, so the server can refuse (full, departed, inactive).
+  const showError = (title: string) => (err: unknown) =>
+    Alert.alert(title, err instanceof Error ? err.message : 'Please try again.');
+
   const approve = useMutation({
     mutationFn: (requestId: string) => updateSeatRequestStatus(requestId, 'ACCEPTED'),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['rides', 'seat-requests', rideId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rides', 'seat-requests', rideId] });
+      queryClient.invalidateQueries({ queryKey: ['rides', 'detail', rideId] });
+    },
+    onError: showError('Could not accept request'),
   });
 
   const reject = useMutation({
     mutationFn: (requestId: string) => updateSeatRequestStatus(requestId, 'REJECTED'),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['rides', 'seat-requests', rideId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rides', 'seat-requests', rideId] });
+      queryClient.invalidateQueries({ queryKey: ['rides', 'detail', rideId] });
+    },
+    onError: showError('Could not reject request'),
   });
 
   if (isLoading) {

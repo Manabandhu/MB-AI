@@ -61,7 +61,7 @@ public class RidesGraphqlController {
 
     @MutationMapping
     RideRequest requestRideSeat(Authentication authentication, @Argument UUID rideId, @Argument @Valid CreateRideRequestInput input) {
-        return requestService.create(rideId, Actor.require(authentication).id(), input);
+        return requestService.create(rideId, Actor.require(authentication), input);
     }
 
     @QueryMapping
