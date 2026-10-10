@@ -1,43 +1,59 @@
 import { YStack } from 'tamagui';
+import { type LanguagePreference, supportedLanguages, useT } from '@/i18n';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 import { useAppearanceStore } from '@/theme/themePreferenceStore';
 
-/** Theme (system / light / dark) and animation level. Saved on this device only. */
+/** Theme, animation level, and language. Saved on this device only. */
 export function AppearanceSettings() {
+  const t = useT();
   const theme = useAppearanceStore((s) => s.theme);
   const motion = useAppearanceStore((s) => s.motion);
+  const language = useAppearanceStore((s) => s.language);
   const setTheme = useAppearanceStore((s) => s.setTheme);
   const setMotion = useAppearanceStore((s) => s.setMotion);
+  const setLanguage = useAppearanceStore((s) => s.setLanguage);
   return (
     <YStack gap="$x4">
       <YStack gap="$x2">
-        <AppText variant="label">Theme</AppText>
+        <AppText variant="label">{t('appearance.theme')}</AppText>
         <SegmentedControl
-          label="Theme"
+          label={t('appearance.theme')}
           onChange={setTheme}
           options={[
-            { value: 'system', label: 'System', icon: 'monitor' },
-            { value: 'light', label: 'Light', icon: 'sun' },
-            { value: 'dark', label: 'Dark', icon: 'moon' },
+            { value: 'system', label: t('appearance.system'), icon: 'monitor' },
+            { value: 'light', label: t('appearance.light'), icon: 'sun' },
+            { value: 'dark', label: t('appearance.dark'), icon: 'moon' },
           ]}
           value={theme}
         />
       </YStack>
       <YStack gap="$x2">
-        <AppText variant="label">Animations</AppText>
+        <AppText variant="label">{t('appearance.language')}</AppText>
+        <SegmentedControl<LanguagePreference>
+          label={t('appearance.language')}
+          onChange={setLanguage}
+          options={[
+            { value: 'system', label: t('appearance.system') },
+            ...supportedLanguages.map((l) => ({ value: l.code, label: l.label })),
+          ]}
+          value={language}
+        />
+      </YStack>
+      <YStack gap="$x2">
+        <AppText variant="label">{t('appearance.animations')}</AppText>
         <SegmentedControl
-          label="Animations"
+          label={t('appearance.animations')}
           onChange={setMotion}
           options={[
-            { value: 'full', label: 'Full' },
-            { value: 'reduced', label: 'Reduced' },
-            { value: 'off', label: 'Off' },
+            { value: 'full', label: t('appearance.full') },
+            { value: 'reduced', label: t('appearance.reduced') },
+            { value: 'off', label: t('appearance.off') },
           ]}
           value={motion}
         />
         <AppText tone="muted" variant="caption">
-          Your device's reduce-motion setting always limits animations.
+          {t('appearance.motionNote')}
         </AppText>
       </YStack>
     </YStack>

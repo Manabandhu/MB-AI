@@ -2,6 +2,7 @@ import { contentWidth } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { XStack, YStack } from 'tamagui';
+import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
@@ -17,6 +18,7 @@ import { useTabPress } from './useTabPress';
 export function TopNav(props: BottomTabBarProps) {
   const { palette } = useAppearance();
   const press = useTabPress(props);
+  const t = useT();
   const active = props.state.routes[props.state.index]?.name;
   const user = useAuthStore((s) => s.user);
   const name = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'Member';
@@ -44,7 +46,7 @@ export function TopNav(props: BottomTabBarProps) {
             const selected = tab.name === active;
             return (
               <XStack
-                aria-label={tab.label}
+                aria-label={t(`tabs.${tab.name}`)}
                 role="tab"
                 aria-selected={selected}
                 alignItems="center"
@@ -74,7 +76,7 @@ export function TopNav(props: BottomTabBarProps) {
                   fontWeight={selected ? '800' : '600'}
                   variant="label"
                 >
-                  {tab.label}
+                  {t(`tabs.${tab.name}`)}
                 </AppText>
               </XStack>
             );
@@ -98,17 +100,17 @@ export function TopNav(props: BottomTabBarProps) {
         >
           <AppIcon color={palette.muted} name="search" size={16} />
           <AppText numberOfLines={1} tone="muted" variant="caption">
-            Search rooms, rides, jobs…
+            {t('shell.search')}
           </AppText>
         </XStack>
         <IconButton
           badge={<UnreadNotificationDot />}
           icon="bell"
-          label="Open notifications"
+          label={t('shell.notifications')}
           onPress={() => router.push('/notifications')}
         />
         <YStack
-          aria-label="Open profile"
+          aria-label={t('shell.openProfile')}
           role="button"
           cursor="pointer"
           onPress={() => press('profile')}

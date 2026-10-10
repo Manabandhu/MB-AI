@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 import Head from 'expo-router/head';
 import { XStack, YStack } from 'tamagui';
+import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { AppearanceSettings } from '@/modules/foundation/settings/AppearanceSettings';
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -39,6 +40,7 @@ const accountLinks = [
 ] as const satisfies readonly { label: string; icon: AppIconName; route: string }[];
 
 export function ProfileTab() {
+  const t = useT();
   const user = useAuthStore((s) => s.user);
   const name = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'Member';
   const contact = user?.email ?? user?.phone ?? null;
@@ -49,7 +51,7 @@ export function ProfileTab() {
       <Head>
         <title>Profile · ManaBandhu</title>
       </Head>
-      <TabHeader title="Profile" />
+      <TabHeader title={t('tabs.profile')} />
       <Card variant="elevated">
         <XStack alignItems="center" gap="$x4">
           <Avatar
@@ -71,14 +73,14 @@ export function ProfileTab() {
         </XStack>
       </Card>
       <ResponsiveGrid columns={{ compact: 1, medium: 2, expanded: 2, wide: 3 }}>
-        <Section title="Your activity">
+        <Section title={t('profile.activity')}>
           <YStack gap="$x2">
             {activityLinks.map((link) => (
               <ListRow href={link.route} icon={link.icon} key={link.label} title={link.label} />
             ))}
           </YStack>
         </Section>
-        <Section title="Account">
+        <Section title={t('profile.account')}>
           <YStack gap="$x2">
             {accountLinks.map((link) => (
               <ListRow
@@ -91,7 +93,7 @@ export function ProfileTab() {
             ))}
           </YStack>
         </Section>
-        <Section title="Appearance">
+        <Section title={t('appearance.title')}>
           <Card>
             <AppearanceSettings />
           </Card>
@@ -99,7 +101,7 @@ export function ProfileTab() {
       </ResponsiveGrid>
       <AppButton
         icon="logout"
-        label="Sign out"
+        label={t('profile.signOut')}
         onPress={() => useAuthStore.getState().signOut()}
         variant="ghost"
       />

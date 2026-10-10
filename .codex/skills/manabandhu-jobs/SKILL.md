@@ -84,3 +84,4 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - Cleanup: removed the unused `index.ts` barrel, `JobsSearchScreen.tsx`, `SavedJobsScreen.tsx`, and unused API/type exports.
 - Salaries render with `formatSalaryRange` from `@manabandhu/core` (compact on the list, full amounts on the detail screen); an unlisted salary shows "Salary not listed" / "Not listed", never an invented label.
 - Public API: `jobs/index.ts` exports `moduleMeta` and `JobsHomeWidget` (three newest postings).
+- The Home widget query sets `meta: persistMeta` (public listings only) so it survives app restarts for 24 h.

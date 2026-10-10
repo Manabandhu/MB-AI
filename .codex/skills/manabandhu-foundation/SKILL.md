@@ -153,3 +153,4 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 - Launcher: `launcher/moduleRegistry.ts` aggregates each module's `moduleMeta`; `launcher/rankModules.ts` (pure) orders tiles by device-local visits; `userActivityStore` only stores visits and exposes `useRankedModules`. Explore filters the same registry by `category` and text.
 - Profile shows only provider-confirmed badges, activity/account links, and `settings/AppearanceSettings.tsx` (theme + animation level).
 - Desktop/landscape Home hero shows `BrandHero3D`; Splash is rebuilt on Tamagui with `AnimatedBrandMark` and the brand tagline (the unverifiable "Safe & Verified" badge was removed); the redirect timing is unchanged.
+- Home, the shell, Profile, and Appearance use `useT()` strings (English, Telugu, Hindi). Appearance now also picks the language. Widget queries and the home/explore/community shell counts are persisted for instant start; chat/saved/profile shells are not.

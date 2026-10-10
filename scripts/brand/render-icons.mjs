@@ -40,7 +40,20 @@ async function fullBleedIcon(size, out) {
     .toFile(out);
 }
 
+// Social preview card (1200x630): mark and wordmark centred on the brand background.
+async function ogImage(out) {
+  const mark = await sharp(svg('logo-wordmark.svg'), { density: 200 })
+    .resize(900, 195, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+  await sharp({ create: { width: 1200, height: 630, channels: 4, background: '#faf8ff' } })
+    .composite([{ input: mark, top: 217, left: 150 }])
+    .png({ compressionLevel: 9 })
+    .toFile(out);
+}
+
 const jobs = [
+  ogImage(join(web, 'og-image.png')),
   fullBleedIcon(1024, join(images, 'icon.png')),
   render('logo-glyph.svg', 1024, join(images, 'android-icon-foreground.png')),
   render('icon-background.svg', 1024, join(images, 'android-icon-background.png')),

@@ -1,5 +1,6 @@
 import { formatRelative } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
+import { persistMeta } from '@/lib/queryPersistence';
 import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { listPosts } from '../api';
@@ -10,6 +11,7 @@ export function CommunityHomeWidget() {
     queryKey: ['community', 'home-widget'],
     queryFn: () => listPosts(),
     staleTime: 60_000,
+    meta: persistMeta,
   });
   const posts = (query.data ?? []).slice(0, 3);
   return (

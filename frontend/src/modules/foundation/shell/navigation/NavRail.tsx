@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { YStack } from 'tamagui';
+import { useT } from '@/i18n';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BrandMark } from '@/modules/shared/ui/BrandLogo';
@@ -14,6 +15,7 @@ import { useTabPress } from './useTabPress';
 export function NavRail(props: BottomTabBarProps) {
   const { palette } = useAppearance();
   const press = useTabPress(props);
+  const t = useT();
   const active = props.state.routes[props.state.index]?.name;
   return (
     <YStack
@@ -34,7 +36,7 @@ export function NavRail(props: BottomTabBarProps) {
         const selected = tab.name === active;
         return (
           <YStack
-            aria-label={tab.label}
+            aria-label={t(`tabs.${tab.name}`)}
             role="tab"
             aria-selected={selected}
             alignItems="center"
@@ -70,7 +72,7 @@ export function NavRail(props: BottomTabBarProps) {
               fontSize={12}
               fontWeight={selected ? '800' : '600'}
             >
-              {tab.label}
+              {t(`tabs.${tab.name}`)}
             </AppText>
           </YStack>
         );
@@ -79,12 +81,12 @@ export function NavRail(props: BottomTabBarProps) {
       <IconButton
         badge={<UnreadNotificationDot />}
         icon="bell"
-        label="Open notifications"
+        label={t('shell.notifications')}
         onPress={() => router.push('/notifications')}
       />
       <IconButton
         icon="settings"
-        label="Open settings"
+        label={t('shell.settings')}
         onPress={() => router.push('/settings')}
         variant="plain"
       />

@@ -1,6 +1,7 @@
 import { formatMoney } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import { ALL_USA_LOCATION, useLocationStore } from '@/lib/locationStore';
+import { persistMeta } from '@/lib/queryPersistence';
 import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { listRoomListings } from '../api';
@@ -16,6 +17,7 @@ export function RoomsHomeWidget() {
         nationwide ? { size: 4 } : { size: 4, city: location.cityName, state: location.stateCode },
       ),
     staleTime: 60_000,
+    meta: persistMeta,
   });
   const rooms = (query.data ?? []).slice(0, 4);
   return (

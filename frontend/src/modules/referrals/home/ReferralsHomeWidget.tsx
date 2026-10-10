@@ -1,5 +1,6 @@
 import { formatRelative } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
+import { persistMeta } from '@/lib/queryPersistence';
 import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { listPublicReferrals } from '../api';
@@ -10,6 +11,7 @@ export function ReferralsHomeWidget() {
     queryKey: ['referrals', 'home-widget'],
     queryFn: listPublicReferrals,
     staleTime: 60_000,
+    meta: persistMeta,
   });
   const referrals = (query.data ?? []).slice(0, 3);
   return (

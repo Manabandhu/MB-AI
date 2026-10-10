@@ -142,3 +142,4 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 - Maps proxy (2026-10): `RideMapsController` binds caller input only to RestTemplate URI variables with `EncodingMode.VALUES_ONLY`, so input can never change the Google host, path, or other parameters (CodeQL SSRF); coordinates are range-checked.
 - Cleanup: removed unused API/type exports and repository/GraphQL helpers.
 - Public API: `rides/index.ts` exports `moduleMeta` and `RidesHomeWidget` (next three future offers with open seats).
+- The Home widget query sets `meta: persistMeta` (public listings only) so it survives app restarts for 24 h.

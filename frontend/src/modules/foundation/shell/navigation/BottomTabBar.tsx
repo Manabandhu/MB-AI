@@ -1,5 +1,6 @@
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { XStack, YStack } from 'tamagui';
+import { useT } from '@/i18n';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { useAppearance } from '@/theme/ThemeProvider';
@@ -10,6 +11,7 @@ import { useTabPress } from './useTabPress';
 export function BottomTabBar(props: BottomTabBarProps) {
   const { palette, reduceMotion } = useAppearance();
   const press = useTabPress(props);
+  const t = useT();
   const active = props.state.routes[props.state.index]?.name;
   return (
     <XStack
@@ -25,7 +27,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
         const selected = tab.name === active;
         return (
           <YStack
-            aria-label={tab.label}
+            aria-label={t(`tabs.${tab.name}`)}
             role="tab"
             aria-selected={selected}
             alignItems="center"
@@ -59,7 +61,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
               fontWeight={selected ? '800' : '600'}
               numberOfLines={1}
             >
-              {tab.label}
+              {t(`tabs.${tab.name}`)}
             </AppText>
           </YStack>
         );

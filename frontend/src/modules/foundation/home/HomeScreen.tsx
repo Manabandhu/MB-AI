@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Head from 'expo-router/head';
 import { useCallback, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
+import { useT } from '@/i18n';
 import { useShellContent } from '@/modules/foundation/shell/shellApi';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { CountUp } from '@/modules/shared/ui/motion/CountUp';
@@ -10,6 +11,7 @@ import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { Section } from '@/modules/shared/ui/Section';
 import { HomeHero } from './HomeHero';
+import { InviteCard } from './InviteCard';
 import { QuickAccess } from './QuickAccess';
 import { homeWidgets } from './registry';
 import { WidgetBoundary } from './WidgetBoundary';
@@ -18,11 +20,12 @@ import { WidgetBoundary } from './WidgetBoundary';
 function CommunityPulse() {
   const { data } = useShellContent('home');
   const metrics = data?.metrics ?? [];
+  const t = useT();
   if (metrics.length === 0) return null;
   return (
     <YStack gap="$x2">
       <AppText tone="muted" variant="overline">
-        Community pulse
+        {t('home.communityPulse')}
       </AppText>
       <XStack flexWrap="wrap" gap="$x2">
         {metrics.map((metric) => (
@@ -54,6 +57,7 @@ function CommunityPulse() {
  */
 export function HomeScreen() {
   const queryClient = useQueryClient();
+  const t = useT();
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -75,7 +79,7 @@ export function HomeScreen() {
         <HomeHero />
       </FadeIn>
       <FadeIn index={1}>
-        <Section title="Quick access">
+        <Section title={t('home.quickAccess')}>
           <QuickAccess />
         </Section>
       </FadeIn>
@@ -91,6 +95,7 @@ export function HomeScreen() {
           </FadeIn>
         ))}
       </ResponsiveGrid>
+      <InviteCard />
     </Screen>
   );
 }

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
+import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { useLocationStore } from '@/lib/locationStore';
 import { LocationSelectorModal } from '@/modules/foundation/components/LocationSelectorModal';
@@ -12,11 +13,11 @@ import { GradientSurface } from '@/modules/shared/ui/GradientSurface';
 import { BrandHero3D } from '@/modules/shared/ui/hero/BrandHero3D';
 import { useFormFactor } from '@/platform/formFactor';
 
-function greetingFor(hour: number) {
-  if (hour < 5) return 'Good evening';
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+function greetingKey(hour: number) {
+  if (hour < 5) return 'greeting.evening' as const;
+  if (hour < 12) return 'greeting.morning' as const;
+  if (hour < 17) return 'greeting.afternoon' as const;
+  return 'greeting.evening' as const;
 }
 
 /** Greeting, location, and search entry at the top of Home, on the brand gradient. */
@@ -25,6 +26,7 @@ export function HomeHero() {
   const location = useLocationStore((s) => s.currentLocation);
   const [locationOpen, setLocationOpen] = useState(false);
   const { navigationStyle, windowClass } = useFormFactor();
+  const t = useT();
   const fullName = (user?.user_metadata?.full_name as string | undefined)?.trim();
   const firstName = fullName?.split(/\s+/)[0];
   const showAccountButtons = navigationStyle === 'bottom';
@@ -37,7 +39,7 @@ export function HomeHero() {
           <XStack alignItems="flex-start" gap="$x3">
             <YStack flex={1} gap="$x2">
               <AppText color="rgba(255,255,255,0.8)" variant="label">
-                {greetingFor(new Date().getHours())}
+                {t(greetingKey(new Date().getHours()))}
                 {firstName ? ',' : ''}
               </AppText>
               <AppText
@@ -45,13 +47,13 @@ export function HomeHero() {
                 color="#ffffff"
                 variant={windowClass === 'compact' ? 'h2' : 'h1'}
               >
-                {firstName ? `${firstName} 👋` : 'Welcome back 👋'}
+                {`${firstName ?? t('greeting.welcomeBack')} 👋`}
               </AppText>
             </YStack>
             {showAccountButtons ? (
               <XStack gap="$x2">
                 <YStack
-                  aria-label="Open notifications"
+                  aria-label={t('shell.notifications')}
                   role="button"
                   alignItems="center"
                   backgroundColor="rgba(255,255,255,0.16)"
@@ -66,7 +68,7 @@ export function HomeHero() {
                   <UnreadNotificationDot />
                 </YStack>
                 <YStack
-                  aria-label="Open profile"
+                  aria-label={t('shell.openProfile')}
                   role="button"
                   onPress={() => router.push('/profile')}
                 >
@@ -81,7 +83,7 @@ export function HomeHero() {
           </XStack>
 
           <XStack
-            aria-label={`Location: ${location.name}. Change city`}
+            aria-label={`${location.name}. ${t('home.changeCity')}`}
             role="button"
             alignItems="center"
             alignSelf="flex-start"
@@ -102,7 +104,7 @@ export function HomeHero() {
           </XStack>
 
           <XStack
-            aria-label="Search rooms, rides, jobs, and people"
+            aria-label={t('home.searchPlaceholder')}
             role="button"
             alignItems="center"
             backgroundColor="$surface"
@@ -117,7 +119,7 @@ export function HomeHero() {
           >
             <AppIcon name="search" size={20} />
             <AppText flex={1} numberOfLines={1} tone="muted">
-              Search rooms, rides, jobs, people…
+              {t('home.searchPlaceholder')}
             </AppText>
           </XStack>
         </YStack>

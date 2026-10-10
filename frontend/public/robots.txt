@@ -1,0 +1,9 @@
+# Public pages may be indexed; signed-in areas hold member data and are not useful to crawlers.
+User-agent: *
+Allow: /$
+Allow: /welcome
+Disallow: /home
+Disallow: /chat
+Disallow: /profile
+Disallow: /settings
+Disallow: /admin

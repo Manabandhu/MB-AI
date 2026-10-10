@@ -85,3 +85,4 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - Cleanup: removed unused API exports and repository/GraphQL helpers.
 - Event dates and times render with `formatDate` (`weekdayTime` on lists, `long` on detail) and `formatTimeRange` from `@manabandhu/core`.
 - Public API: `events/index.ts` exports `moduleMeta` and `EventsHomeWidget` (next three upcoming events).
+- The Home widget query sets `meta: persistMeta` (public listings only) so it survives app restarts for 24 h.

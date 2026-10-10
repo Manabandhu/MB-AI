@@ -95,3 +95,4 @@ Owns Community Home, Discover, Joined Communities, Community Details, Create Pos
 - Reaction rollback (2026-10 review): `reactPost` throws on non-2xx and `PostDetailsScreen` reverts the optimistic like when the request fails.
 - Cleanup: deleted the unused `CommunityHomeScreen.tsx`; the `/community` tab is `foundation/screens/shell/CommunityShell.tsx`. Removed unused `PostCommentRepository` methods.
 - Public API: `community/index.ts` exports `moduleMeta`, `CommunityHomeWidget` (three latest posts), and `listPosts`/`Post` for the foundation Community tab.
+- The Home widget query sets `meta: persistMeta` (public listings only) so it survives app restarts for 24 h.

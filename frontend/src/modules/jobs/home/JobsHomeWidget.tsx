@@ -1,5 +1,6 @@
 import { formatSalaryRange } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
+import { persistMeta } from '@/lib/queryPersistence';
 import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { listJobPostings } from '../api';
@@ -10,6 +11,7 @@ export function JobsHomeWidget() {
     queryKey: ['jobs', 'home-widget'],
     queryFn: () => listJobPostings(0, 3),
     staleTime: 60_000,
+    meta: persistMeta,
   });
   const jobs = (query.data ?? []).slice(0, 3);
   return (

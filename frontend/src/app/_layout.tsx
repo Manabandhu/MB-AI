@@ -1,4 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
@@ -6,7 +7,9 @@ import '../../global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaListener } from 'react-native-safe-area-context';
 import { Uniwind } from 'uniwind';
+import '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
+import { persistOptions, queryPersister } from '@/lib/queryPersistence';
 import { AppThemeProvider } from '@/theme/ThemeProvider';
 
 export default function RootLayout() {
@@ -25,7 +28,10 @@ export default function RootLayout() {
     return useAuthStore.subscribe((state) => {
       const userId = state.user?.id ?? null;
       if (userId !== previousUserId) {
-        if (previousUserId !== null) queryClient.clear();
+        if (previousUserId !== null) {
+          queryClient.clear();
+          Promise.resolve(queryPersister.removeClient()).catch(() => undefined);
+        }
         previousUserId = userId;
       }
     });
@@ -47,9 +53,9 @@ export default function RootLayout() {
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AppThemeProvider>
-          <QueryClientProvider client={queryClient}>
+          <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
             <Stack screenOptions={{ headerShown: false }} />
-          </QueryClientProvider>
+          </PersistQueryClientProvider>
         </AppThemeProvider>
       </GestureHandlerRootView>
     </SafeAreaListener>

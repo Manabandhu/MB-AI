@@ -1,5 +1,6 @@
 import { formatDate } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
+import { persistMeta } from '@/lib/queryPersistence';
 import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { listEvents } from '../api';
@@ -10,6 +11,7 @@ export function EventsHomeWidget() {
     queryKey: ['events', 'home-widget'],
     queryFn: listEvents,
     staleTime: 60_000,
+    meta: persistMeta,
   });
   const now = Date.now();
   const events = (query.data ?? [])
