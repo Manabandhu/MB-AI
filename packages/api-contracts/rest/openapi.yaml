@@ -1370,6 +1370,8 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CreateEventInput' }
       responses:
+        '400':
+          description: startAt/endAt are not ISO-8601 timestamps, or endAt is not after startAt
         '201':
           description: Event created
           content:
@@ -1379,7 +1381,12 @@ paths:
     get:
       operationId: listSavedEvents
       summary: List saved events
+      description: >-
+        Events the caller has RSVPed to (going, interested, maybe) or saved, soonest first, at most 200.
+        Requires sign-in.
       responses:
+        '401':
+          description: Sign-in required
         '200':
           description: Saved events
           content:
@@ -1445,8 +1452,10 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CreateEventAttendanceInput' }
       responses:
+        '400':
+          description: Status is not one of going, interested, maybe, saved, not_going
         '201':
-          description: Attendance created
+          description: Attendance created (status stored lowercase)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EventAttendance' }

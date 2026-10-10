@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Pageable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -25,7 +24,7 @@ public class EventsGraphqlController {
 
     @QueryMapping
     List<Event> events() {
-        return service.findAll(Pageable.unpaged()).getContent();
+        return service.findAll(org.springframework.data.domain.PageRequest.of(0, 100)).getContent();
     }
 
     @QueryMapping
@@ -36,8 +35,8 @@ public class EventsGraphqlController {
     }
 
     @QueryMapping
-    List<Event> savedEvents() {
-        return service.findSaved();
+    List<Event> savedEvents(Authentication authentication) {
+        return service.findSaved(Actor.require(authentication));
     }
 
     @QueryMapping
@@ -47,8 +46,8 @@ public class EventsGraphqlController {
 
     @MutationMapping
     Event createEvent(Authentication authentication, @Argument @Valid CreateEventInput input) {
-        var startAt = java.time.Instant.parse(input.startAt());
-        var endAt = java.time.Instant.parse(input.endAt());
+        var startAt = EventsService.parseInstant(input.startAt(), "startAt");
+        var endAt = EventsService.parseInstant(input.endAt(), "endAt");
         return service.create(Actor.require(authentication).id(), input.title(), input.description(),
                 input.location(), input.latitude(), input.longitude(), startAt, endAt, input.categoryId());
     }

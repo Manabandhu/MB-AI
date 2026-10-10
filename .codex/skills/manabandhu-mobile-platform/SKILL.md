@@ -151,3 +151,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 
 - Screens that read caller-owned data gate on `useAuthStore((s) => s.status)`: signed-out visitors see a sign-in prompt and the query is disabled, so a 401 is never shown as an error. First user: immigration checklists.
 - Mutations whose server can refuse for business reasons (rides booking, seat-request accept/reject) show the server's reason in an `Alert` instead of failing silently.
+- Events: `SavedEventsScreen` is the second auth-gated personal list (sign-in prompt, pull-to-refresh).

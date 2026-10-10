@@ -73,11 +73,9 @@ export async function createEvent(input: {
   return parseJsonOrThrow<Event>(response, 'Create event');
 }
 
+/** Events the signed-in member has RSVPed to (going, interested, maybe) or saved. */
 export async function listSavedEvents(): Promise<Event[]> {
-  const response = await apiFetch('/api/v1/events/saved');
-  const data = await parseJson<Event[]>(response);
-  if (Array.isArray(data)) return data;
-  return [];
+  return parseJsonOrThrow(await apiFetch('/api/v1/events/saved'), 'Saved events');
 }
 
 export async function listMyEvents(): Promise<Event[]> {

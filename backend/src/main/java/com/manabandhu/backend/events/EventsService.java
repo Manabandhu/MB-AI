@@ -37,9 +37,27 @@ public class EventsService {
         return eventRepository.searchPublished("published", q, pageable);
     }
 
+    /** RSVP statuses, stored lowercase. "saved" is a bookmark without a commitment to attend. */
+    static final java.util.Set<String> ATTENDANCE_STATUSES = java.util.Set.of("going", "interested", "maybe", "saved", "not_going");
+    /** Statuses that keep an event on the caller's saved list. */
+    static final List<String> SAVED_STATUSES = List.of("going", "interested", "maybe", "saved");
+    static final int MAX_SAVED = 200;
+
+    /** Events the caller has RSVPed to or bookmarked; never anyone else's. */
     @Transactional(readOnly = true)
-    public List<Event> findSaved() {
-        return eventRepository.findByStatusOrderByStartAtAsc("saved");
+    public List<Event> findSaved(Actor actor) {
+        return eventRepository.findSavedByUser(actor.id(), SAVED_STATUSES,
+                org.springframework.data.domain.PageRequest.of(0, MAX_SAVED));
+    }
+
+    /** Parses an ISO-8601 instant from client input; malformed values are a 400, not a 500. */
+    public static java.time.Instant parseInstant(String value, String field) {
+        try {
+            return java.time.Instant.parse(value.trim());
+        } catch (RuntimeException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    field + " must be an ISO-8601 timestamp such as 2026-11-01T18:00:00Z");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -56,12 +74,20 @@ public class EventsService {
     public Event create(UUID organizerId, String title, String description, String location, java.math.BigDecimal latitude,
                         java.math.BigDecimal longitude, java.time.Instant startAt, java.time.Instant endAt,
                         UUID categoryId) {
+        if (!endAt.isAfter(startAt)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "endAt must be after startAt");
+        }
         return eventRepository.save(new Event(organizerId, title, description, location, latitude, longitude,
                 startAt, endAt, categoryId, "published"));
     }
 
     @Transactional
-    public EventAttendance attend(UUID eventId, UUID userId, String status) {
+    public EventAttendance attend(UUID eventId, UUID userId, String rawStatus) {
+        var status = rawStatus == null ? "" : rawStatus.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!ATTENDANCE_STATUSES.contains(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Status must be one of going, interested, maybe, saved, not_going");
+        }
         if (!eventRepository.existsById(eventId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found");
         }

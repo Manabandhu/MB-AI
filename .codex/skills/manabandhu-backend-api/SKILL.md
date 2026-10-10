@@ -73,3 +73,4 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 - `Actor` carries `verifiedGender` (JWT `app_metadata.gender`, lowercased; null when absent). The three-argument constructor stays for tests and callers that do not need it.
 - Rides: women/men-only enforcement at booking and request; locked seat-request accept with seat reservation and participant creation.
 - Rooms: `isVerifiedHost` removed from owner inputs; GraphQL `savedRoomListings` = caller's favorites; GraphQL `createRoomListing` = validated draft path.
+- Events: saved = caller's RSVPs or bookmarks (login required); RSVP status allowlist; malformed dates → 400.

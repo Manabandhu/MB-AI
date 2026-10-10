@@ -47,8 +47,8 @@ public class EventsController {
     }
 
     @GetMapping("/saved")
-    List<Event> saved() {
-        return service.findSaved();
+    List<Event> saved(Authentication authentication) {
+        return service.findSaved(Actor.require(authentication));
     }
 
     @GetMapping("/mine")
@@ -67,7 +67,7 @@ public class EventsController {
     ResponseEntity<Event> create(Authentication authentication, @Valid @RequestBody CreateEventInput input) {
         var event = service.create(Actor.require(authentication).id(), input.title(), input.description(),
                 input.location(), input.latitude(), input.longitude(),
-                java.time.Instant.parse(input.startAt()), java.time.Instant.parse(input.endAt()),
+                EventsService.parseInstant(input.startAt(), "startAt"), EventsService.parseInstant(input.endAt(), "endAt"),
                 input.categoryId());
         return ResponseEntity.created(URI.create("/api/v1/events/" + event.getId())).body(event);
     }

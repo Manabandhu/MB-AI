@@ -26,3 +26,4 @@ description: Maintain ManaBandhu's canonical OpenAPI, GraphQL, and AsyncAPI cont
 - P0 hardening (2026-10-10): `GET /immigration/checklists` is authenticated and returns only the caller's checklists (documents `401`).
 - P0 hardening (2026-10-10): documented `GET /referrals/{referralId}/request` and `/offer` (visibility rule, 401/404); `/referrals/public` lists open referrals only. Quoted two notification descriptions that contained commas, which broke the Redocly lint (0 errors again).
 - P0 hardening (2026-10-10): GraphQL `savedRoomListings` returns the caller's favorites (login required), `createRoomListing` creates a validated draft, and `roomListings` returns at most 100 active listings. No schema shape changed.
+- P0 hardening (2026-10-10): `GET /events/saved` is authenticated and caller-scoped (401 documented); `POST /events` and `POST /events/{eventId}/attendance` document their 400s. GraphQL `savedEvents` requires a login; `events` returns at most 100.

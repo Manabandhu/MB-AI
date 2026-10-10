@@ -49,7 +49,7 @@ class EventsServiceTest {
 
         assertThat(attendance).isNotNull();
         assertThat(attendance.getEventId()).isEqualTo(eventId);
-        assertThat(attendance.getStatus()).isEqualTo("GOING");
+        assertThat(attendance.getStatus()).isEqualTo("going");
         verify(attendanceRepo).save(any(EventAttendance.class));
     }
 
@@ -64,5 +64,45 @@ class EventsServiceTest {
         var categories = service.findCategories();
         assertThat(categories).isEmpty();
         verify(categoryRepo).findAllByOrderByNameAsc();
+    }
+
+    @Test
+    void savedEventsAreScopedToTheCaller() {
+        var eventRepo = mock(EventRepository.class);
+        var service = new EventsService(eventRepo, mock(EventAttendanceRepository.class), mock(EventCategoryRepository.class));
+        var caller = new com.manabandhu.backend.auth.Actor(UUID.randomUUID(), false, false);
+        when(eventRepo.findSavedByUser(org.mockito.ArgumentMatchers.eq(caller.id()), any(), any())).thenReturn(List.of());
+
+        assertThat(service.findSaved(caller)).isEmpty();
+
+        verify(eventRepo).findSavedByUser(org.mockito.ArgumentMatchers.eq(caller.id()), any(), any());
+        org.mockito.Mockito.verify(eventRepo, org.mockito.Mockito.never()).findByStatusOrderByStartAtAsc("saved");
+    }
+
+    @Test
+    void malformedTimestampsAreBadRequests() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> EventsService.parseInstant("next tuesday", "startAt"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("400");
+    }
+
+    @Test
+    void endMustFollowStart() {
+        var service = new EventsService(mock(EventRepository.class), mock(EventAttendanceRepository.class), mock(EventCategoryRepository.class));
+        var start = Instant.now().plusSeconds(3600);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.create(UUID.randomUUID(), "t", null, "Irving",
+                        null, null, start, start.minusSeconds(60), null))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("400");
+    }
+
+    @Test
+    void unknownAttendanceStatusIsRejected() {
+        var eventRepo = mock(EventRepository.class);
+        var attendanceRepo = mock(EventAttendanceRepository.class);
+        var service = new EventsService(eventRepo, attendanceRepo, mock(EventCategoryRepository.class));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.attend(UUID.randomUUID(), UUID.randomUUID(), "organizer"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        org.mockito.Mockito.verifyNoInteractions(attendanceRepo);
     }
 }

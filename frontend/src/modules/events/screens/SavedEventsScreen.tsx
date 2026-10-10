@@ -2,8 +2,9 @@ import { color } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/lib/authStore';
 import { listSavedEvents } from '@/modules/events/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -14,9 +15,12 @@ import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 export default function SavedEventsScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const { data, isLoading, isError, refetch } = useQuery({
+  const authStatus = useAuthStore((st) => st.status);
+  const { data, isLoading, isError, isRefetching, refetch } = useQuery({
     queryKey: ['events', 'saved'],
     queryFn: listSavedEvents,
+    // Saved events are personal; the endpoint requires a signed-in member.
+    enabled: authStatus === 'authenticated',
   });
 
   const events = data ?? [];
@@ -29,6 +33,19 @@ export default function SavedEventsScreen() {
         e.location.toLowerCase().includes(query.toLowerCase()),
     );
   }, [events, query]);
+
+  if (authStatus === 'unauthenticated') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <EmptyState
+          title="Sign in to see your events"
+          body="Events you RSVP to are saved to your account."
+          actionLabel="Sign in"
+          onAction={() => router.push('/sign-in')}
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (isError) {
     return (
@@ -45,16 +62,19 @@ export default function SavedEventsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
+      <ScrollView
+        contentContainerStyle={styles.page}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} />}
+      >
         <View style={styles.container}>
-          <SectionHeader title="Saved Events" subtitle="Events you have bookmarked" />
+          <SectionHeader title="Saved Events" subtitle="Events you RSVPed to or saved" />
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search saved events" />
-          {isLoading ? (
+          {isLoading || authStatus === 'loading' ? (
             <LoadingState />
           ) : filtered.length === 0 ? (
             <EmptyState
               title="No saved events"
-              body="Save events you want to attend later."
+              body="RSVP to an event and it will appear here."
               actionLabel="Discover events"
               onAction={() => router.push('/events')}
             />
@@ -64,6 +84,7 @@ export default function SavedEventsScreen() {
                 <Pressable
                   key={e.id}
                   accessibilityRole="button"
+                  accessibilityLabel={`${e.title}, ${e.location}`}
                   onPress={() => router.push(`/events/${e.id}`)}
                   style={styles.item}
                 >

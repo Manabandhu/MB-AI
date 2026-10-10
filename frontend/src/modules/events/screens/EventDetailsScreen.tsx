@@ -71,8 +71,10 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
 
   const rsvpMutation = useMutation({
     mutationFn: () => rsvpEvent(resolvedEventId as string, 'GOING'),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['events', resolvedEventId, 'attendance'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events', resolvedEventId, 'attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['events', 'saved'] });
+    },
     onError: (err: Error) => setRsvpError(err.message),
   });
 

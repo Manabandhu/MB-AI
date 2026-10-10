@@ -112,6 +112,50 @@ await status('unknown resource type is a 400', 400, 'A', 'POST', '/api/v1/immigr
   resourceType: 'NOT_A_TYPE',
 });
 
+console.log('== events');
+await status('anonymous cannot list saved events', 401, null, 'GET', '/api/v1/events/saved');
+await status('bad event dates are a 400', 400, 'A', 'POST', '/api/v1/events', {
+  title: 'Bad date',
+  location: 'Irving',
+  startAt: 'next tuesday',
+  endAt: 'later',
+});
+{
+  const startAt = new Date(Date.now() + 3 * 86400000).toISOString();
+  const endAt = new Date(Date.now() + 3 * 86400000 + 3600000).toISOString();
+  const event = await status('organizer creates an event', 201, 'A', 'POST', '/api/v1/events', {
+    title: 'Smoke meetup',
+    location: 'Irving',
+    startAt,
+    endAt,
+  });
+  await status('member RSVPs', 201, 'B', 'POST', `/api/v1/events/${event?.id}/attendance`, {
+    status: 'GOING',
+  });
+  await status(
+    'unknown RSVP status is a 400',
+    400,
+    'B',
+    'POST',
+    `/api/v1/events/${event?.id}/attendance`,
+    {
+      status: 'organizer',
+    },
+  );
+  const savedB = (await call('B', 'GET', '/api/v1/events/saved')).body ?? [];
+  const savedC = (await call('C', 'GET', '/api/v1/events/saved')).body ?? [];
+  expect(
+    'RSVPed event is on the member saved list',
+    savedB.some((e) => e.id === event?.id),
+    true,
+  );
+  expect(
+    "saved list never shows another member's events",
+    savedC.some((e) => e.id === event?.id),
+    false,
+  );
+}
+
 console.log('== rides');
 const departureAt = new Date(Date.now() + 2 * 86400000).toISOString();
 const offer = await status('driver creates offer', 201, 'A', 'POST', '/api/v1/rides/offers', {
