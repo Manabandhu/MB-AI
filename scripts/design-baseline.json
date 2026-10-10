@@ -56,13 +56,6 @@
   "expenses/screens/SettlementsScreen.tsx": {
     "colorLiteral": 8
   },
-  "foundation/components/LocationSelectorModal.tsx": {
-    "colorLiteral": 15,
-    "localPalette": 1
-  },
-  "foundation/home/HomeHero.tsx": {
-    "colorLiteral": 8
-  },
   "foundation/screens/OnboardingScreen.tsx": {
     "colorLiteral": 3,
     "localPalette": 1
