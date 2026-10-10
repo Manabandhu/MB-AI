@@ -35,6 +35,14 @@ if ! curl -s -o /dev/null -m 8 "https://$REF.supabase.co/auth/v1/health"; then
   exit 1
 fi
 
+# The backend talks to Postgres through the pooler over TCP 5432, which an HTTPS-only network blocks even when the
+# Auth check above passes; fail here with a clear message instead of a JDBC stack trace.
+if ! timeout 8 bash -c "exec 3<>/dev/tcp/$POOLER/5432" 2>/dev/null; then
+  echo "Cannot open a connection to $POOLER:5432. Check SUPABASE_POOLER_HOST (Supabase → Connect) and that the network" >&2
+  echo "allows outbound TCP to *.pooler.supabase.com." >&2
+  exit 1
+fi
+
 java_major() { "${1:+$1/bin/}java" -version 2>&1 | sed -nE 's/.*version "([0-9]+).*/\1/p' | head -1; }
 if [ "$(java_major "${JAVA_HOME:-}")" != "25" ]; then
   for candidate in /usr/lib/jvm/java-25-openjdk-amd64 /usr/lib/jvm/temurin-25* /opt/java/openjdk; do
@@ -56,7 +64,7 @@ fi
 
 # Session-mode pooler (port 5432) keeps prepared statements working for Hibernate (and Flyway with --migrate).
 DATABASE_URL="jdbc:postgresql://$POOLER:5432/postgres?sslmode=require" \
-DATABASE_USERNAME="postgres.$REF" \
+DATABASE_USERNAME="${DATABASE_USERNAME:-manabandhu_app.$REF}" \
 SPRING_FLYWAY_ENABLED="$MIGRATE" \
 SUPABASE_JWKS_URI="https://$REF.supabase.co/auth/v1/.well-known/jwks.json" \
 SUPABASE_JWT_ISSUER="https://$REF.supabase.co/auth/v1" \

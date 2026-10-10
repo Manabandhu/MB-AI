@@ -41,7 +41,8 @@ const projectRef = env.SUPABASE_PROJECT_REF ?? 'lpzaioyurvgdysdfktzc';
 const pooler = env.SUPABASE_POOLER_HOST ?? 'aws-0-us-east-2.pooler.supabase.com';
 // Session-mode pooler (port 5432) keeps prepared statements working for Hibernate.
 env.DATABASE_URL ??= `jdbc:postgresql://${pooler}:5432/postgres?sslmode=require`;
-env.DATABASE_USERNAME ??= `postgres.${projectRef}`;
+// The application role owns every table; DATABASE_PASSWORD is that role's password.
+env.DATABASE_USERNAME ??= `manabandhu_app.${projectRef}`;
 env.SPRING_FLYWAY_ENABLED ??= 'false';
 if (!env.DATABASE_PASSWORD || env.DATABASE_PASSWORD.startsWith('replace-with')) {
   console.error(

@@ -55,7 +55,8 @@ fi
 if ! psql -d postgres -qtAc "select 1 from pg_database where datname = '$DB'" | grep -q 1; then
   psql -d postgres -qc "CREATE DATABASE $DB;"
 fi
-psql -d "$DB" -q -f "$ROOT/scripts/local-dev/supabase-stub.sql" 2>/dev/null
+# Re-runs only print "already exists" notices; hide those but stop on real errors.
+PGOPTIONS="-c client_min_messages=warning" psql -d "$DB" -q -v ON_ERROR_STOP=1 -f "$ROOT/scripts/local-dev/supabase-stub.sql"
 # Fixed test users referenced by authz-smoke.mjs: A (driver/owner), B (rider/member), C (stranger), D (admin).
 psql -d "$DB" -qc "insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'a@example.test'),
