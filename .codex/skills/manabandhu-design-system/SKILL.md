@@ -40,3 +40,4 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 - `breakpoint.narrow` (360) marks cover screens and very small phones inside `compact`.
 - Ratchet: `pnpm verify:design` (`scripts/verify-design-system.mjs`, also in CI Governance) counts colour literals, local palette objects, numeric width breakpoints, and icon/toolkit imports per module file against `scripts/design-baseline.json`. Counts may only go down; `--update` locks in improvements. `shared/ui` is exempt.
 - ADR 0005 records the Tamagui decision, ADR 0006 module-owned Home widgets, ADR 0007 the shared core for watch/car/TV.
+- Ratchet rules also count `hsl()`/`hsla()` colours and local palette objects declared at any indentation (inside components too); the stricter rules found no new violations, so the baseline is unchanged.

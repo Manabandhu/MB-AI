@@ -9,8 +9,8 @@ const modulesDir = join(root, 'frontend/src/modules');
 const baselinePath = join(root, 'scripts/design-baseline.json');
 
 const rules = {
-  colorLiteral: /['"`]#[0-9a-fA-F]{3,8}['"`]|\brgba?\(/g,
-  localPalette: /^(?:export )?const (?:colors|palette|C|COLORS|theme)\s*=\s*\{/gm,
+  colorLiteral: /['"`]#[0-9a-fA-F]{3,8}['"`]|\brgba?\(|\bhsla?\(/g,
+  localPalette: /\b(?:export )?const (?:colors|palette|C|COLORS|theme)\s*=\s*\{/g,
   numericBreakpoint: /\bwidth\s*(?:>=|<=|<|>)\s*\d{3,4}\b/g,
   toolkitImport:
     /from '(?:@gluestack-ui[^']*|iconoir-react-native|lucide-react-native[^']*|@tamagui\/lucide[^']*)'/g,
