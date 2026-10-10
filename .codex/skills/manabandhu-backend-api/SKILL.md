@@ -72,3 +72,4 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 - Referrals: `ReferralService.requireVisible` gates referral, request and offer reads (open → members; closed → owner/recipient/admin; 404 otherwise).
 - `Actor` carries `verifiedGender` (JWT `app_metadata.gender`, lowercased; null when absent). The three-argument constructor stays for tests and callers that do not need it.
 - Rides: women/men-only enforcement at booking and request; locked seat-request accept with seat reservation and participant creation.
+- Rooms: `isVerifiedHost` removed from owner inputs; GraphQL `savedRoomListings` = caller's favorites; GraphQL `createRoomListing` = validated draft path.

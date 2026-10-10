@@ -35,8 +35,9 @@ public class RoomsService {
     }
 
     @Transactional(readOnly = true)
-    public List<RoomListing> findSaved() {
-        return listingRepository.findByStatusOrderByCreatedAtDesc("saved");
+    public List<RoomListing> findActivePage(int size) {
+        return listingRepository.findByStatusOrderByCreatedAtDesc("active",
+                org.springframework.data.domain.PageRequest.of(0, size)).getContent();
     }
 
     @Transactional(readOnly = true)
@@ -47,13 +48,6 @@ public class RoomsService {
     @Transactional(readOnly = true)
     public Optional<RoomListing> findById(UUID id) {
         return listingRepository.findById(id);
-    }
-
-    @Transactional
-    public RoomListing create(UUID ownerId, String title, String description, BigDecimal price, String roomType,
-                              String broadLocation, String exactAddress, BigDecimal latitude, BigDecimal longitude) {
-        return listingRepository.save(new RoomListing(ownerId, title, description, price, roomType, "active",
-                broadLocation, exactAddress, latitude, longitude));
     }
 
     @Transactional

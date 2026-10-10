@@ -98,7 +98,6 @@ public class RoomListingService {
         if (input.estUtilityMonthly() != null) listing.setEstUtilityMonthly(input.estUtilityMonthly());
         if (input.securityDeposit() != null) listing.setSecurityDeposit(input.securityDeposit());
         if (input.leaseTerm() != null) listing.setLeaseTerm(input.leaseTerm());
-        if (input.isVerifiedHost() != null) listing.setIsVerifiedHost(input.isVerifiedHost());
         if (input.universityShuttleAccessible() != null) listing.setUniversityShuttleAccessible(input.universityShuttleAccessible());
         if (input.stateCode() != null) listing.setStateCode(input.stateCode());
         if (input.county() != null) listing.setCounty(input.county());
@@ -123,7 +122,6 @@ public class RoomListingService {
         if (input.estUtilityMonthly() != null) listing.setEstUtilityMonthly(input.estUtilityMonthly());
         if (input.securityDeposit() != null) listing.setSecurityDeposit(input.securityDeposit());
         if (input.leaseTerm() != null) listing.setLeaseTerm(input.leaseTerm());
-        if (input.isVerifiedHost() != null) listing.setIsVerifiedHost(input.isVerifiedHost());
         if (input.universityShuttleAccessible() != null) listing.setUniversityShuttleAccessible(input.universityShuttleAccessible());
         if (input.stateCode() != null) listing.setStateCode(input.stateCode());
         if (input.county() != null) listing.setCounty(input.county());

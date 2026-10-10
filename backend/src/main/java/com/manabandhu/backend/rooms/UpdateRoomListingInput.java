@@ -21,7 +21,6 @@ public record UpdateRoomListingInput(
         BigDecimal estUtilityMonthly,
         BigDecimal securityDeposit,
         String leaseTerm,
-        Boolean isVerifiedHost,
         Boolean universityShuttleAccessible,
         String stateCode,
         String county) {
@@ -29,6 +28,6 @@ public record UpdateRoomListingInput(
     public UpdateRoomListingInput(String title, String description, BigDecimal price, String roomType,
                                   String broadLocation, String exactAddress, BigDecimal latitude, BigDecimal longitude, String status) {
         this(title, description, price, roomType, broadLocation, exactAddress, latitude, longitude, status,
-                null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null);
     }
 }

@@ -16,14 +16,19 @@ import com.manabandhu.backend.auth.Actor;
 public class RoomListingGraphqlController {
 
     private final RoomsService service;
+    private final RoomListingService listingService;
+    private final RoomFavoriteService favoriteService;
 
-    RoomListingGraphqlController(RoomsService service) {
+    RoomListingGraphqlController(RoomsService service, RoomListingService listingService, RoomFavoriteService favoriteService) {
         this.service = service;
+        this.listingService = listingService;
+        this.favoriteService = favoriteService;
     }
 
+    /** The newest 100 active listings; REST {@code GET /api/v1/rooms/listings} pages and filters. */
     @QueryMapping
     List<RoomListing> roomListings() {
-        return service.findAllActive();
+        return service.findActivePage(100);
     }
 
     @QueryMapping
@@ -45,9 +50,10 @@ public class RoomListingGraphqlController {
         return Actor.from(authentication).map(a -> a.admin() || a.is(listing.getOwnerId())).orElse(false);
     }
 
+    /** The caller's own favorites, same as REST {@code GET /api/v1/rooms/favorites}. */
     @QueryMapping
-    List<RoomListing> savedRoomListings() {
-        return service.findSaved();
+    List<RoomListing> savedRoomListings(Authentication authentication) {
+        return favoriteService.findSavedListings(Actor.require(authentication).id());
     }
 
     @QueryMapping
@@ -57,9 +63,8 @@ public class RoomListingGraphqlController {
 
     @MutationMapping
     RoomListing createRoomListing(Authentication authentication, @Argument @Valid CreateRoomListingInput input) {
-        return service.create(Actor.require(authentication).id(), input.title(), input.description(),
-                input.price(), input.roomType(), input.broadLocation(), input.exactAddress(),
-                input.latitude(), input.longitude());
+        // Same path as REST: validated input, starts as a draft the owner publishes later.
+        return listingService.create(Actor.require(authentication).id(), input);
     }
 
     @MutationMapping

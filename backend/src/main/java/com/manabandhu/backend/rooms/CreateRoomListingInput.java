@@ -24,7 +24,6 @@ public record CreateRoomListingInput(
         BigDecimal estUtilityMonthly,
         BigDecimal securityDeposit,
         String leaseTerm,
-        Boolean isVerifiedHost,
         Boolean universityShuttleAccessible,
         @Size(max = 50) String stateCode,
         @Size(max = 100) String county) {
@@ -32,6 +31,6 @@ public record CreateRoomListingInput(
     public CreateRoomListingInput(String title, String description, BigDecimal price, String roomType,
                                   String broadLocation, String exactAddress, BigDecimal latitude, BigDecimal longitude) {
         this(title, description, price, roomType, broadLocation, exactAddress, latitude, longitude,
-                "ANY", "ANY", "SHARED", false, BigDecimal.ZERO, BigDecimal.ZERO, "FLEXIBLE", false, false, null, null);
+                "ANY", "ANY", "SHARED", false, BigDecimal.ZERO, BigDecimal.ZERO, "FLEXIBLE", false, null, null);
     }
 }

@@ -18,23 +18,6 @@ import org.springframework.web.server.ResponseStatusException;
 class RoomsServiceTest {
 
     @Test
-    void createAndFindListing() {
-        var listingRepo = mock(RoomListingRepository.class);
-        var bookingRepo = mock(RoomBookingRepository.class);
-        when(listingRepo.save(any(RoomListing.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        var service = new RoomsService(listingRepo, bookingRepo);
-        var ownerId = UUID.randomUUID();
-        var listing = service.create(ownerId, "Sunny room", "Nice place", BigDecimal.valueOf(850), "PRIVATE",
-                "Irving", "123 Main St", BigDecimal.valueOf(32.8), BigDecimal.valueOf(-96.9));
-
-        assertThat(listing).isNotNull();
-        assertThat(listing.getOwnerId()).isEqualTo(ownerId);
-        assertThat(listing.getTitle()).isEqualTo("Sunny room");
-        assertThat(listing.getStatus()).isEqualTo("active");
-        verify(listingRepo).save(any(RoomListing.class));
-    }
-
-    @Test
     void updateListing() {
         var listingRepo = mock(RoomListingRepository.class);
         var bookingRepo = mock(RoomBookingRepository.class);

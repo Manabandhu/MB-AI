@@ -676,6 +676,39 @@ expect(
   gql.body?.errors?.[0]?.extensions?.classification,
   'FORBIDDEN',
 );
+{
+  const created = await call('C', 'POST', '/graphql', {
+    query:
+      'mutation { createRoomListing(input: { title: "GQL room", price: "900", roomType: "private", broadLocation: "Irving" }) { id status } }',
+  });
+  expect(
+    'GraphQL createRoomListing starts as a draft',
+    created.body?.data?.createRoomListing?.status,
+    'draft',
+  );
+  const invalid = await call('C', 'POST', '/graphql', {
+    query:
+      'mutation { createRoomListing(input: { title: "", price: "-5", roomType: "private", broadLocation: "Irving" }) { id } }',
+  });
+  expect('GraphQL createRoomListing validates input', Boolean(invalid.body?.errors?.length), true);
+  const saved = await call('B', 'POST', '/graphql', { query: '{ savedRoomListings { id } }' });
+  const favorites = (await call('B', 'GET', '/api/v1/rooms/favorites')).body ?? [];
+  expect(
+    "GraphQL savedRoomListings returns only the caller's favorites",
+    (saved.body?.data?.savedRoomListings ?? []).length,
+    Array.isArray(favorites) ? favorites.length : -1,
+  );
+}
+{
+  const forged = await call('C', 'POST', '/api/v1/rooms/listings', {
+    title: 'Forged host',
+    price: 800,
+    roomType: 'private',
+    broadLocation: 'Irving',
+    isVerifiedHost: true,
+  });
+  expect('owners cannot mark themselves verified hosts', forged.body?.isVerifiedHost, false);
+}
 
 console.log(`\nPASS=${pass} FAIL=${fail}${skip ? ` SKIPPED_GROUPS=${skip}` : ''}`);
 process.exit(fail > 0 ? 1 : 0);
