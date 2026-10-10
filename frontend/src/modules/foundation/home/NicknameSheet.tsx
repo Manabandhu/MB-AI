@@ -19,9 +19,10 @@ export function NicknameSheet({ visible, onClose }: { visible: boolean; onClose:
   useEffect(() => {
     if (visible) {
       const existing = user?.user_metadata?.nickname;
-      setValue(
-        typeof existing === 'string' ? existing : (preferredName(user?.user_metadata) ?? ''),
-      );
+      // Pre-fill only a real nickname or a first name short enough to keep; never a too-long name.
+      const candidate =
+        typeof existing === 'string' ? existing : (preferredName(user?.user_metadata) ?? '');
+      setValue(validateNickname(candidate).ok ? candidate : '');
       setError(null);
     }
   }, [visible, user]);
