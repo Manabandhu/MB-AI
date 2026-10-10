@@ -206,7 +206,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
   const watchedRoomType = watch('roomType');
   const watchedShuttle = watch('universityShuttleAccessible');
 
-  // Available cities for selected state (offline from country-state-city)
+  // Available cities for selected state (offline US data in usLocationData.ts)
   const availableCities = useMemo(() => {
     return getCitiesByState(watchedStateCode || 'TX').slice(0, 12);
   }, [watchedStateCode]);
@@ -532,7 +532,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
               <Text style={s.fieldError}>{errors.broadLocation.message}</Text>
             )}
 
-            {/* Quick city suggestions from country-state-city */}
+            {/* Quick city suggestions from the offline US city list */}
             {availableCities.length > 0 && (
               <View style={{ marginTop: 8 }}>
                 <Text style={s.subLabel}>Quick Select City:</Text>

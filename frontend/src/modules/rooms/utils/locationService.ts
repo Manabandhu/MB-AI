@@ -1,4 +1,4 @@
-import { City, State } from 'country-state-city';
+import { US_CITIES, US_STATES } from './usLocationData';
 
 export type USState = {
   code: string;
@@ -25,21 +25,39 @@ export type ZipLookupResult = {
   lng: number;
 };
 
-// 1. Free Country/State/City lookup (100% offline, zero API key)
+// 1. Free State/City lookup (100% offline, zero API key)
+type RawUSCity = { name: string; stateCode: string; latitude: number; longitude: number };
+
+let parsedCities: RawUSCity[] | null = null;
+
+function allUSCities(): RawUSCity[] {
+  if (!parsedCities) {
+    parsedCities = US_CITIES.split('\n').map((line) => {
+      const [stateCode, name, latitude, longitude] = line.split('|');
+      return {
+        name,
+        stateCode,
+        latitude: latitude ? Number(latitude) || 0 : 0,
+        longitude: longitude ? Number(longitude) || 0 : 0,
+      };
+    });
+  }
+  return parsedCities;
+}
+
 export function getUSStates(): USState[] {
-  const raw = State.getStatesOfCountry('US') || [];
-  return raw.map((s) => ({
-    code: s.isoCode,
-    name: s.name,
-  }));
+  return US_STATES.split('\n').map((line) => {
+    const [code, name] = line.split('|');
+    return { code, name };
+  });
 }
 
 export function getCitiesByState(stateCode: string): USCity[] {
   if (!stateCode) return [];
-  const raw = City.getCitiesOfState('US', stateCode.toUpperCase()) || [];
-  return raw.map((c) => ({
-    name: c.name,
-  }));
+  const code = stateCode.toUpperCase();
+  return allUSCities()
+    .filter((c) => c.stateCode === code)
+    .map((c) => ({ name: c.name }));
 }
 
 interface PhotonFeature {
@@ -121,14 +139,13 @@ let cachedUSCities: SearchCityResult[] | null = null;
 
 function getCachedUSCities(): SearchCityResult[] {
   if (!cachedUSCities) {
-    const raw = City.getCitiesOfCountry('US') || [];
-    cachedUSCities = raw.map((c) => ({
+    cachedUSCities = allUSCities().map((c) => ({
       id: `${c.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${c.stateCode.toLowerCase()}`,
       name: `${c.name}, ${c.stateCode}`,
       cityName: c.name,
       stateCode: c.stateCode,
-      latitude: c.latitude ? Number(c.latitude) || 0 : 0,
-      longitude: c.longitude ? Number(c.longitude) || 0 : 0,
+      latitude: c.latitude,
+      longitude: c.longitude,
     }));
   }
   return cachedUSCities;
