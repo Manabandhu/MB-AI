@@ -752,6 +752,63 @@ await status(
   },
 );
 
+await status(
+  'admin cannot suspend themselves',
+  403,
+  'D',
+  'PATCH',
+  `/api/v1/admin/users/${D}/status`,
+  {
+    status: 'Suspended',
+  },
+);
+{
+  const report = await status(
+    'member files a safety report',
+    201,
+    'B',
+    'POST',
+    '/api/v1/safety/reports',
+    {
+      targetId: C,
+      category: 'harassment',
+      description: 'smoke test report',
+      severity: 'LOW',
+    },
+  );
+  await status(
+    'reporter cannot resolve their own report',
+    403,
+    'B',
+    'POST',
+    `/api/v1/safety/reports/${report?.id}/resolve`,
+  );
+  await status(
+    'admin resolves the report',
+    200,
+    'D',
+    'POST',
+    `/api/v1/admin/reports/${report?.id}/resolve`,
+  );
+}
+if (conversationId) {
+  await status(
+    'admin can open a chat they are not in',
+    200,
+    'D',
+    'GET',
+    `/api/v1/chat/conversations/${conversationId}/messages`,
+  );
+  const log = (await call('D', 'GET', '/api/v1/admin/audit-log')).body ?? [];
+  expect(
+    'admin chat access is written to the audit log',
+    log.some((e) => e.action === 'chat.admin_access' && e.targetId === conversationId),
+    true,
+  );
+} else {
+  skip += 1;
+}
+
 console.log('== graphql');
 const gql = await call('C', 'POST', '/graphql', {
   query: `{ rideParticipants(rideId: "${rideId}") { id } }`,

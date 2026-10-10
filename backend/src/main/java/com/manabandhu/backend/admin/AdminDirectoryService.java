@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.manabandhu.backend.auth.Actor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,14 +46,16 @@ class AdminDirectoryService {
                               boolean reported, Instant createdAt) {}
 
     private final JdbcTemplate jdbcTemplate;
+    private final AdminAuditService audit;
     private final RestTemplate restTemplate;
     private final String supabaseProjectUrl;
     private final String serviceRoleKey;
 
-    AdminDirectoryService(JdbcTemplate jdbcTemplate,
+    AdminDirectoryService(JdbcTemplate jdbcTemplate, AdminAuditService audit,
                           @Value("${app.supabase.project-url:}") String supabaseProjectUrl,
                           @Value("${app.supabase.service-role-key:}") String serviceRoleKey) {
         this.jdbcTemplate = jdbcTemplate;
+        this.audit = audit;
         this.supabaseProjectUrl = supabaseProjectUrl;
         this.serviceRoleKey = serviceRoleKey;
         var requestFactory = new SimpleClientHttpRequestFactory();
@@ -124,11 +127,29 @@ class AdminDirectoryService {
         }
     }
 
-    /** Suspends or reactivates an account by banning it in Supabase Auth, which also blocks new sessions. */
-    AdminUser setStatus(UUID id, String status) {
+    /**
+     * Suspends or reactivates an account by banning it in Supabase Auth, which also blocks new sessions.
+     * Admins only; nobody can change their own status, super admins cannot be suspended here, and only a
+     * super admin can suspend another admin. Every change is written to {@code admin_audit_log}.
+     */
+    AdminUser setStatus(Actor actor, UUID id, String status) {
+        actor.requireAdmin();
         var suspend = "suspended".equalsIgnoreCase(status);
         if (!suspend && !"active".equalsIgnoreCase(status)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status must be Active or Suspended");
+        }
+        if (actor.is(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot change your own account status");
+        }
+        if (suspend) {
+            var role = user(id).role();
+            var targetRole = role == null ? "" : role.trim().toLowerCase(java.util.Locale.ROOT);
+            if (targetRole.equals("super_admin")) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Super admins cannot be suspended here");
+            }
+            if (targetRole.equals("admin") && !actor.superAdmin()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a super admin can suspend an admin");
+            }
         }
         if (supabaseProjectUrl.isBlank() || serviceRoleKey.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Supabase admin API is not configured");
@@ -143,6 +164,7 @@ class AdminDirectoryService {
         } catch (RestClientException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Supabase rejected the status change", exception);
         }
+        audit.record(actor.id().toString(), "user." + (suspend ? "suspended" : "active"), "USER", id.toString());
         return user(id);
     }
 

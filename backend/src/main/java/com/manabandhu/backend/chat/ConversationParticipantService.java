@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.admin.AdminAuditService;
 import com.manabandhu.backend.auth.Actor;
 
 /** Conversation membership. Only active participants (and admins) can read or write a conversation. */
@@ -15,9 +16,11 @@ import com.manabandhu.backend.auth.Actor;
 public class ConversationParticipantService {
 
     private final ConversationParticipantRepository repository;
+    private final AdminAuditService audit;
 
-    ConversationParticipantService(ConversationParticipantRepository repository) {
+    ConversationParticipantService(ConversationParticipantRepository repository, AdminAuditService audit) {
         this.repository = repository;
+        this.audit = audit;
     }
 
     @Transactional(readOnly = true)
@@ -38,12 +41,17 @@ public class ConversationParticipantService {
                 .orElse(false);
     }
 
-    /** Fails with 403 unless the caller is an active participant or an admin. */
+    /**
+     * Fails with 403 unless the caller is an active participant or an admin. An admin opening a conversation
+     * they are not part of is recorded in {@code admin_audit_log} ({@code chat.admin_access}).
+     */
     @Transactional(readOnly = true)
     public void requireParticipant(Actor actor, UUID conversationId) {
-        if (!actor.admin() && !isParticipant(conversationId, actor.id())) {
+        if (isParticipant(conversationId, actor.id())) return;
+        if (!actor.admin()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a participant in this conversation");
         }
+        audit.record(actor.id().toString(), "chat.admin_access", "CONVERSATION", conversationId.toString());
     }
 
     /** Only the conversation owner (or an admin) can invite people. */

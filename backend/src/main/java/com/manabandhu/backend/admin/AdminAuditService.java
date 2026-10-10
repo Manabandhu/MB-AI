@@ -20,7 +20,8 @@ public class AdminAuditService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @Transactional
+    /** Runs in its own transaction so callers inside read-only transactions (for example chat reads) can audit. */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void record(String actor, String action, String targetType, String targetId) {
         jdbcTemplate.update(
                 "INSERT INTO public.admin_audit_log (actor, action, target_type, target_id) VALUES (?, ?, ?, ?)",

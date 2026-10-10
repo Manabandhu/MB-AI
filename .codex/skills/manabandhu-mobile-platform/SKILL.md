@@ -153,3 +153,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Mutations whose server can refuse for business reasons (rides booking, seat-request accept/reject) show the server's reason in an `Alert` instead of failing silently.
 - Events: `SavedEventsScreen` is the second auth-gated personal list (sign-in prompt, pull-to-refresh).
 - Expenses: `SettlementsScreen` adds confirm/cancel actions for pending payments; its hex colours were replaced with `palette` tokens.
+- Admin: `AdminUsersScreen` alerts when a status change is refused.

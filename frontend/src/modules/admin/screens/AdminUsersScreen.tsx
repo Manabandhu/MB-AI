@@ -2,7 +2,7 @@ import { color } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listUsers, updateUserStatus } from '@/modules/admin/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
@@ -23,6 +23,8 @@ export default function AdminUsersScreen() {
   const mutation = useMutation({
     mutationFn: updateUserStatus,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+    // The server refuses self-suspension, super admins, and admins unless the caller is a super admin.
+    onError: (err) => Alert.alert('Status not changed', err.message),
   });
 
   const users = data ?? [];

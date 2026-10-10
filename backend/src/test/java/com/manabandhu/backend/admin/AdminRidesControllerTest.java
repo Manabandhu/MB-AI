@@ -35,7 +35,7 @@ class AdminRidesControllerTest {
     @Test
     void nonAdminRequestIsRejected() {
         var service = mock(RideOfferService.class);
-        var policy = new AdminAccessPolicy(false);
+        var policy = new AdminAccessPolicy(false, "");
         var controller = new AdminRidesController(service, policy);
 
         var user = new UsernamePasswordAuthenticationToken("user-1", "n/a", List.of());
@@ -46,7 +46,7 @@ class AdminRidesControllerTest {
     @Test
     void adminRequestReturnsProjection() {
         var service = mock(RideOfferService.class);
-        var policy = new AdminAccessPolicy(false);
+        var policy = new AdminAccessPolicy(false, "");
         var controller = new AdminRidesController(service, policy);
 
         var offerId = UUID.randomUUID();
@@ -78,7 +78,7 @@ class AdminRidesControllerTest {
     @Test
     void emptyResultsReturnEmptyList() {
         var service = mock(RideOfferService.class);
-        var policy = new AdminAccessPolicy(false);
+        var policy = new AdminAccessPolicy(false, "");
         var controller = new AdminRidesController(service, policy);
 
         when(service.findAllForAdmin()).thenReturn(List.of());

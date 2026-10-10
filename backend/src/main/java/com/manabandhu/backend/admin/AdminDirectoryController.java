@@ -45,10 +45,8 @@ public class AdminDirectoryController {
     @PatchMapping("/users/{id}/status")
     AdminDirectoryService.AdminUser updateUserStatus(Authentication authentication, @PathVariable UUID id,
                                                      @Valid @RequestBody UpdateUserStatusInput input) {
-        accessPolicy.require(authentication);
-        var user = directory.setStatus(id, input.status());
-        audit.record(accessPolicy.actorId(authentication), "user." + input.status().toLowerCase(), "USER", id.toString());
-        return user;
+        // Never available through public demo access: the status change needs a real signed-in admin.
+        return directory.setStatus(com.manabandhu.backend.auth.Actor.require(authentication), id, input.status());
     }
 
     @GetMapping("/rooms")

@@ -39,7 +39,7 @@ public class AdminReportsController {
     @GetMapping
     List<AdminReportProjection> reports(Authentication authentication) {
         accessPolicy.require(authentication);
-        return reportService.findAllForAdmin().stream()
+        return reportService.findAllForAdmin(com.manabandhu.backend.auth.Actor.require(authentication)).stream()
                 .map(r -> new AdminReportProjection(
                         r.getId(),
                         r.getCategory(),
@@ -55,7 +55,7 @@ public class AdminReportsController {
     @PostMapping("/{id}/resolve")
     AdminReportProjection resolve(Authentication authentication, @PathVariable UUID id) {
         accessPolicy.require(authentication);
-        var r = reportService.resolve(id);
+        var r = reportService.resolve(com.manabandhu.backend.auth.Actor.require(authentication), id);
         audit.record(accessPolicy.actorId(authentication), "report.resolve", "SAFETY_REPORT", id.toString());
         return new AdminReportProjection(
                 r.getId(),
