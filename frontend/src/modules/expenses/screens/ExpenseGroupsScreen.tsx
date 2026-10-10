@@ -1,3 +1,4 @@
+import { formatMoney } from '@manabandhu/core';
 import { color, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -17,10 +18,6 @@ import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 
 const GROUP_TYPES: ExpenseGroupType[] = ['APARTMENT', 'TRIP', 'CARPOOL', 'EVENT'];
-
-function formatMoney(amount: number, currency: string) {
-  return `${currency === 'USD' ? '$' : `${currency} `}${amount.toFixed(2)}`;
-}
 
 export function ExpenseGroupsScreen() {
   const router = useRouter();

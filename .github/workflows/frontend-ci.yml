@@ -5,6 +5,7 @@ on:
     paths:
       - frontend/**
       - packages/design-system/**
+      - packages/core/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -15,6 +16,7 @@ on:
     paths:
       - frontend/**
       - packages/design-system/**
+      - packages/core/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -48,6 +50,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check formatting, lint, and types
         run: pnpm lint
+      - name: Run shared package tests
+        run: pnpm test:packages
       - name: Run frontend tests
         run: pnpm --filter @manabandhu/frontend test
       - name: Export responsive web application

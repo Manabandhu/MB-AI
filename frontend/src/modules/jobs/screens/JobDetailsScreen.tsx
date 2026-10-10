@@ -1,3 +1,4 @@
+import { formatSalaryRange } from '@manabandhu/core';
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
@@ -84,13 +85,6 @@ export function JobDetailsScreen() {
     onError: (err: Error) => setReferralError(err.message),
   });
 
-  const formatSalary = (min?: number, max?: number) => {
-    if (!min && !max) return 'Not listed';
-    if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()} / yr`;
-    if (min) return `From $${min.toLocaleString()} / yr`;
-    return `Up to $${(max ?? 0).toLocaleString()} / yr`;
-  };
-
   if (isLoading) {
     return (
       <View style={s.centerContainer}>
@@ -116,7 +110,8 @@ export function JobDetailsScreen() {
 
   const companyLabel = job.company || 'Company not listed';
   const companyInitial = (job.company || '?').charAt(0).toUpperCase();
-  const salaryDisplay = formatSalary(job.salaryMin, job.salaryMax);
+  const salaryDisplay =
+    formatSalaryRange(job.salaryMin, job.salaryMax, { compact: false }) ?? 'Not listed';
   const metaParts = [job.employmentType, job.isRemote ? 'Remote OK' : null].filter(
     (part): part is string => Boolean(part),
   );

@@ -1,3 +1,4 @@
+import { formatDate } from '@manabandhu/core';
 import { color, radius, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
@@ -55,12 +56,6 @@ const SCREEN_COPY: Record<ImmigrationScreenId, { title: string; subtitle: string
   news: { title: 'Immigration News', subtitle: 'Policy and processing updates.' },
   saved: { title: 'Saved', subtitle: 'Your bookmarked guides and checklists.' },
 };
-
-function formatDate(value?: string | null): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString();
-}
 
 function checklistItemCount(itemsJson?: string | null): number | null {
   if (!itemsJson) return null;

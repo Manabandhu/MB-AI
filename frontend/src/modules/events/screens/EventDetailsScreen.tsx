@@ -1,3 +1,4 @@
+import { formatDate, formatTimeRange } from '@manabandhu/core';
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
@@ -75,34 +76,6 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
     onError: (err: Error) => setRsvpError(err.message),
   });
 
-  const formatEventDate = (isoString?: string) => {
-    if (!isoString) return 'Date not set';
-    try {
-      const d = new Date(isoString);
-      return d.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    } catch {
-      return isoString;
-    }
-  };
-
-  const formatEventTime = (start?: string, end?: string) => {
-    if (!start) return 'Time not set';
-    try {
-      const s = new Date(start);
-      const e = end ? new Date(end) : null;
-      const sTime = s.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      const eTime = e ? e.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
-      return eTime ? `${sTime} – ${eTime}` : sTime;
-    } catch {
-      return start;
-    }
-  };
-
   if (isLoading) {
     return (
       <View style={s.centerContainer}>
@@ -156,7 +129,7 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `${event.title} — ${formatEventDate(event.startAt)} at ${event.location}`,
+        message: `${event.title} — ${formatDate(event.startAt, 'long') ?? 'Date not set'} at ${event.location}`,
       });
     } catch (err) {
       Alert.alert('Unable to share', err instanceof Error ? err.message : 'Please try again.');
@@ -221,8 +194,10 @@ export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps)
               <Text style={s.dateIconEmoji}>📅</Text>
             </View>
             <View style={s.dateMeta}>
-              <Text style={s.dateTitle}>{formatEventDate(event.startAt)}</Text>
-              <Text style={s.timeSubtitle}>{formatEventTime(event.startAt, event.endAt)}</Text>
+              <Text style={s.dateTitle}>{formatDate(event.startAt, 'long') ?? 'Date not set'}</Text>
+              <Text style={s.timeSubtitle}>
+                {formatTimeRange(event.startAt, event.endAt) ?? 'Time not set'}
+              </Text>
             </View>
           </View>
         </View>

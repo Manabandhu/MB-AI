@@ -1,3 +1,4 @@
+import { formatMoney } from '@manabandhu/core';
 import { radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -52,10 +53,6 @@ const SETTLEMENT_STATUS: Record<Settlement['status'], string> = {
   cancelled: 'Cancelled',
 };
 
-function formatMoney(amount: number, currency: string) {
-  return `${currency === 'USD' ? '$' : `${currency} `}${Math.abs(amount).toFixed(2)}`;
-}
-
 /** Signed sums keyed by currency; amounts in different currencies are never added together. */
 function sumByCurrency(rows: { amount: number; currency: string }[], sign = 1) {
   const totals = new Map<string, number>();
@@ -67,11 +64,11 @@ function sumByCurrency(rows: { amount: number; currency: string }[], sign = 1) {
 
 function formatTotals(totals: Map<string, number>, fallbackCurrency: string, signed = false) {
   const entries = [...totals.entries()].filter(([, amount]) => Math.abs(amount) >= 0.005);
-  if (entries.length === 0) return formatMoney(0, fallbackCurrency);
+  if (entries.length === 0) return formatMoney(0, fallbackCurrency, { absolute: true });
   return entries
     .map(
       ([currency, amount]) =>
-        `${signed ? (amount > 0 ? '+' : '−') : ''}${formatMoney(amount, currency)}`,
+        `${signed ? (amount > 0 ? '+' : '−') : ''}${formatMoney(amount, currency, { absolute: true })}`,
     )
     .join(' · ');
 }
@@ -333,13 +330,14 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                           {netInGroup >= 0.005 ? (
                             <View style={s.groupBadgeOwed}>
                               <Text style={s.groupBadgeOwedText}>
-                                +{formatMoney(netInGroup, group.currency)}
+                                +{formatMoney(netInGroup, group.currency, { absolute: true })}
                               </Text>
                             </View>
                           ) : netInGroup <= -0.005 ? (
                             <View style={s.groupBadgeOwe}>
                               <Text style={s.groupBadgeOweText}>
-                                You owe {formatMoney(netInGroup, group.currency)}
+                                You owe{' '}
+                                {formatMoney(netInGroup, group.currency, { absolute: true })}
                               </Text>
                             </View>
                           ) : (
@@ -353,7 +351,8 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
 
                         <View style={s.groupDetailsBox}>
                           <Text style={s.groupDetailsText}>
-                            Total spend: {formatMoney(group.totalExpenses, group.currency)}
+                            Total spend:{' '}
+                            {formatMoney(group.totalExpenses, group.currency, { absolute: true })}
                           </Text>
                           {group.description ? (
                             <Text style={s.groupTagsText}>{group.description}</Text>
@@ -420,12 +419,12 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                           <View style={s.balanceRightCol}>
                             {owedToMe ? (
                               <Text style={s.balanceOwedGreen}>
-                                +{formatMoney(b.amount, b.currency)}
+                                +{formatMoney(b.amount, b.currency, { absolute: true })}
                               </Text>
                             ) : (
                               <>
                                 <Text style={s.balanceOweOrange}>
-                                  You owe {formatMoney(b.amount, b.currency)}
+                                  You owe {formatMoney(b.amount, b.currency, { absolute: true })}
                                 </Text>
                                 <Pressable
                                   style={s.balancePayBtn}
@@ -465,7 +464,9 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                         <View style={s.activityBody}>
                           <Text style={s.activityTitle}>
                             {name(settlement.fromUserId)} paid {name(settlement.toUserId)}{' '}
-                            {formatMoney(settlement.amount, settlement.currency)}
+                            {formatMoney(settlement.amount, settlement.currency, {
+                              absolute: true,
+                            })}
                           </Text>
                           <Text style={s.activityMeta}>
                             {groupsById.get(settlement.groupId)?.name ?? 'Expense group'} •{' '}

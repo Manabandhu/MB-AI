@@ -82,3 +82,4 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - Security & correctness hardening (2026-10): Removed the unreachable `JobsGraphqlController` (no matching schema fields; it bypassed ownership checks). `listJobPostings` is typed instead of `any`; screens use typed `Href` routes.
 - Screen metrics are computed from the database (2026-10): `JobsContentService.screen(id, Optional<Actor>)` counts open job postings and, for signed-in callers, their applications and postings; filters, saved and post-form numbers were removed.
 - Cleanup: removed the unused `index.ts` barrel, `JobsSearchScreen.tsx`, `SavedJobsScreen.tsx`, and unused API/type exports.
+- Salaries render with `formatSalaryRange` from `@manabandhu/core` (compact on the list, full amounts on the detail screen); an unlisted salary shows "Salary not listed" / "Not listed", never an invented label.

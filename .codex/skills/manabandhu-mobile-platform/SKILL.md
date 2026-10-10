@@ -5,7 +5,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 
 # Mobile platform
 
-1. Read the Expo SDK 54 documentation, `docs/architecture/platform.md`, `frontend/src/platform/adaptive.ts`, and the affected module under `frontend/src/modules`.
+1. Read the Expo SDK 57 documentation, `docs/architecture/platform.md`, `frontend/src/platform/adaptive.ts`, and the affected module under `frontend/src/modules`.
 2. Design by window size, input capability, safe area, orientation, font scale, and reduced-motion preference. Never branch on device model.
 3. Keep phone, tablet, foldable, and web behavior in one Expo app unless an interaction model requires a separate shell.
 4. Preserve keyboard, pointer, touch, deep-link, offline, accessibility, and responsive-web behavior.
@@ -22,9 +22,9 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 15. The old local `stitch/` export folder has been removed; use a fresh MCP export as the source for the next Stitch implementation pass. Do not satisfy Stitch requirements by rendering screenshots as the app UI.
 16. Shared catalog or Stitch-derived screens must expose connected navigation through primary nav, screen actions, and routed cards so route files are reachable through UI.
 17. Shared UI primitives live under `frontend/src/modules/shared/ui`; use Gluestack-backed app wrappers such as `AppButton`, generated components under `shared/ui/gluestack`, and `AppIcon` before adding screen-local controls. Icons use `iconoir-react-native` with `react-native-svg`.
-18. Keep Expo SDK 54 aligned through `expo install --fix`: React Native 0.81, React 19.1, React Native Web 0.21, and Node 20.19.4 or newer. Prefer a development build when a current physical-iOS Expo Go no longer supports SDK 54.
+18. Keep Expo SDK 57 aligned through `expo install --fix`: React Native 0.86, React 19.2, React Native Web 0.21, and Node 22.13 or newer.
 19. Update this skill when targets, breakpoints, routing, commands, dependencies, or invariants change.
-20. Current frontend implementation: Expo SDK 54 with Expo Router, React Native 0.81, React 19.1, and React Native Web 0.21. Adaptive layout governed by `frontend/src/platform/adaptive.ts` using breakpoints compact (0), medium (600), expanded (1024), and wide (1440). All modules use `react-native-safe-area-context` and respect reduced-motion preferences.
+20. Current frontend implementation: Expo SDK 57 with Expo Router, React Native 0.86, React 19.2, and React Native Web 0.21. Adaptive layout governed by `frontend/src/platform/adaptive.ts` using breakpoints compact (0), medium (600), expanded (1024), and wide (1440). All modules use `react-native-safe-area-context` and respect reduced-motion preferences.
   21. Recent client-side fixes: shared Supabase/client imports are grouped before UI imports, `AppButton` supports a `loading` disabled state, admin navigation uses typed `Href` casts where needed, `frontend/src/lib/apiClient.ts` centralizes shared API response parsing helpers (`parseJson`, `parseJsonOrThrow`) to replace duplicated module-local response handling, and duplicated `responseJson` functions were removed from module API files in favor of the shared helpers.
   22. Rides thin routes now cover `/rides/saved`, `/rides/mine`, `/rides/history`, `/rides/[rideId]/seat-requests`, and `/rides/[rideId]/participants`; missing routes must be created before module handoff.
   23. LoadingState component upgraded to replace static non-animated CSS ring with native `ActivityIndicator` (size="large", color=primary) and animated pulsing skeleton opacity loop (`0.4` to `1.0`), ensuring animated loading state across web, iOS, and Android.
@@ -118,3 +118,11 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Structure cleanup: removed Expo template assets and ~20 unused shared components (`shared/components/*Screen.tsx`, `Modal`, `Toggle`, `TabBar`, …); renamed foundation screens without the `Stitch` prefix and split the app shell into `foundation/screens/shell/`; route files import the new names.
 - `pnpm verify:screens` (`scripts/verify-screen-catalog.mjs`, part of `pnpm verify`) fails when `screen-catalog.ts` and the route files under `frontend/src/app` disagree; redirect-only legacy routes and the `/splash` alias are exempt.
 - Removed the `country-state-city` dependency (GPL-3.0, 8 MB worldwide city JSON) after it broke every iOS route importing `rooms/utils/locationService` under Hermes in development; offline US data now lives in `rooms/utils/usLocationData.ts`. iOS JS bundle 17.4 MB → 9.3 MB, Hermes bytecode 22.2 MB → 12.0 MB.
+
+## Theme, core package, and storage (2026-10 foundation pass)
+- The root layout wraps the app in `AppThemeProvider` (`frontend/src/theme/ThemeProvider.tsx`): Tamagui 2.7.7 (`tamagui.config.ts`, runtime mode, no compiler) plus the user's appearance choice from `useAppearanceStore` (`themePreferenceStore.ts`): theme `system | light | dark` and motion `full | reduced | off`. `useAppearance()` returns the resolved scheme, palette, and motion flags; the OS reduced-motion setting always wins over "full". Uniwind follows the same scheme while screens still use classes.
+- Pin Tamagui packages to the same exact version (2.7.7) until a deliberate upgrade that also satisfies the supply-chain release-age policy.
+- The HTTP client, response parsers (`parseJson`, `parseJsonOrThrow`), `ApiError`/`AuthError`, and formatters live in `@manabandhu/core` (`packages/core`). `frontend/src/lib/api.ts` only configures it (base URL resolution and Supabase token); `apiFetch` keeps its signature.
+- Use `formatDate`, `formatTimeRange`, `formatRelative`, `formatMoney`, `formatSalaryRange`, and `formatCount` from `@manabandhu/core` instead of module-local helpers or inline `toLocaleDateString`. They return `null` for missing input so screens pick an honest label.
+- Persisted Zustand stores use `persistentStorage` from `frontend/src/lib/persistentStorage.ts` (localStorage on web, SecureStore on native, memory fallback); do not copy the adapter into stores.
+- The web export needs the public env vars; run it with the same placeholders as CI (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) and `--clear` after changing them, because Metro caches inlined env values.

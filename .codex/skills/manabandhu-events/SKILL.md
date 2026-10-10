@@ -83,3 +83,4 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - Security & correctness hardening (2026-10): RSVPs upsert one row per user and event and require an existing event. `GET /api/v1/events/{id}/attendance` needs a JWT: organizers/admins see the guest list, others only their own RSVP (REST and GraphQL). Event API helpers and screens are typed (no `any`).
 - Real events only (2026-10): the featured card is the first upcoming event from the live list (hidden when there are none); the hard-coded Diwali feature, attendee/capacity numbers and festival schedule were removed from the home, details and create screens.
 - Cleanup: removed unused API exports and repository/GraphQL helpers.
+- Event dates and times render with `formatDate` (`weekdayTime` on lists, `long` on detail) and `formatTimeRange` from `@manabandhu/core`.

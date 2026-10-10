@@ -18,3 +18,8 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 
 11. Auth surfaces (2026-10) use `frontend/src/modules/auth/components/AuthKit.tsx`: 32pt left-aligned titles, 17pt body and input text, 52pt fields and buttons with 14pt radius, primary `#431ebe` buttons, black "Continue with Apple" above a white outlined Google button, sentence-case labels (no all-caps eyebrows), and a centered 460pt card at ≥600pt widths.
 - Added `tone` (surface containers, tints, pastel badge backgrounds) and `palette` (`color` + `tone`) so screens stop re-declaring hex values.
+## Token package layout (2026-10)
+- `packages/design-system/src/` is split into `tokens.ts` (colors, `tone`, `palette`, `darkColor`, `darkTone`, `darkPalette`, `paletteFor(scheme)`, spacing, radius, shadow, typography, breakpoints, accessibility), `brand.ts` (`brand` name, tagline, brand colors, gradient stops), and `motion.ts` (`spring` presets `snappy`/`gentle`/`bouncy`, `motion` press/hover/stagger values, `MotionPreference`). `index.ts` re-exports all three.
+- `darkTone` mirrors every `tone` key so `darkPalette` and `palette` have identical keys. The unused `saffronPalette` was removed.
+- `pnpm --filter @manabandhu/design-system tokens:json` writes `dist/tokens.json` (gitignored) for non-JS clients such as future SwiftUI watch, Android for Cars, or TV code.
+- The Tamagui config in `frontend/src/theme/tamagui.config.ts` is built only from these tokens (themes `light`/`dark` plus `primary`, `teal`, `warm`, `danger` sub-themes; media `medium`/`expanded`/`wide` from `breakpoint`).

@@ -1,3 +1,4 @@
+import { formatSalaryRange } from '@manabandhu/core';
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
@@ -190,13 +191,6 @@ export function JobsHomeScreen(_props: { screenId?: string }) {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
   }, [rawJobs, filters]);
-
-  const formatSalary = (min?: number, max?: number) => {
-    if (!min && !max) return 'Competitive Compensation';
-    if (min && max) return `$${Math.round(min / 1000)}k - $${Math.round(max / 1000)}k / yr`;
-    if (min) return `From $${Math.round(min / 1000)}k / yr`;
-    return `Up to $${Math.round((max ?? 0) / 1000)}k / yr`;
-  };
 
   return (
     <View style={s.container}>
@@ -400,7 +394,8 @@ export function JobsHomeScreen(_props: { screenId?: string }) {
           <View style={s.jobsListGrid}>
             {filteredJobs.map((job) => {
               const isSaved = savedJobs.has(job.id);
-              const salaryText = formatSalary(job.salaryMin, job.salaryMax);
+              const salaryText =
+                formatSalaryRange(job.salaryMin, job.salaryMax) ?? 'Salary not listed';
 
               return (
                 <View key={job.id} style={s.jobCard}>

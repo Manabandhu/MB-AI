@@ -1,3 +1,4 @@
+import { formatDate } from '@manabandhu/core';
 import { color as baseColors, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
@@ -108,22 +109,6 @@ export default function EventsHomeScreen() {
   // The spotlight is simply the next upcoming event that matches the current filters.
   const featuredEvent = filteredEvents[0];
   const regularEvents = filteredEvents.slice(1);
-
-  const formatEventDate = (isoString?: string) => {
-    if (!isoString) return 'Upcoming Date';
-    try {
-      const d = new Date(isoString);
-      return d.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoString;
-    }
-  };
 
   return (
     <View style={s.container}>
@@ -273,7 +258,9 @@ export default function EventsHomeScreen() {
                 </View>
 
                 <Text style={s.featuredTitle}>{featuredEvent.title}</Text>
-                <Text style={s.featuredDate}>📅 {formatEventDate(featuredEvent.startAt)}</Text>
+                <Text style={s.featuredDate}>
+                  📅 {formatDate(featuredEvent.startAt, 'weekdayTime') ?? 'Date to be announced'}
+                </Text>
                 <Text style={s.featuredLocation}>📍 {featuredEvent.location}</Text>
               </View>
 
@@ -309,7 +296,9 @@ export default function EventsHomeScreen() {
                           <Text style={s.cardTitle}>{event.title}</Text>
                         </Pressable>
 
-                        <Text style={s.cardDate}>📅 {formatEventDate(event.startAt)}</Text>
+                        <Text style={s.cardDate}>
+                          📅 {formatDate(event.startAt, 'weekdayTime') ?? 'Date to be announced'}
+                        </Text>
                         <Text style={s.cardLocation}>📍 {event.location}</Text>
                         {event.description ? (
                           <Text numberOfLines={2} style={s.cardLocation}>
