@@ -2793,7 +2793,10 @@ components:
       additionalProperties: false
       required: [status]
       properties:
-        status: { type: string, enum: [INTERESTED, GOING, NOT_GOING] }
+        status:
+          type: string
+          enum: [going, interested, maybe, saved, not_going]
+          description: Matched case-insensitively (GOING is accepted) and stored lowercase
     EventAttendance:
       type: object
       additionalProperties: false
@@ -2802,7 +2805,9 @@ components:
         id: { type: string, format: uuid }
         eventId: { type: string, format: uuid }
         userId: { type: string, format: uuid }
-        status: { type: string, enum: [INTERESTED, GOING, NOT_GOING] }
+        status:
+          type: string
+          description: 'Lowercase: going, interested, maybe, saved, not_going (rows written before 2026-10 may be uppercase)'
         createdAt: { type: string, format: date-time }
     EventCategory:
       type: object

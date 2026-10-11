@@ -37,3 +37,4 @@ description: Maintain ManaBandhu's canonical OpenAPI, GraphQL, and AsyncAPI cont
   - `NotificationPreference` is `{channel, enabled}`.
 - Account (2026-10-11): `GET /me/export` and `DELETE /me` (401 `reauth_required`, 502, 503) are documented under the existing `/me` path.
 - Media (2026-10-11): `POST /media/upload-url` (bucket, contentType, size → ticket with publicUrl) and `POST /media/delete` documented.
+- Event attendance `status` enum is now the real lowercase set (`going|interested|maybe|saved|not_going`), matching the 400 description.

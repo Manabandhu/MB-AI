@@ -84,3 +84,4 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
     - Requires `EAS_PROJECT_ID` at build time.
 - Safety notices (`safetyAlerts`) are delivered even while "All notifications" is paused, matching the settings screen copy.
 - Inbox, detail and settings have a `BackButton` (fallback route when there is no history), and the expense notification amount uses two decimals.
+- Dispatcher treats Expo's HTTP-200 `errors` response as a failed attempt (backoff), not as sent; stale stored setting values are logged when they fall back to defaults.

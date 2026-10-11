@@ -50,6 +50,8 @@ public class NotificationsContentService {
     private static final Set<String> TIME_KEYS = Set.of("quietStart", "quietEnd");
     private static final Pattern HH_MM = Pattern.compile("^([01]\\d|2[0-3]):[0-5]\\d$");
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NotificationsContentService.class);
+
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -158,8 +160,9 @@ public class NotificationsContentService {
                     if (!DEFAULT_SETTINGS.containsKey(key) || value == null) return;
                     try {
                         merged.put(key, validated(key, value));
-                    } catch (ResponseStatusException ignored) {
+                    } catch (ResponseStatusException stale) {
                         // A stale value keeps its default instead of failing the settings screen.
+                        log.warn("notification_settings_stale_value user={} key={}", userId, key);
                     }
                 });
             } catch (JsonProcessingException ignored) {

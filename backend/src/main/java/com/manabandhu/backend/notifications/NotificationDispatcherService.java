@@ -118,7 +118,11 @@ public class NotificationDispatcherService {
         }
         var response = restTemplate.exchange(EXPO_PUSH_URL, HttpMethod.POST, new HttpEntity<>(messages, headers), Map.class);
         var body = response.getBody();
-        if (body != null && body.get("data") instanceof List<?> tickets) {
+        // Expo reports request-level failures (bad token format, auth, payload) as HTTP 200 with "errors".
+        if (body == null || body.get("errors") != null) {
+            throw new IllegalStateException("Expo push rejected: " + (body == null ? "empty response" : body.get("errors")));
+        }
+        if (body.get("data") instanceof List<?> tickets) {
             for (int i = 0; i < tickets.size() && i < tokens.size(); i++) {
                 if (tickets.get(i) instanceof Map<?, ?> ticket && "error".equals(ticket.get("status"))
                         && ticket.get("details") instanceof Map<?, ?> details
