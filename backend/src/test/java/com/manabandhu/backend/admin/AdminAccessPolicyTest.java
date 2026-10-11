@@ -35,10 +35,11 @@ class AdminAccessPolicyTest {
     }
 
     @Test
-    void publicOverrideCannotStartAgainstAHostedIssuer() {
-        assertThrows(IllegalStateException.class,
-                () -> new AdminAccessPolicy(true, "https://lpzaioyurvgdysdfktzc.supabase.co/auth/v1"));
-        assertThrows(IllegalStateException.class, () -> new AdminAccessPolicy(true, ""));
-        assertDoesNotThrow(() -> new AdminAccessPolicy(false, "https://lpzaioyurvgdysdfktzc.supabase.co/auth/v1"));
+    void publicOverrideIsIgnoredAgainstAHostedIssuer() {
+        var hosted = new AdminAccessPolicy(true, "https://lpzaioyurvgdysdfktzc.supabase.co/auth/v1");
+        assertEquals(false, hosted.publicAccessEnabled());
+        assertThrows(AccessDeniedException.class, () -> hosted.require(null));
+        assertEquals(false, new AdminAccessPolicy(true, "").publicAccessEnabled());
+        assertEquals(true, new AdminAccessPolicy(true, "http://127.0.0.1:9999/auth/v1").publicAccessEnabled());
     }
 }

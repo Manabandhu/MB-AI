@@ -75,4 +75,5 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 - Rooms: `isVerifiedHost` removed from owner inputs; GraphQL `savedRoomListings` = caller's favorites; GraphQL `createRoomListing` = validated draft path.
 - Events: saved = caller's RSVPs or bookmarks (login required); RSVP status allowlist; malformed dates → 400.
 - Expenses: settlements need the recipient's confirmation; server-set `settledAt`; locked, explicit status transitions.
-- Safety/Admin: report resolve and account status checks live in services; self/super-admin suspension refused; `ADMIN_PUBLIC_ACCESS_ENABLED` refuses non-local issuers at startup; admin chat access is audited.
+- Safety/Admin: report resolve and account status checks live in services; self/super-admin suspension refused; `ADMIN_PUBLIC_ACCESS_ENABLED` is ignored for non-local issuers; admin chat access is audited.
+- Jobs: application status, duplicate, closed-job and own-posting rules in `JobApplicationService`. Utilities: tracking status parse → 400.

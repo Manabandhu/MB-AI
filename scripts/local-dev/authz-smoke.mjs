@@ -734,6 +734,84 @@ console.log('== token validation');
   await bearer('tampered signature is rejected', `${head}.${body}.${flipped}`);
 }
 
+console.log('== jobs, utilities');
+{
+  const categories = (await call(null, 'GET', '/api/v1/jobs/categories')).body ?? [];
+  const job = await call('A', 'POST', '/api/v1/jobs', {
+    categoryId: categories[0]?.id,
+    title: 'Smoke engineer',
+    company: 'Acme',
+    location: 'Irving',
+    description: 'Build things',
+    employmentType: 'FULL_TIME',
+  });
+  if (job.status === 201) {
+    const application = await status(
+      'member applies',
+      201,
+      'B',
+      'POST',
+      `/api/v1/jobs/${job.body.id}/applications`,
+      {
+        coverLetter: 'hi',
+      },
+    );
+    await status(
+      'duplicate application rejected',
+      409,
+      'B',
+      'POST',
+      `/api/v1/jobs/${job.body.id}/applications`,
+      {
+        coverLetter: 'again',
+      },
+    );
+    await status(
+      'employer cannot apply to own job',
+      409,
+      'A',
+      'POST',
+      `/api/v1/jobs/${job.body.id}/applications`,
+      {
+        coverLetter: 'me',
+      },
+    );
+    await status(
+      'applicant cannot accept own application',
+      403,
+      'B',
+      'PATCH',
+      `/api/v1/jobs/applications/${application?.id}`,
+      { status: 'accepted' },
+    );
+    await status(
+      'stranger cannot list applicants',
+      403,
+      'C',
+      'GET',
+      `/api/v1/jobs/${job.body.id}/applications`,
+    );
+    await status(
+      'employer accepts',
+      200,
+      'A',
+      'PATCH',
+      `/api/v1/jobs/applications/${application?.id}`,
+      {
+        status: 'accepted',
+      },
+    );
+  } else {
+    console.log(`  skip jobs checks (create returned ${job.status})`);
+    skip += 1;
+  }
+}
+await status('unknown package status is a 400', 400, 'A', 'POST', '/api/v1/utilities/packages', {
+  trackingNumber: '1Z999',
+  carrier: 'UPS',
+  status: 'teleported',
+});
+
 console.log('== admin');
 await status('non-admin blocked from admin API', 403, 'B', 'GET', '/api/v1/admin/rooms');
 await status('admin lists users', 200, 'D', 'GET', '/api/v1/admin/users');

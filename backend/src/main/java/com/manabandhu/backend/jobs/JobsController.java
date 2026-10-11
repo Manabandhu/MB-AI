@@ -131,15 +131,7 @@ public class JobsController {
 
     @GetMapping("/{jobId}/applications")
     List<JobApplication> applications(Authentication authentication, @PathVariable UUID jobId) {
-        var actorId = actorId(authentication);
-        var posting = postingService.findById(jobId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Job posting not found"));
-        if (!posting.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to view applicants for this job");
-        }
-        return applicationService.findByJobId(jobId);
+        return applicationService.listForJob(Actor.require(authentication), jobId);
     }
 
     @PostMapping("/{jobId}/applications")
@@ -153,17 +145,6 @@ public class JobsController {
     @PatchMapping("/applications/{applicationId}")
     JobApplication updateApplication(Authentication authentication, @PathVariable UUID applicationId,
                                     @Valid @RequestBody UpdateJobApplicationInput input) {
-        var actorId = actorId(authentication);
-        var application = applicationService.findById(applicationId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Job application not found"));
-        var posting = postingService.findById(application.getJobPostingId())
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Job posting not found"));
-        if (!posting.getOwnerId().equals(actorId) && !application.getApplicantId().equals(actorId) && !isAdmin(authentication)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to update this application");
-        }
-        return applicationService.updateStatus(applicationId, input.status());
+        return applicationService.updateStatus(Actor.require(authentication), applicationId, input.status());
     }
 }

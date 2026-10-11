@@ -45,7 +45,7 @@ public class UtilitiesController {
 
     @PostMapping("/packages")
     ResponseEntity<PackageTracking> createPackage(Authentication authentication, @Valid @RequestBody CreatePackageTrackingInput input) {
-        var status = PackageTracking.TrackingStatus.valueOf(input.status());
+        var status = PackageTracking.TrackingStatus.parse(input.status());
         var tracking = packageService.create(Actor.require(authentication).id(), input.trackingNumber(), input.carrier(), status, input.estimatedDelivery());
         return ResponseEntity.created(URI.create("/api/v1/utilities/packages/" + tracking.getId())).body(tracking);
     }
