@@ -23,14 +23,18 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAuthStore } from '@/lib/authStore';
 import { ALL_USA_LOCATION, useLocationStore } from '@/lib/locationStore';
-import { listRoomListings } from '@/modules/rooms/api';
-import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
+import { getRoomAmenities, listRoomListings } from '@/modules/rooms/api';
+import { useRoomSave } from '@/modules/rooms/hooks/useRoomSave';
 import type { RoomListing } from '@/modules/rooms/types';
 import { searchAllUSCities } from '@/modules/rooms/utils/locationService';
+import { showMessage } from '@/modules/rooms/utils/notify';
+import { amenityLabel } from '@/modules/rooms/utils/roomLabels';
 import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
 import { useMapPreferencesStore } from '@/modules/shared/stores/mapPreferencesStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { BackButton } from '@/modules/shared/ui/BackButton';
 import type { Coordinate } from '@/modules/shared/utils/geoPolygon';
 import { isPointInPolygon } from '@/modules/shared/utils/geoPolygon';
 
@@ -73,10 +77,32 @@ type CityOption = {
 };
 
 type ExtendedRoom = RoomListing & {
-  mapX: number; // percentage across map
-  mapY: number; // percentage down map
   verifiedHost: boolean;
 };
+
+/** Real coordinates only. Rooms without them are left off the map and out of drawn-area searches. */
+function roomCoordinate(room: RoomListing): Coordinate | null {
+  const latitude = room.latitude == null ? Number.NaN : Number(room.latitude);
+  const longitude = room.longitude == null ? Number.NaN : Number(room.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude === 0 && longitude === 0) return null;
+  return { latitude, longitude };
+}
+
+/** Badges come from the listing's structured fields, never from guesses on its title. */
+function getRoomCulturalFlags(room: RoomListing) {
+  const bath = upper(room.bathroomType);
+  return {
+    isPureVeg: upper(room.dietaryPreference) === 'PURE_VEG',
+    isPrivateBath: bath === 'PRIVATE_ATTACHED' || bath === 'PRIVATE_DEDICATED',
+    isFurnished: (room.amenities ?? []).some((a) => a.toLowerCase() === 'furnished_bed'),
+  };
+}
+
+const PURE_VEG = ['PURE_VEG'];
+const VEG_FRIENDLY = ['PURE_VEG', 'VEG_PREFERRED', 'VEG_FRIENDLY'];
+const NON_VEG_OK = ['NON_VEG_ALLOWED', 'ANY'];
+const upper = (v?: string | null) => (v ?? '').toUpperCase();
 
 export function matchesRoomLocation(
   room: ExtendedRoom,
@@ -179,7 +205,7 @@ const SORT_OPTIONS: { id: SortOption; label: string; icon: string; description: 
     id: 'recommended',
     label: 'Recommended',
     icon: '✦',
-    description: 'Best balance of reviews, verified hosts, and relevance',
+    description: 'Listings closest to your city first',
   },
   {
     id: 'price_low',
@@ -327,13 +353,16 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         (pos) => {
           applyCoords(pos.coords.latitude, pos.coords.longitude);
         },
-        (err) => {
-          console.warn('Geolocation high accuracy failed, falling back:', err?.message);
+        () => {
           navigator.geolocation.getCurrentPosition(
             (pos2) => {
               applyCoords(pos2.coords.latitude, pos2.coords.longitude);
             },
-            () => {
+            (err2) => {
+              showMessage(
+                'Could not find your location',
+                `${err2?.message || 'Location is unavailable.'} Showing ${selectedCity.name} instead.`,
+              );
               applyCoords(
                 selectedCity.latitude || ALL_USA_LOCATION.latitude,
                 selectedCity.longitude || ALL_USA_LOCATION.longitude,
@@ -371,7 +400,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         setViewMode('card');
         return true;
       }
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/home' as Href);
       return true;
     });
     return () => sub.remove();
@@ -411,8 +441,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
 
-  const savedRoomsMap = useSavedRoomsStore((s) => s.savedRooms);
-  const toggleSaveInStore = useSavedRoomsStore((s) => s.toggleSave);
+  const { isSaved: isRoomSaved, toggle: toggleRoomSave } = useRoomSave();
+  const isSignedIn = useAuthStore((s) => s.status === 'authenticated');
+  const amenitiesQuery = useQuery({
+    queryKey: ['rooms', 'amenities'],
+    queryFn: getRoomAmenities,
+    staleTime: 10 * 60_000,
+  });
+  const amenityCatalog = (amenitiesQuery.data ?? []).filter((a) => a.active !== false);
 
   const searchedCities = useMemo(() => {
     if (!citySearchInput.trim()) return [];
@@ -424,7 +460,6 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   const [filterRoomType, setFilterRoomType] = useState<string>('All');
   const [filterDiet, setFilterDiet] = useState<string>('All');
   const [filterGender, setFilterGender] = useState<string>('All');
-  const [filterVerifiedOnly, setFilterVerifiedOnly] = useState(false);
   const [filterSelectedAmenities, setFilterSelectedAmenities] = useState<string[]>([]);
   const [drawnBoundary, setDrawnBoundary] = useState<Coordinate[] | null>(null);
 
@@ -433,7 +468,6 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     (filterRoomType !== 'All' ? 1 : 0) +
     (filterDiet !== 'All' ? 1 : 0) +
     (filterGender !== 'All' ? 1 : 0) +
-    (filterVerifiedOnly ? 1 : 0) +
     filterSelectedAmenities.length;
 
   // Query real API listings directly from backend / Supabase
@@ -458,46 +492,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     }
   }, [refetch]);
 
-  // Transform backend listings into map-enabled extended listings
-  const rawListings: ExtendedRoom[] = useMemo(() => {
-    const list = listings ?? [];
-    return list.map((l, i) => {
-      let mapX = 50;
-      let mapY = 50;
-      if (l.latitude && l.longitude && selectedCity.latitude && selectedCity.longitude) {
-        const minLng = selectedCity.longitude - 0.2;
-        const maxLng = selectedCity.longitude + 0.2;
-        const minLat = selectedCity.latitude - 0.2;
-        const maxLat = selectedCity.latitude + 0.2;
-        mapX = Math.min(
-          85,
-          Math.max(15, Math.round(((l.longitude - minLng) / (maxLng - minLng)) * 100)),
-        );
-        mapY = Math.min(
-          85,
-          Math.max(15, Math.round(((maxLat - l.latitude) / (maxLat - minLat)) * 100)),
-        );
-      } else if (l.latitude && l.longitude) {
-        mapX = Math.min(
-          85,
-          Math.max(15, Math.round(((l.longitude - -97.85) / (-97.65 - -97.85)) * 100)),
-        );
-        mapY = Math.min(
-          85,
-          Math.max(15, Math.round(((30.55 - l.latitude) / (30.55 - 30.2)) * 100)),
-        );
-      } else {
-        mapX = 25 + ((i * 26) % 55);
-        mapY = 22 + ((i * 20) % 55);
-      }
-      return {
-        ...l,
-        mapX,
-        mapY,
-        verifiedHost: Boolean(l.isVerifiedHost),
-      };
-    });
-  }, [listings, selectedCity]);
+  const rawListings: ExtendedRoom[] = useMemo(
+    () => (listings ?? []).map((l) => ({ ...l, verifiedHost: Boolean(l.isVerifiedHost) })),
+    [listings],
+  );
 
   // Step 1: Filter rawListings by active location
   const locationRooms = useMemo(() => {
@@ -529,18 +527,15 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
       const found = locationRooms.find((r) => r.id === selectedPinRoomId);
       if (found) return found;
     }
-    return locationRooms[0] ?? null;
+    return locationRooms.find((r) => roomCoordinate(r) !== null) ?? null;
   }, [selectedPinRoomId, locationRooms]);
 
   // Filter and sort listings
-  let filteredRooms = locationRooms.filter((room, idx) => {
-    // Hand-drawn boundary filter (Zillow / Apartments.com style)
+  let filteredRooms = locationRooms.filter((room) => {
+    // Hand-drawn boundary filter: rooms without a real location cannot be inside it.
     if (drawnBoundary && drawnBoundary.length >= 3) {
-      const lat = Number(room.latitude) || 30.2672 + (((idx * 17) % 30) - 15) * 0.005;
-      const lng = Number(room.longitude) || -97.7431 + (((idx * 23) % 30) - 15) * 0.005;
-      if (!isPointInPolygon({ latitude: lat, longitude: lng }, drawnBoundary)) {
-        return false;
-      }
+      const point = roomCoordinate(room);
+      if (!point || !isPointInPolygon(point, drawnBoundary)) return false;
     }
 
     if (searchQuery.trim().length > 0) {
@@ -552,62 +547,31 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     }
 
     // Horizontal category chips
-    if (activeCategory === 'Pure Veg Only') {
-      const isVeg =
-        room.dietaryPreference === 'PURE_VEG' ||
-        (room.preferences ?? []).some((p) => p.toLowerCase().includes('veg'));
-      if (!isVeg) return false;
+    const flags = getRoomCulturalFlags(room);
+    if (activeCategory === 'Pure Veg Only' && !flags.isPureVeg) return false;
+    if (activeCategory === 'Private Bath' && !flags.isPrivateBath) return false;
+    if (activeCategory === 'Female Only' && upper(room.genderPreference) !== 'FEMALE_ONLY') {
+      return false;
     }
-    if (activeCategory === 'Private Bath') {
-      const hasPrivateBath =
-        room.bathroomType === 'PRIVATE_ATTACHED' ||
-        room.bathroomType === 'PRIVATE_DEDICATED' ||
-        (room.amenities ?? []).some(
-          (a) => a.toLowerCase().includes('bath') || a.toLowerCase().includes('private'),
-        );
-      if (!hasPrivateBath) return false;
-    }
-    if (activeCategory === 'Female Only') {
-      const isFemale =
-        room.genderPreference === 'FEMALE_ONLY' ||
-        (room.preferences ?? []).some(
-          (p) => p.toLowerCase().includes('female') || p.toLowerCase().includes('girls'),
-        );
-      if (!isFemale) return false;
-    }
-    if (activeCategory === 'Under $800') {
-      if (room.price > 800) return false;
-    }
-    if (activeCategory === 'Furnished') {
-      const isFurnished = (room.amenities ?? []).some(
-        (a) => a.toLowerCase().includes('furnished') || a.toLowerCase().includes('bed'),
-      );
-      if (!isFurnished) return false;
-    }
+    if (activeCategory === 'Under $800' && room.price > 800) return false;
+    if (activeCategory === 'Furnished' && !flags.isFurnished) return false;
 
-    // Advanced modal filters
+    // Advanced modal filters (only on real listing fields)
     if (filterPriceMax !== null && room.price > filterPriceMax) return false;
     if (filterRoomType !== 'All' && room.roomType !== filterRoomType) return false;
-    if (
-      filterDiet === 'Veg Only' &&
-      !(room.preferences ?? []).some((p) => p.toLowerCase().includes('veg'))
-    )
-      return false;
-    if (
-      filterGender === 'Female Only' &&
-      !(room.preferences ?? []).some(
-        (p) => p.toLowerCase().includes('female') || p.toLowerCase().includes('girls'),
-      )
-    )
-      return false;
-    if (filterVerifiedOnly && !room.verifiedHost) return false;
+    const diet = upper(room.dietaryPreference);
+    if (filterDiet === 'Pure Veg' && !PURE_VEG.includes(diet)) return false;
+    if (filterDiet === 'Veg Friendly' && !VEG_FRIENDLY.includes(diet)) return false;
+    if (filterDiet === 'Non-Veg OK' && !NON_VEG_OK.includes(diet)) return false;
+    const gender = upper(room.genderPreference);
+    if (filterGender === 'Female Only' && gender !== 'FEMALE_ONLY') return false;
+    if (filterGender === 'Male Only' && gender !== 'MALE_ONLY') return false;
 
     if (filterSelectedAmenities.length > 0) {
       const roomAmenities = (room.amenities ?? []).map((a) => a.toLowerCase());
-      const hasAll = filterSelectedAmenities.every((sel) =>
-        roomAmenities.some((ra) => ra.includes(sel.toLowerCase())),
-      );
-      if (!hasAll) return false;
+      if (!filterSelectedAmenities.every((code) => roomAmenities.includes(code.toLowerCase()))) {
+        return false;
+      }
     }
 
     return true;
@@ -623,7 +587,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
   });
 
   const toggleSave = (room: ExtendedRoom) => {
-    toggleSaveInStore(room);
+    toggleRoomSave(room);
   };
 
   const toggleAmenityFilter = (amenity: string) => {
@@ -637,7 +601,6 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     setFilterRoomType('All');
     setFilterDiet('All');
     setFilterGender('All');
-    setFilterVerifiedOnly(false);
     setFilterSelectedAmenities([]);
     setSortBy('recommended');
   };
@@ -689,38 +652,17 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
     return '🛋️';
   };
 
-  const getRoomCulturalFlags = (room: ExtendedRoom) => {
-    const isPureVeg =
-      room.title.toLowerCase().includes('pure veg') ||
-      (room.amenities ?? []).some((a) => a.toLowerCase().includes('pure veg')) ||
-      (room.preferences ?? []).some((p) => p.toLowerCase().includes('pure veg'));
-    const isPrivateBath =
-      room.title.toLowerCase().includes('attached') ||
-      room.title.toLowerCase().includes('private bath') ||
-      (room.amenities ?? []).some(
-        (a) => a.toLowerCase().includes('private') || a.toLowerCase().includes('attached'),
-      );
-    const isFurnished =
-      room.title.toLowerCase().includes('furnish') ||
-      (room.amenities ?? []).some((a) => a.toLowerCase().includes('furnish'));
-    return { isPureVeg, isPrivateBath, isFurnished };
-  };
-
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={s.safeArea}>
       {/* ─── Top Header ──────────────────────────────────────────────────────── */}
       <View style={[s.header, isDesktop && s.headerDesktop]}>
         <View style={s.headerTop}>
-          <Pressable
-            onPress={() => router.push('/home')}
-            style={s.backBtn}
-            accessibilityLabel="Back to Home"
-          >
-            <AppIcon color={colors.ink} name="chevron-left" size={20} />
-          </Pressable>
+          <BackButton fallback="/home" />
 
           {/* Interactive City Selector Pill */}
           <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
             onPress={() => setIsCityModalVisible(true)}
             style={s.locationSelector}
             accessibilityLabel="Select city"
@@ -733,20 +675,42 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           </Pressable>
 
           <View style={s.headerActions}>
-            <Link href="/rooms/my-listings" asChild>
-              <Pressable
-                accessibilityLabel="My Created Rooms"
-                style={StyleSheet.flatten(s.myRoomsBtn)}
-              >
-                <AppIcon color="#ffffff" name="home" size={14} />
-                <Text style={s.myRoomsBtnText}>My Rooms</Text>
-              </Pressable>
-            </Link>
-            <Link href="/rooms/saved" asChild>
-              <Pressable accessibilityLabel="Saved Rooms" style={StyleSheet.flatten(s.iconBtn)}>
-                <AppIcon color={colors.appPrimary} name="star" size={18} />
-              </Pressable>
-            </Link>
+            {isSignedIn ? (
+              <>
+                <Link href="/rooms/my-listings" asChild>
+                  <Pressable
+                    hitSlop={8}
+                    accessibilityLabel="My listings"
+                    accessibilityRole="link"
+                    style={StyleSheet.flatten(s.myRoomsBtn)}
+                  >
+                    <AppIcon color={palette.surface} name="home" size={14} />
+                    <Text style={s.myRoomsBtnText}>My listings</Text>
+                  </Pressable>
+                </Link>
+                <Link href="/rooms/saved" asChild>
+                  <Pressable
+                    accessibilityLabel="Saved rooms"
+                    accessibilityRole="link"
+                    style={StyleSheet.flatten(s.iconBtn)}
+                  >
+                    <AppIcon color={colors.appPrimary} name="heart" size={18} />
+                  </Pressable>
+                </Link>
+              </>
+            ) : (
+              <Link href="/rooms/create-listing" asChild>
+                <Pressable
+                  hitSlop={8}
+                  accessibilityLabel="Post a room"
+                  accessibilityRole="link"
+                  style={StyleSheet.flatten(s.myRoomsBtn)}
+                >
+                  <AppIcon color={palette.surface} name="plus" size={14} />
+                  <Text style={s.myRoomsBtnText}>Post a room</Text>
+                </Pressable>
+              </Link>
+            )}
           </View>
         </View>
 
@@ -761,11 +725,19 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
             style={s.searchInput}
           />
           {searchQuery.length > 0 ? (
-            <Pressable onPress={() => setSearchQuery('')} style={s.clearBtn}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+              hitSlop={10}
+              onPress={() => setSearchQuery('')}
+              style={s.clearBtn}
+            >
               <Text style={s.clearBtnText}>✕</Text>
             </Pressable>
           ) : null}
           <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
             onPress={() => setIsFilterModalVisible(true)}
             style={StyleSheet.flatten(s.filterPillBtn)}
             accessibilityLabel="Open filters and sorting"
@@ -782,6 +754,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           {/* Segmented control: List vs Card vs Map */}
           <View style={s.segmentedControl}>
             <Pressable
+              hitSlop={8}
+              accessibilityRole="tab"
+              accessibilityLabel="List view"
+              accessibilityState={{ selected: viewMode === 'list' }}
               onPress={() => setViewMode('list')}
               style={[s.segmentBtn, viewMode === 'list' && s.segmentBtnActive]}
             >
@@ -790,6 +766,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               </Text>
             </Pressable>
             <Pressable
+              hitSlop={8}
+              accessibilityRole="tab"
+              accessibilityLabel="Card view"
+              accessibilityState={{ selected: viewMode === 'card' }}
               onPress={() => setViewMode('card')}
               style={[s.segmentBtn, viewMode === 'card' && s.segmentBtnActive]}
             >
@@ -798,6 +778,10 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               </Text>
             </Pressable>
             <Pressable
+              hitSlop={8}
+              accessibilityRole="tab"
+              accessibilityLabel="Map view"
+              accessibilityState={{ selected: viewMode === 'map' }}
               onPress={() => setViewMode('map')}
               style={[s.segmentBtn, viewMode === 'map' && s.segmentBtnActive]}
             >
@@ -809,6 +793,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
 
           {/* Sort button beside the tabs that opens the dedicated Sort bottom sheet */}
           <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
             onPress={() => setIsSortModalVisible(true)}
             style={s.toolbarSortBtn}
             accessibilityLabel="Open sort bottom sheet"
@@ -829,6 +815,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         >
           {filterCategories.map((cat) => (
             <Pressable
+              hitSlop={8}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeCategory === cat.label }}
               key={cat.id}
               onPress={() => setActiveCategory(cat.label)}
               style={[s.categoryChip, activeCategory === cat.label && s.categoryChipActive]}
@@ -849,21 +838,26 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
       {/* ─── BODY CONTENT: MAP VIEW vs LIST VIEW vs DUAL PANE ───────────────── */}
       {(() => {
         const renderMapView = () => {
-          const cityLat = selectedCity.latitude || 30.2672;
-          const cityLng = selectedCity.longitude || -97.7431;
+          const mapMarkers = filteredRooms.flatMap((room) => {
+            const point = roomCoordinate(room);
+            if (!point) return [];
+            return [
+              {
+                id: room.id,
+                ...point,
+                title: room.title,
+                price: room.price,
+                subtitle: `${room.roomType} • ${room.broadLocation ?? ''}`,
+                isSelected: activePinRoom?.id === room.id,
+              },
+            ];
+          });
+          const unmappedCount = filteredRooms.length - mapMarkers.length;
 
-          const mapMarkers = filteredRooms.map((room, idx) => ({
-            id: room.id,
-            latitude: Number(room.latitude) || cityLat + (((idx * 17) % 30) - 15) * 0.005,
-            longitude: Number(room.longitude) || cityLng + (((idx * 23) % 30) - 15) * 0.005,
-            title: room.title,
-            price: room.price,
-            subtitle: `${room.roomType} • ${room.broadLocation}`,
-            isSelected: activePinRoom?.id === room.id,
-          }));
-
-          const initialLat = selectedCity.latitude || mapMarkers[0]?.latitude || 30.2672;
-          const initialLng = selectedCity.longitude || mapMarkers[0]?.longitude || -97.7431;
+          const initialLat =
+            selectedCity.latitude || mapMarkers[0]?.latitude || ALL_USA_LOCATION.latitude;
+          const initialLng =
+            selectedCity.longitude || mapMarkers[0]?.longitude || ALL_USA_LOCATION.longitude;
 
           return (
             <View style={[s.mapContainer, isDualPane && s.mapContainerDualPane]}>
@@ -891,11 +885,53 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 onClearPolygon={() => setDrawnBoundary(null)}
               />
 
+              {/* Loading, error and empty overlays: the map never pretends there are rooms */}
+              {isLoading || isError || mapMarkers.length === 0 ? (
+                <View pointerEvents="box-none" style={s.mapStatusWrap}>
+                  <View accessibilityLiveRegion="polite" style={s.mapStatusCard}>
+                    {isLoading ? (
+                      <>
+                        <ActivityIndicator color={colors.appPrimary} />
+                        <Text style={s.mapStatusText}>Loading rooms…</Text>
+                      </>
+                    ) : isError ? (
+                      <>
+                        <Text style={s.mapStatusText}>Could not load rooms.</Text>
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => refetch()}
+                          style={s.mapStatusBtn}
+                        >
+                          <Text style={s.mapStatusBtnText}>Retry</Text>
+                        </Pressable>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={s.mapStatusText}>
+                          {filteredRooms.length === 0
+                            ? 'No rooms match here yet.'
+                            : `${unmappedCount} ${unmappedCount === 1 ? 'room has' : 'rooms have'} no map location.`}
+                        </Text>
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => setViewMode('list')}
+                          style={s.mapStatusBtn}
+                        >
+                          <Text style={s.mapStatusBtnText}>Show list</Text>
+                        </Pressable>
+                      </>
+                    )}
+                  </View>
+                </View>
+              ) : null}
+
               {/* Apple Maps Floating Controls: Map Mode, 3D, and GPS (Hidden when Google Maps is active) */}
               {isAppleMapsActive && (
                 <View style={s.appleMapsControlCluster}>
                   {/* 1. Map Mode (Layers) Button */}
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: isMapStyleSheetOpen }}
                     onPress={() => setIsMapStyleSheetOpen(!isMapStyleSheetOpen)}
                     style={[s.appleMapBtn, isMapStyleSheetOpen && s.appleMapBtnActive]}
                     accessibilityLabel="Choose Map Mode"
@@ -905,6 +941,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
 
                   {/* 2. 3D / 2D Perspective Toggle Button */}
                   <Pressable
+                    accessibilityRole="button"
                     onPress={() => setIs3D(!is3D)}
                     style={[s.appleMapBtn, is3D && s.appleMapBtnActive]}
                     accessibilityLabel={is3D ? 'Switch to 2D view' : 'Switch to 3D perspective'}
@@ -916,6 +953,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
 
                   {/* 3. GPS Current Location Button */}
                   <Pressable
+                    accessibilityRole="button"
                     onPress={handleGpsPress}
                     style={[s.appleMapBtn, s.appleMapBtnLast, isGpsActive && s.appleMapBtnActive]}
                     accessibilityLabel="Center Current GPS Location"
@@ -940,6 +978,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     };
                     return (
                       <Pressable
+                        accessibilityRole="radio"
+                        accessibilityLabel={`${meta[type].label} map`}
+                        accessibilityState={{ checked: isSelected }}
                         key={type}
                         onPress={() => {
                           setMapType(type);
@@ -975,6 +1016,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   ]}
                 >
                   <Pressable
+                    accessibilityRole="button"
                     onPress={() => setIsRoomPreviewExpanded(true)}
                     style={s.collapsedCardInner}
                     accessibilityLabel="Show room preview (drag to move)"
@@ -1006,18 +1048,21 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
 
                     {/* Minimize / Close button */}
                     <Pressable
+                      accessibilityRole="button"
                       onPress={(e) => {
                         e.stopPropagation();
                         setIsRoomPreviewExpanded(false);
                       }}
                       style={s.cardCloseBtn}
                       accessibilityLabel="Hide room preview"
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      hitSlop={10}
                     >
                       <Text style={s.cardCloseText}>✕</Text>
                     </Pressable>
 
                     <Pressable
+                      accessibilityRole="link"
+                      accessibilityLabel={`Open ${activePinRoom.title}`}
                       onPress={() => router.push(`/rooms/${activePinRoom.id}` as Href)}
                       style={s.floatingMapCardInner}
                     >
@@ -1087,11 +1132,13 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         };
 
         const renderCardItem = (room: ExtendedRoom) => {
-          const isSaved = Boolean(savedRoomsMap[room.id] || room.savedByViewer);
+          const isSaved = isRoomSaved(room);
           const { isPureVeg, isPrivateBath, isFurnished } = getRoomCulturalFlags(room);
 
           return (
             <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={`${room.title}, $${room.price} per month`}
               key={room.id}
               onPress={() => {
                 if (isDualPane) {
@@ -1119,9 +1166,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     toggleSave(room);
                   }}
                   style={s.roomCardHeroSaveBtn}
-                  accessibilityLabel={isSaved ? 'Unsave room' : 'Save room'}
+                  accessibilityLabel={
+                    isSaved ? `Remove ${room.title} from saved` : `Save ${room.title}`
+                  }
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isSaved }}
+                  hitSlop={10}
                 >
-                  <AppIcon color={isSaved ? '#e02424' : '#1a1c28'} name="star" size={17} />
+                  <AppIcon color={isSaved ? palette.error : palette.ink} name="heart" size={17} />
                 </Pressable>
 
                 {/* Price tag badge floating bottom-left */}
@@ -1186,7 +1238,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     <View key={amenity} style={s.featureChip}>
                       <Text style={s.featureChipText}>
                         {getAmenityIcon(amenity)}
-                        {amenity}
+                        {amenityLabel(amenity, amenityCatalog)}
                       </Text>
                     </View>
                   ))}
@@ -1209,6 +1261,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   <View style={s.cardActions}>
                     <Link href={`/rooms/${room.id}/inquiry` as Href} asChild>
                       <Pressable
+                        hitSlop={8}
+                        accessibilityRole="link"
+                        accessibilityLabel={`Inquire about ${room.title}`}
                         onPress={(e) => e.stopPropagation()}
                         style={StyleSheet.flatten(s.inquireBtn)}
                       >
@@ -1217,6 +1272,9 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     </Link>
                     <Link href={`/rooms/${room.id}` as Href} asChild>
                       <Pressable
+                        hitSlop={8}
+                        accessibilityRole="link"
+                        accessibilityLabel={`Details for ${room.title}`}
                         onPress={(e) => e.stopPropagation()}
                         style={StyleSheet.flatten(s.viewDetailsBtn)}
                       >
@@ -1231,11 +1289,13 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         };
 
         const renderListItem = (room: ExtendedRoom) => {
-          const isSaved = Boolean(savedRoomsMap[room.id] || room.savedByViewer);
+          const isSaved = isRoomSaved(room);
           const { isPureVeg, isPrivateBath, isFurnished } = getRoomCulturalFlags(room);
 
           return (
             <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={`${room.title}, $${room.price} per month`}
               key={room.id}
               onPress={() => {
                 if (isDualPane) {
@@ -1288,7 +1348,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   )}
                   {(room.amenities ?? []).slice(0, 2).map((a) => (
                     <View key={a} style={s.featureChipSmall}>
-                      <Text style={s.featureChipTextSmall}>{a}</Text>
+                      <Text style={s.featureChipTextSmall}>{amenityLabel(a, amenityCatalog)}</Text>
                     </View>
                   ))}
                 </View>
@@ -1302,9 +1362,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     toggleSave(room);
                   }}
                   style={s.roomListSaveBtn}
-                  accessibilityLabel={isSaved ? 'Unsave room' : 'Save room'}
+                  accessibilityLabel={
+                    isSaved ? `Remove ${room.title} from saved` : `Save ${room.title}`
+                  }
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isSaved }}
+                  hitSlop={10}
                 >
-                  <AppIcon color={isSaved ? '#e02424' : colors.muted} name="star" size={17} />
+                  <AppIcon color={isSaved ? palette.error : colors.muted} name="heart" size={17} />
                 </Pressable>
                 <View style={s.roomListViewArrow}>
                   <AppIcon color={colors.appPrimary} name="chevron-right" size={16} />
@@ -1349,6 +1414,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Pressable
+                    hitSlop={8}
+                    accessibilityRole="button"
                     onPress={() => setViewMode('map')}
                     style={s.drawnBoundaryMapBtn}
                     accessibilityLabel="Return to map view"
@@ -1356,6 +1423,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     <Text style={s.drawnBoundaryMapText}>🗺️ Map</Text>
                   </Pressable>
                   <Pressable
+                    hitSlop={8}
+                    accessibilityRole="button"
                     onPress={() => setDrawnBoundary(null)}
                     style={s.drawnBoundaryClearBtn}
                     accessibilityLabel="Clear drawn area filter"
@@ -1377,7 +1446,11 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 <Text style={s.emptyEmoji}>⚠️</Text>
                 <Text style={s.emptyTitle}>Unable to load rooms</Text>
                 <Text style={s.emptySub}>Check your connection and try again.</Text>
-                <Pressable onPress={() => refetch()} style={s.resetFilterBtn}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => refetch()}
+                  style={s.resetFilterBtn}
+                >
                   <Text style={s.resetFilterBtnText}>Retry</Text>
                 </Pressable>
               </View>
@@ -1406,19 +1479,24 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   {locationRooms.length === 0 ? (
                     <>
                       <Pressable
+                        accessibilityRole="button"
                         onPress={() => setSelectedCity(ALL_USA_LOCATION)}
                         style={s.resetFilterBtn}
                       >
                         <Text style={s.resetFilterBtnText}>Browse All Cities (USA)</Text>
                       </Pressable>
                       <Link href="/rooms/create-listing" asChild>
-                        <Pressable style={s.resetFilterBtn}>
+                        <Pressable accessibilityRole="link" style={s.resetFilterBtn}>
                           <Text style={s.resetFilterBtnText}>+ Post a Room</Text>
                         </Pressable>
                       </Link>
                     </>
                   ) : (
-                    <Pressable onPress={resetFilters} style={s.resetFilterBtn}>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={resetFilters}
+                      style={s.resetFilterBtn}
+                    >
                       <Text style={s.resetFilterBtnText}>Reset All Filters</Text>
                     </Pressable>
                   )}
@@ -1471,8 +1549,15 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}
         >
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsCityModalVisible(false)} />
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close city picker"
+            style={StyleSheet.absoluteFill}
+            onPress={() => setIsCityModalVisible(false)}
+          />
+          <Pressable
+            accessible={false}
+            accessibilityRole="none"
             onPress={(e) => e.stopPropagation()}
             style={[s.cityModalCard, !isDesktop && s.cityModalCardMobile]}
           >
@@ -1498,7 +1583,12 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 clearButtonMode="while-editing"
               />
               {citySearchInput.length > 0 && (
-                <Pressable onPress={() => setCitySearchInput('')} hitSlop={8}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear city search"
+                  onPress={() => setCitySearchInput('')}
+                  hitSlop={8}
+                >
                   <Text style={s.citySearchClearText}>✕</Text>
                 </Pressable>
               )}
@@ -1523,6 +1613,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                       const isSelected = selectedCity.name === city.name;
                       return (
                         <Pressable
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: isSelected }}
                           key={city.id}
                           onPress={() => {
                             setSelectedCity({
@@ -1569,6 +1661,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   {/* 1. Detected / Current Location */}
                   <Text style={s.citySectionLabel}>📍 CURRENT LOCATION</Text>
                   <Pressable
+                    accessibilityRole="button"
                     onPress={() => {
                       if (detectedLocation) {
                         setSelectedCity(detectedLocation);
@@ -1647,6 +1740,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                         const isSelected = selectedCity.id === city.id;
                         return (
                           <Pressable
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: isSelected }}
                             key={city.id}
                             onPress={() => {
                               setSelectedCity(city);
@@ -1687,6 +1782,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   {/* 3. All Cities (USA) */}
                   <Text style={s.citySectionLabel}>🇺🇸 ALL LOCATIONS</Text>
                   <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selectedCity.id === ALL_USA_LOCATION.id }}
                     onPress={() => {
                       setSelectedCity(ALL_USA_LOCATION);
                       setIsCityModalVisible(false);
@@ -1749,10 +1846,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         onRequestClose={() => setIsSortModalVisible(false)}
       >
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close sort options"
           onPress={() => setIsSortModalVisible(false)}
           style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}
         >
           <Pressable
+            accessible={false}
+            accessibilityRole="none"
             onPress={(e) => e.stopPropagation()}
             style={[s.sortModalCard, !isDesktop && s.sortModalCardMobile]}
           >
@@ -1768,6 +1869,7 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 <Text style={s.modalTitle}>Sort Listings By</Text>
               </View>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setIsSortModalVisible(false)}
                 style={s.modalCloseBtn}
                 accessibilityLabel="Close sort bottom sheet"
@@ -1781,6 +1883,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 const isSelected = sortBy === opt.id;
                 return (
                   <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isSelected }}
                     key={opt.id}
                     onPress={() => {
                       setSortBy(opt.id);
@@ -1818,10 +1922,14 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
         onRequestClose={() => setIsFilterModalVisible(false)}
       >
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close filters"
           onPress={() => setIsFilterModalVisible(false)}
           style={[s.modalOverlay, !isDesktop && s.modalOverlayMobile]}
         >
           <Pressable
+            accessible={false}
+            accessibilityRole="none"
             onPress={(e) => e.stopPropagation()}
             style={[s.filterModalCard, !isDesktop && s.filterModalCardMobile]}
           >
@@ -1849,6 +1957,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     const active = sortBy === opt.id;
                     return (
                       <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: active }}
                         key={opt.id}
                         onPress={() => setSortBy(opt.id)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
@@ -1878,6 +1988,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     const active = filterPriceMax === p.val;
                     return (
                       <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: active }}
                         key={p.label}
                         onPress={() => setFilterPriceMax(p.val)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
@@ -1906,6 +2018,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     const active = filterRoomType === t.val;
                     return (
                       <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: active }}
                         key={t.val}
                         onPress={() => setFilterRoomType(t.val)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
@@ -1925,29 +2039,35 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
               <View style={s.filterSection}>
                 <Text style={s.filterSectionLabel}>Amenities</Text>
                 <View style={s.filterOptionsRow}>
-                  {[
-                    { id: 'wifi', label: '📶 High-Speed WiFi' },
-                    { id: 'bath', label: '🛁 Attached Private Bath' },
-                    { id: 'w/d', label: '🧺 In-unit W/D' },
-                    { id: 'parking', label: '🚗 Reserved Parking' },
-                    { id: 'pool', label: '🏊 Swimming Pool' },
-                    { id: 'ac', label: '❄️ Central AC' },
-                  ].map((amenity) => {
-                    const active = filterSelectedAmenities.includes(amenity.id);
-                    return (
-                      <Pressable
-                        key={amenity.id}
-                        onPress={() => toggleAmenityFilter(amenity.id)}
-                        style={[s.filterOptionPill, active && s.filterOptionPillActive]}
-                      >
-                        <Text
-                          style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}
+                  {amenitiesQuery.isError ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => amenitiesQuery.refetch()}
+                      style={s.filterOptionPill}
+                    >
+                      <Text style={s.filterOptionPillText}>Could not load amenities. Retry</Text>
+                    </Pressable>
+                  ) : null}
+                  {amenityCatalog
+                    .map((a) => ({ id: a.code, label: a.label }))
+                    .map((amenity) => {
+                      const active = filterSelectedAmenities.includes(amenity.id);
+                      return (
+                        <Pressable
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: active }}
+                          key={amenity.id}
+                          onPress={() => toggleAmenityFilter(amenity.id)}
+                          style={[s.filterOptionPill, active && s.filterOptionPillActive]}
                         >
-                          {amenity.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                          <Text
+                            style={[s.filterOptionPillText, active && s.filterOptionPillTextActive]}
+                          >
+                            {amenity.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
                 </View>
               </View>
 
@@ -1957,12 +2077,15 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                 <View style={s.filterOptionsRow}>
                   {[
                     { label: '🍽️ All', val: 'All' },
-                    { label: '🥦 Veg Only', val: 'Veg Only' },
-                    { label: '🍳 Veg / Non-Veg OK', val: 'Non-Veg OK' },
+                    { label: '🥦 Pure veg', val: 'Pure Veg' },
+                    { label: '🥗 Veg friendly', val: 'Veg Friendly' },
+                    { label: '🍳 Non-veg OK', val: 'Non-Veg OK' },
                   ].map((d) => {
                     const active = filterDiet === d.val;
                     return (
                       <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: active }}
                         key={d.val}
                         onPress={() => setFilterDiet(d.val)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
@@ -1990,6 +2113,8 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                     const active = filterGender === g.val;
                     return (
                       <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: active }}
                         key={g.val}
                         onPress={() => setFilterGender(g.val)}
                         style={[s.filterOptionPill, active && s.filterOptionPillActive]}
@@ -2004,24 +2129,17 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
                   })}
                 </View>
               </View>
-
-              {/* Verified Hosts Only Switch */}
-              <Pressable onPress={() => setFilterVerifiedOnly((prev) => !prev)} style={s.toggleRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.toggleLabel}>🛡️ Verified Hosts Only</Text>
-                  <Text style={s.toggleSub}>Hosts marked verified on their listing</Text>
-                </View>
-                <View style={[s.switchTrack, filterVerifiedOnly && s.switchTrackActive]}>
-                  <View style={[s.switchThumb, filterVerifiedOnly && s.switchThumbActive]} />
-                </View>
-              </Pressable>
             </ScrollView>
 
             <View style={s.filterModalActions}>
-              <Pressable onPress={resetFilters} style={s.resetFilterBtn}>
+              <Pressable accessibilityRole="button" onPress={resetFilters} style={s.resetFilterBtn}>
                 <Text style={s.resetFilterBtnText}>Reset All</Text>
               </Pressable>
-              <Pressable onPress={() => setIsFilterModalVisible(false)} style={s.applyFilterBtn}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setIsFilterModalVisible(false)}
+                style={s.applyFilterBtn}
+              >
                 <Text style={s.applyFilterBtnText}>Show {filteredRooms.length} Rooms</Text>
               </Pressable>
             </View>
@@ -2035,6 +2153,34 @@ export function RoomsScreen({ screenId }: RoomsScreenProps) {
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   safeArea: { backgroundColor: colors.background, flex: 1 },
+  mapStatusWrap: {
+    position: 'absolute',
+    top: space.x4,
+    left: space.x4,
+    right: space.x4,
+    alignItems: 'center',
+  },
+  mapStatusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.x3,
+    backgroundColor: palette.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: space.x4,
+    paddingVertical: space.x3,
+    maxWidth: 480,
+  },
+  mapStatusText: { color: palette.ink, fontSize: 14, fontWeight: '600', flexShrink: 1 },
+  mapStatusBtn: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: space.x3,
+    borderRadius: radius.pill,
+    backgroundColor: palette.primaryTint,
+  },
+  mapStatusBtnText: { color: palette.primary, fontSize: 14, fontWeight: '700' },
   header: {
     backgroundColor: '#fff',
     borderBottomColor: palette.surfaceContainer,
@@ -2105,9 +2251,9 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
   iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: palette.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2247,6 +2393,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'transparent',
     gap: 12,
+    minHeight: 44,
   },
   sortOptionRowActive: {
     backgroundColor: 'rgba(67,30,190,0.06)',
@@ -2770,8 +2917,8 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   appleMapBtn: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 1,
@@ -3243,9 +3390,9 @@ const s = StyleSheet.create({
     marginTop: -4,
   },
   modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: palette.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
@@ -3263,6 +3410,7 @@ const s = StyleSheet.create({
     paddingHorizontal: space.x3,
     borderRadius: 12,
     marginBottom: 4,
+    minHeight: 44,
   },
   cityOptionRowActive: {
     backgroundColor: 'rgba(67,30,190,0.06)',
@@ -3348,6 +3496,8 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLow,
     borderWidth: 1,
     borderColor: colors.border,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   filterOptionPillActive: {
     backgroundColor: colors.appPrimary,
@@ -3417,6 +3567,8 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   resetFilterBtnText: {
     color: colors.muted,
@@ -3429,6 +3581,7 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     paddingVertical: space.x3,
     alignItems: 'center',
+    minHeight: 44,
     justifyContent: 'center',
   },
   applyFilterBtnText: {

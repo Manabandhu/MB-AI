@@ -1,415 +1,308 @@
-import { space } from '@manabandhu/design-system';
+import { formatMoney } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
-import { Link, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
 import {
-  BackHandler,
-  FlatList,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import {
+  archiveRoomListing,
   deleteRoomListing,
   getMyListings,
+  markRoomRented,
   pauseRoomListing,
   publishRoomListing,
-  updateRoomListing,
 } from '@/modules/rooms/api';
-import type { OwnerRoomListing } from '@/modules/rooms/types';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type OwnerRoomListing, statusIs } from '@/modules/rooms/types';
+import { confirmAction, showError } from '@/modules/rooms/utils/notify';
+import { errorMessage, statusLabel } from '@/modules/rooms/utils/roomLabels';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 
-import { styles } from './roomListStyles';
+type ListingTab = 'active' | 'drafts' | 'rented';
+type StatusAction = 'publish' | 'pause' | 'rented' | 'archive';
 
-type ListingTab = 'ACTIVE' | 'DRAFT' | 'RENTED';
+const TAB_STATUSES = {
+  active: ['active', 'paused'],
+  drafts: ['draft', 'rejected'],
+  rented: ['rented', 'archived'],
+} as const;
 
+const EMPTY_COPY: Record<ListingTab, { title: string; body: string }> = {
+  active: {
+    title: 'No live listings',
+    body: 'Published and paused listings appear here. Post a room or publish a draft.',
+  },
+  drafts: {
+    title: 'No drafts',
+    body: 'Listings you saved without publishing (and any a moderator sent back) appear here.',
+  },
+  rented: {
+    title: 'Nothing rented yet',
+    body: 'Listings you mark as rented or archive appear here for your records.',
+  },
+};
+
+const ACTION_COPY: Record<StatusAction, string> = {
+  publish: 'Could not publish listing',
+  pause: 'Could not pause listing',
+  rented: 'Could not mark listing as rented',
+  archive: 'Could not archive listing',
+};
+
+/** The owner's listings with publish/pause/rented/relist/archive/delete actions. */
 export function RoomMyListingsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedTab, setSelectedTab] = useState<ListingTab>('ACTIVE');
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [deleteModalListing, setDeleteModalListing] = useState<OwnerRoomListing | null>(null);
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
+  const params = useLocalSearchParams<{ notice?: string }>();
+  const [tab, setTab] = useState<ListingTab>('active');
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.push('/rooms' as Href);
-      return true;
-    });
-    return () => sub.remove();
-  }, [router]);
-
-  const { data, refetch } = useQuery({
+  const listingsQuery = useQuery({
     queryKey: ['rooms', 'my-listings'],
     queryFn: getMyListings,
-    retry: false,
+    enabled: isAuthenticated,
   });
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const onRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [refetch]);
+  const invalidate = () =>
+    Promise.allSettled([
+      queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] }),
+      queryClient.invalidateQueries({ queryKey: ['rooms', 'listings'] }),
+      queryClient.invalidateQueries({ queryKey: ['rooms', 'detail'] }),
+      queryClient.invalidateQueries({ queryKey: ['rooms', 'owner'] }),
+    ]);
 
-  const listings = data ?? [];
-
-  const updateStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      updateRoomListing(id, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] });
-      setActiveMenuId(null);
-    },
-  });
-
-  const toggleStatus = useMutation({
-    mutationFn: async ({ id, currentStatus }: { id: string; currentStatus: string }) => {
-      if (currentStatus === 'ACTIVE' || currentStatus === 'PUBLISHED') {
-        return pauseRoomListing(id);
-      } else {
-        return publishRoomListing(id);
+  const statusMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: StatusAction }) => {
+      switch (action) {
+        case 'publish':
+          return publishRoomListing(id);
+        case 'pause':
+          return pauseRoomListing(id);
+        case 'rented':
+          return markRoomRented(id);
+        case 'archive':
+          return archiveRoomListing(id);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms', 'listings'] });
-      setActiveMenuId(null);
-    },
+    onError: (error, { action }) => showError(ACTION_COPY[action], error),
+    onSettled: invalidate,
   });
 
-  const deleteListing = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteRoomListing(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', 'my-listings'] });
-      setDeleteModalListing(null);
-      setActiveMenuId(null);
-    },
+    onError: (error) => showError('Could not delete listing', error),
+    onSettled: invalidate,
   });
 
-  const activeListings = listings.filter((l) => l.status === 'ACTIVE' || l.status === 'PUBLISHED');
-  const draftListings = listings.filter((l) => l.status === 'DRAFT' || l.status === 'PAUSED');
-  const rentedListings = listings.filter((l) => l.status === 'RENTED' || l.status === 'ARCHIVED');
+  const listings = listingsQuery.data ?? [];
+  const grouped = useMemo(() => {
+    const byTab = (t: ListingTab) => listings.filter((l) => statusIs(l.status, ...TAB_STATUSES[t]));
+    return { active: byTab('active'), drafts: byTab('drafts'), rented: byTab('rented') };
+  }, [listings]);
 
-  const filteredListings =
-    selectedTab === 'ACTIVE'
-      ? activeListings
-      : selectedTab === 'DRAFT'
-        ? draftListings
-        : rentedListings;
+  const busyId =
+    statusMutation.isPending || deleteMutation.isPending
+      ? (statusMutation.variables?.id ?? deleteMutation.variables)
+      : undefined;
+
+  const onDelete = async (listing: OwnerRoomListing) => {
+    const confirmed = await confirmAction(
+      'Delete listing?',
+      `"${listing.title}" and its inquiries will be permanently removed.`,
+      'Delete',
+    );
+    if (confirmed) deleteMutation.mutate(listing.id);
+  };
+
+  const body = () => {
+    if (!isAuthenticated || listingsQuery.isLoading) {
+      return <LoadingState count={3} label="Loading your listings…" variant="skeleton" />;
+    }
+    if (listingsQuery.isError) {
+      return (
+        <ErrorState
+          body={errorMessage(listingsQuery.error)}
+          onRetry={() => listingsQuery.refetch()}
+          retryLabel="Retry"
+          title="Could not load your listings"
+        />
+      );
+    }
+    const items = grouped[tab];
+    if (items.length === 0) {
+      return (
+        <EmptyState
+          actionLabel="Post a room"
+          body={EMPTY_COPY[tab].body}
+          iconName="home"
+          onAction={() => router.push('/rooms/create-listing' as Href)}
+          title={EMPTY_COPY[tab].title}
+        />
+      );
+    }
+    return (
+      <YStack gap="$x3">
+        {items.map((listing) => (
+          <ListingCard
+            busy={busyId === listing.id}
+            key={listing.id}
+            listing={listing}
+            onAction={(action) => statusMutation.mutate({ id: listing.id, action })}
+            onDelete={() => onDelete(listing)}
+            onEdit={() => router.push(`/rooms/${listing.id}/edit` as Href)}
+            onView={() => router.push(`/rooms/${listing.id}` as Href)}
+          />
+        ))}
+      </YStack>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Pressable
-            accessibilityLabel="Back to Rooms"
-            onPress={() => router.push('/rooms' as Href)}
-            style={styles.backBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <AppIcon color="#1a1c28" name="chevron-left" size={20} />
-          </Pressable>
-          <View>
-            <Text style={styles.headerTitle}>My Listings</Text>
-            <Text style={styles.headerSubtitle}>Manage your posted rooms & inquiries</Text>
-          </View>
-        </View>
-        <Link href="/rooms/create-listing" asChild>
-          <Pressable style={StyleSheet.flatten(styles.createListingBtnSmall)}>
-            <AppIcon color="#fff" name="plus" size={16} />
-            <Text style={styles.createListingBtnSmallText}>Post Room</Text>
-          </Pressable>
-        </Link>
-      </View>
+    <Screen onRefresh={() => listingsQuery.refetch()} refreshing={listingsQuery.isRefetching}>
+      <YStack gap="$x4">
+        <BackButton fallback="/rooms" />
+        <XStack alignItems="center" flexWrap="wrap" gap="$x3" justifyContent="space-between">
+          <YStack flex={1} gap={2} minWidth={200}>
+            <AppText role="heading" variant="h2">
+              My listings
+            </AppText>
+            <AppText tone="muted" variant="caption">
+              Publish, pause, and manage the rooms you posted
+            </AppText>
+          </YStack>
+          <AppButton
+            icon="plus"
+            label="Post a room"
+            onPress={() => router.push('/rooms/create-listing' as Href)}
+            size="sm"
+          />
+        </XStack>
+        {typeof params.notice === 'string' && params.notice ? (
+          <Card aria-live="polite" variant="tinted">
+            <AppText variant="label">{params.notice}</AppText>
+          </Card>
+        ) : null}
+        <SegmentedControl
+          label="Listing status"
+          onChange={setTab}
+          options={[
+            { value: 'active', label: `Active (${grouped.active.length})` },
+            { value: 'drafts', label: `Drafts (${grouped.drafts.length})` },
+            { value: 'rented', label: `Rented (${grouped.rented.length})` },
+          ]}
+          value={tab}
+        />
+        {body()}
+      </YStack>
+    </Screen>
+  );
+}
 
-      {/* Tabs Filter Bar: Active, Draft, Rented */}
-      <View style={styles.tabsContainer}>
-        {(
-          [
-            { key: 'ACTIVE', label: 'Active', count: activeListings.length },
-            { key: 'DRAFT', label: 'Draft', count: draftListings.length },
-            { key: 'RENTED', label: 'Rented', count: rentedListings.length },
-          ] as const
-        ).map((tab) => {
-          const isSelected = selectedTab === tab.key;
-          return (
-            <Pressable
-              key={tab.key}
-              onPress={() => setSelectedTab(tab.key)}
-              style={[styles.tabButton, isSelected && styles.tabButtonActive]}
-            >
-              <Text style={[styles.tabButtonText, isSelected && styles.tabButtonTextActive]}>
-                {tab.label}
-              </Text>
-              <View style={[styles.tabBadge, isSelected && styles.tabBadgeActive]}>
-                <Text style={[styles.tabBadgeText, isSelected && styles.tabBadgeTextActive]}>
-                  {tab.count}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+function ListingCard({
+  listing,
+  busy,
+  onAction,
+  onDelete,
+  onEdit,
+  onView,
+}: {
+  listing: OwnerRoomListing;
+  busy: boolean;
+  onAction: (action: StatusAction) => void;
+  onDelete: () => void;
+  onEdit: () => void;
+  onView: () => void;
+}) {
+  const status = listing.status;
+  const isActive = statusIs(status, 'active');
+  const isPaused = statusIs(status, 'paused');
+  const isDraft = statusIs(status, 'draft');
+  const isRejected = statusIs(status, 'rejected');
+  const isRented = statusIs(status, 'rented');
 
-      <FlatList
-        data={filteredListings}
-        keyExtractor={(listing) => listing.id}
-        renderItem={({ item: listing }) => {
-          const isRented = listing.status === 'RENTED' || listing.status === 'ARCHIVED';
-          const isMenuOpen = activeMenuId === listing.id;
-
-          return (
-            <View
-              key={listing.id}
-              style={[styles.myListingCard, isRented && styles.myListingCardRented]}
-            >
-              <View style={styles.cardHeaderInfo}>
-                <View style={styles.cardTypeRow}>
-                  <View
-                    style={[
-                      styles.statusBadgeContainer,
-                      isRented
-                        ? styles.statusBadgeRented
-                        : listing.status === 'ACTIVE'
-                          ? styles.statusBadgeActive
-                          : styles.statusBadgeDraft,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusBadgeLabel,
-                        isRented
-                          ? styles.statusBadgeLabelRented
-                          : listing.status === 'ACTIVE'
-                            ? styles.statusBadgeLabelActive
-                            : styles.statusBadgeLabelDraft,
-                      ]}
-                    >
-                      {listing.status}
-                    </Text>
-                  </View>
-
-                  {/* Three-dot action menu toggle */}
-                  <Pressable
-                    accessibilityLabel="Listing options"
-                    onPress={() => setActiveMenuId(isMenuOpen ? null : listing.id)}
-                    style={styles.menuTriggerBtn}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Text style={styles.menuTriggerDots}>⋮</Text>
-                  </Pressable>
-                </View>
-
-                {/* Popover / expanded action menu */}
-                {isMenuOpen && (
-                  <View style={styles.menuPopover}>
-                    <Pressable
-                      onPress={() => {
-                        setActiveMenuId(null);
-                        router.push(`/rooms/${listing.id}/edit` as Href);
-                      }}
-                      style={styles.menuItem}
-                    >
-                      <Text style={styles.menuItemText}>✏️ Edit Listing</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        const newStatus = isRented ? 'ACTIVE' : 'RENTED';
-                        updateStatus.mutate({ id: listing.id, status: newStatus });
-                      }}
-                      style={styles.menuItem}
-                    >
-                      <Text style={styles.menuItemText}>
-                        {isRented ? '🔄 Mark as Active' : '🏷️ Mark as Rented'}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        setActiveMenuId(null);
-                        setDeleteModalListing(listing);
-                      }}
-                      style={[styles.menuItem, styles.menuItemDestructive]}
-                    >
-                      <Text style={styles.menuItemDestructiveText}>🗑️ Delete Listing</Text>
-                    </Pressable>
-                  </View>
-                )}
-
-                <View style={styles.titlePriceRow}>
-                  <Text style={styles.cardTitle}>{listing.title}</Text>
-                  <Text style={styles.priceValue}>${listing.price}/mo</Text>
-                </View>
-
-                <Text style={styles.locationText}>{listing.broadLocation}</Text>
-              </View>
-
-              {/* 1-Tap Active / Deactivate Toggle Row */}
-              <View style={styles.statusToggleRow}>
-                <View style={styles.statusPillWrap}>
-                  <View
-                    style={[
-                      styles.statusDot,
-                      listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
-                        ? styles.statusDotActive
-                        : styles.statusDotPaused,
-                    ]}
-                  />
-                  <Text style={styles.statusPillText}>
-                    {listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
-                      ? '🟢 Visible in search'
-                      : '⏸️ Deactivated'}
-                  </Text>
-                </View>
-                <Pressable
-                  accessibilityLabel={
-                    listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
-                      ? 'Deactivate listing'
-                      : 'Activate listing'
-                  }
-                  accessibilityRole="button"
-                  disabled={toggleStatus.isPending}
-                  onPress={() =>
-                    toggleStatus.mutate({
-                      id: listing.id,
-                      currentStatus: listing.status,
-                    })
-                  }
-                  style={[
-                    styles.toggleStatusBtn,
-                    listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
-                      ? styles.toggleStatusBtnDeactivate
-                      : styles.toggleStatusBtnActivate,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.toggleStatusBtnText,
-                      listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
-                        ? styles.toggleStatusBtnTextDeactivate
-                        : styles.toggleStatusBtnTextActivate,
-                    ]}
-                  >
-                    {listing.status === 'ACTIVE' || listing.status === 'PUBLISHED'
-                      ? '⏸️ Deactivate'
-                      : '🟢 Activate'}
-                  </Text>
-                </Pressable>
-              </View>
-
-              <View style={styles.actionButtonGroup}>
-                <Pressable
-                  onPress={() => router.push(`/rooms/${listing.id}/edit` as Href)}
-                  style={styles.cardActionBtn}
-                >
-                  <Text style={styles.cardActionBtnText}>Edit</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    const newStatus = isRented ? 'ACTIVE' : 'RENTED';
-                    updateStatus.mutate({ id: listing.id, status: newStatus });
-                  }}
-                  style={[styles.cardActionBtn, isRented && styles.cardActionBtnAccent]}
-                >
-                  <Text
-                    style={[styles.cardActionBtnText, isRented && styles.cardActionBtnTextAccent]}
-                  >
-                    {isRented ? 'Mark Active' : 'Mark Rented'}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setDeleteModalListing(listing)}
-                  style={[styles.cardActionBtn, styles.cardActionBtnDanger]}
-                >
-                  <Text style={styles.cardActionBtnDangerText}>Delete</Text>
-                </Pressable>
-              </View>
-            </View>
-          );
-        }}
-        refreshing={isRefreshing}
-        onRefresh={onRefresh}
-        contentContainerStyle={[styles.scrollContent, styles.listGrid]}
-        ItemSeparatorComponent={() => <View style={{ height: space.x3 }} />}
-        initialNumToRender={6}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyEmoji}>🏡</Text>
-            <Text style={styles.emptyTitle}>
-              {selectedTab === 'ACTIVE'
-                ? 'No active listings'
-                : selectedTab === 'DRAFT'
-                  ? 'No draft listings'
-                  : 'No rented listings'}
-            </Text>
-            <Text style={styles.emptyBody}>
-              {selectedTab === 'ACTIVE'
-                ? 'Ready to host? Post a room listing to connect with diaspora housemates.'
-                : selectedTab === 'DRAFT'
-                  ? 'Draft listings in progress will appear here.'
-                  : 'Listings marked as rented will appear here for your records.'}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push('/rooms/create-listing' as Href)}
-              style={styles.exploreBtn}
-            >
-              <Text style={styles.exploreBtnText}>Post a Room Listing</Text>
-            </Pressable>
-          </View>
-        }
-      />
-
-      {/* Confirmation Modal for Delete */}
-      <Modal
-        animationType="fade"
-        transparent
-        visible={Boolean(deleteModalListing)}
-        onRequestClose={() => setDeleteModalListing(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalIconWrap}>
-              <Text style={styles.modalIconEmoji}>⚠️</Text>
-            </View>
-            <Text style={styles.modalTitle}>Delete Room Listing?</Text>
-            <Text style={styles.modalMessage}>
-              Are you sure you want to permanently delete &ldquo;
-              {deleteModalListing?.title}&rdquo;? All inquiries and data associated with this
-              listing will be permanently removed.
-            </Text>
-
-            <View style={styles.modalActions}>
-              <Pressable onPress={() => setDeleteModalListing(null)} style={styles.modalCancelBtn}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  if (deleteModalListing) {
-                    deleteListing.mutate(deleteModalListing.id);
-                  }
-                }}
-                style={styles.modalDeleteBtn}
-              >
-                <Text style={styles.modalDeleteText}>
-                  {deleteListing.isPending ? 'Deleting...' : 'Delete Listing'}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+  return (
+    <Card gap="$x3" variant="outlined">
+      <XStack alignItems="center" gap="$x2" justifyContent="space-between">
+        <Chip label={statusLabel(status)} selected={isActive} />
+        <AppText tone="primary" variant="bodyStrong">
+          {formatMoney(listing.price, 'USD')}/mo
+        </AppText>
+      </XStack>
+      <YStack gap={2}>
+        <AppText numberOfLines={2} variant="bodyStrong">
+          {listing.title}
+        </AppText>
+        {listing.broadLocation ? (
+          <AppText numberOfLines={1} tone="muted" variant="caption">
+            {listing.broadLocation}
+          </AppText>
+        ) : null}
+        <AppText tone="muted" variant="caption">
+          {isActive
+            ? 'Visible in search'
+            : isPaused
+              ? 'Paused: hidden from search'
+              : isDraft
+                ? 'Draft: only you can see it'
+                : isRejected
+                  ? 'Sent back by a moderator. Edit it; a moderator must approve it again.'
+                  : isRented
+                    ? 'Rented: hidden from search'
+                    : 'Archived'}
+        </AppText>
+      </YStack>
+      <XStack flexWrap="wrap" gap="$x2">
+        {isActive ? (
+          <AppButton
+            label="Pause"
+            loading={busy}
+            onPress={() => onAction('pause')}
+            size="sm"
+            variant="secondary"
+          />
+        ) : null}
+        {isPaused || isDraft ? (
+          <AppButton label="Publish" loading={busy} onPress={() => onAction('publish')} size="sm" />
+        ) : null}
+        {isActive || isPaused ? (
+          <AppButton
+            disabled={busy}
+            label="Mark rented"
+            onPress={() => onAction('rented')}
+            size="sm"
+            variant="secondary"
+          />
+        ) : null}
+        {isRented ? (
+          <>
+            <AppButton
+              label="Relist"
+              loading={busy}
+              onPress={() => onAction('publish')}
+              size="sm"
+            />
+            <AppButton
+              disabled={busy}
+              label="Archive"
+              onPress={() => onAction('archive')}
+              size="sm"
+              variant="secondary"
+            />
+          </>
+        ) : null}
+        <AppButton disabled={busy} label="Edit" onPress={onEdit} size="sm" variant="secondary" />
+        <AppButton label="View" onPress={onView} size="sm" variant="ghost" />
+        <AppButton disabled={busy} label="Delete" onPress={onDelete} size="sm" variant="danger" />
+      </XStack>
+    </Card>
   );
 }

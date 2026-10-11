@@ -8,47 +8,47 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.auth.Actor;
+
 @Service
 public class RoomImageService {
 
+    static final int MAX_IMAGES = 20;
+
     private final RoomImageRepository repository;
-    private final RoomListingRepository listingRepository;
+    private final RoomListingService listingService;
     private final com.manabandhu.backend.media.StorageUrls storageUrls;
 
-    RoomImageService(RoomImageRepository repository, RoomListingRepository listingRepository,
+    RoomImageService(RoomImageRepository repository, RoomListingService listingService,
                      com.manabandhu.backend.media.StorageUrls storageUrls) {
         this.repository = repository;
-        this.listingRepository = listingRepository;
+        this.listingService = listingService;
         this.storageUrls = storageUrls;
     }
 
+    /** Photos of a public listing, or of the viewer's own listing in any status. */
     @Transactional(readOnly = true)
-    public List<RoomImage> findByListingId(UUID listingId) {
+    public List<RoomImage> findVisible(UUID listingId, Actor viewer) {
+        listingService.requireVisible(listingId, viewer);
         return repository.findByListingIdOrderBySortOrderAsc(listingId);
     }
 
     @Transactional
-    public RoomImage add(UUID listingId, UUID actorId, boolean isAdmin, String url, int sortOrder) {
-        var listing = requireOwnedListing(listingId, actorId, isAdmin);
-        // Only images the owner uploaded through ManaBandhu storage; never arbitrary or local URLs.
-        storageUrls.requireOwnedImage(url, java.util.Set.of("rooms"), listing.getOwnerId(), actorId);
+    public RoomImage add(Actor actor, UUID listingId, String url, int sortOrder) {
+        var listing = listingService.requireOwned(actor, listingId);
+        // Only images uploaded through ManaBandhu storage into the owner's (or acting admin's) folder.
+        storageUrls.requireOwnedImage(url, java.util.Set.of("rooms"), listing.getOwnerId(), actor.id());
+        if (repository.countByListingId(listingId) >= MAX_IMAGES) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A listing can have at most " + MAX_IMAGES + " photos");
+        }
         return repository.save(new RoomImage(listingId, url, sortOrder));
     }
 
     @Transactional
-    public void delete(UUID imageId, UUID actorId, boolean isAdmin) {
+    public void delete(Actor actor, UUID imageId) {
         var image = repository.findById(imageId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room image not found"));
-        requireOwnedListing(image.getListingId(), actorId, isAdmin);
+        listingService.requireOwned(actor, image.getListingId());
         repository.deleteById(imageId);
-    }
-
-    private RoomListing requireOwnedListing(UUID listingId, UUID actorId, boolean isAdmin) {
-        var listing = listingRepository.findById(listingId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
-        if (!isAdmin && !listing.getOwnerId().equals(actorId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this listing");
-        }
-        return listing;
     }
 }

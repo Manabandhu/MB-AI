@@ -6,7 +6,7 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 interface RoomSavedSearchRepository extends JpaRepository<RoomSavedSearch, UUID> {
-    List<RoomSavedSearch> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    List<RoomSavedSearch> findByUserIdOrderByCreatedAtDesc(UUID userId, org.springframework.data.domain.Pageable pageable);
 
     boolean existsByUserIdAndName(UUID userId, String name);
 }

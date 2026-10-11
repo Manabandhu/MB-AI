@@ -431,6 +431,37 @@ await status(
   `/api/v1/chat/conversations/${conversationId}/participants`,
   { userId: C },
 );
+await status(
+  'ratings wait until the ride is completed',
+  409,
+  'B',
+  'POST',
+  `/api/v1/rides/offers/${rideId}/ratings`,
+  { rating: 5 },
+);
+await status('driver starts the trip', 200, 'A', 'PATCH', `/api/v1/rides/offers/${rideId}/status`, {
+  status: 'IN_PROGRESS',
+});
+await status(
+  'driver completes the trip',
+  200,
+  'A',
+  'PATCH',
+  `/api/v1/rides/offers/${rideId}/status`,
+  {
+    status: 'completed',
+  },
+);
+await status(
+  'a completed ride cannot be reopened',
+  409,
+  'A',
+  'PATCH',
+  `/api/v1/rides/offers/${rideId}/status`,
+  {
+    status: 'active',
+  },
+);
 await status('stranger cannot rate', 403, 'C', 'POST', `/api/v1/rides/offers/${rideId}/ratings`, {
   rateeId: A,
   rating: 1,
@@ -451,9 +482,110 @@ await status(
 );
 await status('bookmark a ride', 200, 'C', 'POST', `/api/v1/rides/${rideId}/favorite`);
 await status('remove bookmark', 204, 'C', 'DELETE', `/api/v1/rides/${rideId}/favorite`);
-await status('driver starts the trip', 200, 'A', 'PATCH', `/api/v1/rides/offers/${rideId}/status`, {
-  status: 'IN_PROGRESS',
-});
+
+console.log('== rides production rules');
+{
+  const soon = new Date(Date.now() + 3 * 86400000).toISOString();
+  const ride = await call('A', 'POST', '/api/v1/rides/offers', {
+    originArea: 'Irving',
+    destinationArea: 'Austin',
+    departureAt: soon,
+    seatsTotal: 3,
+    contribution: '$20',
+    originLat: 32.8123456,
+    originLng: -96.9554321,
+  });
+  expect('driver offers a ride', ride.status, 201);
+  const rid = ride.body?.id;
+  const pub = await call('C', 'GET', `/api/v1/rides/offers/${rid}`);
+  expect('public ride hides the driver id', pub.body?.driverId, null);
+  expect('public ride hides the chat id', pub.body?.conversationId, null);
+  expect('public ride coordinates are rounded', pub.body?.originLat, 32.81);
+  expect(
+    'driver sees their own id',
+    (await call('A', 'GET', `/api/v1/rides/offers/${rid}`)).body?.driverId,
+    A,
+  );
+  await status('strangers cannot edit a ride', 403, 'C', 'PATCH', `/api/v1/rides/offers/${rid}`, {
+    contribution: '$1',
+  });
+  await status('strangers cannot delete a ride', 403, 'C', 'DELETE', `/api/v1/rides/offers/${rid}`);
+  await status(
+    'strangers cannot change seats',
+    403,
+    'C',
+    'PATCH',
+    `/api/v1/rides/offers/${rid}/seats?seats=2`,
+  );
+  const tamper = await call('A', 'PATCH', `/api/v1/rides/offers/${rid}`, {
+    conversationId: '00000000-0000-0000-0000-000000000001',
+    status: 'cancelled',
+  });
+  expect(
+    'the edit endpoint ignores chat and status fields',
+    [tamper.body?.conversationId, tamper.body?.status],
+    [null, 'active'],
+  );
+  await status('more than 8 seats is a 400', 400, 'A', 'PATCH', `/api/v1/rides/offers/${rid}`, {
+    seatsTotal: 20,
+  });
+  await status('unknown luggage size is a 400', 400, 'A', 'PATCH', `/api/v1/rides/offers/${rid}`, {
+    luggageCapacity: 'PIANO',
+  });
+  await status(
+    're-activate needs a future time',
+    400,
+    'A',
+    'POST',
+    `/api/v1/rides/offers/${rid}/re-activate`,
+    {
+      newDepartureAt: '2000-01-01T00:00:00Z',
+    },
+  );
+  const booked = await call('B', 'POST', `/api/v1/rides/offers/${rid}/bookings`, {
+    seatsBooked: 2,
+  });
+  expect('rider books two seats', booked.status, 201);
+  await status(
+    'seats cannot drop below what riders hold',
+    409,
+    'A',
+    'PATCH',
+    `/api/v1/rides/offers/${rid}`,
+    {
+      seatsTotal: 1,
+    },
+  );
+  const seats = await call('A', 'PATCH', `/api/v1/rides/offers/${rid}/seats?seats=5`);
+  expect('opening seats never oversells', seats.body?.seatsAvailable, 1);
+  const members = await call('B', 'GET', `/api/v1/rides/offers/${rid}/participants`);
+  expect(
+    'a booking makes the rider a participant',
+    (members.body ?? []).map((p) => p.userId).includes(B),
+    true,
+  );
+  await status('driver cancels the ride', 200, 'A', 'PATCH', `/api/v1/rides/offers/${rid}/status`, {
+    status: 'cancelled',
+  });
+  const after = await call('B', 'GET', `/api/v1/rides/bookings/${booked.body?.id}`);
+  expect("cancelling the ride cancels the rider's booking", after.body?.status, 'cancelled');
+  const inbox = await call('B', 'GET', '/api/v1/notifications/inbox?size=20');
+  expect(
+    'riders are notified when the driver cancels',
+    (inbox.body?.items ?? []).some((n) => n.title === 'Ride cancelled'),
+    true,
+  );
+  await status(
+    'a cancelled ride cannot be edited',
+    409,
+    'A',
+    'PATCH',
+    `/api/v1/rides/offers/${rid}`,
+    {
+      contribution: '$5',
+    },
+  );
+}
 
 console.log('== expenses');
 const group = await status('owner creates a group', 201, 'A', 'POST', '/api/v1/expenses/groups', {
@@ -1174,6 +1306,203 @@ expect(
     isVerifiedHost: true,
   });
   expect('owners cannot mark themselves verified hosts', forged.body?.isVerifiedHost, false);
+}
+
+console.log('== rooms production rules');
+{
+  const created = await call('A', 'POST', '/api/v1/rooms/listings', {
+    title: 'Smoke room',
+    price: 950,
+    roomType: 'Private Room',
+    broadLocation: 'Irving, TX',
+    exactAddress: '1 Hidden St',
+    latitude: 32.8123456,
+    longitude: -96.9554321,
+    amenities: ['WiFi', 'Parking', 'WiFi'],
+  });
+  expect('owner creates a draft listing', created.status, 201);
+  expect('amenities are saved without duplicates', created.body?.amenities, ['WiFi', 'Parking']);
+  const id = created.body?.id;
+  await status('strangers cannot see a draft', 404, 'B', 'GET', `/api/v1/rooms/listings/${id}`);
+  await status('owner opens their own draft', 200, 'A', 'GET', `/api/v1/rooms/listings/${id}`);
+  await status(
+    'strangers cannot see draft photos',
+    404,
+    'B',
+    'GET',
+    `/api/v1/rooms/listings/${id}/images`,
+  );
+  await status(
+    'owner sees their own draft photos',
+    200,
+    'A',
+    'GET',
+    `/api/v1/rooms/listings/${id}/images`,
+  );
+  await status(
+    'strangers cannot edit a listing',
+    403,
+    'C',
+    'PATCH',
+    `/api/v1/rooms/listings/${id}`,
+    {
+      price: 1,
+    },
+  );
+  await status(
+    'strangers cannot delete a listing',
+    403,
+    'C',
+    'DELETE',
+    `/api/v1/rooms/listings/${id}`,
+  );
+  await status(
+    'only the owner publishes',
+    403,
+    'D',
+    'PATCH',
+    `/api/v1/rooms/listings/${id}/publish`,
+  );
+  await status('owner publishes', 200, 'A', 'PATCH', `/api/v1/rooms/listings/${id}/publish`);
+  const pub = await call('B', 'GET', `/api/v1/rooms/listings/${id}`);
+  expect('public listing hides the owner id', pub.body?.ownerId, undefined);
+  expect('public listing hides the exact address', pub.body?.exactAddress, undefined);
+  expect('public coordinates are rounded', pub.body?.latitude, 32.81);
+  expect('public listing tells the viewer they are not the owner', pub.body?.isOwner, false);
+  const near = async (lat, lng) =>
+    (
+      (
+        await call(
+          null,
+          'GET',
+          `/api/v1/rooms/listings?lat=${lat}&lng=${lng}&radiusMiles=0.001&size=200`,
+        )
+      ).body?.content ?? []
+    ).some((l) => l.id === id);
+  expect(
+    'a tiny radius search cannot pinpoint the exact spot',
+    await near(32.8123456, -96.9554321),
+    await near(32.81, -96.96),
+  );
+  const own = await call('A', 'GET', `/api/v1/rooms/listings/${id}`);
+  expect('owner sees isOwner', own.body?.isOwner, true);
+  const gql = await call('B', 'POST', '/graphql', {
+    query: `{ roomListing(id: "${id}") { ownerId isOwner latitude exactAddress } }`,
+  });
+  expect('GraphQL hides the owner id and exact address', gql.body?.data?.roomListing, {
+    ownerId: null,
+    isOwner: false,
+    latitude: '32.81',
+    exactAddress: null,
+  });
+  await status('unknown diet value is a 400', 400, 'A', 'PATCH', `/api/v1/rooms/listings/${id}`, {
+    dietaryPreference: 'CARNIVORE',
+  });
+  await status('negative deposit is a 400', 400, 'A', 'PATCH', `/api/v1/rooms/listings/${id}`, {
+    securityDeposit: -5,
+  });
+  await status('missing price is a 400', 400, 'A', 'POST', '/api/v1/rooms/listings', {
+    title: 'No price',
+    roomType: 'Private Room',
+  });
+  const moveIn = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const first = await call('B', 'POST', `/api/v1/rooms/${id}/inquire`, {
+    moveInDate: moveIn,
+    stayDurationMonths: null,
+    introMessage: 'Hello from smoke',
+  });
+  expect('guest inquires about an active room', first.status, 200);
+  const again = await call('B', 'POST', `/api/v1/rooms/${id}/inquire`, {
+    moveInDate: moveIn,
+    introMessage: 'Following up',
+  });
+  expect(
+    'a repeat inquiry reuses the same chat',
+    again.body?.conversationId,
+    first.body?.conversationId,
+  );
+  await status('past move-in date is a 400', 400, 'B', 'POST', `/api/v1/rooms/${id}/inquire`, {
+    moveInDate: '2000-01-01',
+    introMessage: 'Too late',
+  });
+  await status(
+    'owner cannot report their own listing',
+    400,
+    'A',
+    'POST',
+    `/api/v1/rooms/listings/${id}/report`,
+    {
+      reason: 'spam',
+    },
+  );
+  await status('guest reports a listing', 201, 'B', 'POST', `/api/v1/rooms/listings/${id}/report`, {
+    reason: 'spam',
+  });
+  await status(
+    'non-admins cannot read the report queue',
+    403,
+    'B',
+    'GET',
+    '/api/v1/rooms/admin/reports',
+  );
+  await status('admins read the report queue', 200, 'D', 'GET', '/api/v1/rooms/admin/reports');
+  await status(
+    'unknown report status is a 400',
+    400,
+    'D',
+    'GET',
+    '/api/v1/rooms/admin/reports?status=bogus',
+  );
+  const booking = await call('B', 'POST', `/api/v1/rooms/listings/${id}/bookings`, {
+    message: 'Hi',
+  });
+  expect('guest requests a booking', booking.status, 201);
+  await status(
+    'missing booking status is a 400',
+    400,
+    'A',
+    'PATCH',
+    `/api/v1/rooms/bookings/${booking.body?.id}/status`,
+    {},
+  );
+  await status(
+    'guest cancels',
+    200,
+    'B',
+    'PATCH',
+    `/api/v1/rooms/bookings/${booking.body?.id}/status`,
+    {
+      status: 'cancelled',
+    },
+  );
+  await status(
+    'a cancelled booking cannot be accepted',
+    409,
+    'A',
+    'PATCH',
+    `/api/v1/rooms/bookings/${booking.body?.id}/status`,
+    {
+      status: 'accepted',
+    },
+  );
+  const gqlSelf = await call('A', 'POST', '/graphql', {
+    query: `mutation { bookRoom(roomId: "${id}", input: { message: "self" }) { id } }`,
+  });
+  expect(
+    'GraphQL bookRoom blocks booking your own room',
+    Boolean(gqlSelf.body?.errors?.length),
+    true,
+  );
+  const rented = await call('A', 'PATCH', `/api/v1/rooms/listings/${id}`, { status: 'rented' });
+  expect('owner marks the room rented', rented.body?.status, 'rented');
+  await status(
+    'a rented room is hidden from search detail',
+    404,
+    'B',
+    'GET',
+    `/api/v1/rooms/listings/${id}`,
+  );
+  await status('owner relists', 200, 'A', 'PATCH', `/api/v1/rooms/listings/${id}/publish`);
 }
 
 console.log(`\nPASS=${pass} FAIL=${fail}${skip ? ` SKIPPED_GROUPS=${skip}` : ''}`);

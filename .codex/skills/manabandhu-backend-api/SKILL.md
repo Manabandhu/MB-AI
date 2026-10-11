@@ -110,3 +110,4 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
   - `documents` uploads return no public URL.
   - RSVP notifications fire only on change.
   - Smoke suite: 172 checks.
+- Rooms production pass (2026-10-11): rooms services take `Actor`; public listing responses come from `RoomListingViews` (batch-loaded, no `ownerId`, rounded coordinates); V39 revokes the remaining Data API grants on ride tables, `room_inquiries` and the `room_amenities` catalog. Smoke suite: 206 checks.

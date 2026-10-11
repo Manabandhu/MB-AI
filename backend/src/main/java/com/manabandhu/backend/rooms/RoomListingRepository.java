@@ -15,6 +15,8 @@ interface RoomListingRepository extends JpaRepository<RoomListing, UUID> {
 
     List<RoomListing> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
 
+    List<RoomListing> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId, Pageable pageable);
+
     List<RoomListing> findByBroadLocationContainingIgnoreCaseAndStatusOrderByCreatedAtDesc(String location, String status);
 
     List<RoomListing> findByRoomTypeAndStatusOrderByCreatedAtDesc(String roomType, String status);
@@ -27,7 +29,8 @@ interface RoomListingRepository extends JpaRepository<RoomListing, UUID> {
 
     /**
      * Single search used by the listings endpoint. Every filter is optional; the optional bounding box
-     * implements "within N miles" without needing PostGIS.
+     * implements "within N miles" without needing PostGIS. It compares the rounded coordinates the public sees, so
+     * shrinking the box cannot reveal the exact location.
      */
     @Query("""
         SELECT l FROM RoomListing l
@@ -43,8 +46,9 @@ interface RoomListingRepository extends JpaRepository<RoomListing, UUID> {
                OR l.genderPreference = cast(:genderPreference as String) OR l.genderPreference = 'ANY')
           AND (:minRent IS NULL OR l.price >= :minRent)
           AND (:maxRent IS NULL OR l.price <= :maxRent)
-          AND (cast(:bathroomType as String) IS NULL OR l.bathroomType = cast(:bathroomType as String))
-          AND (:minLat IS NULL OR (l.latitude BETWEEN :minLat AND :maxLat AND l.longitude BETWEEN :minLng AND :maxLng))
+          AND (cast(:bathroomType as String) IS NULL OR l.bathroomType LIKE CONCAT(cast(:bathroomType as String), '%'))
+          AND (:minLat IS NULL OR (round(l.latitude, 2) BETWEEN :minLat AND :maxLat
+                                   AND round(l.longitude, 2) BETWEEN :minLng AND :maxLng))
         ORDER BY l.createdAt DESC
     """)
     Page<RoomListing> searchListings(
@@ -63,7 +67,7 @@ interface RoomListingRepository extends JpaRepository<RoomListing, UUID> {
             @Param("maxLng") BigDecimal maxLng,
             Pageable pageable);
 
-    @Query(value = "SELECT l.* FROM room_listings l INNER JOIN room_favorites f ON l.id = f.listing_id WHERE f.user_id = :userId AND l.status IN ('active', 'paused') ORDER BY f.created_at DESC", nativeQuery = true)
+    @Query(value = "SELECT l.* FROM room_listings l INNER JOIN room_favorites f ON l.id = f.listing_id WHERE f.user_id = :userId AND l.status IN ('active', 'paused') ORDER BY f.created_at DESC LIMIT 200", nativeQuery = true)
     List<RoomListing> findSavedListingsByUserId(@Param("userId") UUID userId);
 
     long countByStatus(String status);

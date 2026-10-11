@@ -42,16 +42,6 @@ public class RoomFavoriteService {
         return listingRepository.findSavedListingsByUserId(userId);
     }
 
-    @Transactional(readOnly = true)
-    public List<RoomListingResponse> findListingResponses(UUID userId, RoomListingService listingService) {
-        return findSavedListings(userId).stream()
-                .map(l -> RoomListingResponse.from(l,
-                        listingService.amenitiesFor(l.getId()),
-                        listingService.preferencesFor(l.getId()),
-                        true))
-                .toList();
-    }
-
     @Transactional
     public RoomFavorite favorite(UUID userId, UUID listingId) {
         var listing = listingRepository.findById(listingId)

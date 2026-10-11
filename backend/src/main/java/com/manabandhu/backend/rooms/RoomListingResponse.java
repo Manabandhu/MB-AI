@@ -6,13 +6,12 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Public listing response. Deliberately excludes the exact address, which is never
- * returned through public APIs. The exact address is only available to the listing
- * owner through {@link OwnerRoomListingResponse}.
+ * Public listing response. Deliberately excludes the exact address and the owner's user id, and rounds the
+ * coordinates to about a kilometre so the address cannot be recovered from them. The owner sees the exact values
+ * through {@link OwnerRoomListingResponse}; {@code isOwner} tells the client whether to show owner actions.
  */
 public record RoomListingResponse(
         UUID id,
-        UUID ownerId,
         String title,
         String description,
         BigDecimal price,
@@ -26,6 +25,8 @@ public record RoomListingResponse(
         List<String> amenities,
         List<String> preferences,
         boolean savedByViewer,
+        boolean isOwner,
+        String coverImageUrl,
         String dietaryPreference,
         String genderPreference,
         String bathroomType,
@@ -38,24 +39,30 @@ public record RoomListingResponse(
         String stateCode,
         String county) {
 
+    /** Two decimals of latitude/longitude is roughly 1 km: enough for a map pin, not enough for an address. */
+    static BigDecimal approximate(BigDecimal coordinate) {
+        return coordinate == null ? null : coordinate.setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
     public static RoomListingResponse from(RoomListing listing, List<String> amenities,
-            List<String> preferences, boolean savedByViewer) {
+            List<String> preferences, boolean savedByViewer, boolean isOwner, String coverImageUrl) {
         return new RoomListingResponse(
                 listing.getId(),
-                listing.getOwnerId(),
                 listing.getTitle(),
                 listing.getDescription(),
                 listing.getPrice(),
                 listing.getRoomType(),
                 listing.getStatus(),
                 listing.getBroadLocation(),
-                listing.getLatitude(),
-                listing.getLongitude(),
+                approximate(listing.getLatitude()),
+                approximate(listing.getLongitude()),
                 listing.getCreatedAt(),
                 listing.getUpdatedAt(),
                 amenities,
                 preferences,
                 savedByViewer,
+                isOwner,
+                coverImageUrl,
                 listing.getDietaryPreference(),
                 listing.getGenderPreference(),
                 listing.getBathroomType(),

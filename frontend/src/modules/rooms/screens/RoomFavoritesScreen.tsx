@@ -1,217 +1,148 @@
-import { space } from '@manabandhu/design-system';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { formatMoney } from '@manabandhu/core';
+import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
-import { Link, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BackHandler, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Image } from 'react-native';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
 import { getFavorites } from '@/modules/rooms/api';
-import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
+import { useRoomSave } from '@/modules/rooms/hooks/useRoomSave';
 import type { RoomListing } from '@/modules/rooms/types';
+import { errorMessage } from '@/modules/rooms/utils/roomLabels';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { Screen } from '@/modules/shared/ui/Screen';
 
-import { styles } from './roomListStyles';
-
+/** The caller's saved rooms, straight from the server (`GET /favorites`). */
 export function RoomFavoritesScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const [removedIds, setRemovedIds] = useState<Record<string, boolean>>({});
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
+  const { isSaved, toggle } = useRoomSave();
 
-  const savedRoomsMap = useSavedRoomsStore((s) => s.savedRooms);
-  const removeSaved = useSavedRoomsStore((s) => s.removeSaved);
-  const setFavoritesFromBackend = useSavedRoomsStore((s) => s.setFavoritesFromBackend);
-
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.push('/rooms' as Href);
-      return true;
-    });
-    return () => sub.remove();
-  }, [router]);
-
-  const { data: backendFavorites, refetch } = useQuery({
+  const favoritesQuery = useQuery({
     queryKey: ['rooms', 'favorites'],
     queryFn: getFavorites,
-    retry: false,
+    enabled: isAuthenticated,
   });
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const onRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [refetch]);
+  // Hide rooms the person just unsaved while the request and refetch run.
+  const rooms = (favoritesQuery.data ?? []).filter((room) =>
+    isSaved({ id: room.id, savedByViewer: true }),
+  );
 
-  useEffect(() => {
-    if (backendFavorites && backendFavorites.length > 0) {
-      setFavoritesFromBackend(backendFavorites);
+  const body = () => {
+    if (!isAuthenticated || favoritesQuery.isLoading) {
+      return <LoadingState count={3} label="Loading saved rooms…" variant="skeleton" />;
     }
-  }, [backendFavorites, setFavoritesFromBackend]);
-
-  const allSaved = useMemo(() => {
-    const map = new Map<string, RoomListing>();
-    for (const r of Object.values(savedRoomsMap)) {
-      map.set(r.id, r);
+    if (favoritesQuery.isError) {
+      return (
+        <ErrorState
+          body={errorMessage(favoritesQuery.error)}
+          onRetry={() => favoritesQuery.refetch()}
+          retryLabel="Retry"
+          title="Could not load saved rooms"
+        />
+      );
     }
-    for (const r of backendFavorites ?? []) {
-      map.set(r.id, r);
+    if (rooms.length === 0) {
+      return (
+        <EmptyState
+          actionLabel="Browse rooms"
+          body="Tap the heart on a listing to keep it here and compare rent, amenities, and location."
+          iconName="heart"
+          onAction={() => router.push('/rooms' as Href)}
+          title="No saved rooms yet"
+        />
+      );
     }
-    return Array.from(map.values()).filter((room) => !removedIds[room.id]);
-  }, [savedRoomsMap, backendFavorites, removedIds]);
-
-  const handleUnsave = (id: string) => {
-    setRemovedIds((prev) => ({ ...prev, [id]: true }));
-    removeSaved(id);
-    queryClient.invalidateQueries({ queryKey: ['rooms', 'favorites'] });
+    return (
+      <YStack gap="$x3">
+        {rooms.map((room) => (
+          <SavedRoomCard
+            key={room.id}
+            onOpen={() => router.push(`/rooms/${room.id}` as Href)}
+            onUnsave={() => toggle({ id: room.id, savedByViewer: true })}
+            room={room}
+          />
+        ))}
+      </YStack>
+    );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Top Header with Back Navigation */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Pressable
-            accessibilityLabel="Back to Rooms"
-            onPress={() => router.push('/rooms' as Href)}
-            style={styles.backBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <AppIcon color="#1a1c28" name="chevron-left" size={20} />
-          </Pressable>
-          <View>
-            <Text style={styles.headerTitle}>Saved Rooms</Text>
-            <Text style={styles.headerSubtitle}>Compare your shortlisted listings</Text>
-          </View>
-        </View>
-        <View style={styles.savedCountPill}>
-          <Text style={styles.savedCountText}>{allSaved.length} Saved</Text>
-        </View>
-      </View>
-
-      <FlatList
-        data={allSaved}
-        keyExtractor={(room) => room.id}
-        renderItem={({ item: room }) => (
-          <SavedRoomCard room={room} onUnsave={() => handleUnsave(room.id)} />
-        )}
-        refreshing={isRefreshing}
-        onRefresh={onRefresh}
-        contentContainerStyle={[styles.scrollContent, styles.listGrid]}
-        ItemSeparatorComponent={() => <View style={{ height: space.x3 }} />}
-        initialNumToRender={6}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyEmoji}>❤️</Text>
-            <Text style={styles.emptyTitle}>No saved rooms yet</Text>
-            <Text style={styles.emptyBody}>
-              Bookmark rooms while exploring to easily compare rent, amenities, and locations here.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push('/rooms' as Href)}
-              style={styles.exploreBtn}
-            >
-              <Text style={styles.exploreBtnText}>Browse Available Rooms</Text>
-            </Pressable>
-          </View>
-        }
-      />
-    </SafeAreaView>
+    <Screen onRefresh={() => favoritesQuery.refetch()} refreshing={favoritesQuery.isRefetching}>
+      <YStack gap="$x4">
+        <BackButton fallback="/rooms" />
+        <YStack gap={2}>
+          <AppText role="heading" variant="h2">
+            Saved rooms
+          </AppText>
+          <AppText tone="muted" variant="caption">
+            {favoritesQuery.data ? `${rooms.length} saved` : 'Compare the rooms you shortlisted'}
+          </AppText>
+        </YStack>
+        {body()}
+      </YStack>
+    </Screen>
   );
 }
 
-function SavedRoomCard({ room, onUnsave }: { room: RoomListing; onUnsave: () => void }) {
-  const router = useRouter();
-
+function SavedRoomCard({
+  room,
+  onOpen,
+  onUnsave,
+}: {
+  room: RoomListing;
+  onOpen: () => void;
+  onUnsave: () => void;
+}) {
   return (
-    <Pressable onPress={() => router.push(`/rooms/${room.id}` as Href)} style={styles.savedCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.thumbBox}>
-          <Text style={styles.thumbEmoji}>🛏️</Text>
-          <View style={styles.pricePill}>
-            <Text style={styles.priceValue}>${room.price}</Text>
-            <Text style={styles.pricePeriod}>/mo</Text>
-          </View>
-        </View>
-
-        <View style={styles.cardHeaderInfo}>
-          <View style={styles.cardTypeRow}>
-            <View style={styles.roomTypeBadge}>
-              <Text style={styles.roomTypeBadgeText}>{room.roomType}</Text>
-            </View>
-            <Pressable
-              accessibilityLabel="Remove from saved"
-              onPress={(e) => {
-                e.stopPropagation();
-                onUnsave();
-              }}
-              style={styles.unsaveBtn}
-            >
-              <Text style={styles.heartActive}>❤️</Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.cardTitle} numberOfLines={2}>
+    <Card aria-label={`Open ${room.title}`} gap="$x3" onPress={onOpen}>
+      <XStack alignItems="flex-start" gap="$x3">
+        <YStack
+          alignItems="center"
+          backgroundColor="$surfaceContainerLow"
+          borderRadius="$control"
+          height={72}
+          justifyContent="center"
+          overflow="hidden"
+          width={72}
+        >
+          {room.coverImageUrl ? (
+            <Image
+              accessibilityIgnoresInvertColors
+              source={{ uri: room.coverImageUrl }}
+              style={{ width: 72, height: 72 }}
+            />
+          ) : (
+            <AppIcon name="bed" size={28} />
+          )}
+        </YStack>
+        <YStack flex={1} gap={2}>
+          <AppText numberOfLines={2} variant="bodyStrong">
             {room.title}
-          </Text>
-
-          <View style={styles.locationRow}>
-            <AppIcon color="#747688" name="map" size={13} />
-            <Text style={styles.locationText} numberOfLines={1}>
+          </AppText>
+          <AppText tone="primary" variant="label">
+            {formatMoney(room.price, 'USD')}/mo · {room.roomType}
+          </AppText>
+          {room.broadLocation ? (
+            <AppText numberOfLines={1} tone="muted" variant="caption">
               {room.broadLocation}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Preferences / Tags */}
-      <View style={styles.tagsRow}>
-        {(room.preferences ?? []).slice(0, 2).map((pref) => (
-          <View key={pref} style={styles.tagPill}>
-            <Text style={styles.tagPillText}>{pref}</Text>
-          </View>
-        ))}
-        {(room.amenities ?? []).slice(0, 2).map((amenity) => (
-          <View key={amenity} style={styles.amenityTagPill}>
-            <Text style={styles.amenityTagPillText}>{amenity}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Card Actions */}
-      <View style={styles.cardFooter}>
-        <View style={styles.hostTrustRow}>
-          {room.isVerifiedHost ? <View style={styles.verifiedDot} /> : null}
-          <Text style={styles.hostTrustText}>
-            {room.isVerifiedHost ? 'Verified Host' : 'Community Host'}
-          </Text>
-        </View>
-        <View style={styles.ctaRow}>
-          <Link href={`/rooms/${room.id}/inquiry` as Href} asChild>
-            <Pressable
-              onPress={(e) => e.stopPropagation()}
-              style={StyleSheet.flatten(styles.inquireBtn)}
-            >
-              <Text style={styles.inquireBtnText}>Inquire</Text>
-            </Pressable>
-          </Link>
-          <Link href={`/rooms/${room.id}` as Href} asChild>
-            <Pressable
-              onPress={(e) => e.stopPropagation()}
-              style={StyleSheet.flatten(styles.viewBtn)}
-            >
-              <Text style={styles.viewBtnText}>View Details →</Text>
-            </Pressable>
-          </Link>
-        </View>
-      </View>
-    </Pressable>
+            </AppText>
+          ) : null}
+        </YStack>
+        <IconButton icon="heart" label={`Remove ${room.title} from saved`} onPress={onUnsave} />
+      </XStack>
+      <XStack gap="$x2" justifyContent="flex-end">
+        <AppButton label="View details" onPress={onOpen} size="sm" variant="secondary" />
+      </XStack>
+    </Card>
   );
 }

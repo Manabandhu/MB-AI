@@ -2,96 +2,69 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { persistentStorage } from '@/lib/persistentStorage';
 import { saveRoom as apiSaveRoom, unsaveRoom as apiUnsaveRoom } from './api';
-import type { RoomListing } from './types';
 
+/**
+ * Optimistic cache of save/unsave choices, keyed to the signed-in user. The server (`savedByViewer`, `/favorites`)
+ * stays the source of truth: entries here only override it while a request is in flight or until the next refetch,
+ * and the whole cache is dropped on sign-out (`clearSavedRooms`) or when a different user is seen.
+ */
 interface SavedRoomsState {
-  savedRooms: Record<string, RoomListing>;
-  isSaved: (roomId: string) => boolean;
-  toggleSave: (room: RoomListing) => Promise<boolean>;
-  removeSaved: (roomId: string) => Promise<void>;
-  setFavoritesFromBackend: (rooms: RoomListing[]) => void;
-  getSavedList: () => RoomListing[];
+  userId: string | null;
+  /** roomId → saved (true) / unsaved (false). Missing means "use the server value". */
+  overrides: Record<string, boolean>;
+  /** Saves or unsaves on the server; rolls back and rethrows when the request fails. */
+  setSaved: (userId: string, roomId: string, saved: boolean) => Promise<void>;
+  /** Drops one override once the server data reflects it. */
+  forget: (roomId: string) => void;
+  clear: () => void;
 }
 
 export const useSavedRoomsStore = create<SavedRoomsState>()(
   persist(
     (set, get) => ({
-      savedRooms: {},
+      userId: null,
+      overrides: {},
 
-      isSaved: (roomId: string) => {
-        return Boolean(get().savedRooms[roomId]);
-      },
-
-      toggleSave: async (room: RoomListing) => {
-        const currentlySaved = Boolean(get().savedRooms[room.id]);
-
-        if (currentlySaved) {
-          // Optimistically remove from store
-          set((state) => {
-            const next = { ...state.savedRooms };
-            delete next[room.id];
-            return { savedRooms: next };
-          });
-
-          // Sync with backend (non-blocking)
-          try {
-            await apiUnsaveRoom(room.id);
-          } catch {
-            // Silently handled for offline/guest mode
-          }
-
-          return false;
-        }
-
-        // Optimistically add to store
+      setSaved: async (userId, roomId, saved) => {
+        const sameUser = get().userId === userId;
+        const previous = sameUser ? get().overrides[roomId] : undefined;
         set((state) => ({
-          savedRooms: {
-            ...state.savedRooms,
-            [room.id]: room,
-          },
+          userId,
+          overrides: { ...(sameUser ? state.overrides : {}), [roomId]: saved },
         }));
-
-        // Sync with backend (non-blocking)
         try {
-          await apiSaveRoom(room.id);
-        } catch {
-          // Silently handled for offline/guest mode
+          if (saved) await apiSaveRoom(roomId);
+          else await apiUnsaveRoom(roomId);
+        } catch (error) {
+          set((state) => {
+            if (state.userId !== userId) return state;
+            const next = { ...state.overrides };
+            if (previous === undefined) delete next[roomId];
+            else next[roomId] = previous;
+            return { overrides: next };
+          });
+          throw error;
         }
-
-        return true;
       },
 
-      removeSaved: async (roomId: string) => {
+      forget: (roomId) =>
         set((state) => {
-          const next = { ...state.savedRooms };
+          if (!(roomId in state.overrides)) return state;
+          const next = { ...state.overrides };
           delete next[roomId];
-          return { savedRooms: next };
-        });
+          return { overrides: next };
+        }),
 
-        try {
-          await apiUnsaveRoom(roomId);
-        } catch {
-          // Silently handled
-        }
-      },
-
-      setFavoritesFromBackend: (backendRooms: RoomListing[]) => {
-        set((state) => {
-          const merged = { ...state.savedRooms };
-          for (const room of backendRooms) {
-            merged[room.id] = room;
-          }
-          return { savedRooms: merged };
-        });
-      },
-
-      getSavedList: () => {
-        return Object.values(get().savedRooms);
-      },
+      clear: () => set({ userId: null, overrides: {} }),
     }),
     {
-      name: 'manabandhu-saved-rooms-v1',
+      name: 'manabandhu-saved-rooms-v2',
       storage: createJSONStorage(() => persistentStorage),
     },
   ),
 );
+
+/** Drops every cached save choice. Called by `authStore.signOut` so the next user never sees them. */
+export function clearSavedRooms() {
+  useSavedRoomsStore.getState().clear();
+}

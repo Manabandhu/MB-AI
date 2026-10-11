@@ -33,15 +33,21 @@ type PostReaction {
 
 type RoomListing {
   id: ID!
-  ownerId: ID!
+  "Only returned to the owner and admins."
+  ownerId: ID
+  "True when the signed-in caller owns the listing."
+  isOwner: Boolean!
   title: String!
   description: String
   price: String!
   roomType: String!
   status: String!
-  broadLocation: String!
+  broadLocation: String
+  "Only returned to the owner and admins."
   exactAddress: String
+  "Rounded to two decimals unless the caller is the owner or an admin."
   latitude: String
+  "Rounded to two decimals unless the caller is the owner or an admin."
   longitude: String
   createdAt: String!
   updatedAt: String!

@@ -49,29 +49,32 @@ public class RoomInquiryService {
         if (senderId.equals(hostId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot inquire about your own room listing");
         }
+        if (!"active".equals(listing.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This listing is not accepting inquiries right now");
+        }
+        // The client sends its own local date; UTC-12 is the last place where "today" is still today.
+        if (input.moveInDate().isBefore(java.time.LocalDate.now(java.time.ZoneOffset.ofHours(-12)))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Move-in date cannot be in the past");
+        }
 
-        // Create direct conversation for room inquiry with title
+        var introText = introText(listing, input);
+
+        // A repeat inquiry goes into the existing chat instead of opening (and notifying) a new one each time.
+        var previous = repository.findFirstByRoomIdAndSenderIdOrderByCreatedAtDesc(roomId, senderId)
+                .filter(p -> p.getConversationId() != null
+                        && participantService.isParticipant(p.getConversationId(), senderId)
+                        && participantService.isParticipant(p.getConversationId(), hostId));
+        if (previous.isPresent()) {
+            var inquiry = previous.get();
+            messageService.send(inquiry.getConversationId(), senderId, introText, Message.MessageType.TEXT);
+            return new RoomInquiryResponse(inquiry.getId(), inquiry.getConversationId());
+        }
+
         var title = "Room Inquiry: " + listing.getTitle();
         var conversation = conversationService.create(senderId, Conversation.ConversationType.ROOM_INQUIRY, title);
         participantService.add(conversation.getId(), hostId, ConversationParticipant.ParticipantRole.MEMBER);
-
-        // Format and post intro chat message
-        String introText = String.format(
-                "👋 Room Inquiry for \"%s\" ($%s/mo)\n\n" +
-                "📅 Preferred Move-In: %s\n" +
-                "⏳ Stay Duration: %d months\n" +
-                "🥗 Dietary Preference: %s\n\n" +
-                "💬 Message: %s",
-                listing.getTitle(),
-                listing.getPrice() != null ? listing.getPrice().toPlainString() : "N/A",
-                input.moveInDate(),
-                input.stayDurationMonths() != null ? input.stayDurationMonths() : 6,
-                input.dietaryLifestyle() != null ? input.dietaryLifestyle() : "Flexible",
-                input.introMessage()
-        );
         messageService.send(conversation.getId(), senderId, introText, Message.MessageType.TEXT);
 
-        // Record room inquiry
         var inquiry = repository.save(new RoomInquiry(
                 roomId, senderId, hostId, conversation.getId(),
                 input.moveInDate(), input.stayDurationMonths(),
@@ -81,5 +84,20 @@ public class RoomInquiryService {
         notifications.publish(hostId, senderId, Notification.NotificationType.ROOM, "New room inquiry",
                 "Someone asked about \"" + listing.getTitle() + "\".", "/chat/" + conversation.getId());
         return new RoomInquiryResponse(inquiry.getId(), conversation.getId());
+    }
+
+    private static String introText(RoomListing listing, RoomInquiryInput input) {
+        return String.format(
+                "👋 Room Inquiry for \"%s\" ($%s/mo)%n%n"
+                        + "📅 Preferred Move-In: %s%n"
+                        + "⏳ Stay Duration: %s%n"
+                        + "🥗 Dietary Preference: %s%n%n"
+                        + "💬 Message: %s",
+                listing.getTitle(),
+                listing.getPrice() != null ? listing.getPrice().toPlainString() : "N/A",
+                input.moveInDate(),
+                input.stayDurationMonths() != null ? input.stayDurationMonths() + " months" : "Flexible",
+                input.dietaryLifestyle() != null ? input.dietaryLifestyle() : "Flexible",
+                input.introMessage().trim());
     }
 }

@@ -281,11 +281,11 @@ Each screen entry includes:
 ### Rooms Home
 - Route: `/rooms`
 - Module: rooms
-- Purpose: Discover available rooms
+- Purpose: Discover available rooms (card/list/map views, city picker, filters, sort)
 - Type: catalog
-- States: loading | empty | error
-- Components: CatalogScreen, SearchBar, FilterBar, Card, MapPreview, AppButton
-- Navigation: push to `/rooms/search`, `/rooms/map`, `/rooms/filters`, `/rooms/saved`
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: RoomsScreen, BackButton, UniversalMapView
+- Navigation: push to `/rooms/[roomId]`, `/rooms/create-listing` ("Post a room"); signed-in members also get `/rooms/my-listings` ("My listings") and `/rooms/saved`
 
 ### Rooms Search
 - Route: `/rooms/search`
@@ -293,71 +293,80 @@ Each screen entry includes:
 - Purpose: Search and filter rooms
 - Type: list
 - States: loading | empty | error
-- Components: ScreenShell, SearchBar, FilterBar, ListScreen, Card, MapPreview
-- Navigation: push to `/rooms/[roomId]`, `/rooms/map`, `/rooms/filters`
+- Components: RoomsScreen
+- Navigation: push to `/rooms/[roomId]`
 
 ### Rooms Map
 - Route: `/rooms/map`
 - Module: rooms
-- Purpose: View rooms on map
+- Purpose: View rooms on a map and filter by a drawn area
 - Type: map
-- States: loading | empty | error | permission
-- Components: ScreenShell, MapView, MapPin, Card, FilterBar, SearchBar
-- Navigation: push to `/rooms/[roomId]`, `/rooms/search`
+- States: loading | empty ("no map location") | error (retry)
+- Components: RoomsScreen, UniversalMapView
+- Navigation: push to `/rooms/[roomId]`; "Show list" switches to the list view
 
 ### Rooms Filters
 - Route: `/rooms/filters`
 - Module: rooms
-- Purpose: Apply search filters
+- Purpose: Filter by rent, room type, amenities (catalog codes), diet and gender (listing fields)
 - Type: filter
 - States: normal
-- Components: ScreenShell, FilterBar, RangeSlider, CheckboxGroup, AppButton
-- Navigation: apply to `/rooms/search`
+- Components: RoomsScreen (filter sheet open)
+- Navigation: closes back to the list
 
 ### Rooms Saved
 - Route: `/rooms/saved`
 - Module: rooms
-- Purpose: View saved rooms
+- Purpose: The member's saved rooms from `GET /favorites`
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: Screen, Card, IconButton, EmptyState, ErrorState
 - Navigation: push to `/rooms/[roomId]`
 
 ### Rooms My Listings
 - Route: `/rooms/my-listings`
 - Module: rooms
-- Purpose: Manage own room listings
+- Purpose: Manage own listings (Active, Drafts, Rented tabs; publish, pause, mark rented, relist, archive, delete)
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton, SwipeAction
-- Navigation: push to `/rooms/[roomId]/edit`, `/rooms/create-listing`
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: Screen, SegmentedControl, Card, Chip, AppButton
+- Navigation: push to `/rooms/[roomId]`, `/rooms/[roomId]/edit`, `/rooms/create-listing`
 
 ### Rooms Create Listing
 - Route: `/rooms/create-listing`
 - Module: rooms
-- Purpose: Create new room listing
+- Purpose: Create a listing with photos and amenities; "Publish now" (primary) or "Save draft"
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, TextArea, ImageUpload, CheckboxGroup, AppButton
-- Navigation: to `/rooms/my-listings` on success
+- States: normal | error | loading | upload progress
+- Components: RoomForm (TextField, Chip, Card, AppButton, useImageUpload)
+- Navigation: replace with `/rooms/my-listings?notice=…`
 
 ### Room Details
 - Route: `/rooms/[roomId]`
 - Module: rooms
-- Purpose: View room details
+- Purpose: Listing detail with real photos, amenities, pricing, and approximate area
 - Type: detail
-- States: loading | error
-- Components: DetailScreen, ImageGallery, MapPreview, AppButton, SectionHeader, ListScreen
-- Navigation: push to `/rooms/[roomId]/edit`, `/rooms/saved`
+- States: loading | not found | error (retry)
+- Components: Screen, Card, Chip, IconButton, BottomSheet (report)
+- Navigation: owner → `/rooms/[roomId]/edit`; others → `/rooms/[roomId]/inquiry` or `/chat/[conversationId]`
 
 ### Edit Listing
 - Route: `/rooms/[roomId]/edit`
 - Module: rooms
-- Purpose: Edit room listing
+- Purpose: Edit a listing, its photos and amenities
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, TextArea, ImageUpload, AppButton
-- Navigation: back to `/rooms/[roomId]`, `/rooms/my-listings`
+- States: normal | error | not found | loading
+- Components: RoomForm
+- Navigation: replace with `/rooms/my-listings?notice=…`
+
+### Room Inquiry
+- Route: `/rooms/[roomId]/inquiry`
+- Module: rooms
+- Purpose: Send move-in date, stay length and an introduction to the host
+- Type: form
+- States: normal | validation error | error | loading
+- Components: Screen, TextField, Chip, AppButton
+- Navigation: replace with `/chat/[conversationId]`
 
 ---
 

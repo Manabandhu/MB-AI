@@ -40,14 +40,14 @@
 │   └── /onboarding/complete (Complete)
 ├── /rooms/*
 │   ├── /rooms/search
-│   ├── /rooms/map
+│   ├── /rooms/map (rooms without coordinates are listed, never pinned)
 │   ├── /rooms/filters
-│   ├── /rooms/saved
-│   ├── /rooms/my-listings
-│   ├── /rooms/create-listing
-│   ├── /rooms/[roomId]
-│   │   └── /rooms/[roomId]/edit
-│   └── /rooms/[roomId]/details
+│   ├── /rooms/saved (sign-in required)
+│   ├── /rooms/my-listings (sign-in required; ?notice= shows the result of a save)
+│   ├── /rooms/create-listing (sign-in required → /rooms/my-listings)
+│   └── /rooms/[roomId] (owner sees Edit + status actions; others Save, Message host, Report)
+│       ├── /rooms/[roomId]/edit (sign-in required, owner only)
+│       └── /rooms/[roomId]/inquiry (sign-in required → /chat/[conversationId])
 ├── /rides/*
 │   ├── /rides/search
 │   ├── /rides/map
@@ -244,7 +244,7 @@ Splash → Welcome → Sign In/Up → Onboarding → Home
 
 | Screen | Permission | Action if Missing |
 |---|---|---|
-| /rooms/map | Location | Show permission banner + fallback list |
+| /rooms/map | Location (only for the GPS button) | Alert, then centre on the selected city |
 | /rides/map | Location | Show permission banner + fallback list |
 | /utilities/nearby | Location | Show permission banner + fallback list |
 | /notifications/settings | Push Notifications | Asked only when the member turns push on; a refusal shows how to allow it in phone settings |

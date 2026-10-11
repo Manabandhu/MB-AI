@@ -120,30 +120,9 @@
     "colorLiteral": 110,
     "localPalette": 1
   },
-  "rooms/components/RoomForm.tsx": {
-    "colorLiteral": 11,
-    "localPalette": 1
-  },
-  "rooms/screens/RoomDetailScreen.tsx": {
-    "colorLiteral": 26,
-    "localPalette": 1
-  },
-  "rooms/screens/RoomFavoritesScreen.tsx": {
-    "colorLiteral": 2
-  },
-  "rooms/screens/RoomInquiryScreen.tsx": {
-    "colorLiteral": 4,
-    "localPalette": 1
-  },
-  "rooms/screens/RoomMyListingsScreen.tsx": {
-    "colorLiteral": 2
-  },
   "rooms/screens/RoomsScreen.tsx": {
-    "colorLiteral": 142,
+    "colorLiteral": 138,
     "localPalette": 1
-  },
-  "rooms/screens/roomListStyles.ts": {
-    "colorLiteral": 60
   },
   "safety/screens/SafetyCenterScreen.tsx": {
     "colorLiteral": 24,

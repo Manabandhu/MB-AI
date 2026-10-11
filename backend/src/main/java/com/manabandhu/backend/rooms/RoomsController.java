@@ -40,12 +40,14 @@ public class RoomsController {
     private final RoomReportService reportService;
     private final RoomAnalyticsService analyticsService;
     private final RoomInquiryService inquiryService;
+    private final RoomListingViews views;
 
     public RoomsController(RoomsContentService contentService, RoomListingService listingService,
                            RoomAvailabilityService availabilityService, RoomBookingService bookingService,
                            RoomImageService imageService, RoomFavoriteService favoriteService,
                            RoomSavedSearchService savedSearchService, RoomReportService reportService,
-                           RoomAnalyticsService analyticsService, RoomInquiryService inquiryService) {
+                           RoomAnalyticsService analyticsService, RoomInquiryService inquiryService,
+                           RoomListingViews views) {
         this.contentService = contentService;
         this.listingService = listingService;
         this.availabilityService = availabilityService;
@@ -56,18 +58,15 @@ public class RoomsController {
         this.reportService = reportService;
         this.analyticsService = analyticsService;
         this.inquiryService = inquiryService;
+        this.views = views;
     }
 
-    private static UUID actorId(Authentication authentication) {
-        return Actor.require(authentication).id();
+    private static Actor actor(Authentication authentication) {
+        return Actor.require(authentication);
     }
 
-    private static UUID viewerId(Authentication authentication) {
-        return Actor.from(authentication).map(Actor::id).orElse(null);
-    }
-
-    private static boolean isAdmin(Authentication authentication) {
-        return Actor.from(authentication).map(Actor::admin).orElse(false);
+    private static Actor viewer(Authentication authentication) {
+        return Actor.from(authentication).orElse(null);
     }
 
     @GetMapping("/amenities")
@@ -96,315 +95,225 @@ public class RoomsController {
             @RequestParam(required = false) BigDecimal lng,
             @RequestParam(required = false) Double radiusMiles,
             Pageable pageable) {
-        var viewerId = viewerId(authentication);
-        var bath = Boolean.TRUE.equals(privateBathOnly) ? "PRIVATE_ATTACHED" : null;
+        var bath = Boolean.TRUE.equals(privateBathOnly) ? "PRIVATE" : null;
         var criteria = new RoomSearchCriteria(city != null ? city : location, roomType, state, dietaryPreference,
                 genderPreference, minRent, maxRent, bath, lat, lng, radiusMiles);
-        var listings = listingService.search(criteria, pageable);
-        List<UUID> listingIds = listings.getContent().stream().map(RoomListing::getId).toList();
-        var amenitiesMap = listingService.amenitiesForListings(listingIds);
-        var preferencesMap = listingService.preferencesForListings(listingIds);
-        var savedSet = viewerId == null ? java.util.Set.<UUID>of() : favoriteService.findSavedListingIds(viewerId, listingIds);
-
-        return listings.map(l -> RoomListingResponse.from(l,
-                amenitiesMap.getOrDefault(l.getId(), List.of()),
-                preferencesMap.getOrDefault(l.getId(), List.of()),
-                savedSet.contains(l.getId())));
+        // Newest first only; a client-chosen sort could name a column that does not exist (500).
+        var page = listingService.search(criteria,
+                org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+        var responses = views.publicViews(page.getContent(), viewer(authentication));
+        return new org.springframework.data.domain.PageImpl<>(responses, page.getPageable(), page.getTotalElements());
     }
 
     @PostMapping("/listings")
     ResponseEntity<OwnerRoomListingResponse> createListing(Authentication authentication,
                                                            @Valid @RequestBody CreateRoomListingInput input) {
-        var ownerId = actorId(authentication);
-        var listing = listingService.create(ownerId, input);
+        var listing = listingService.create(actor(authentication), input);
         return ResponseEntity.created(URI.create("/api/v1/rooms/listings/" + listing.getId()))
-                .body(toOwnerResponse(listing));
+                .body(views.ownerView(listing));
     }
 
-    @GetMapping("/listings/{listingId}")
+    @GetMapping({"/listings/{listingId}", "/{listingId}"})
     RoomListingResponse listing(Authentication authentication, @PathVariable UUID listingId) {
-        var viewerId = viewerId(authentication);
-        var listing = listingService.findPublishedById(listingId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
-        return toResponse(listing, viewerId);
+        // Active or paused for everyone; the owner and admins also see drafts, rented and archived listings.
+        var viewer = viewer(authentication);
+        return views.publicView(listingService.requireVisible(listingId, viewer), viewer);
     }
 
-    @GetMapping("/{roomId}")
-    RoomListingResponse roomDetail(Authentication authentication, @PathVariable UUID roomId) {
-        var viewerId = viewerId(authentication);
-        var listing = listingService.findPublishedById(roomId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
-        return toResponse(listing, viewerId);
-    }
-
-    @GetMapping("/listings/{listingId}/owner")
+    @GetMapping({"/listings/{listingId}/owner", "/{listingId}/owner"})
     OwnerRoomListingResponse listingForOwner(Authentication authentication, @PathVariable UUID listingId) {
-        var actorId = actorId(authentication);
-        var listing = listingService.requireOwnedListingListing(actorId, isAdmin(authentication), listingId);
-        return toOwnerResponse(listing);
+        return views.ownerView(listingService.requireOwned(actor(authentication), listingId));
     }
 
-    @GetMapping("/{roomId}/owner")
-    OwnerRoomListingResponse roomDetailForOwner(Authentication authentication, @PathVariable UUID roomId) {
-        var actorId = actorId(authentication);
-        var listing = listingService.requireOwnedListingListing(actorId, isAdmin(authentication), roomId);
-        return toOwnerResponse(listing);
-    }
-
-    @PatchMapping("/listings/{listingId}")
+    @PatchMapping({"/listings/{listingId}", "/{listingId}"})
     OwnerRoomListingResponse updateListing(Authentication authentication, @PathVariable UUID listingId,
                                            @Valid @RequestBody UpdateRoomListingInput input) {
-        var actorId = actorId(authentication);
-        var listing = listingService.update(listingId, actorId, isAdmin(authentication), input);
-        return toOwnerResponse(listing);
+        return views.ownerView(listingService.update(actor(authentication), listingId, input));
     }
 
-    @PatchMapping("/{roomId}")
-    OwnerRoomListingResponse updateRoom(Authentication authentication, @PathVariable UUID roomId,
-                                        @Valid @RequestBody UpdateRoomListingInput input) {
-        var actorId = actorId(authentication);
-        var listing = listingService.update(roomId, actorId, isAdmin(authentication), input);
-        return toOwnerResponse(listing);
-    }
-
-    @PatchMapping("/listings/{listingId}/publish")
+    @PatchMapping({"/listings/{listingId}/publish", "/{listingId}/publish"})
     OwnerRoomListingResponse publish(Authentication authentication, @PathVariable UUID listingId) {
-        var actorId = actorId(authentication);
-        return toOwnerResponse(listingService.setOwnerOnlyStatus(listingId, actorId, "active", "publish"));
+        return views.ownerView(listingService.setOwnerOnlyStatus(actor(authentication), listingId, "active"));
     }
 
-    @PatchMapping("/{roomId}/publish")
-    OwnerRoomListingResponse publishRoom(Authentication authentication, @PathVariable UUID roomId) {
-        var actorId = actorId(authentication);
-        return toOwnerResponse(listingService.setOwnerOnlyStatus(roomId, actorId, "active", "publish"));
-    }
-
-    @PatchMapping("/listings/{listingId}/pause")
+    @PatchMapping({"/listings/{listingId}/pause", "/{listingId}/pause"})
     OwnerRoomListingResponse pause(Authentication authentication, @PathVariable UUID listingId) {
-        var actorId = actorId(authentication);
-        return toOwnerResponse(listingService.setOwnerOnlyStatus(listingId, actorId, "paused", "pause"));
+        return views.ownerView(listingService.setOwnerOnlyStatus(actor(authentication), listingId, "paused"));
     }
 
-    @PatchMapping("/{roomId}/pause")
-    OwnerRoomListingResponse pauseRoom(Authentication authentication, @PathVariable UUID roomId) {
-        var actorId = actorId(authentication);
-        return toOwnerResponse(listingService.setOwnerOnlyStatus(roomId, actorId, "paused", "pause"));
-    }
-
-    @PatchMapping("/listings/{listingId}/archive")
+    @PatchMapping({"/listings/{listingId}/archive", "/{listingId}/archive"})
     OwnerRoomListingResponse archive(Authentication authentication, @PathVariable UUID listingId) {
-        var actorId = actorId(authentication);
-        return toOwnerResponse(listingService.setOwnerOnlyStatus(listingId, actorId, "archived", "archive"));
+        return views.ownerView(listingService.setOwnerOnlyStatus(actor(authentication), listingId, "archived"));
     }
 
-    @PatchMapping("/{roomId}/archive")
-    OwnerRoomListingResponse archiveRoom(Authentication authentication, @PathVariable UUID roomId) {
-        var actorId = actorId(authentication);
-        return toOwnerResponse(listingService.setOwnerOnlyStatus(roomId, actorId, "archived", "archive"));
-    }
-
-    @DeleteMapping("/listings/{listingId}")
+    @DeleteMapping({"/listings/{listingId}", "/{listingId}"})
     ResponseEntity<Void> deleteListing(Authentication authentication, @PathVariable UUID listingId) {
-        listingService.delete(listingId, actorId(authentication), isAdmin(authentication));
+        listingService.delete(actor(authentication), listingId);
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/{roomId}")
-    ResponseEntity<Void> deleteRoom(Authentication authentication, @PathVariable UUID roomId) {
-        listingService.delete(roomId, actorId(authentication), isAdmin(authentication));
-        return ResponseEntity.noContent().build();
-    }
-
+    /** The caller's newest 200 listings in every status. */
     @GetMapping("/my-listings")
     List<OwnerRoomListingResponse> myListings(Authentication authentication) {
-        var ownerId = actorId(authentication);
-        return listingService.findByOwner(ownerId).stream().map(this::toOwnerResponse).toList();
+        return views.ownerViews(listingService.findByOwner(actor(authentication).id()));
     }
 
     @GetMapping("/listings/{listingId}/images")
-    List<RoomImage> images(@PathVariable UUID listingId) {
-        return imageService.findByListingId(listingId);
+    List<RoomImage> images(Authentication authentication, @PathVariable UUID listingId) {
+        return imageService.findVisible(listingId, viewer(authentication));
     }
 
     @PostMapping("/listings/{listingId}/images")
     ResponseEntity<RoomImage> addImage(Authentication authentication, @PathVariable UUID listingId,
                                        @Valid @RequestBody AddRoomImageInput input) {
-        var image = imageService.add(listingId, actorId(authentication), isAdmin(authentication),
-                input.url(), input.sortOrder());
+        var image = imageService.add(actor(authentication), listingId, input.url(), input.sortOrder());
         return ResponseEntity.created(URI.create("/api/v1/rooms/images/" + image.getId())).body(image);
     }
 
     @DeleteMapping("/images/{imageId}")
     ResponseEntity<Void> deleteImage(Authentication authentication, @PathVariable UUID imageId) {
-        imageService.delete(imageId, actorId(authentication), isAdmin(authentication));
+        imageService.delete(actor(authentication), imageId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/listings/{listingId}/availability")
-    List<RoomAvailability> availability(@PathVariable UUID listingId) {
-        return availabilityService.findByListingId(listingId);
+    List<RoomAvailability> availability(Authentication authentication, @PathVariable UUID listingId) {
+        return availabilityService.findVisible(listingId, viewer(authentication));
     }
 
     @PostMapping("/listings/{listingId}/availability")
     ResponseEntity<RoomAvailability> createAvailability(Authentication authentication, @PathVariable UUID listingId,
                                                          @Valid @RequestBody CreateRoomAvailabilityInput input) {
-        var availability = availabilityService.create(listingId, actorId(authentication),
-                isAdmin(authentication), input);
+        var availability = availabilityService.create(actor(authentication), listingId, input);
         return ResponseEntity.created(URI.create("/api/v1/rooms/availability/" + availability.getId())).body(availability);
     }
 
     @DeleteMapping("/availability/{availabilityId}")
     ResponseEntity<Void> deleteAvailability(Authentication authentication, @PathVariable UUID availabilityId) {
-        availabilityService.delete(availabilityId, actorId(authentication), isAdmin(authentication));
+        availabilityService.delete(actor(authentication), availabilityId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/listings/{listingId}/bookings")
     List<RoomBooking> bookings(Authentication authentication, @PathVariable UUID listingId) {
-        return bookingService.findByListingId(listingId, actorId(authentication), isAdmin(authentication));
+        return bookingService.findByListingId(actor(authentication), listingId);
     }
 
     @PostMapping("/listings/{listingId}/bookings")
     ResponseEntity<RoomBooking> createBooking(Authentication authentication, @PathVariable UUID listingId,
                                                @Valid @RequestBody CreateRoomBookingInput input) {
-        var requesterId = actorId(authentication);
-        var booking = bookingService.create(listingId, requesterId, input);
+        var booking = bookingService.create(listingId, actor(authentication).id(), input);
         return ResponseEntity.created(URI.create("/api/v1/rooms/bookings/" + booking.getId())).body(booking);
     }
 
-    @PostMapping("/{roomId}/inquire")
+    @PostMapping({"/{listingId}/inquire", "/listings/{listingId}/inquire"})
     public ResponseEntity<RoomInquiryResponse> inquire(
-            Authentication authentication,
-            @PathVariable UUID roomId,
-            @Valid @RequestBody RoomInquiryInput input) {
-        return ResponseEntity.ok(inquiryService.inquire(Actor.require(authentication), roomId, input));
-    }
-
-    @PostMapping("/listings/{listingId}/inquire")
-    public ResponseEntity<RoomInquiryResponse> inquireByListingId(
             Authentication authentication,
             @PathVariable UUID listingId,
             @Valid @RequestBody RoomInquiryInput input) {
-        return inquire(authentication, listingId, input);
+        return ResponseEntity.ok(inquiryService.inquire(actor(authentication), listingId, input));
     }
 
     @GetMapping("/bookings/{bookingId}")
     RoomBooking booking(Authentication authentication, @PathVariable UUID bookingId) {
-        return bookingService.requireBooking(bookingId, actorId(authentication), isAdmin(authentication));
+        return bookingService.requireBooking(actor(authentication), bookingId);
     }
 
     @PatchMapping("/bookings/{bookingId}/status")
     RoomBooking updateBookingStatus(Authentication authentication, @PathVariable UUID bookingId,
                                      @Valid @RequestBody UpdateRoomBookingStatusInput input) {
-        return bookingService.updateStatus(bookingId, actorId(authentication), isAdmin(authentication), input.status());
+        return bookingService.updateStatus(actor(authentication), bookingId, input.status());
     }
 
     @DeleteMapping("/bookings/{bookingId}")
     ResponseEntity<Void> deleteBooking(Authentication authentication, @PathVariable UUID bookingId) {
-        bookingService.delete(bookingId, actorId(authentication), isAdmin(authentication));
+        bookingService.delete(actor(authentication), bookingId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my-bookings")
     List<RoomBooking> myBookings(Authentication authentication) {
-        return bookingService.findByRequester(actorId(authentication));
+        return bookingService.findByRequester(actor(authentication));
     }
 
+    /** The caller's newest 200 saved listings that are still public. */
     @GetMapping("/favorites")
     List<RoomListingResponse> favorites(Authentication authentication) {
-        var userId = actorId(authentication);
-        return favoriteService.findListingResponses(userId, listingService);
+        var actor = actor(authentication);
+        return views.publicViews(favoriteService.findSavedListings(actor.id()), actor);
     }
 
     @PostMapping({"/listings/{listingId}/favorite", "/{listingId}/favorite"})
     ResponseEntity<RoomListingResponse> favorite(Authentication authentication, @PathVariable UUID listingId) {
-        var userId = actorId(authentication);
-        favoriteService.favorite(userId, listingId);
-        var listing = listingService.findById(listingId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
+        var actor = actor(authentication);
+        favoriteService.favorite(actor.id(), listingId);
+        var listing = listingService.requireVisible(listingId, actor);
         return ResponseEntity.created(URI.create("/api/v1/rooms/favorites/" + listingId))
-                .body(toResponse(listing, userId));
+                .body(views.publicView(listing, actor));
     }
 
     @DeleteMapping({"/listings/{listingId}/favorite", "/{listingId}/favorite"})
     ResponseEntity<Void> unfavorite(Authentication authentication, @PathVariable UUID listingId) {
-        favoriteService.unfavorite(actorId(authentication), listingId);
+        favoriteService.unfavorite(actor(authentication).id(), listingId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/saved-searches")
     List<RoomSavedSearch> savedSearches(Authentication authentication) {
-        return savedSearchService.findByUserId(actorId(authentication));
+        return savedSearchService.findByUserId(actor(authentication).id());
     }
 
     @PostMapping("/saved-searches")
     ResponseEntity<RoomSavedSearch> createSavedSearch(Authentication authentication,
                                                        @Valid @RequestBody CreateSavedSearchInput input) {
-        var search = savedSearchService.create(actorId(authentication), input);
+        var search = savedSearchService.create(actor(authentication).id(), input);
         return ResponseEntity.created(URI.create("/api/v1/rooms/saved-searches/" + search.getId())).body(search);
     }
 
     @PatchMapping("/saved-searches/{searchId}")
     RoomSavedSearch updateSavedSearch(Authentication authentication, @PathVariable UUID searchId,
                                       @Valid @RequestBody UpdateSavedSearchInput input) {
-        return savedSearchService.update(searchId, actorId(authentication), input);
+        return savedSearchService.update(searchId, actor(authentication).id(), input);
     }
 
     @DeleteMapping("/saved-searches/{searchId}")
     ResponseEntity<Void> deleteSavedSearch(Authentication authentication, @PathVariable UUID searchId) {
-        savedSearchService.delete(searchId, actorId(authentication));
+        savedSearchService.delete(searchId, actor(authentication).id());
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/listings/{listingId}/report")
     ResponseEntity<RoomReport> report(Authentication authentication, @PathVariable UUID listingId,
                                       @Valid @RequestBody CreateReportInput input) {
-        var report = reportService.create(actorId(authentication),
-                new CreateReportInput(listingId, input.reason(), input.description()));
+        var report = reportService.create(actor(authentication), listingId, input);
         return ResponseEntity.created(URI.create("/api/v1/rooms/reports/" + report.getId())).body(report);
     }
 
     @GetMapping("/my-reports")
     List<RoomReport> myReports(Authentication authentication) {
-        return reportService.findByReporter(actorId(authentication));
+        return reportService.findByReporter(actor(authentication));
     }
 
     @GetMapping("/listings/{listingId}/analytics")
     Map<String, Long> analytics(Authentication authentication, @PathVariable UUID listingId) {
-        return analyticsService.summary(listingId, actorId(authentication), isAdmin(authentication));
+        var actor = actor(authentication);
+        return analyticsService.summary(listingId, actor.id(), actor.admin());
     }
 
     @GetMapping("/admin/reports")
     List<RoomReport> reviewQueue(Authentication authentication, @RequestParam(required = false) String status) {
-        if (!isAdmin(authentication)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Moderator access required");
-        }
-        return reportService.findReviewQueue(status);
+        return reportService.findReviewQueue(actor(authentication), status);
     }
 
     @PostMapping("/admin/reports/{reportId}/review")
     RoomReport reviewReport(Authentication authentication, @PathVariable UUID reportId,
                             @RequestParam String status, @RequestParam(required = false) String resolution) {
-        return reportService.review(reportId, actorId(authentication), isAdmin(authentication), status, resolution);
+        return reportService.review(actor(authentication), reportId, status, resolution);
     }
 
     @PostMapping("/admin/listings/{listingId}/moderate")
     OwnerRoomListingResponse moderate(Authentication authentication, @PathVariable UUID listingId,
                                       @RequestParam String status) {
-        var listing = listingService.moderate(listingId, actorId(authentication), status, isAdmin(authentication));
-        return toOwnerResponse(listing);
-    }
-
-    private RoomListingResponse toResponse(RoomListing listing, UUID viewerId) {
-        var amenities = listingService.amenitiesFor(listing.getId());
-        var preferences = listingService.preferencesFor(listing.getId());
-        var saved = viewerId != null && favoriteService.isSaved(listing.getId(), viewerId);
-        return RoomListingResponse.from(listing, amenities, preferences, saved);
-    }
-
-    private OwnerRoomListingResponse toOwnerResponse(RoomListing listing) {
-        return OwnerRoomListingResponse.from(listing,
-                listingService.amenitiesFor(listing.getId()),
-                listingService.preferencesFor(listing.getId()));
+        return views.ownerView(listingService.moderate(actor(authentication), listingId, status));
     }
 }

@@ -826,25 +826,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AssistantCitation'
-  /rooms:
+  /rooms/amenities:
     get:
-      operationId: listRoomListings
-      summary: List room listings
-      parameters:
-        - name: location
-          in: query
-          schema: { type: string }
+      operationId: listRoomAmenities
+      summary: List the amenity catalog
+      security: []
       responses:
         '200':
-          description: Room listings
+          description: Amenity catalog entries
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/RoomListing' }
+                items: { $ref: '#/components/schemas/RoomAmenityCatalogEntry' }
+  /rooms/listings:
+    get:
+      operationId: listRoomListings
+      summary: Search published room listings
+      description: >-
+        Public. Returns active and paused listings only, newest first; a client-supplied sort is ignored. Page size is
+        capped at 500. Coordinates in each listing are rounded to 2 decimals.
+      security: []
+      parameters:
+        - { name: location, in: query, required: false, description: Alias of city (city wins when both are set), schema: { type: string } }
+        - { name: city, in: query, required: false, schema: { type: string } }
+        - { name: state, in: query, required: false, schema: { type: string } }
+        - { name: roomType, in: query, required: false, schema: { type: string } }
+        - { name: dietaryPreference, in: query, required: false, schema: { $ref: '#/components/schemas/RoomDietaryPreference' } }
+        - { name: genderPreference, in: query, required: false, schema: { $ref: '#/components/schemas/RoomGenderPreference' } }
+        - { name: minRent, in: query, required: false, schema: { type: number } }
+        - { name: maxRent, in: query, required: false, schema: { type: number } }
+        - { name: privateBathOnly, in: query, required: false, description: When true only PRIVATE_ATTACHED bathrooms match, schema: { type: boolean } }
+        - { name: lat, in: query, required: false, schema: { type: number, minimum: -90, maximum: 90 } }
+        - { name: lng, in: query, required: false, schema: { type: number, minimum: -180, maximum: 180 } }
+        - { name: radiusMiles, in: query, required: false, schema: { type: number, exclusiveMinimum: 0 } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 500, default: 20 } }
+      responses:
+        '200':
+          description: One page of public room listings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomListingPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
     post:
       operationId: createRoomListing
       summary: Create room listing
+      description: The listing starts as a draft owned by the caller.
       requestBody:
         required: true
         content:
@@ -853,133 +881,378 @@ paths:
       responses:
         '201':
           description: Listing created
+          headers:
+            Location: { description: URL of the new listing, schema: { type: string } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnerRoomListing' }
-  /rooms/saved:
-    get:
-      operationId: listSavedRoomListings
-      summary: List saved room listings
-      responses:
-        '200':
-          description: Saved room listings
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/RoomListing' }
-  /rooms/my-listings:
-    get:
-      operationId: listMyRoomListings
-      summary: List my room listings
-      responses:
-        '200':
-          description: My room listings
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/OwnerRoomListing' }
-  /rooms/{roomId}:
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rooms/listings/{listingId}:
+    parameters:
+      - $ref: '#/components/parameters/RoomListingId'
     get:
       operationId: getRoomListing
-      summary: Get room listing
-      parameters:
-        - name: roomId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+      summary: Get a published room listing
+      description: Public. Only active and paused listings are returned; any other status is a 404, even for the owner.
+      security: []
       responses:
         '200':
-          description: Room listing detail
+          description: Public room listing
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RoomListing' }
-  /rooms/{roomId}/owner:
-    get:
-      operationId: getRoomListingForOwner
-      summary: Get room listing for owner
-      parameters:
-        - name: roomId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateRoomListing
+      summary: Update room listing
+      description: >-
+        Owner or admin. Null fields are left unchanged; amenities replaces the whole set when present. A status change
+        must follow the listing transition rules.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRoomListingInput' }
       responses:
         '200':
-          description: Owner-facing room listing detail
+          description: Updated listing
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnerRoomListing' }
-  /rooms/{roomId}/publish:
-    post:
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+    delete:
+      operationId: deleteRoomListing
+      summary: Delete room listing
+      description: Owner or admin.
+      responses:
+        '204': { description: Listing deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rooms/{listingId}:
+    parameters:
+      - $ref: '#/components/parameters/RoomListingId'
+    get:
+      operationId: getRoomListingShortPath
+      summary: Get a published room listing (short path)
+      description: Same operation as GET /rooms/listings/{listingId}. Public.
+      security: []
+      responses:
+        '200':
+          description: Public room listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomListing' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateRoomListingShortPath
+      summary: Update room listing (short path)
+      description: Same operation as PATCH /rooms/listings/{listingId}.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRoomListingInput' }
+      responses:
+        '200':
+          description: Updated listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+    delete:
+      operationId: deleteRoomListingShortPath
+      summary: Delete room listing (short path)
+      description: Same operation as DELETE /rooms/listings/{listingId}.
+      responses:
+        '204': { description: Listing deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rooms/listings/{listingId}/owner:
+    get:
+      operationId: getRoomListingForOwner
+      summary: Get room listing for owner
+      description: Owner or admin. Returns the listing in any status, with the exact address and coordinates.
+      parameters:
+        - $ref: '#/components/parameters/RoomListingId'
+      responses:
+        '200':
+          description: Owner-facing room listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rooms/{listingId}/owner:
+    get:
+      operationId: getRoomListingForOwnerShortPath
+      summary: Get room listing for owner (short path)
+      description: Same operation as GET /rooms/listings/{listingId}/owner.
+      parameters:
+        - $ref: '#/components/parameters/RoomListingId'
+      responses:
+        '200':
+          description: Owner-facing room listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rooms/listings/{listingId}/publish:
+    patch:
       operationId: publishRoomListing
       summary: Publish room listing
+      description: Owner only (admins cannot act for the owner). Sets the status to active.
       parameters:
-        - name: roomId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RoomListingId'
       responses:
         '200':
           description: Listing published
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnerRoomListing' }
-  /rooms/{roomId}/pause:
-    post:
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+  /rooms/{listingId}/publish:
+    patch:
+      operationId: publishRoomListingShortPath
+      summary: Publish room listing (short path)
+      description: Same operation as PATCH /rooms/listings/{listingId}/publish.
+      parameters:
+        - $ref: '#/components/parameters/RoomListingId'
+      responses:
+        '200':
+          description: Listing published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+  /rooms/listings/{listingId}/pause:
+    patch:
       operationId: pauseRoomListing
       summary: Pause room listing
+      description: Owner only (admins cannot act for the owner). Sets the status to paused.
       parameters:
-        - name: roomId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RoomListingId'
       responses:
         '200':
           description: Listing paused
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnerRoomListing' }
-  /rooms/{roomId}/archive:
-    post:
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+  /rooms/{listingId}/pause:
+    patch:
+      operationId: pauseRoomListingShortPath
+      summary: Pause room listing (short path)
+      description: Same operation as PATCH /rooms/listings/{listingId}/pause.
+      parameters:
+        - $ref: '#/components/parameters/RoomListingId'
+      responses:
+        '200':
+          description: Listing paused
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+  /rooms/listings/{listingId}/archive:
+    patch:
       operationId: archiveRoomListing
       summary: Archive room listing
+      description: Owner only (admins cannot act for the owner). Sets the status to archived.
       parameters:
-        - name: roomId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RoomListingId'
       responses:
         '200':
           description: Listing archived
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnerRoomListing' }
-  /rooms/{roomId}/bookings:
-    get:
-      operationId: listRoomBookings
-      summary: List room bookings
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+  /rooms/{listingId}/archive:
+    patch:
+      operationId: archiveRoomListingShortPath
+      summary: Archive room listing (short path)
+      description: Same operation as PATCH /rooms/listings/{listingId}/archive.
       parameters:
-        - name: roomId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RoomListingId'
       responses:
         '200':
-          description: Room bookings
+          description: Listing archived
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+  /rooms/my-listings:
+    get:
+      operationId: listMyRoomListings
+      summary: List my room listings
+      description: The caller's newest 200 listings in every status.
+      responses:
+        '200':
+          description: The caller's listings
           content:
             application/json:
               schema:
                 type: array
+                maxItems: 200
+                items: { $ref: '#/components/schemas/OwnerRoomListing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rooms/listings/{listingId}/images:
+    parameters:
+      - $ref: '#/components/parameters/RoomListingId'
+    get:
+      operationId: listRoomImages
+      summary: List listing images
+      description: Public for active and paused listings; the owner and admins also see other statuses.
+      security: []
+      responses:
+        '200':
+          description: Images ordered by sortOrder
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoomImage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: addRoomImage
+      summary: Add listing image
+      description: >-
+        Owner or admin. The URL must point at an image uploaded through ManaBandhu storage into the rooms bucket
+        under the owner's or acting admin's folder. A listing holds at most 20 images.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddRoomImageInput' }
+      responses:
+        '201':
+          description: Image added
+          headers:
+            Location: { description: URL of the new image, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomImage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: The listing already has 20 images, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+  /rooms/images/{imageId}:
+    delete:
+      operationId: deleteRoomImage
+      summary: Delete listing image
+      description: Owner of the image's listing or admin.
+      parameters:
+        - { name: imageId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Image deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rooms/listings/{listingId}/availability:
+    parameters:
+      - $ref: '#/components/parameters/RoomListingId'
+    get:
+      operationId: listRoomAvailability
+      summary: List listing availability windows
+      description: Public for active and paused listings; the owner and admins also see other statuses.
+      security: []
+      responses:
+        '200':
+          description: Availability windows ordered by availableFrom
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoomAvailability' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createRoomAvailability
+      summary: Add availability window
+      description: Owner or admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRoomAvailabilityInput' }
+      responses:
+        '201':
+          description: Availability window created
+          headers:
+            Location: { description: URL of the new availability window, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomAvailability' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rooms/availability/{availabilityId}:
+    delete:
+      operationId: deleteRoomAvailability
+      summary: Delete availability window
+      description: Owner of the window's listing or admin.
+      parameters:
+        - { name: availabilityId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Availability window deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rooms/listings/{listingId}/bookings:
+    parameters:
+      - $ref: '#/components/parameters/RoomListingId'
+    get:
+      operationId: listRoomBookings
+      summary: List bookings for a listing
+      description: Listing owner or admin. Newest 200 first.
+      responses:
+        '200':
+          description: Bookings for the listing
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
                 items: { $ref: '#/components/schemas/RoomBooking' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       operationId: createRoomBooking
-      summary: Create room booking
-      parameters:
-        - name: roomId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+      summary: Request a booking
+      description: Any signed-in user except the owner, on an active listing, with no other pending request for it.
       requestBody:
         required: true
         content:
@@ -987,14 +1260,214 @@ paths:
             schema: { $ref: '#/components/schemas/CreateRoomBookingInput' }
       responses:
         '201':
-          description: Booking created
+          description: Booking created with status pending
+          headers:
+            Location: { description: URL of the new booking, schema: { type: string } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RoomBooking' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Own listing, listing not active, or a pending request already exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /rooms/{listingId}/inquire:
+    post:
+      operationId: inquireAboutRoom
+      summary: Send an inquiry to the listing owner
+      description: Opens (or reuses) a conversation with the owner and posts the intro message.
+      parameters:
+        - $ref: '#/components/parameters/RoomListingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoomInquiryInput' }
+      responses:
+        '200':
+          description: Inquiry recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomInquiryResponse' }
+        '400': { description: 'Validation failed, or the caller owns the listing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The listing is not accepting inquiries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /rooms/listings/{listingId}/inquire:
+    post:
+      operationId: inquireAboutRoomListingPath
+      summary: Send an inquiry to the listing owner (listings path)
+      description: Same operation as POST /rooms/{listingId}/inquire.
+      parameters:
+        - $ref: '#/components/parameters/RoomListingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoomInquiryInput' }
+      responses:
+        '200':
+          description: Inquiry recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomInquiryResponse' }
+        '400': { description: 'Validation failed, or the caller owns the listing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The listing is not accepting inquiries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /rooms/bookings/{bookingId}:
+    parameters:
+      - { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getRoomBooking
+      summary: Get booking
+      description: The requester, the listing owner, or an admin.
+      responses:
+        '200':
+          description: Booking
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomBooking' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteRoomBooking
+      summary: Delete booking
+      description: The requester or an admin.
+      responses:
+        '204': { description: Booking deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rooms/bookings/{bookingId}/status:
+    patch:
+      operationId: updateRoomBookingStatus
+      summary: Change booking status
+      description: >-
+        The listing owner accepts or rejects; the requester cancels (admins may do either). Allowed transitions are
+        pending to accepted, rejected or cancelled, and accepted to cancelled. Setting the current status is a no-op.
+      parameters:
+        - { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRoomBookingStatusInput' }
+      responses:
+        '200':
+          description: Updated booking
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomBooking' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+  /rooms/my-bookings:
+    get:
+      operationId: listMyRoomBookings
+      summary: List my booking requests
+      description: Bookings the caller requested, newest 200 first.
+      responses:
+        '200':
+          description: The caller's booking requests
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items: { $ref: '#/components/schemas/RoomBooking' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rooms/favorites:
+    get:
+      operationId: listFavoriteRoomListings
+      summary: List saved room listings
+      description: The caller's newest 200 saved listings that are still public.
+      responses:
+        '200':
+          description: Saved listings
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items: { $ref: '#/components/schemas/RoomListing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rooms/listings/{listingId}/favorite:
+    parameters:
+      - $ref: '#/components/parameters/RoomListingId'
+    post:
+      operationId: favoriteRoomListing
+      summary: Save a room listing
+      description: Idempotent; saving an already saved listing returns it again. Only active listings can be saved.
+      responses:
+        '201':
+          description: Listing saved
+          headers:
+            Location: { description: URL of the favorite, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomListing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The listing is not active
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    delete:
+      operationId: unfavoriteRoomListing
+      summary: Remove a saved room listing
+      responses:
+        '204': { description: Listing removed from saved }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rooms/{listingId}/favorite:
+    parameters:
+      - $ref: '#/components/parameters/RoomListingId'
+    post:
+      operationId: favoriteRoomListingShortPath
+      summary: Save a room listing (short path)
+      description: Same operation as POST /rooms/listings/{listingId}/favorite.
+      responses:
+        '201':
+          description: Listing saved
+          headers:
+            Location: { description: URL of the favorite, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomListing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The listing is not active
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    delete:
+      operationId: unfavoriteRoomListingShortPath
+      summary: Remove a saved room listing (short path)
+      description: Same operation as DELETE /rooms/listings/{listingId}/favorite.
+      responses:
+        '204': { description: Listing removed from saved }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /rooms/saved-searches:
     get:
       operationId: listSavedSearches
       summary: List saved searches
+      description: The caller's newest 100 saved searches.
       responses:
         '200':
           description: Saved searches
@@ -1002,10 +1475,13 @@ paths:
             application/json:
               schema:
                 type: array
+                maxItems: 100
                 items: { $ref: '#/components/schemas/SavedSearch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       operationId: createSavedSearch
       summary: Create saved search
+      description: alertsEnabled defaults to true when omitted.
       requestBody:
         required: true
         content:
@@ -1014,49 +1490,56 @@ paths:
       responses:
         '201':
           description: Saved search created
+          headers:
+            Location: { description: URL of the new saved search, schema: { type: string } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SavedSearch' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: The caller already has a saved search with this name
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
   /rooms/saved-searches/{searchId}:
+    parameters:
+      - { name: searchId, in: path, required: true, schema: { type: string, format: uuid } }
     patch:
       operationId: updateSavedSearch
       summary: Update saved search
-      parameters:
-        - name: searchId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+      description: Owner only. Null fields are left unchanged.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CreateSavedSearchInput' }
+            schema: { $ref: '#/components/schemas/UpdateSavedSearchInput' }
       responses:
         '200':
           description: Saved search updated
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SavedSearch' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
     delete:
       operationId: deleteSavedSearch
       summary: Delete saved search
-      parameters:
-        - name: searchId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+      description: Owner only.
       responses:
-        '204':
-          description: Saved search deleted
+        '204': { description: Saved search deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /rooms/listings/{listingId}/report:
     post:
       operationId: reportRoomListing
       summary: Report room listing
+      description: Any signed-in user who can see the listing, except its owner; one open report per listing and reporter.
       parameters:
-        - name: listingId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RoomListingId'
       requestBody:
         required: true
         content:
@@ -1064,45 +1547,58 @@ paths:
             schema: { $ref: '#/components/schemas/CreateReportInput' }
       responses:
         '201':
-          description: Report created
+          description: Report created with status open
+          headers:
+            Location: { description: URL of the new report, schema: { type: string } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RoomReport' }
+        '400': { description: 'Validation failed, or the caller owns the listing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The caller already has an open report for this listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
   /rooms/my-reports:
     get:
       operationId: listMyReports
       summary: List my reports
+      description: Reports the caller submitted, newest 200 first.
       responses:
         '200':
-          description: Reports submitted by the user
+          description: Reports submitted by the caller
           content:
             application/json:
               schema:
                 type: array
+                maxItems: 200
                 items: { $ref: '#/components/schemas/RoomReport' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /rooms/listings/{listingId}/analytics:
     get:
       operationId: getRoomAnalytics
       summary: Get room analytics
+      description: Listing owner or admin.
       parameters:
-        - name: listingId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RoomListingId'
       responses:
         '200':
-          description: Owner-only analytics for a listing
+          description: Event counts for the listing
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RoomAnalytics' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /rooms/admin/reports:
     get:
       operationId: listReviewQueue
       summary: List review queue
+      description: Admin only. Newest 200 reports in the given status.
       parameters:
-        - name: status
-          in: query
-          schema: { type: string }
+        - { name: status, in: query, required: false, schema: { $ref: '#/components/schemas/RoomReportStatus', default: open } }
       responses:
         '200':
           description: Moderator review queue
@@ -1110,48 +1606,49 @@ paths:
             application/json:
               schema:
                 type: array
+                maxItems: 200
                 items: { $ref: '#/components/schemas/RoomReport' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ModeratorRequired' }
   /rooms/admin/reports/{reportId}/review:
     post:
       operationId: reviewReport
       summary: Review report
+      description: Admin only. Records the caller as reviewer and stamps reviewedAt.
       parameters:
-        - name: reportId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: status
-          in: query
-          required: true
-          schema: { type: string }
-        - name: resolution
-          in: query
-          schema: { type: string }
+        - { name: reportId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: status, in: query, required: true, schema: { $ref: '#/components/schemas/RoomReportStatus' } }
+        - { name: resolution, in: query, required: false, schema: { type: string, maxLength: 4000 } }
       responses:
         '200':
           description: Report reviewed
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RoomReport' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ModeratorRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /rooms/admin/listings/{listingId}/moderate:
     post:
       operationId: moderateRoomListing
       summary: Moderate room listing
+      description: Admin only. The target status must follow the admin transition rules (for example active to rejected).
       parameters:
-        - name: listingId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: status
-          in: query
-          required: true
-          schema: { type: string }
+        - $ref: '#/components/parameters/RoomListingId'
+        - { name: status, in: query, required: true, schema: { $ref: '#/components/schemas/RoomListingStatus' } }
       responses:
         '200':
           description: Listing moderated
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnerRoomListing' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ModeratorRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
   /rides:
     get:
       operationId: listRideOffers
@@ -2501,141 +2998,350 @@ components:
         environment: { type: string }
         ref: { type: string }
         requestedAt: { type: string, format: date-time }
+    RoomListingStatus:
+      type: string
+      description: Stored lowercase. Only active and paused listings are public.
+      enum: [draft, active, paused, archived, rejected, rented]
+    RoomBookingStatus:
+      type: string
+      enum: [pending, accepted, rejected, cancelled]
+    RoomReportStatus:
+      type: string
+      enum: [open, in_review, resolved, dismissed]
+    RoomDietaryPreference:
+      type: string
+      enum: [ANY, PURE_VEG, VEG_PREFERRED, VEG_FRIENDLY, NON_VEG_ALLOWED]
+    RoomGenderPreference:
+      type: string
+      enum: [ANY, MALE_ONLY, FEMALE_ONLY]
+    RoomBathroomType:
+      type: string
+      enum: [SHARED, PRIVATE_DEDICATED, PRIVATE_ATTACHED]
+    RoomLeaseTerm:
+      type: string
+      enum: [FLEXIBLE, SHORT_TERM, LONG_TERM, SUBLEASE, MONTH_TO_MONTH, SIX_MONTHS, ONE_YEAR]
+    ApiError:
+      type: object
+      description: Error body for rule violations raised by services. Bean-validation failures use a problem+json body instead.
+      required: [error, message]
+      properties:
+        error: { type: string }
+        message: { type: string }
     RoomListing:
       type: object
       additionalProperties: false
-      description: Public listing response. The exact address is never returned here; it is only available to the owner via OwnerRoomListing.
-      required: [id, ownerId, title, price, roomType, status, broadLocation, createdAt, updatedAt, savedByViewer]
+      description: >-
+        Public listing response. Never carries the owner's user id or the exact address, and latitude/longitude are
+        rounded to 2 decimals (about 1 km). isOwner tells the client whether to show owner actions; the owner reads
+        exact values through OwnerRoomListing.
+      required: [id, title, description, price, roomType, status, broadLocation, latitude, longitude, createdAt, updatedAt, amenities, preferences, savedByViewer, isOwner, coverImageUrl, dietaryPreference, genderPreference, bathroomType, utilitiesIncluded, estUtilityMonthly, securityDeposit, leaseTerm, isVerifiedHost, universityShuttleAccessible, stateCode, county]
       properties:
         id: { type: string, format: uuid }
-        ownerId: { type: string, format: uuid }
         title: { type: string, maxLength: 200 }
-        description: { type: string, maxLength: 4000 }
-        price: { type: number, format: double }
-        roomType: { type: string }
-        status: { type: string, enum: [DRAFT, ACTIVE, PAUSED, ARCHIVED, REJECTED] }
-        broadLocation: { type: string, maxLength: 200 }
-        latitude: { type: number, format: double }
-        longitude: { type: number, format: double }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        price: { type: number }
+        roomType: { type: string, maxLength: 50, description: Free text }
+        status: { $ref: '#/components/schemas/RoomListingStatus' }
+        broadLocation: { type: [string, 'null'], maxLength: 200 }
+        latitude: { type: [number, 'null'], description: Rounded to 2 decimals }
+        longitude: { type: [number, 'null'], description: Rounded to 2 decimals }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         amenities: { type: array, items: { type: string } }
         preferences: { type: array, items: { type: string } }
-        savedByViewer: { type: boolean }
+        savedByViewer: { type: boolean, description: False for anonymous viewers }
+        isOwner: { type: boolean, description: True when the viewer owns the listing }
+        coverImageUrl: { type: [string, 'null'], description: URL of the first image by sortOrder }
+        dietaryPreference: { anyOf: [{ $ref: '#/components/schemas/RoomDietaryPreference' }, { type: 'null' }] }
+        genderPreference: { anyOf: [{ $ref: '#/components/schemas/RoomGenderPreference' }, { type: 'null' }] }
+        bathroomType: { anyOf: [{ $ref: '#/components/schemas/RoomBathroomType' }, { type: 'null' }] }
+        utilitiesIncluded: { type: [boolean, 'null'] }
+        estUtilityMonthly: { type: [number, 'null'] }
+        securityDeposit: { type: [number, 'null'] }
+        leaseTerm: { anyOf: [{ $ref: '#/components/schemas/RoomLeaseTerm' }, { type: 'null' }] }
+        isVerifiedHost: { type: [boolean, 'null'] }
+        universityShuttleAccessible: { type: [boolean, 'null'] }
+        stateCode: { type: [string, 'null'], maxLength: 50 }
+        county: { type: [string, 'null'], maxLength: 100 }
+    RoomListingPage:
+      type: object
+      description: >-
+        Spring Data page rendered directly (serialization mode direct). Only content and the page counters are part
+        of the contract; pageable and sort carry Spring's own shape.
+      required: [content, totalElements, totalPages, number, size, numberOfElements, first, last, empty]
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/RoomListing' } }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        number: { type: integer, description: Zero-based page index }
+        size: { type: integer }
+        numberOfElements: { type: integer }
+        first: { type: boolean }
+        last: { type: boolean }
+        empty: { type: boolean }
+        pageable: { type: object }
+        sort: { type: object }
     OwnerRoomListing:
       type: object
       additionalProperties: false
-      description: Owner-facing listing response that includes the exact address.
-      required: [id, ownerId, title, price, roomType, status, broadLocation, exactAddress, createdAt, updatedAt]
+      description: Owner-facing listing response with the owner id, exact address and exact coordinates. Returned only to the owner or an admin.
+      required: [id, ownerId, title, description, price, roomType, status, broadLocation, exactAddress, latitude, longitude, createdAt, updatedAt, amenities, preferences, coverImageUrl, dietaryPreference, genderPreference, bathroomType, utilitiesIncluded, estUtilityMonthly, securityDeposit, leaseTerm, isVerifiedHost, universityShuttleAccessible, stateCode, county]
       properties:
         id: { type: string, format: uuid }
         ownerId: { type: string, format: uuid }
         title: { type: string, maxLength: 200 }
-        description: { type: string, maxLength: 4000 }
-        price: { type: number, format: double }
-        roomType: { type: string }
-        status: { type: string, enum: [DRAFT, ACTIVE, PAUSED, ARCHIVED, REJECTED] }
-        broadLocation: { type: string, maxLength: 200 }
-        exactAddress: { type: string, maxLength: 4000 }
-        latitude: { type: number, format: double }
-        longitude: { type: number, format: double }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        price: { type: number }
+        roomType: { type: string, maxLength: 50, description: Free text }
+        status: { $ref: '#/components/schemas/RoomListingStatus' }
+        broadLocation: { type: [string, 'null'], maxLength: 200 }
+        exactAddress: { type: [string, 'null'], maxLength: 4000 }
+        latitude: { type: [number, 'null'], description: Exact latitude }
+        longitude: { type: [number, 'null'], description: Exact longitude }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         amenities: { type: array, items: { type: string } }
         preferences: { type: array, items: { type: string } }
+        coverImageUrl: { type: [string, 'null'], description: URL of the first image by sortOrder }
+        dietaryPreference: { anyOf: [{ $ref: '#/components/schemas/RoomDietaryPreference' }, { type: 'null' }] }
+        genderPreference: { anyOf: [{ $ref: '#/components/schemas/RoomGenderPreference' }, { type: 'null' }] }
+        bathroomType: { anyOf: [{ $ref: '#/components/schemas/RoomBathroomType' }, { type: 'null' }] }
+        utilitiesIncluded: { type: [boolean, 'null'] }
+        estUtilityMonthly: { type: [number, 'null'] }
+        securityDeposit: { type: [number, 'null'] }
+        leaseTerm: { anyOf: [{ $ref: '#/components/schemas/RoomLeaseTerm' }, { type: 'null' }] }
+        isVerifiedHost: { type: [boolean, 'null'] }
+        universityShuttleAccessible: { type: [boolean, 'null'] }
+        stateCode: { type: [string, 'null'], maxLength: 50 }
+        county: { type: [string, 'null'], maxLength: 100 }
     CreateRoomListingInput:
       type: object
       additionalProperties: false
-      required: [title, price, roomType, broadLocation]
+      description: Omitted preference fields take their defaults (ANY, ANY, SHARED, FLEXIBLE, false, 0).
+      required: [title, price, roomType]
       properties:
-        title: { type: string, maxLength: 200 }
+        title: { type: string, minLength: 1, maxLength: 200, description: Must not be blank }
         description: { type: string, maxLength: 4000 }
-        price: { type: number, format: double }
-        roomType: { type: string, enum: [PRIVATE, SHARED, ENTIRE] }
+        price: { type: number, exclusiveMinimum: 0, maximum: 99999999.99, description: At most 2 decimals }
+        roomType: { type: string, minLength: 1, maxLength: 50, description: Free text; must not be blank }
         broadLocation: { type: string, maxLength: 200 }
         exactAddress: { type: string, maxLength: 4000 }
-        latitude: { type: number, format: double }
-        longitude: { type: number, format: double }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        dietaryPreference: { $ref: '#/components/schemas/RoomDietaryPreference' }
+        genderPreference: { $ref: '#/components/schemas/RoomGenderPreference' }
+        bathroomType: { $ref: '#/components/schemas/RoomBathroomType' }
+        utilitiesIncluded: { type: boolean }
+        estUtilityMonthly: { type: number, minimum: 0, maximum: 99999999.99 }
+        securityDeposit: { type: number, minimum: 0, maximum: 99999999.99 }
+        leaseTerm: { $ref: '#/components/schemas/RoomLeaseTerm' }
+        universityShuttleAccessible: { type: boolean }
+        stateCode: { type: string, maxLength: 50 }
+        county: { type: string, maxLength: 100 }
+        amenities:
+          type: array
+          maxItems: 30
+          items: { type: string, minLength: 1, maxLength: 80 }
+    UpdateRoomListingInput:
+      type: object
+      additionalProperties: false
+      description: >-
+        Partial update. Null or omitted fields are left unchanged; amenities replaces the whole set when present. A
+        status change must follow the transition rules (owner draft to active or archived, active to paused, archived
+        or rented, paused to active, archived or rented, rented to active or archived; admins may also reject an active
+        listing and move a rejected one to active or draft), otherwise 409.
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200, description: Must not be blank when present }
+        description: { type: string, maxLength: 4000 }
+        price: { type: number, exclusiveMinimum: 0, maximum: 99999999.99, description: At most 2 decimals }
+        roomType: { type: string, minLength: 1, maxLength: 50, description: Free text; must not be blank when present }
+        broadLocation: { type: string, maxLength: 200 }
+        exactAddress: { type: string, maxLength: 4000 }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        status: { $ref: '#/components/schemas/RoomListingStatus' }
+        dietaryPreference: { $ref: '#/components/schemas/RoomDietaryPreference' }
+        genderPreference: { $ref: '#/components/schemas/RoomGenderPreference' }
+        bathroomType: { $ref: '#/components/schemas/RoomBathroomType' }
+        utilitiesIncluded: { type: boolean }
+        estUtilityMonthly: { type: number, minimum: 0, maximum: 99999999.99 }
+        securityDeposit: { type: number, minimum: 0, maximum: 99999999.99 }
+        leaseTerm: { $ref: '#/components/schemas/RoomLeaseTerm' }
+        universityShuttleAccessible: { type: boolean }
+        stateCode: { type: string, maxLength: 50 }
+        county: { type: string, maxLength: 100 }
+        amenities:
+          type: array
+          maxItems: 30
+          items: { type: string, minLength: 1, maxLength: 80 }
+    RoomAmenityCatalogEntry:
+      type: object
+      additionalProperties: false
+      required: [id, code, label, category, iconName, active, sortOrder]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, maxLength: 50 }
+        label: { type: string, maxLength: 100 }
+        category: { type: string, maxLength: 50 }
+        iconName: { type: [string, 'null'], maxLength: 50 }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+    RoomImage:
+      type: object
+      additionalProperties: false
+      required: [id, listingId, url, sortOrder, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        url: { type: string, maxLength: 500 }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+    AddRoomImageInput:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url: { type: string, minLength: 1, maxLength: 500, description: Public URL of an image uploaded through ManaBandhu storage }
+        sortOrder: { type: integer, minimum: 0, maximum: 100, default: 0 }
+    RoomAvailability:
+      type: object
+      additionalProperties: false
+      required: [id, listingId, availableFrom, availableTo, minStayMonths, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        availableFrom: { type: string, format: date }
+        availableTo: { type: string, format: date }
+        minStayMonths: { type: integer }
+        createdAt: { type: string, format: date-time }
+    CreateRoomAvailabilityInput:
+      type: object
+      additionalProperties: false
+      description: availableTo must be on or after availableFrom.
+      required: [availableFrom, availableTo]
+      properties:
+        availableFrom: { type: string, format: date }
+        availableTo: { type: string, format: date }
+        minStayMonths: { type: integer, minimum: 0, maximum: 36, default: 0 }
     CreateRoomBookingInput:
       type: object
       additionalProperties: false
-      required: [message]
       properties:
-        message: { type: string, maxLength: 4000 }
+        message: { type: [string, 'null'], maxLength: 4000 }
+    UpdateRoomBookingStatusInput:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/RoomBookingStatus' }
     RoomBooking:
       type: object
       additionalProperties: false
-      required: [id, listingId, requesterId, status, createdAt]
+      required: [id, listingId, requesterId, status, message, createdAt]
       properties:
         id: { type: string, format: uuid }
         listingId: { type: string, format: uuid }
         requesterId: { type: string, format: uuid }
-        status: { type: string, enum: [PENDING, ACCEPTED, REJECTED, CANCELLED] }
-        message: { type: string, maxLength: 4000 }
+        status: { $ref: '#/components/schemas/RoomBookingStatus' }
+        message: { type: [string, 'null'], maxLength: 4000 }
         createdAt: { type: string, format: date-time }
+    RoomInquiryInput:
+      type: object
+      additionalProperties: false
+      required: [moveInDate, introMessage]
+      properties:
+        moveInDate: { type: string, format: date, description: Today or later }
+        stayDurationMonths: { type: [integer, 'null'], minimum: 1, maximum: 36, description: Null when the guest is flexible }
+        dietaryLifestyle: { type: string, maxLength: 50 }
+        introMessage: { type: string, minLength: 1, maxLength: 4000, description: Must not be blank }
+    RoomInquiryResponse:
+      type: object
+      additionalProperties: false
+      required: [inquiryId, conversationId]
+      properties:
+        inquiryId: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid, description: Chat conversation with the owner; a repeat inquiry reuses it }
     CreateSavedSearchInput:
       type: object
       additionalProperties: false
+      description: minPrice must not exceed maxPrice.
       required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120, description: Must not be blank; unique per user }
+        query: { type: string, maxLength: 200 }
+        city: { type: string, maxLength: 200 }
+        broadLocation: { type: string, maxLength: 200 }
+        roomType: { type: string, maxLength: 50 }
+        minPrice: { type: number, minimum: 0, maximum: 99999999.99 }
+        maxPrice: { type: number, minimum: 0, maximum: 99999999.99 }
+        availableFrom: { type: string, format: date }
+        furnished: { type: boolean }
+        alertsEnabled: { type: boolean, default: true }
+    UpdateSavedSearchInput:
+      type: object
+      additionalProperties: false
+      description: Partial update; null or omitted fields are left unchanged. minPrice must not exceed maxPrice when both are sent.
       properties:
         name: { type: string, maxLength: 120 }
         query: { type: string, maxLength: 200 }
         city: { type: string, maxLength: 200 }
         broadLocation: { type: string, maxLength: 200 }
-        roomType: { type: string, maxLength: 20 }
-        minPrice: { type: number, format: double }
-        maxPrice: { type: number, format: double }
+        roomType: { type: string, maxLength: 50 }
+        minPrice: { type: number, minimum: 0, maximum: 99999999.99 }
+        maxPrice: { type: number, minimum: 0, maximum: 99999999.99 }
         availableFrom: { type: string, format: date }
         furnished: { type: boolean }
         alertsEnabled: { type: boolean }
     SavedSearch:
       type: object
       additionalProperties: false
-      required: [id, userId, name, alertsEnabled, createdAt]
+      required: [id, userId, name, query, city, broadLocation, roomType, minPrice, maxPrice, availableFrom, furnished, alertsEnabled, lastNotifiedAt, createdAt]
       properties:
         id: { type: string, format: uuid }
         userId: { type: string, format: uuid }
         name: { type: string, maxLength: 120 }
-        query: { type: string, maxLength: 200 }
-        city: { type: string, maxLength: 200 }
-        broadLocation: { type: string, maxLength: 200 }
-        roomType: { type: string, maxLength: 20 }
-        minPrice: { type: number, format: double }
-        maxPrice: { type: number, format: double }
-        availableFrom: { type: string, format: date }
-        furnished: { type: boolean }
+        query: { type: [string, 'null'], maxLength: 200 }
+        city: { type: [string, 'null'], maxLength: 200 }
+        broadLocation: { type: [string, 'null'], maxLength: 200 }
+        roomType: { type: [string, 'null'], maxLength: 50 }
+        minPrice: { type: [number, 'null'] }
+        maxPrice: { type: [number, 'null'] }
+        availableFrom: { type: [string, 'null'], format: date }
+        furnished: { type: [boolean, 'null'] }
         alertsEnabled: { type: boolean }
+        lastNotifiedAt: { type: [string, 'null'], format: date-time }
         createdAt: { type: string, format: date-time }
     CreateReportInput:
       type: object
       additionalProperties: false
-      required: [listingId, reason]
+      description: The listing comes from the path.
+      required: [reason]
       properties:
-        listingId: { type: string, format: uuid }
-        reason: { type: string, maxLength: 80 }
+        reason: { type: string, minLength: 1, maxLength: 80, description: Must not be blank }
         description: { type: string, maxLength: 4000 }
     RoomReport:
       type: object
       additionalProperties: false
-      required: [id, listingId, reporterId, reason, status, createdAt]
+      required: [id, listingId, reporterId, reason, description, status, reviewerId, resolution, createdAt, reviewedAt]
       properties:
         id: { type: string, format: uuid }
         listingId: { type: string, format: uuid }
         reporterId: { type: string, format: uuid }
         reason: { type: string, maxLength: 80 }
-        description: { type: string, maxLength: 4000 }
-        status: { type: string, enum: [OPEN, IN_REVIEW, RESOLVED, DISMISSED] }
-        resolution: { type: string, maxLength: 4000 }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        status: { $ref: '#/components/schemas/RoomReportStatus' }
+        reviewerId: { type: [string, 'null'], format: uuid }
+        resolution: { type: [string, 'null'], maxLength: 4000 }
         createdAt: { type: string, format: date-time }
-        reviewedAt: { type: string, format: date-time }
+        reviewedAt: { type: [string, 'null'], format: date-time }
     RoomAnalytics:
       type: object
       additionalProperties: false
       required: [views, saves, inquiries]
       properties:
-        views: { type: integer }
-        saves: { type: integer }
-        inquiries: { type: integer }
+        views: { type: integer, format: int64 }
+        saves: { type: integer, format: int64 }
+        inquiries: { type: integer, format: int64 }
     RideOffer:
       type: object
       additionalProperties: false
@@ -2824,5 +3530,32 @@ components:
   responses:
     Unauthorized: { description: Authentication is required }
     Forbidden: { description: SUPER_ADMIN role is required }
+    BadRequest: { description: 'Validation failed (problem+json body), or a service rule rejected a value ({error, message} body)' }
+    NotOwner:
+      description: The caller does not own the resource and is not an admin
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    ModeratorRequired:
+      description: Admin (moderator) access is required
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    NotFound:
+      description: The resource does not exist or is not visible to the caller
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    InvalidTransition:
+      description: The status change is not allowed from the current status
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+  parameters:
+    RoomListingId:
+      name: listingId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
 security:
   - bearerAuth: []

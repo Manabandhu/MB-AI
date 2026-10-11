@@ -9,6 +9,7 @@ import { getIdentity } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { parseAuthRedirect } from '@/modules/auth/authHelpers';
 import { routeAfterAuth } from '@/modules/auth/postAuth';
+import { clearSavedRooms } from '@/modules/rooms/savedRoomsStore';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -346,6 +347,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       status: 'unauthenticated',
       isLoading: false,
     });
+    // Per-user caches must not leak to the next person who signs in on this device.
+    clearSavedRooms();
     router.replace('/welcome');
   },
 

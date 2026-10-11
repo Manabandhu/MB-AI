@@ -81,7 +81,7 @@ export async function searchAddressFree(query: string): Promise<FreeAddressSugge
     const res = await fetch(
       `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&bbox=-125,24,-66,49`,
     );
-    if (!res.ok) return [];
+    if (!res.ok) throw new Error(`Address search failed (${res.status}).`);
     const data = await res.json();
     return (data.features || []).map((f: PhotonFeature) => ({
       formattedAddress: [
@@ -99,9 +99,9 @@ export async function searchAddressFree(query: string): Promise<FreeAddressSugge
       lat: f.geometry?.coordinates?.[1] ?? 0,
       lng: f.geometry?.coordinates?.[0] ?? 0,
     }));
-  } catch (e) {
-    console.warn('Photon geocoding fallback error:', e);
-    return [];
+  } catch (error) {
+    // Surface the failure to the form instead of pretending there were no matches.
+    throw error instanceof Error ? error : new Error('Address search is unavailable.');
   }
 }
 
@@ -110,7 +110,8 @@ export async function lookupZipCodeFree(zip: string): Promise<ZipLookupResult | 
   if (!/^\d{5}$/.test(zip)) return null;
   try {
     const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-    if (!res.ok) return null;
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`ZIP lookup failed (${res.status}).`);
     const data = await res.json();
     const place = data.places?.[0];
     return place
@@ -121,8 +122,8 @@ export async function lookupZipCodeFree(zip: string): Promise<ZipLookupResult | 
           lng: parseFloat(place.longitude),
         }
       : null;
-  } catch {
-    return null;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error('ZIP lookup is unavailable.');
   }
 }
 

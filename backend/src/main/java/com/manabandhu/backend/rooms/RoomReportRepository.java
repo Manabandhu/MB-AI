@@ -8,9 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface RoomReportRepository extends JpaRepository<RoomReport, UUID> {
     List<RoomReport> findByListingIdOrderByCreatedAtDesc(UUID listingId);
 
-    List<RoomReport> findByStatusOrderByCreatedAtDesc(String status);
+    List<RoomReport> findByStatusOrderByCreatedAtDesc(String status, org.springframework.data.domain.Pageable pageable);
 
-    List<RoomReport> findByReporterIdOrderByCreatedAtDesc(UUID reporterId);
+    List<RoomReport> findByReporterIdOrderByCreatedAtDesc(UUID reporterId, org.springframework.data.domain.Pageable pageable);
 
     boolean existsByListingIdAndReporterIdAndStatus(UUID listingId, UUID reporterId, String status);
 }
