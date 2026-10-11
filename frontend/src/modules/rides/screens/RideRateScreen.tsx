@@ -1,163 +1,258 @@
-import { color as colors, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { getRideDetail, getRideRating, submitRideRating } from '@/modules/rides/api';
-import type { CreateRideRatingInput } from '@/modules/rides/types';
+import { KeyboardAvoidingView, Platform } from 'react-native';
+import { useTheme, XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import { getRide, listParticipants, submitRideRating } from '@/modules/rides/api';
+import { ChoiceChip } from '@/modules/rides/components/ChoiceChip';
+import { formatDeparture } from '@/modules/rides/components/RideListCard';
+import {
+  errorMessage,
+  isNotFound,
+  memberLabel,
+  statusIs,
+  statusLabel,
+} from '@/modules/rides/utils/rideFormat';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { StarRating } from '@/modules/shared/components/StarRating';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Screen } from '@/modules/shared/ui/Screen';
 import { TextField } from '@/modules/shared/ui/TextField';
 
+const SCORE_WORDS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
+
+/**
+ * One 1–5 rating per person per ride, only after the ride is completed. A passenger rates the driver (no
+ * `rateeId`); the driver picks which rider to rate from the participants list.
+ */
 export function RideRateScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const router = useRouter();
-  const [safety, setSafety] = useState(0);
-  const [timeliness, setTimeliness] = useState(0);
-  const [comfort, setComfort] = useState(0);
+  const theme = useTheme();
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const [score, setScore] = useState(0);
   const [comment, setComment] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [rateeId, setRateeId] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
-  const { data: ride, isLoading: loadingRide } = useQuery({
+  const rideQuery = useQuery({
     queryKey: ['rides', 'detail', rideId],
-    queryFn: () => getRideDetail(rideId),
-    enabled: Boolean(rideId),
+    queryFn: () => getRide(rideId),
+    enabled: Boolean(rideId) && isAuthenticated,
   });
-
-  const { data: existingRating } = useQuery({
-    queryKey: ['rides', 'rating', rideId],
-    queryFn: () => getRideRating(rideId),
-    enabled: Boolean(rideId),
+  const ride = rideQuery.data;
+  const participantsQuery = useQuery({
+    queryKey: ['rides', 'participants', rideId],
+    queryFn: () => listParticipants(rideId),
+    enabled: Boolean(ride?.isDriver),
   });
+  const riders = (participantsQuery.data ?? []).filter(
+    (p) => statusIs(p.role, 'rider') && p.userId !== userId,
+  );
 
   const mutation = useMutation({
-    mutationFn: (input: {
-      safetyRating: number;
-      timelinessRating: number;
-      comfortRating: number;
-      comment?: string;
-    }) => submitRideRating(rideId, input as CreateRideRatingInput),
-    onSuccess: () => setSuccess(true),
-    onError: (err: Error) => setError(err.message),
+    mutationFn: () =>
+      submitRideRating(rideId, {
+        rateeId: ride?.isDriver ? (rateeId ?? undefined) : undefined,
+        rating: score,
+        comment,
+      }),
+    onSuccess: () => setDone(true),
+    onError: (e) => setFormError(errorMessage(e)),
   });
 
-  function handleSubmit() {
-    setError(null);
-    if (safety === 0 || timeliness === 0 || comfort === 0) {
-      setError('Please rate all three categories.');
+  const submit = () => {
+    setFormError(null);
+    if (ride?.isDriver && !rateeId) {
+      setFormError('Choose the rider you want to rate.');
       return;
     }
-    mutation.mutate({
-      safetyRating: safety,
-      timelinessRating: timeliness,
-      comfortRating: comfort,
-      comment: comment.trim() || undefined,
-    });
-  }
+    if (score < 1) {
+      setFormError('Choose a rating from 1 to 5 stars.');
+      return;
+    }
+    mutation.mutate();
+  };
 
-  if (loadingRide) {
+  const content = () => {
+    if (!isAuthenticated || rideQuery.isLoading) {
+      return <LoadingState label="Loading ride…" />;
+    }
+    if (rideQuery.isError || !ride) {
+      return isNotFound(rideQuery.error) ? (
+        <ErrorState body="This ride no longer exists." title="Ride not found" />
+      ) : (
+        <ErrorState
+          body={errorMessage(rideQuery.error)}
+          onRetry={() => rideQuery.refetch()}
+          retryLabel="Retry"
+          title="Could not load this ride"
+        />
+      );
+    }
+    if (done) {
+      return (
+        <Card aria-live="polite" gap="$x3" variant="tinted">
+          <AppText variant="h3">Rating sent</AppText>
+          <AppText tone="muted">
+            Thank you. Ratings help riders and drivers choose who to travel with.
+          </AppText>
+          <XStack flexWrap="wrap" gap="$x2">
+            {ride.isDriver && riders.length > 1 ? (
+              <AppButton
+                label="Rate another rider"
+                onPress={() => {
+                  setDone(false);
+                  setScore(0);
+                  setComment('');
+                  setRateeId(null);
+                }}
+                variant="secondary"
+              />
+            ) : null}
+            <AppButton
+              label="Ride history"
+              onPress={() => router.replace('/rides/history' as Href)}
+            />
+          </XStack>
+        </Card>
+      );
+    }
+    if (!statusIs(ride.status, 'completed')) {
+      return (
+        <Card gap="$x2" variant="tinted">
+          <AppText variant="bodyStrong">Ratings open when the ride is completed</AppText>
+          <AppText tone="muted">
+            This ride is {statusLabel(ride.status).toLowerCase()}. The driver marks it completed on
+            arrival; then you can rate {ride.isDriver ? 'your riders' : 'the driver'}.
+          </AppText>
+        </Card>
+      );
+    }
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <LoadingState />
-      </SafeAreaView>
-    );
-  }
+      <YStack gap="$x4">
+        {ride.isDriver ? (
+          <YStack gap="$x2">
+            <AppText variant="label">Rider</AppText>
+            {participantsQuery.isLoading ? (
+              <LoadingState label="Loading riders…" />
+            ) : participantsQuery.isError ? (
+              <ErrorState
+                body={errorMessage(participantsQuery.error)}
+                compact
+                onRetry={() => participantsQuery.refetch()}
+                retryLabel="Retry"
+                title="Could not load riders"
+              />
+            ) : riders.length === 0 ? (
+              <AppText tone="muted">
+                Nobody rode with you on this trip, so there is no one to rate.
+              </AppText>
+            ) : (
+              <XStack aria-label="Rider to rate" flexWrap="wrap" gap="$x2" role="radiogroup">
+                {riders.map((r) => (
+                  <ChoiceChip
+                    key={r.userId}
+                    label={memberLabel(r.userId, 'rider')}
+                    onPress={() => setRateeId(r.userId)}
+                    radio
+                    selected={rateeId === r.userId}
+                  />
+                ))}
+              </XStack>
+            )}
+          </YStack>
+        ) : (
+          <AppText tone="muted">You are rating the driver of this ride.</AppText>
+        )}
 
-  if (existingRating && !success) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Text style={styles.successTitle}>Already rated</Text>
-          <Text style={styles.successBody}>
-            You have already rated this ride. Thank you for your feedback.
-          </Text>
-          <AppButton label="Ride history" onPress={() => router.replace('/rides/history')} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+        <YStack gap="$x2">
+          <AppText variant="label">Rating</AppText>
+          <XStack aria-label="Rating" gap="$x1" role="radiogroup">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <YStack
+                alignItems="center"
+                aria-checked={score === n}
+                aria-label={`${n} ${n === 1 ? 'star' : 'stars'}, ${SCORE_WORDS[n]}`}
+                cursor="pointer"
+                focusable
+                height="$touch"
+                justifyContent="center"
+                key={n}
+                onPress={() => setScore(n)}
+                pressStyle={{ opacity: 0.7 }}
+                role="radio"
+                width="$touch"
+              >
+                <AppIcon
+                  color={n <= score ? theme.warm?.val : theme.colorMuted?.val}
+                  name="star"
+                  size={28}
+                />
+              </YStack>
+            ))}
+          </XStack>
+          <AppText tone="muted" variant="caption">
+            {score ? SCORE_WORDS[score] : 'Tap a star'}
+          </AppText>
+        </YStack>
 
-  if (success) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Text style={styles.successTitle}>Thank you for rating</Text>
-          <Text style={styles.successBody}>Your feedback helps build trust in the community.</Text>
-          <AppButton label="Ride history" onPress={() => router.replace('/rides/history')} />
-        </View>
-      </SafeAreaView>
+        <TextField
+          label="Comment (optional)"
+          maxLength={4000}
+          multiline
+          onChangeText={setComment}
+          placeholder="What went well, or what could be better?"
+          value={comment}
+        />
+
+        {formError ? (
+          <AppText aria-live="polite" tone="danger">
+            {formError}
+          </AppText>
+        ) : null}
+
+        <XStack flexWrap="wrap" gap="$x2">
+          <AppButton
+            disabled={ride.isDriver && riders.length === 0}
+            label="Send rating"
+            loading={mutation.isPending}
+            onPress={submit}
+          />
+          <AppButton label="Cancel" onPress={() => router.back()} variant="ghost" />
+        </XStack>
+      </YStack>
     );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.container}>
-          <Text style={styles.eyebrow}>Rides</Text>
-          <Text style={styles.title}>Rate ride</Text>
-          <Text style={styles.subtitle}>Share feedback on safety, timeliness, and comfort.</Text>
-
-          {ride ? <Text style={styles.rideInfo}>{ride.title}</Text> : null}
-
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-          <View style={styles.form}>
-            <View style={styles.ratingGroup}>
-              <Text style={styles.ratingLabel}>Safety</Text>
-              <StarRating value={safety} onChange={setSafety} />
-            </View>
-            <View style={styles.ratingGroup}>
-              <Text style={styles.ratingLabel}>Timeliness</Text>
-              <StarRating value={timeliness} onChange={setTimeliness} />
-            </View>
-            <View style={styles.ratingGroup}>
-              <Text style={styles.ratingLabel}>Comfort</Text>
-              <StarRating value={comfort} onChange={setComfort} />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Comments (optional)</Text>
-              <TextField
-                placeholder="Share more details about your experience"
-                value={comment}
-                onChangeText={setComment}
-              />
-            </View>
-
-            <View style={styles.actions}>
-              <AppButton
-                label="Submit rating"
-                onPress={handleSubmit}
-                loading={mutation.isPending}
-              />
-              <AppButton label="Cancel" onPress={() => router.back()} variant="secondary" />
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <Screen>
+        <YStack gap="$x4">
+          <BackButton fallback="/rides/history" />
+          <YStack gap="$x1">
+            <AppText role="heading" variant="h2">
+              Rate ride
+            </AppText>
+            {ride ? (
+              <AppText tone="muted" variant="caption">
+                {ride.routeLabel} · {formatDeparture(ride.departureAt)}
+              </AppText>
+            ) : null}
+          </YStack>
+          {content()}
+        </YStack>
+      </Screen>
+    </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x5, maxWidth: 640, width: '100%' },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
-  title: { ...typography.h1, color: colors.ink },
-  subtitle: { ...typography.body, color: colors.muted, marginBottom: space.x4 },
-  rideInfo: { ...typography.bodyStrong, color: colors.primary, marginTop: space.x2 },
-  form: { gap: space.x4 },
-  ratingGroup: { gap: space.x2 },
-  ratingLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
-  inputGroup: { gap: space.x2 },
-  inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
-  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
-  successTitle: { ...typography.h2, color: colors.success, textAlign: 'center' },
-  successBody: { ...typography.body, color: colors.muted, textAlign: 'center' },
-});

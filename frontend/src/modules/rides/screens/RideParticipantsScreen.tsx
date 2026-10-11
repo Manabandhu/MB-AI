@@ -1,108 +1,124 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { listParticipants } from '@/modules/rides/api';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import { getRide, listParticipants } from '@/modules/rides/api';
+import { formatDeparture } from '@/modules/rides/components/RideListCard';
+import { errorMessage, memberLabel, statusIs } from '@/modules/rides/utils/rideFormat';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { Screen } from '@/modules/shared/ui/Screen';
 
+/** Who is on the ride (members only: driver, passengers, admins). */
 export function RideParticipantsScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
+  const router = useRouter();
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const rideQuery = useQuery({
+    queryKey: ['rides', 'detail', rideId],
+    queryFn: () => getRide(rideId),
+    enabled: Boolean(rideId) && isAuthenticated,
+  });
+  const query = useQuery({
     queryKey: ['rides', 'participants', rideId],
     queryFn: () => listParticipants(rideId),
-    enabled: Boolean(rideId),
+    enabled: Boolean(rideId) && isAuthenticated,
   });
+  const ride = rideQuery.data;
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <LoadingState />
-      </SafeAreaView>
-    );
-  }
-
-  if (isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
+  const body = () => {
+    if (!isAuthenticated || query.isLoading) {
+      return <LoadingState count={3} label="Loading participants…" variant="skeleton" />;
+    }
+    if (query.isError) {
+      return (
         <ErrorState
-          title="Unable to load participants"
-          body="Please check your connection and try again."
+          body={errorMessage(query.error)}
+          onRetry={() => query.refetch()}
           retryLabel="Retry"
-          onRetry={refetch}
+          title="Could not load participants"
         />
-      </SafeAreaView>
+      );
+    }
+    const people = query.data ?? [];
+    if (people.length === 0) {
+      return (
+        <EmptyState
+          body="Riders appear here once they book a seat or the driver accepts their request."
+          iconName="community"
+          title="No participants yet"
+        />
+      );
+    }
+    return (
+      <YStack gap="$x3">
+        {people.map((p) => {
+          const name = p.userId === userId ? 'You' : memberLabel(p.userId, p.role);
+          return (
+            <Card alignItems="center" flexDirection="row" gap="$x3" key={p.id} variant="outlined">
+              <Avatar name={name} size="md" />
+              <YStack flex={1} gap={2}>
+                <AppText variant="bodyStrong">{name}</AppText>
+                <AppText tone="muted" variant="caption">
+                  {p.joinedAt ? `Joined ${formatDeparture(p.joinedAt)}` : 'On this ride'}
+                </AppText>
+              </YStack>
+              <Chip
+                label={statusIs(p.role, 'driver') ? 'Driver' : 'Rider'}
+                selected={statusIs(p.role, 'driver')}
+              />
+            </Card>
+          );
+        })}
+      </YStack>
     );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.container}>
-          <Text style={styles.eyebrow}>Rides</Text>
-          <Text style={styles.title}>Participants</Text>
-          <Text style={styles.subtitle}>View confirmed participants and trip sharing status.</Text>
-
-          {data && data.length > 0 ? (
-            data.map((participant) => (
-              <View key={participant.id} style={styles.card}>
-                <Avatar name={participant.name} size="lg" />
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle}>{participant.name}</Text>
-                  <Text style={styles.cardMeta}>
-                    {participant.role === 'DRIVER' ? 'Driver' : 'Rider'} ·{' '}
-                    {participant.status?.toUpperCase() === 'CONFIRMED' ? 'Confirmed' : 'Pending'}
-                    {participant.tripShared ? ' · trip shared' : ''}
-                  </Text>
-                </View>
-              </View>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No participants yet</Text>
-              <Text style={styles.emptyBody}>
-                Participants will appear here once seat requests are approved.
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.actions}>
-            <AppButton label="Seat requests" route={`/rides/${rideId}/seat-requests`} />
-            <AppButton label="Manage ride" route={`/rides/${rideId}/manage`} variant="secondary" />
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Screen
+      onRefresh={() => {
+        query.refetch();
+        rideQuery.refetch();
+      }}
+      refreshing={query.isRefetching}
+    >
+      <YStack gap="$x4">
+        <BackButton fallback={`/rides/${rideId}`} />
+        <YStack gap="$x1">
+          <AppText role="heading" variant="h2">
+            Participants
+          </AppText>
+          {ride ? (
+            <AppText tone="muted" variant="caption">
+              {ride.routeLabel} · {formatDeparture(ride.departureAt)}
+            </AppText>
+          ) : null}
+        </YStack>
+        {body()}
+        {ride?.isDriver ? (
+          <XStack flexWrap="wrap" gap="$x2">
+            <AppButton
+              label="Seat requests"
+              onPress={() => router.push(`/rides/${rideId}/seat-requests` as Href)}
+              variant="secondary"
+            />
+            <AppButton
+              label="Manage ride"
+              onPress={() => router.push(`/rides/${rideId}/manage` as Href)}
+              variant="secondary"
+            />
+          </XStack>
+        ) : null}
+      </YStack>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x5, maxWidth: 640, width: '100%' },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
-  title: { ...typography.h1, color: colors.ink },
-  subtitle: { ...typography.body, color: colors.muted, marginBottom: space.x4 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x3,
-    alignItems: 'center',
-    padding: space.x4,
-  },
-  cardBody: { flex: 1, gap: space.x1 },
-  cardTitle: { ...typography.h4, color: colors.ink },
-  cardMeta: { ...typography.caption, color: colors.muted },
-  emptyState: { alignItems: 'center', gap: space.x2, padding: space.x6 },
-  emptyTitle: { ...typography.h3, color: colors.ink, textAlign: 'center' },
-  emptyBody: { ...typography.body, color: colors.muted, textAlign: 'center' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
-});

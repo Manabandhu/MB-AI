@@ -1,126 +1,160 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
+import { useTheme, XStack, YStack } from 'tamagui';
 import {
   type AutocompletePrediction,
   autocompletePlacesGoogle,
   geocodeAddress,
+  MapsRateLimitError,
 } from '@/modules/rides/services/googleMapsService';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { TextField } from '@/modules/shared/ui/TextField';
 
 type Props = {
   label: string;
   value: string;
   onValueChange: (text: string) => void;
   onCoordsChange: (coords: { lat: number; lng: number } | null) => void;
-  pinColor: string;
   placeholder?: string;
+  error?: string | null;
 };
 
+const LOOKUP_DELAY_MS = 300;
+
+/**
+ * Place field with suggestions from the maps proxy. Typing clears any chosen coordinates (they would no longer
+ * match the text); choosing a suggestion looks them up. Lookup problems are shown, never hidden.
+ */
 export function RideLocationPicker({
   label,
   value,
   onValueChange,
   onCoordsChange,
-  pinColor,
-  placeholder = 'Enter city, suburb, or address',
+  placeholder = 'City, neighbourhood, or address',
+  error,
 }: Props) {
+  const theme = useTheme();
   const [suggestions, setSuggestions] = useState<AutocompletePrediction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [query, setQuery] = useState<string | null>(null);
+  const latest = useRef(0);
 
-  const handleChange = async (text: string) => {
-    onValueChange(text);
-    if (text.length >= 3) {
-      setLoading(true);
-      const results = await autocompletePlacesGoogle(text);
-      setSuggestions(results);
-      setLoading(false);
-    } else {
+  useEffect(() => {
+    if (query == null || query.trim().length < 3) {
       setSuggestions([]);
+      return;
     }
+    const ticket = ++latest.current;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const results = await autocompletePlacesGoogle(query);
+        if (ticket === latest.current) {
+          setSuggestions(results);
+          setNotice(null);
+        }
+      } catch (e) {
+        if (ticket === latest.current) {
+          setSuggestions([]);
+          setNotice(e instanceof MapsRateLimitError ? e.message : 'Place suggestions failed.');
+        }
+      } finally {
+        if (ticket === latest.current) setLoading(false);
+      }
+    }, LOOKUP_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const handleChange = (text: string) => {
+    onValueChange(text);
+    onCoordsChange(null);
+    setQuery(text);
   };
 
   const handleSelect = async (p: AutocompletePrediction) => {
-    onValueChange(p.description);
+    latest.current += 1;
+    setQuery(null);
     setSuggestions([]);
-    const coords = await geocodeAddress(p.placeId || p.description);
-    if (coords) onCoordsChange(coords);
+    onValueChange(p.description);
+    try {
+      const coords = await geocodeAddress(p.placeId || p.description);
+      onCoordsChange(coords);
+      setNotice(coords ? null : 'Could not find the map position for this place.');
+    } catch (e) {
+      onCoordsChange(null);
+      setNotice(e instanceof MapsRateLimitError ? e.message : 'Could not look up this place.');
+    }
   };
 
   return (
-    <View style={s.container}>
-      <View style={s.headerRow}>
-        <Text style={s.fieldLabel}>{label}</Text>
-        {value.length > 0 && (
-          <Pressable onPress={() => onValueChange('')}>
-            <Text style={s.clearText}>Clear</Text>
-          </Pressable>
-        )}
-      </View>
-      <View style={s.inputWithMarker}>
-        <View style={[s.pin, { backgroundColor: pinColor }]} />
-        <TextInput
-          style={s.locationInput}
-          value={value}
-          onChangeText={handleChange}
-          placeholder={placeholder}
-          placeholderTextColor={colors.muted}
-        />
-        {loading && <ActivityIndicator size="small" color={colors.primary} />}
-      </View>
-
-      {suggestions.length > 0 && (
-        <View style={s.suggestionBox}>
-          {suggestions.map((item, idx) => (
-            <Pressable key={idx} style={s.suggestionRow} onPress={() => handleSelect(item)}>
-              <AppIcon name="compass" size={14} color={colors.teal} />
-              <View style={{ flex: 1 }}>
-                <Text style={s.suggestionMainText}>{item.mainText || item.description}</Text>
-                {item.secondaryText && (
-                  <Text style={s.suggestionSubText}>{item.secondaryText}</Text>
-                )}
-              </View>
-            </Pressable>
+    <YStack gap="$x2">
+      <XStack alignItems="flex-end" gap="$x2">
+        <YStack flex={1}>
+          <TextField
+            autoCorrect={false}
+            error={error}
+            label={label}
+            onChangeText={handleChange}
+            placeholder={placeholder}
+            value={value}
+          />
+        </YStack>
+        {loading ? (
+          <YStack height="$control" justifyContent="center">
+            <ActivityIndicator color={theme.primary?.val} size="small" />
+          </YStack>
+        ) : null}
+      </XStack>
+      {notice ? (
+        <AppText aria-live="polite" tone="warm" variant="caption">
+          {notice}
+        </AppText>
+      ) : null}
+      {suggestions.length > 0 ? (
+        <YStack
+          aria-label={`${label} suggestions`}
+          backgroundColor="$surface"
+          borderColor="$borderColor"
+          borderRadius="$card"
+          borderWidth={1}
+          overflow="hidden"
+          role="list"
+        >
+          {suggestions.map((item) => (
+            <XStack
+              alignItems="center"
+              aria-label={`Use ${item.description}`}
+              borderBottomColor="$borderColor"
+              borderBottomWidth={1}
+              cursor="pointer"
+              focusable
+              gap="$x2"
+              hoverStyle={{ backgroundColor: '$surfaceContainerLow' }}
+              key={`${item.placeId}-${item.description}`}
+              minHeight="$touch"
+              onPress={() => handleSelect(item)}
+              paddingHorizontal="$x3"
+              paddingVertical="$x2"
+              pressStyle={{ opacity: 0.8 }}
+              role="button"
+            >
+              <AppIcon color={theme.teal?.val} name="map-pin" size={16} />
+              <YStack flex={1}>
+                <AppText numberOfLines={1} variant="label">
+                  {item.mainText || item.description}
+                </AppText>
+                {item.secondaryText ? (
+                  <AppText numberOfLines={1} tone="muted" variant="caption">
+                    {item.secondaryText}
+                  </AppText>
+                ) : null}
+              </YStack>
+            </XStack>
           ))}
-        </View>
-      )}
-    </View>
+        </YStack>
+      ) : null}
+    </YStack>
   );
 }
-
-const s = StyleSheet.create({
-  container: { gap: 4 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  fieldLabel: { fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 0.5 },
-  clearText: { fontSize: 12, color: colors.primary, fontWeight: '700' },
-  inputWithMarker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f5f6ff',
-    borderRadius: radius.control,
-    paddingHorizontal: space.x3,
-    height: 48,
-    gap: space.x2,
-  },
-  pin: { width: 10, height: 10, borderRadius: 5 },
-  locationInput: { flex: 1, fontSize: 14, color: colors.ink, fontWeight: '600' },
-  suggestionBox: {
-    backgroundColor: '#ffffff',
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: 'rgba(67,30,190,0.15)',
-    marginTop: 4,
-    overflow: 'hidden',
-  },
-  suggestionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: space.x3,
-    gap: space.x2,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f8',
-  },
-  suggestionMainText: { fontSize: 13, fontWeight: '700', color: colors.ink },
-  suggestionSubText: { fontSize: 11, color: colors.muted },
-});

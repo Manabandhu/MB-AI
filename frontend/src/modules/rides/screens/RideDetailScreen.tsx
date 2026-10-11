@@ -1,1709 +1,430 @@
-import { color as baseColors, breakpoint, palette, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Href } from 'expo-router';
-import { router, useLocalSearchParams } from 'expo-router';
+import { type Href, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { useTheme, XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
+import { shareLink } from '@/lib/share';
 import {
   bookRideSeat,
-  getRideOffer,
+  getRide,
   getSavedRides,
   provisionRideChat,
   saveRide,
   unsaveRide,
 } from '@/modules/rides/api';
+import { ChoiceChip } from '@/modules/rides/components/ChoiceChip';
+import { formatDeparture } from '@/modules/rides/components/RideListCard';
+import type { Ride } from '@/modules/rides/types';
+import { confirmAction, showError, showMessage } from '@/modules/rides/utils/notify';
+import {
+  bookingBlockReason,
+  durationLabel,
+  errorMessage,
+  genderLabel,
+  isNotFound,
+  isWomenOnly,
+  luggageLabel,
+  recurrenceLabel,
+  statusIs,
+  statusLabel,
+  tollLabel,
+} from '@/modules/rides/utils/rideFormat';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { Screen } from '@/modules/shared/ui/Screen';
 
-// ─── Theme Colors ─────────────────────────────────────────────────────────────
-const RECURRENCE_LABELS: Record<string, string> = {
-  ONE_TIME: 'One-time trip',
-  WEEKDAYS: 'Repeats on weekdays',
-  DAILY: 'Repeats daily',
-  WEEKLY: 'Repeats weekly',
-};
-const LUGGAGE_LABELS: Record<string, string> = {
-  NONE: 'No luggage',
-  BACKPACK_ONLY: 'Backpack only',
-  MEDIUM: 'Medium bags',
-  LARGE_SUITCASE: 'Large suitcases OK',
-};
-const GENDER_LABELS: Record<string, string> = {
-  FEMALE_ONLY: 'Women riders only',
-  MALE_ONLY: 'Men riders only',
-};
-const TOLL_LABELS: Record<string, string> = {
-  AVOID_TOLLS: 'Avoids toll roads',
-  TOLLS_INCLUDED: 'Tolls included in price',
-  TOLLS_SPLIT: 'Tolls split among riders',
-};
-
-const colors = {
-  ...baseColors,
-  appPrimary: palette.primary,
-  primaryContainer: palette.primaryContainer,
-  surfaceContainer: palette.surfaceContainer,
-  surfaceContainerLow: palette.surfaceContainerLow,
-  surfaceContainerLowest: '#ffffff',
-  inkSecondary: baseColors.muted,
-  warm: palette.warm,
-  teal: palette.teal,
-  tealSoft: 'rgba(0,105,107,0.08)',
-  indigoSoft: 'rgba(67,30,190,0.07)',
-};
-
+/** Ride details from the ride record only, with booking for riders and member actions. */
 export function RideDetailScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= breakpoint.medium;
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.back();
-      return true;
-    });
-    return () => sub.remove();
-  }, []);
-
-  const authStatus = useAuthStore((state) => state.status);
+  const authStatus = useAuthStore((s) => s.status);
   const isAuthenticated = authStatus === 'authenticated';
 
-  const [isSaved, setIsSaved] = useState(false);
-  const [selectedSeatSlots, setSelectedSeatSlots] = useState<number[]>([3]); // default selected seat 3
-  const [showBookingModal, setShowBookingModal] = useState(false);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [joiningChat, setJoiningChat] = useState(false);
-
-  // Query saved status from backend
-  const { data: savedRides } = useQuery({
+  // Wait for the session so members get their member-only fields on the first load.
+  const rideQuery = useQuery({
+    queryKey: ['rides', 'detail', rideId],
+    queryFn: () => getRide(rideId),
+    enabled: Boolean(rideId) && authStatus !== 'loading',
+  });
+  const savedQuery = useQuery({
     queryKey: ['rides', 'saved'],
     queryFn: getSavedRides,
     enabled: isAuthenticated,
   });
-
-  const isRideSaved = useMemo(() => {
-    if (isSaved) return true;
-    return savedRides?.some((r) => r.id === rideId) ?? false;
-  }, [savedRides, rideId, isSaved]);
+  const ride = rideQuery.data;
+  const isSaved = useMemo(
+    () => savedQuery.data?.some((r) => r.id === rideId) ?? false,
+    [savedQuery.data, rideId],
+  );
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (!rideId) return;
-      if (isRideSaved) {
-        await unsaveRide(rideId);
-      } else {
-        await saveRide(rideId);
-      }
+    mutationFn: async (save: boolean) => {
+      if (save) await saveRide(rideId);
+      else await unsaveRide(rideId);
     },
-    onSuccess: () => {
-      setIsSaved(!isRideSaved);
-      queryClient.invalidateQueries({ queryKey: ['rides', 'saved'] });
-    },
-    onError: (err) => {
-      Alert.alert('Bookmark', (err as Error)?.message || 'Failed to update saved rides');
-    },
+    onError: (e, save) =>
+      showError(save ? 'Could not save ride' : 'Could not remove saved ride', e),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['rides', 'saved'] }),
   });
 
-  function handleToggleSave() {
+  const chatMutation = useMutation({
+    mutationFn: () => provisionRideChat(rideId),
+    onSuccess: (res) => router.push(`/chat/${res.conversationId}` as Href),
+    onError: (e) => showError('Could not open the ride chat', e),
+  });
+
+  const onToggleSave = () => {
     if (!isAuthenticated) {
-      router.push('/sign-in');
+      router.push('/sign-in' as Href);
       return;
     }
-    saveMutation.mutate();
-  }
+    saveMutation.mutate(!isSaved);
+  };
 
-  async function handleShare() {
+  const onShare = async () => {
+    if (!ride) return;
     try {
-      const shareTitle = `Carpool: ${detailData?.originArea || 'Origin'} to ${detailData?.destinationArea || 'Destination'}`;
-      const shareMsg = `Join carpool with ${detailData?.driverName || 'a ManaBandhu member'} from ${detailData?.originArea || 'Origin'} to ${detailData?.destinationArea || 'Destination'} on ManaBandhu: https://manabandhu.com/rides/${rideId}`;
-      await Share.share({
-        title: shareTitle,
-        message: shareMsg,
-      });
-    } catch (e) {
-      console.log('Error sharing:', e);
-    }
-  }
-
-  async function handleJoinChat() {
-    if (!isAuthenticated) {
-      router.push('/sign-in');
-      return;
-    }
-    if (!rideId) return;
-    setJoiningChat(true);
-    try {
-      const res = await provisionRideChat(rideId as string);
-      if (res.conversationId) {
-        router.push(`/chat/${res.conversationId}` as Href);
-      } else {
-        router.push(
-          `/chat?recipient=${encodeURIComponent(detailData?.driverName || 'Driver')}` as Href,
-        );
-      }
-    } catch (e: unknown) {
-      Alert.alert(
-        'Ride Chat',
-        (e as Error)?.message || 'Unable to access ephemeral chat right now.',
+      const result = await shareLink(
+        `/rides/${ride.id}`,
+        `Ride ${ride.routeLabel} on ${formatDeparture(ride.departureAt)}`,
       );
-    } finally {
-      setJoiningChat(false);
+      if (result === 'copied') showMessage('Link copied', 'The ride link is on your clipboard.');
+    } catch (e) {
+      showError('Could not share this ride', e);
     }
-  }
+  };
 
-  // Fetch ride offer from backend
-  const {
-    data: rawOffer,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ['rides', 'detail', rideId],
-    queryFn: () => getRideOffer(rideId as string),
-    enabled: Boolean(rideId),
-  });
-
-  // Everything shown about the ride comes from the ride record itself; nothing is invented per driver.
-  const detailData = useMemo(() => {
-    if (!rawOffer) return null;
-    const departure = rawOffer.departureAt ? new Date(rawOffer.departureAt) : null;
-    const depTime = departure
-      ? departure.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : 'Time not set';
-    const amount = parseFloat(String(rawOffer.contribution ?? '').replace(/[^0-9.]/g, ''));
-    const costDollars = Number.isFinite(amount) ? amount.toFixed(2) : null;
-    const preferences = [
-      LUGGAGE_LABELS[rawOffer.luggageCapacity ?? ''],
-      GENDER_LABELS[rawOffer.genderPreference ?? ''],
-      TOLL_LABELS[rawOffer.tollPreference ?? ''],
-    ].filter((label): label is string => Boolean(label));
-
-    return {
-      ...rawOffer,
-      driverName: rawOffer.driverId ? `Member ${rawOffer.driverId.slice(0, 6)}` : 'Ride host',
-      driverTitle: 'Ride host',
-      departureDate: departure
-        ? departure.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
-        : 'Date not set',
-      commuteFreq: RECURRENCE_LABELS[rawOffer.recurrencePattern ?? ''] ?? 'One-time trip',
-      durationEst: rawOffer.estimatedDurationMins
-        ? `About ${Math.round(rawOffer.estimatedDurationMins)} min`
-        : null,
-      routeDistance: rawOffer.distanceMiles
-        ? `${rawOffer.distanceMiles.toFixed(1)} mi`
-        : `${rawOffer.originArea} to ${rawOffer.destinationArea}`,
-      highwayNote: `${rawOffer.originArea} to ${rawOffer.destinationArea}`,
-      pickupExact: rawOffer.originArea,
-      dropoffExact: rawOffer.destinationArea,
-      pickupTime: depTime,
-      dropoffTime: undefined,
-      contribution: costDollars ? `$${costDollars}` : 'Not set',
-      preferences,
-      totalSeats: rawOffer.seatsTotal,
-      coRiders: [],
-    };
-  }, [rawOffer]);
-
-  // Seat Booking Mutation
-  const bookingMutation = useMutation({
-    mutationFn: async () => {
-      if (!rideId) throw new Error('Missing ride ID');
-      return bookRideSeat(rideId, selectedSeatSlots.length);
-    },
-    onSuccess: () => {
-      setBookingSuccess(true);
-      queryClient.invalidateQueries({ queryKey: ['rides', 'detail', rideId] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'offers'] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'saved'] });
-    },
-    // Women-only rides, full rides and duplicate bookings are refused by the server; say why.
-    onError: (err) => {
-      Alert.alert('Booking not completed', (err as Error)?.message || 'Please try again.');
-    },
-  });
-
-  function toggleSeat(slotNum: number) {
-    if (selectedSeatSlots.includes(slotNum)) {
-      if (selectedSeatSlots.length === 1) return; // keep at least 1
-      setSelectedSeatSlots(selectedSeatSlots.filter((s) => s !== slotNum));
-    } else {
-      const maxSeats = rawOffer?.seatsAvailable ?? 3;
-      if (selectedSeatSlots.length >= maxSeats) {
-        Alert.alert(
-          'Seat Limit Reached',
-          `Only ${maxSeats} seat${maxSeats === 1 ? '' : 's'} available for this carpool.`,
+  const content = () => {
+    if (rideQuery.isLoading || authStatus === 'loading') {
+      return <LoadingState label="Loading ride…" />;
+    }
+    if (rideQuery.isError || !ride) {
+      if (isNotFound(rideQuery.error)) {
+        return (
+          <ErrorState
+            body="This ride was removed or the link is wrong."
+            onRetry={() => router.replace('/rides/search' as Href)}
+            retryLabel="Browse rides"
+            title="Ride not found"
+          />
         );
-        return;
       }
-      setSelectedSeatSlots([...selectedSeatSlots, slotNum]);
+      return (
+        <ErrorState
+          body={errorMessage(rideQuery.error)}
+          onRetry={() => rideQuery.refetch()}
+          retryLabel="Retry"
+          title="Could not load this ride"
+        />
+      );
     }
-  }
-
-  function handleRequestSeat() {
-    if (!isAuthenticated) {
-      router.push('/sign-in');
-      return;
-    }
-    setShowBookingModal(true);
-  }
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator color={colors.appPrimary} size="large" />
-          <Text style={styles.loadingText}>Loading ride details...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (isError || !rawOffer || !detailData) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.emptyContainer}>
-          <AppIcon color={colors.warm} name="warning" size={40} />
-          <Text style={styles.emptyTitle}>Carpool Not Found</Text>
-          <Text style={styles.emptySubtitle}>
-            This ride offer may have departed, filled up, or been removed.
-          </Text>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>Browse Available Rides</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const numericCost = parseFloat(String(detailData.contribution).replace(/[^0-9.]/g, '')) || 0;
-  const totalCost = (numericCost * selectedSeatSlots.length).toFixed(2);
+    return <RideDetailBody isAuthenticated={isAuthenticated} ride={ride} />;
+  };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.safeArea}>
-      {/* ── Top App Bar ────────────────────────────────────────────────────────── */}
-      <View
-        style={[
-          styles.topBar,
-          isDesktop && styles.topBarDesktop,
-          { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) },
-        ]}
-      >
-        <View style={styles.topBarLeft}>
-          <Pressable
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-            onPress={() => router.back()}
-            style={styles.backIconButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <AppIcon color={colors.ink} name="chevron-left" size={22} />
-          </Pressable>
-          <View style={styles.titleWithEmblem}>
-            <Text style={styles.screenTitle}>Ride Details</Text>
-          </View>
-        </View>
-
-        <View style={styles.topBarRight}>
-          <View style={styles.statusPill}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusPillText}>
-              Active · {detailData.seatsAvailable ?? 2} Seats Left
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityLabel="Bookmark ride"
-            accessibilityRole="button"
-            disabled={saveMutation.isPending}
-            onPress={handleToggleSave}
-            style={styles.iconButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            {saveMutation.isPending ? (
-              <ActivityIndicator color={colors.warm} size="small" />
-            ) : (
-              <AppIcon
-                color={isRideSaved ? colors.warm : colors.inkSecondary}
-                name="star"
-                size={22}
+    <Screen onRefresh={() => rideQuery.refetch()} refreshing={rideQuery.isRefetching}>
+      <YStack gap="$x4">
+        <XStack alignItems="center" justifyContent="space-between">
+          <BackButton fallback="/rides" />
+          {ride ? (
+            <XStack gap="$x2">
+              <IconButton
+                icon="bookmark"
+                label={isSaved ? 'Remove from saved rides' : 'Save ride'}
+                onPress={onToggleSave}
+                variant={isSaved ? 'solid' : 'tinted'}
               />
-            )}
-          </Pressable>
-
-          <Pressable
-            accessibilityLabel="Share ride"
-            accessibilityRole="button"
-            onPress={handleShare}
-            style={styles.iconButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={{ fontSize: 16, color: colors.inkSecondary }}>↗</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 16) + 80 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={[styles.mainContainer, isDesktop && styles.mainContainerDesktop]}>
-          {/* ── Driver Profile Card ─────────────────────────────────────────── */}
-          <View style={styles.card}>
-            <View style={styles.driverHeader}>
-              <View style={styles.driverProfileLeft}>
-                <View style={styles.driverAvatarCircle}>
-                  <Text style={styles.driverAvatarInitial}>{detailData.driverName.charAt(0)}</Text>
-                </View>
-
-                <View>
-                  <View style={styles.driverNameRow}>
-                    <Text style={styles.driverName}>{detailData.driverName}</Text>
-                    <View style={styles.staffBadge}>
-                      <Text style={styles.staffBadgeText}>{detailData.driverTitle}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.employerName}>Shares this ride with the community</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* ── Route & Schedule Timeline Card ──────────────────────────────── */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.dateRow}>
-                <AppIcon color={colors.appPrimary} name="calendar" size={18} />
-                <View>
-                  <Text style={styles.dateTitle}>{detailData.departureDate}</Text>
-                  <Text style={styles.dateSub}>{detailData.commuteFreq}</Text>
-                </View>
-              </View>
-              {detailData.durationEst ? (
-                <View style={styles.durationBadge}>
-                  <AppIcon color={colors.teal} name="sparks" size={13} />
-                  <Text style={styles.durationText}>{detailData.durationEst}</Text>
-                </View>
+              <IconButton icon="share" label="Share ride" onPress={onShare} />
+              {ride.isMember ? (
+                <IconButton
+                  icon="message"
+                  label="Open ride chat"
+                  onPress={() => chatMutation.mutate()}
+                />
               ) : null}
-            </View>
-
-            {/* Visual Route Timeline */}
-            <View style={styles.timelineContainer}>
-              {/* Vertical Continuous Route Line */}
-              <View style={styles.timelineTrack} />
-
-              {/* Stop 1: Pickup */}
-              <View style={styles.timelineStop}>
-                <View style={styles.timelineBulletPickup} />
-                <View style={styles.stopContent}>
-                  <View style={styles.stopHeader}>
-                    <Text style={styles.stopTitle}>{detailData.originArea}</Text>
-                    <Text style={styles.stopTimePrimary}>{detailData.pickupTime}</Text>
-                  </View>
-                  <Text style={styles.stopAddress}>
-                    <AppIcon color={colors.inkSecondary} name="compass" size={12} />{' '}
-                    {detailData.pickupExact}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Highway Corridor Highlight */}
-              <View style={styles.corridorHighlight}>
-                <AppIcon color={colors.appPrimary} name="car" size={14} />
-                <Text style={styles.corridorText}>{detailData.highwayNote}</Text>
-              </View>
-
-              {/* Stop 2: Dropoff */}
-              <View style={styles.timelineStop}>
-                <View style={styles.timelineBulletDropoff} />
-                <View style={styles.stopContent}>
-                  <View style={styles.stopHeader}>
-                    <Text style={styles.stopTitle}>{detailData.destinationArea}</Text>
-                    <Text style={styles.stopTimeSecondary}>{detailData.dropoffTime}</Text>
-                  </View>
-                  <Text style={styles.stopAddress}>
-                    <AppIcon color={colors.teal} name="compass" size={12} />{' '}
-                    {detailData.dropoffExact}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Live Corridor Stats */}
-            <View style={styles.routeStatsBox}>
-              <View style={styles.routeDistanceRow}>
-                <AppIcon color={colors.teal} name="compass" size={15} />
-                <Text style={styles.routeDistanceText}>{detailData.routeDistance}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* ── 🔒 Ephemeral Chat & Toll Transparency Card ─────────────────── */}
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: '#f0faf8', borderColor: 'rgba(0,105,107,0.18)' },
-            ]}
-          >
-            <View style={styles.cardHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <AppIcon color={colors.teal} name="shield" size={18} />
-                <Text style={[styles.cardHeading, { color: colors.teal }]}>
-                  Toll & Route Transparency
-                </Text>
-              </View>
-              <View
-                style={{
-                  backgroundColor:
-                    rawOffer.tollPreference === 'AVOID_TOLLS'
-                      ? 'rgba(16,185,129,0.15)'
-                      : 'rgba(255,126,51,0.15)',
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 12,
-                }}
-              >
-                <Text
-                  style={{
-                    color: rawOffer.tollPreference === 'AVOID_TOLLS' ? '#059669' : colors.warm,
-                    fontSize: 11,
-                    fontWeight: '800',
-                  }}
-                >
-                  {rawOffer.tollPreference === 'AVOID_TOLLS'
-                    ? 'Tolls Avoided (Free Route)'
-                    : rawOffer.tollPreference === 'TOLLS_INCLUDED'
-                      ? 'Tolls Included'
-                      : 'Split Tolls'}
-                </Text>
-              </View>
-            </View>
-            <Text style={{ fontSize: 13, color: colors.ink, lineHeight: 18, marginTop: 4 }}>
-              {rawOffer.tollPreference === 'AVOID_TOLLS'
-                ? '✅ This driver navigates exclusively on free freeways and surface routes. Passengers pay zero toll fees.'
-                : rawOffer.tollPreference === 'TOLLS_INCLUDED'
-                  ? '🛣️ Express lane tollway charges are prepaid by the driver and fully covered by the advertised contribution.'
-                  : '⚖️ Express lane tolls along the route are split evenly among all passengers.'}
-            </Text>
-            <View
-              style={{
-                marginTop: 8,
-                padding: 10,
-                backgroundColor: '#ffffff',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: 'rgba(0,105,107,0.12)',
-              }}
-            >
-              <Text style={{ fontSize: 11, color: colors.teal, fontWeight: '700' }}>
-                🔒 Privacy Guarantee: Temporary group coordination chat is enabled for this ride.
-                The conversation and all messages permanently self-delete 2 hours after arrival.
-              </Text>
-            </View>
-          </View>
-
-          {/* ── Trip Preferences (from the ride record) ────────────────────── */}
-          {detailData.preferences.length > 0 ? (
-            <View style={styles.card}>
-              <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardHeading}>Trip preferences</Text>
-              </View>
-              <View style={styles.vibesGrid}>
-                {detailData.preferences.map((label) => (
-                  <View key={label} style={styles.vibePill}>
-                    <Text style={styles.vibePillText}>{label}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
+            </XStack>
           ) : null}
-
-          {/* ── Vehicle Capacity & Co-Riders Grid ───────────────────────────── */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <View>
-                <Text style={styles.cardHeading}>Vehicle Capacity & Co-Riders</Text>
-                <Text style={styles.capacitySub}>{detailData.totalSeats} seats in total</Text>
-              </View>
-              <View style={styles.seatsAvailableBadge}>
-                <Text style={styles.seatsAvailableText}>
-                  {detailData.seatsAvailable} Seats Available
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.seatSlotsGrid}>
-              {/* Slot 1: Driver */}
-              <View style={styles.seatSlotOccupied}>
-                <View style={styles.seatSlotTop}>
-                  <Text style={styles.seatSlotLabel}>Seat 1 · Driver</Text>
-                  <AppIcon color={colors.appPrimary} name="user" size={16} />
-                </View>
-                <View style={styles.seatOccupant}>
-                  <View style={styles.miniOccupantAvatar}>
-                    <Text style={styles.miniOccupantInitial}>
-                      {detailData.driverName.charAt(0)}
-                    </Text>
-                  </View>
-                  <View>
-                    <Text style={styles.miniOccupantName}>{detailData.driverName}</Text>
-                    <Text style={styles.miniOccupantRole}>Driver</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Slot 2: Passenger Seat */}
-              {rawOffer.seatsAvailable >= 3 ? (
-                <Pressable
-                  accessibilityLabel="Toggle Seat 2 selection"
-                  accessibilityRole="button"
-                  onPress={() => toggleSeat(2)}
-                  style={[
-                    styles.seatSlotInteractive,
-                    selectedSeatSlots.includes(2) && styles.seatSlotSelected,
-                  ]}
-                >
-                  <View style={styles.seatSlotTop}>
-                    <Text
-                      style={[
-                        styles.seatSlotLabel,
-                        selectedSeatSlots.includes(2) && styles.seatSlotLabelSelected,
-                      ]}
-                    >
-                      Seat 2 · Front Passenger
-                    </Text>
-                    <AppIcon
-                      color={selectedSeatSlots.includes(2) ? colors.appPrimary : '#9ca3af'}
-                      name={selectedSeatSlots.includes(2) ? 'check' : 'plus'}
-                      size={18}
-                    />
-                  </View>
-                  <View>
-                    <Text
-                      style={[
-                        styles.seatStatusText,
-                        selectedSeatSlots.includes(2) && styles.seatStatusTextSelected,
-                      ]}
-                    >
-                      {selectedSeatSlots.includes(2) ? 'Selected for You' : 'Available'}
-                    </Text>
-                    <Text style={styles.seatTapPrompt}>
-                      {selectedSeatSlots.includes(2) ? 'Tap to deselect' : 'Tap to select'}
-                    </Text>
-                  </View>
-                </Pressable>
-              ) : (
-                <View style={styles.seatSlotOccupied}>
-                  <View style={styles.seatSlotTop}>
-                    <Text style={[styles.seatSlotLabel, { color: colors.teal }]}>
-                      Seat 2 · Co-rider
-                    </Text>
-                    <AppIcon color={colors.teal} name="user" size={16} />
-                  </View>
-                  <View style={styles.seatOccupant}>
-                    <View style={[styles.miniOccupantAvatar, { backgroundColor: colors.teal }]}>
-                      <Text style={styles.miniOccupantInitial}>C</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.miniOccupantName}>Reserved Seat</Text>
-                      <Text style={styles.miniOccupantRole}>Verified Passenger</Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* Slot 3: Interactive Seat */}
-              <Pressable
-                accessibilityLabel="Toggle Seat 3 selection"
-                accessibilityRole="button"
-                onPress={() => toggleSeat(3)}
-                style={[
-                  styles.seatSlotInteractive,
-                  selectedSeatSlots.includes(3) && styles.seatSlotSelected,
-                ]}
-              >
-                <View style={styles.seatSlotTop}>
-                  <Text
-                    style={[
-                      styles.seatSlotLabel,
-                      selectedSeatSlots.includes(3) && styles.seatSlotLabelSelected,
-                    ]}
-                  >
-                    Seat 3 · Rear Left
-                  </Text>
-                  <AppIcon
-                    color={selectedSeatSlots.includes(3) ? colors.appPrimary : '#9ca3af'}
-                    name={selectedSeatSlots.includes(3) ? 'check' : 'plus'}
-                    size={18}
-                  />
-                </View>
-                <View>
-                  <Text
-                    style={[
-                      styles.seatStatusText,
-                      selectedSeatSlots.includes(3) && styles.seatStatusTextSelected,
-                    ]}
-                  >
-                    {selectedSeatSlots.includes(3) ? 'Selected for You' : 'Available'}
-                  </Text>
-                  <Text style={styles.seatTapPrompt}>
-                    {selectedSeatSlots.includes(3) ? 'Tap to deselect' : 'Tap to select'}
-                  </Text>
-                </View>
-              </Pressable>
-
-              {/* Slot 4: Interactive Seat */}
-              <Pressable
-                accessibilityLabel="Toggle Seat 4 selection"
-                accessibilityRole="button"
-                onPress={() => toggleSeat(4)}
-                style={[
-                  styles.seatSlotInteractive,
-                  selectedSeatSlots.includes(4) && styles.seatSlotSelected,
-                ]}
-              >
-                <View style={styles.seatSlotTop}>
-                  <Text
-                    style={[
-                      styles.seatSlotLabel,
-                      selectedSeatSlots.includes(4) && styles.seatSlotLabelSelected,
-                    ]}
-                  >
-                    Seat 4 · Rear Right
-                  </Text>
-                  <AppIcon
-                    color={selectedSeatSlots.includes(4) ? colors.appPrimary : '#9ca3af'}
-                    name={selectedSeatSlots.includes(4) ? 'check' : 'plus'}
-                    size={18}
-                  />
-                </View>
-                <View>
-                  <Text
-                    style={[
-                      styles.seatStatusText,
-                      selectedSeatSlots.includes(4) && styles.seatStatusTextSelected,
-                    ]}
-                  >
-                    {selectedSeatSlots.includes(4) ? 'Selected for You' : 'Available'}
-                  </Text>
-                  <Text style={styles.seatTapPrompt}>
-                    {selectedSeatSlots.includes(4) ? 'Tap to deselect' : 'Tap to select'}
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* ── Community Fuel Split Card ───────────────────────────────────── */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeading}>Community Fuel Split</Text>
-              <View style={styles.passSelector}>
-                <View style={styles.passBtnActive}>
-                  <Text style={styles.passBtnActiveText}>1 Ride</Text>
-                </View>
-                <View style={styles.passBtn}>
-                  <Text style={styles.passBtnText}>5-Day Pass ($25)</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.pricingHeadline}>
-              <Text style={styles.pricingBigNumber}>${numericCost}</Text>
-              <Text style={styles.pricingBigUnit}>/ person per ride</Text>
-            </View>
-
-            <View style={styles.feeBreakdown}>
-              <View style={styles.feeRow}>
-                <Text style={styles.feeLabel}>Base fuel reimbursement</Text>
-                <Text style={styles.feeValue}>${numericCost.toFixed(2)}</Text>
-              </View>
-              <View style={styles.feeRow}>
-                <Text style={styles.feeLabel}>Mopac toll express lane pass</Text>
-                <Text style={[styles.feeValue, { color: colors.teal }]}>Included ($0.00)</Text>
-              </View>
-              <View style={styles.feeRow}>
-                <Text style={styles.feeLabel}>ManaBandhu community fee</Text>
-                <Text style={[styles.feeValue, { color: colors.teal }]}>Zero Fee ($0.00)</Text>
-              </View>
-              <View style={[styles.feeRow, styles.feeTotalRow]}>
-                <Text style={styles.feeTotalLabel}>
-                  Total to pay driver ({selectedSeatSlots.length} seat
-                  {selectedSeatSlots.length > 1 ? 's' : ''})
-                </Text>
-                <Text style={styles.feeTotalValue}>${totalCost}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* ── Community Safety Protocol Card ──────────────────────────────── */}
-          <View style={styles.card}>
-            <View style={styles.safetyHeader}>
-              <AppIcon color={colors.appPrimary} name="shield" size={18} />
-              <Text style={styles.safetyTitle}>Riding safely</Text>
-            </View>
-            <View style={styles.safetyItems}>
-              <View style={styles.safetyItem}>
-                <View style={styles.safetyCheckCircle}>
-                  <AppIcon color={colors.teal} name="check" size={12} />
-                </View>
-                <Text style={styles.safetyItemText}>
-                  Meet at a public pickup point and confirm the driver before you get in.
-                </Text>
-              </View>
-              <View style={styles.safetyItem}>
-                <View style={styles.safetyCheckCircle}>
-                  <AppIcon color={colors.teal} name="check" size={12} />
-                </View>
-                <Text style={styles.safetyItemText}>
-                  Tell a trusted contact about your trip; add contacts in the Safety Center.
-                </Text>
-              </View>
-              <View style={styles.safetyItem}>
-                <View style={styles.safetyCheckCircle}>
-                  <AppIcon color={colors.teal} name="check" size={12} />
-                </View>
-                <Text style={styles.safetyItemText}>
-                  Report anything that feels wrong from the Safety Center.
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* ── Sticky Bottom Action Bar ────────────────────────────────────────── */}
-      <View
-        style={[
-          styles.bottomBar,
-          isDesktop && styles.bottomBarDesktop,
-          { paddingBottom: Math.max(insets.bottom, 16) },
-        ]}
-      >
-        <View style={styles.bottomBarLeft}>
-          <Text style={styles.bottomBarTotal}>${totalCost}</Text>
-          <Text style={styles.bottomBarSeatCount}>
-            for {selectedSeatSlots.length} seat{selectedSeatSlots.length > 1 ? 's' : ''}
-          </Text>
-        </View>
-
-        <View style={styles.bottomBarRight}>
-          <Pressable
-            accessibilityLabel={`Join ephemeral chat with ${detailData.driverName}`}
-            accessibilityRole="button"
-            disabled={joiningChat}
-            onPress={handleJoinChat}
-            style={styles.bottomBarChatBtn}
-          >
-            {joiningChat ? (
-              <ActivityIndicator color={colors.appPrimary} size="small" />
-            ) : (
-              <AppIcon color={colors.appPrimary} name="message" size={20} />
-            )}
-          </Pressable>
-
-          <Pressable
-            accessibilityLabel="Request Seat"
-            accessibilityRole="button"
-            onPress={handleRequestSeat}
-            style={styles.bottomBarRequestBtn}
-          >
-            <AppIcon color={colors.surfaceContainerLowest} name="check" size={18} />
-            <Text style={styles.bottomBarRequestText}>Request Seat</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* ── Seat Request Confirmation Modal ─────────────────────────────────── */}
-      <Modal
-        animationType="fade"
-        onRequestClose={() => setShowBookingModal(false)}
-        transparent
-        visible={showBookingModal}
-      >
-        <Pressable onPress={() => setShowBookingModal(false)} style={styles.modalOverlay}>
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.bookingModalCard}>
-            {bookingSuccess ? (
-              <View style={styles.bookingSuccessBox}>
-                <View style={styles.bookingSuccessIconWrap}>
-                  <AppIcon color={colors.teal} name="check" size={28} />
-                </View>
-                <Text style={styles.bookingSuccessTitle}>Seat Request Confirmed!</Text>
-                <Text style={styles.bookingSuccessSubtitle}>
-                  You booked {selectedSeatSlots.length} seat(s) with {detailData.driverName}.
-                </Text>
-                <Text style={styles.bookingSuccessDetails}>
-                  Pickup: {detailData.pickupExact} at {detailData.pickupTime}. The driver will see
-                  your request in their ride bookings.
-                </Text>
-                <Pressable
-                  onPress={() => {
-                    setShowBookingModal(false);
-                    router.push('/rides' as Href);
-                  }}
-                  style={styles.bookingSuccessCta}
-                >
-                  <Text style={styles.bookingSuccessCtaText}>Return to Carpools</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <View style={styles.bookingConfirmBox}>
-                <View style={styles.bookingConfirmHeader}>
-                  <Text style={styles.bookingConfirmTitle}>Confirm Seat Request</Text>
-                  <Pressable onPress={() => setShowBookingModal(false)}>
-                    <Text style={{ fontSize: 16, color: colors.inkSecondary }}>✕</Text>
-                  </Pressable>
-                </View>
-
-                <View style={styles.bookingSummaryRow}>
-                  <View>
-                    <Text style={styles.bookingSummaryDriver}>{detailData.driverName}</Text>
-                    <Text style={styles.bookingSummaryRoute}>
-                      {detailData.originArea} ➔ {detailData.destinationArea}
-                    </Text>
-                    <Text style={styles.bookingSummaryTime}>
-                      Departure: {detailData.pickupTime}
-                    </Text>
-                  </View>
-                  <View style={styles.bookingSummaryPriceBox}>
-                    <Text style={styles.bookingSummaryPrice}>${totalCost}</Text>
-                    <Text style={styles.bookingSummarySeats}>
-                      {selectedSeatSlots.length} seat(s)
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.trustNote}>
-                  <AppIcon color={colors.teal} name="verified-user" size={16} />
-                  <Text style={styles.trustNoteText}>
-                    Community Fuel Split is handed to the driver directly upon boarding.
-                  </Text>
-                </View>
-
-                <Pressable
-                  accessibilityLabel="Confirm and Reserve Seat"
-                  accessibilityRole="button"
-                  disabled={bookingMutation.isPending}
-                  onPress={() => bookingMutation.mutate()}
-                  style={styles.bookingConfirmBtn}
-                >
-                  {bookingMutation.isPending ? (
-                    <ActivityIndicator color="#ffffff" size="small" />
-                  ) : (
-                    <>
-                      <AppIcon color={colors.surfaceContainerLowest} name="check" size={18} />
-                      <Text style={styles.bookingConfirmBtnText}>Confirm and Reserve Seat</Text>
-                    </>
-                  )}
-                </Pressable>
-              </View>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </SafeAreaView>
+        </XStack>
+        {content()}
+      </YStack>
+    </Screen>
   );
 }
 
-// ─── StyleSheet ───────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: '#f6f6ff',
-    flex: 1,
-  },
-  topBar: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderBottomColor: '#e5e7eb',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-    zIndex: 10,
-  },
-  topBarDesktop: {
-    alignSelf: 'center',
-    maxWidth: 800,
-    width: '100%',
-  },
-  topBarLeft: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-  },
-  backIconButton: {
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: radius.pill,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  titleWithEmblem: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  screenTitle: {
-    color: '#111827',
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  topBarRight: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  statusPill: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,105,107,0.1)',
-    borderColor: 'rgba(0,105,107,0.2)',
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  statusDot: {
-    backgroundColor: colors.teal,
-    borderRadius: 3,
-    height: 6,
-    width: 6,
-  },
-  statusPillText: {
-    color: colors.teal,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  iconButton: {
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: radius.pill,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  scrollContent: {
-    paddingBottom: 110,
-  },
-  mainContainer: {
-    gap: space.x3,
-    paddingHorizontal: space.x4,
-    paddingTop: space.x3,
-  },
-  mainContainerDesktop: {
-    alignSelf: 'center',
-    maxWidth: 800,
-    width: '100%',
-  },
+function RideDetailBody({ ride, isAuthenticated }: { ride: Ride; isAuthenticated: boolean }) {
+  const theme = useTheme();
+  const queryClient = useQueryClient();
+  const [seats, setSeats] = useState(1);
+  const [booked, setBooked] = useState<number | null>(null);
+  const blockReason = bookingBlockReason(ride);
+  const maxSeats = Math.max(1, Math.min(ride.seatsAvailable, 8));
 
-  // Generic Card
-  card: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: space.x4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-  },
-  cardHeaderRow: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  cardHeading: {
-    color: '#111827',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  useEffect(() => {
+    setSeats((s) => Math.min(s, maxSeats));
+  }, [maxSeats]);
 
-  // Driver Card
-  driverHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  driverProfileLeft: {
-    alignItems: 'flex-start',
-    flex: 1,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  driverAvatarCircle: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: 24,
-    height: 48,
-    justifyContent: 'center',
-    position: 'relative',
-    width: 48,
-  },
-  driverAvatarInitial: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  driverNameRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  driverName: {
-    color: '#111827',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  staffBadge: {
-    backgroundColor: palette.surfaceContainer,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-  },
-  staffBadgeText: {
-    color: colors.appPrimary,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  employerName: {
-    color: '#4b5563',
-    fontSize: 12,
-    fontWeight: '500',
-  },
+  const booking = useMutation({
+    mutationFn: (count: number) => bookRideSeat(ride.id, count),
+    onSuccess: (b) => {
+      setBooked(b.seatsBooked);
+      Promise.allSettled([
+        queryClient.invalidateQueries({ queryKey: ['rides', 'detail', ride.id] }),
+        queryClient.invalidateQueries({ queryKey: ['rides', 'offers'] }),
+        queryClient.invalidateQueries({ queryKey: ['rides', 'saved'] }),
+        queryClient.invalidateQueries({ queryKey: ['rides', 'my-bookings'] }),
+      ]);
+    },
+    // Women-only rides, full rides and duplicate bookings are refused by the server; say why.
+    onError: (e) => showError('Seat not booked', e),
+  });
 
-  // Route Timeline
-  dateRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dateTitle: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  dateSub: {
-    color: '#6b7280',
-    fontSize: 11,
-  },
-  durationBadge: {
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  durationText: {
-    color: '#374151',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  timelineContainer: {
-    marginTop: 12,
-    paddingLeft: 18,
-    position: 'relative',
-  },
-  timelineTrack: {
-    backgroundColor: colors.appPrimary,
-    bottom: 20,
-    left: 4,
-    position: 'absolute',
-    top: 10,
-    width: 2,
-  },
-  timelineStop: {
-    position: 'relative',
-  },
-  timelineBulletPickup: {
-    backgroundColor: '#ffffff',
-    borderColor: colors.appPrimary,
-    borderRadius: 6,
-    borderWidth: 3,
-    height: 12,
-    left: -19,
-    position: 'absolute',
-    top: 3,
-    width: 12,
-  },
-  timelineBulletDropoff: {
-    backgroundColor: '#ffffff',
-    borderColor: colors.teal,
-    borderRadius: 6,
-    borderWidth: 3,
-    height: 12,
-    left: -19,
-    position: 'absolute',
-    top: 3,
-    width: 12,
-  },
-  stopContent: {
-    paddingBottom: 8,
-  },
-  stopHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  stopTitle: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  stopTimePrimary: {
-    color: colors.appPrimary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  stopTimeSecondary: {
-    color: colors.teal,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  stopAddress: {
-    color: '#6b7280',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  corridorHighlight: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(67,30,190,0.06)',
-    borderRadius: 10,
-    flexDirection: 'row',
-    gap: 6,
-    marginVertical: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  corridorText: {
-    color: colors.appPrimary,
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  routeStatsBox: {
-    alignItems: 'center',
-    backgroundColor: '#1f2937',
-    borderRadius: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  routeDistanceRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  routeDistanceText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '600',
-  },
+  const onBook = async () => {
+    if (!isAuthenticated) {
+      router.push('/sign-in' as Href);
+      return;
+    }
+    const price =
+      ride.contributionAmount != null && ride.contributionAmount > 0
+        ? ` You pay the driver $${(ride.contributionAmount * seats).toFixed(2)} directly.`
+        : '';
+    const ok = await confirmAction(
+      `Book ${seats} ${seats === 1 ? 'seat' : 'seats'}?`,
+      `${ride.routeLabel}, ${formatDeparture(ride.departureAt)}. The seat is yours as soon as you confirm.${price}`,
+      'Book seat',
+    );
+    if (ok) booking.mutate(seats);
+  };
 
-  // Vehicle Details
+  const taken = Math.max(0, ride.seatsTotal - ride.seatsAvailable);
+  const facts = [
+    recurrenceLabel(ride.recurrencePattern) ?? (ride.isRecurring ? 'Recurring' : null),
+    durationLabel(ride.estimatedDurationMins),
+    ride.distanceMiles ? `${ride.distanceMiles.toFixed(1)} mi` : null,
+    luggageLabel(ride.luggageCapacity),
+    genderLabel(ride.genderPreference),
+    tollLabel(ride.tollPreference),
+    ride.estimatedTollAmount ? `Tolls about $${ride.estimatedTollAmount.toFixed(2)}` : null,
+  ].filter((f): f is string => Boolean(f));
+  const total =
+    ride.contributionAmount != null && ride.contributionAmount > 0
+      ? `$${(ride.contributionAmount * seats).toFixed(2)} for ${seats} ${seats === 1 ? 'seat' : 'seats'}`
+      : null;
 
-  // Vibes
-  vibesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  vibePill: {
-    backgroundColor: palette.surfaceContainer,
-    borderRadius: radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  vibePillText: {
-    color: colors.appPrimary,
-    fontSize: 11,
-    fontWeight: '600',
-  },
+  return (
+    <YStack gap="$x4">
+      <YStack gap="$x2">
+        <XStack alignItems="center" flexWrap="wrap" gap="$x2">
+          <Chip label={statusLabel(ride.status)} selected={statusIs(ride.status, 'active')} />
+          {ride.isDriver ? (
+            <Chip label="You drive" />
+          ) : ride.isMember ? (
+            <Chip label="You're on this ride" />
+          ) : null}
+        </XStack>
+        <AppText role="heading" variant="h2">
+          {ride.routeLabel}
+        </AppText>
+        <AppText tone="muted">Departs {formatDeparture(ride.departureAt)}</AppText>
+      </YStack>
 
-  // Capacity & Seats Grid
-  capacitySub: {
-    color: '#6b7280',
-    fontSize: 11,
-  },
-  seatsAvailableBadge: {
-    backgroundColor: 'rgba(0,105,107,0.12)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  seatsAvailableText: {
-    color: colors.teal,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  seatSlotsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  seatSlotOccupied: {
-    backgroundColor: '#f9fafb',
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
-    borderWidth: 1,
-    height: 84,
-    justifyContent: 'space-between',
-    padding: 10,
-    width: '48%',
-  },
-  seatSlotInteractive: {
-    backgroundColor: '#ffffff',
-    borderColor: '#d1d5db',
-    borderRadius: 16,
-    borderStyle: 'dashed',
-    borderWidth: 1.5,
-    height: 84,
-    justifyContent: 'space-between',
-    padding: 10,
-    width: '48%',
-  },
-  seatSlotSelected: {
-    backgroundColor: palette.surfaceContainer,
-    borderColor: colors.appPrimary,
-    borderStyle: 'solid',
-  },
-  seatSlotTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  seatSlotLabel: {
-    color: '#6b7280',
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  seatSlotLabelSelected: {
-    color: colors.appPrimary,
-  },
-  seatOccupant: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  miniOccupantAvatar: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: 11,
-    height: 22,
-    justifyContent: 'center',
-    width: 22,
-  },
-  miniOccupantInitial: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  miniOccupantName: {
-    color: '#111827',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  miniOccupantRole: {
-    color: '#6b7280',
-    fontSize: 9,
-  },
-  seatStatusText: {
-    color: '#374151',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  seatStatusTextSelected: {
-    color: colors.appPrimary,
-  },
-  seatTapPrompt: {
-    color: '#9ca3af',
-    fontSize: 9,
-  },
+      <Card gap="$x3" variant="outlined">
+        <XStack alignItems="center" gap="$x3">
+          <AppIcon color={theme.teal?.val} name="map-pin" size={18} />
+          <YStack flex={1}>
+            <AppText tone="muted" variant="caption">
+              Pickup area
+            </AppText>
+            <AppText variant="bodyStrong">{ride.originArea}</AppText>
+          </YStack>
+        </XStack>
+        <XStack alignItems="center" gap="$x3">
+          <AppIcon color={theme.warm?.val} name="map-pin" size={18} />
+          <YStack flex={1}>
+            <AppText tone="muted" variant="caption">
+              Destination
+            </AppText>
+            <AppText variant="bodyStrong">{ride.destinationArea}</AppText>
+          </YStack>
+        </XStack>
+        {!ride.isMember ? (
+          <AppText tone="muted" variant="caption">
+            Exact pickup details are shared with riders after they book.
+          </AppText>
+        ) : null}
+        {facts.length > 0 ? (
+          <XStack flexWrap="wrap" gap="$x2">
+            {facts.map((f) => (
+              <Chip key={f} label={f} />
+            ))}
+          </XStack>
+        ) : null}
+      </Card>
 
-  // Fuel Split
-  passSelector: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    flexDirection: 'row',
-    padding: 2,
-  },
-  passBtnActive: {
-    backgroundColor: '#ffffff',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  passBtnActiveText: {
-    color: colors.appPrimary,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  passBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  passBtnText: {
-    color: '#6b7280',
-    fontSize: 10,
-  },
-  pricingHeadline: {
-    alignItems: 'baseline',
-    flexDirection: 'row',
-    gap: 4,
-    marginVertical: 6,
-  },
-  pricingBigNumber: {
-    color: '#111827',
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  pricingBigUnit: {
-    color: '#6b7280',
-    fontSize: 12,
-  },
-  feeBreakdown: {
-    borderTopColor: '#f3f4f6',
-    borderTopWidth: 1,
-    gap: 4,
-    paddingTop: 8,
-  },
-  feeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  feeLabel: {
-    color: '#6b7280',
-    fontSize: 11,
-  },
-  feeValue: {
-    color: '#111827',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  feeTotalRow: {
-    borderTopColor: '#f3f4f6',
-    borderTopWidth: 1,
-    marginTop: 6,
-    paddingTop: 6,
-  },
-  feeTotalLabel: {
-    color: '#111827',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  feeTotalValue: {
-    color: colors.appPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
+      <Card gap="$x3" variant="outlined">
+        <XStack alignItems="center" justifyContent="space-between">
+          <AppText variant="h4">Seats</AppText>
+          {ride.contributionLabel ? (
+            <AppText tone="primary" variant="bodyStrong">
+              {ride.contributionLabel}
+            </AppText>
+          ) : null}
+        </XStack>
+        <XStack
+          aria-label={`${ride.seatsAvailable} of ${ride.seatsTotal} seats open`}
+          flexWrap="wrap"
+          gap="$x2"
+          role="img"
+        >
+          {Array.from({ length: ride.seatsTotal }, (_, i) => {
+            const isTaken = i < taken;
+            return (
+              <YStack
+                alignItems="center"
+                backgroundColor={isTaken ? '$surfaceContainer' : '$tealTint'}
+                borderColor={isTaken ? '$borderColor' : '$teal'}
+                borderRadius="$control"
+                borderWidth={1}
+                height={44}
+                justifyContent="center"
+                key={i}
+                width={44}
+              >
+                <AppIcon
+                  color={isTaken ? theme.colorMuted?.val : theme.teal?.val}
+                  name={isTaken ? 'user' : 'plus'}
+                  size={18}
+                />
+              </YStack>
+            );
+          })}
+        </XStack>
+        <AppText tone="muted" variant="caption">
+          {ride.seatsAvailable} of {ride.seatsTotal} {ride.seatsTotal === 1 ? 'seat' : 'seats'} open
+          {taken > 0 ? ` · ${taken} taken` : ''}
+        </AppText>
+      </Card>
 
-  // Safety Section
-  safetyHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 8,
-  },
-  safetyTitle: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  safetyItems: {
-    gap: 6,
-  },
-  safetyItem: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  safetyCheckCircle: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,105,107,0.12)',
-    borderRadius: 10,
-    height: 20,
-    justifyContent: 'center',
-    width: 20,
-  },
-  safetyItemText: {
-    color: '#374151',
-    fontSize: 11,
-  },
+      {isWomenOnly(ride.genderPreference) && !ride.isDriver ? (
+        <Card gap="$x1" variant="tinted">
+          <AppText variant="bodyStrong">Women-only ride</AppText>
+          <AppText tone="muted" variant="caption">
+            Only riders whose gender has been verified by ManaBandhu can book this ride. If yours is
+            not verified yet, booking will be refused.
+          </AppText>
+        </Card>
+      ) : null}
 
-  // Sticky Bottom Bar
-  bottomBar: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderTopColor: '#e5e7eb',
-    borderTopWidth: 1,
-    bottom: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    left: 0,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-    position: 'absolute',
-    right: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-  },
-  bottomBarDesktop: {
-    alignSelf: 'center',
-    maxWidth: 800,
-    width: '100%',
-  },
-  bottomBarLeft: {
-    alignItems: 'baseline',
-    flexDirection: 'row',
-    gap: 4,
-  },
-  bottomBarTotal: {
-    color: colors.appPrimary,
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  bottomBarSeatCount: {
-    color: '#6b7280',
-    fontSize: 11,
-  },
-  bottomBarRight: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  bottomBarChatBtn: {
-    alignItems: 'center',
-    backgroundColor: palette.surfaceContainer,
-    borderRadius: 16,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  bottomBarRequestBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: 16,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    shadowColor: colors.appPrimary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  bottomBarRequestText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+      {booked != null ? (
+        <Card aria-live="polite" gap="$x3" variant="tinted">
+          <AppText variant="bodyStrong">Seat booked. The driver can see your booking.</AppText>
+          <AppText tone="muted" variant="caption">
+            You have {booked} {booked === 1 ? 'seat' : 'seats'} on this ride. Use the ride chat to
+            agree on the exact pickup point.
+          </AppText>
+          <XStack flexWrap="wrap" gap="$x2">
+            <AppButton
+              label="My trips"
+              onPress={() => router.push('/rides/mine?tab=trips' as Href)}
+              variant="secondary"
+            />
+          </XStack>
+        </Card>
+      ) : blockReason ? (
+        <Card gap="$x2" variant="tinted">
+          <AppText variant="bodyStrong">{blockReason}</AppText>
+          {ride.isDriver ? (
+            <XStack flexWrap="wrap" gap="$x2">
+              {!statusIs(ride.status, 'completed', 'cancelled') ? (
+                <AppButton
+                  label="Manage ride"
+                  onPress={() => router.push(`/rides/${ride.id}/manage` as Href)}
+                />
+              ) : null}
+              <AppButton
+                label="Seat requests"
+                onPress={() => router.push(`/rides/${ride.id}/seat-requests` as Href)}
+                variant="secondary"
+              />
+            </XStack>
+          ) : null}
+        </Card>
+      ) : (
+        <Card gap="$x3" variant="outlined">
+          <AppText variant="h4">Book a seat</AppText>
+          <XStack aria-label="Number of seats" flexWrap="wrap" gap="$x2" role="radiogroup">
+            {Array.from({ length: maxSeats }, (_, i) => i + 1).map((n) => (
+              <ChoiceChip
+                accessibilityLabel={`${n} ${n === 1 ? 'seat' : 'seats'}`}
+                key={n}
+                label={String(n)}
+                onPress={() => setSeats(n)}
+                radio
+                selected={seats === n}
+              />
+            ))}
+          </XStack>
+          {total ? (
+            <AppText tone="muted" variant="caption">
+              {total}, paid to the driver directly.
+            </AppText>
+          ) : null}
+          <AppButton
+            fullWidth
+            icon="check"
+            label={isAuthenticated ? 'Book seat' : 'Sign in to book'}
+            loading={booking.isPending}
+            onPress={onBook}
+            size="lg"
+          />
+        </Card>
+      )}
 
-  // Modal
-  modalOverlay: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    flex: 1,
-    justifyContent: 'center',
-    padding: space.x4,
-  },
-  bookingModalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    maxWidth: 440,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  bookingConfirmBox: {
-    padding: space.x4,
-  },
-  bookingConfirmHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  bookingConfirmTitle: {
-    color: '#111827',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  bookingSummaryRow: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 12,
-  },
-  bookingSummaryDriver: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  bookingSummaryRoute: {
-    color: '#4b5563',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  bookingSummaryTime: {
-    color: colors.appPrimary,
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  bookingSummaryPriceBox: {
-    alignItems: 'flex-end',
-  },
-  bookingSummaryPrice: {
-    color: colors.appPrimary,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  bookingSummarySeats: {
-    color: '#6b7280',
-    fontSize: 10,
-  },
-  trustNote: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,105,107,0.08)',
-    borderRadius: 12,
-    flexDirection: 'row',
-    gap: 8,
-    marginVertical: 12,
-    padding: 10,
-  },
-  trustNoteText: {
-    color: colors.teal,
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  bookingConfirmBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: 16,
-    flexDirection: 'row',
-    gap: 6,
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  bookingConfirmBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  bookingSuccessBox: {
-    alignItems: 'center',
-    padding: 24,
-  },
-  bookingSuccessIconWrap: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,105,107,0.12)',
-    borderRadius: radius.pill,
-    height: 56,
-    justifyContent: 'center',
-    marginBottom: 12,
-    width: 56,
-  },
-  bookingSuccessTitle: {
-    color: '#111827',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  bookingSuccessSubtitle: {
-    color: '#4b5563',
-    fontSize: 13,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  bookingSuccessDetails: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 14,
-    color: '#6b7280',
-    fontSize: 11,
-    lineHeight: 16,
-    marginVertical: 14,
-    padding: 10,
-    textAlign: 'center',
-  },
-  bookingSuccessCta: {
-    backgroundColor: colors.appPrimary,
-    borderRadius: radius.pill,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    width: '100%',
-    alignItems: 'center',
-  },
-  bookingSuccessCtaText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+      {ride.isMember ? (
+        <XStack flexWrap="wrap" gap="$x2">
+          <AppButton
+            label="Participants"
+            onPress={() => router.push(`/rides/${ride.id}/participants` as Href)}
+            variant="secondary"
+          />
+          {statusIs(ride.status, 'completed') ? (
+            <AppButton
+              label={ride.isDriver ? 'Rate riders' : 'Rate driver'}
+              onPress={() => router.push(`/rides/${ride.id}/rate` as Href)}
+              variant="secondary"
+            />
+          ) : null}
+          {!ride.isDriver ? (
+            <AppButton
+              label="My trips"
+              onPress={() => router.push('/rides/mine?tab=trips' as Href)}
+              variant="ghost"
+            />
+          ) : null}
+        </XStack>
+      ) : null}
 
-  // Loading & Error States
-  loadingContainer: {
-    alignItems: 'center',
-    gap: 12,
-    justifyContent: 'center',
-    paddingVertical: 80,
-  },
-  loadingText: {
-    color: '#4b5563',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    gap: 10,
-    padding: 32,
-  },
-  emptyTitle: {
-    color: '#111827',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  emptySubtitle: {
-    color: '#6b7280',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  backBtn: {
-    marginTop: 4,
-    padding: 8,
-  },
-  backBtnText: {
-    color: colors.appPrimary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});
+      <Card gap="$x2" variant="outlined">
+        <XStack alignItems="center" gap="$x2">
+          <AppIcon color={theme.primary?.val} name="shield" size={18} />
+          <AppText variant="h4">Riding safely</AppText>
+        </XStack>
+        <AppText tone="muted" variant="caption">
+          Meet at a public pickup point and confirm the driver before you get in.
+        </AppText>
+        <AppText tone="muted" variant="caption">
+          Tell a trusted contact about your trip; add contacts in the Safety Center.
+        </AppText>
+        <AppText tone="muted" variant="caption">
+          Report anything that feels wrong from the Safety Center.
+        </AppText>
+      </Card>
+    </YStack>
+  );
+}

@@ -1,2292 +1,481 @@
-import { color as baseColors, breakpoint, palette, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import type { Href } from 'expo-router';
-import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  Modal,
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { type Href, router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet } from 'react-native';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
 import { useLocationStore } from '@/lib/locationStore';
-import { listRideOffers, provisionRideChat } from '@/modules/rides/api';
-import type { RideOffer } from '@/modules/rides/types';
+import { listRideOffers } from '@/modules/rides/api';
+import { ChoiceChip } from '@/modules/rides/components/ChoiceChip';
+import { formatDeparture } from '@/modules/rides/components/RideListCard';
+import type { Ride } from '@/modules/rides/types';
+import {
+  errorMessage,
+  isWomenOnly,
+  luggageLabel,
+  recurrenceLabel,
+  tollLabel,
+} from '@/modules/rides/utils/rideFormat';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
+import { TextField } from '@/modules/shared/ui/TextField';
 import type { Coordinate } from '@/modules/shared/utils/geoPolygon';
 import { isPointInPolygon } from '@/modules/shared/utils/geoPolygon';
 
-// ─── Theme Colors ─────────────────────────────────────────────────────────────
-const colors = {
-  ...baseColors,
-  appPrimary: palette.primary,
-  primaryDim: '#32149b',
-  primaryContainer: palette.primaryContainer,
-  surfaceContainer: palette.surfaceContainer,
-  surfaceContainerLow: palette.surfaceContainerLow,
-  surfaceContainerLowest: '#ffffff',
-  inkSecondary: baseColors.muted,
-  warm: palette.warm,
-  teal: palette.teal,
-  tealSoft: 'rgba(0,105,107,0.08)',
-  indigoSoft: 'rgba(67,30,190,0.07)',
-  orangeSoft: 'rgba(255,126,51,0.10)',
-};
+export type RidesScreenId = 'home' | 'search' | 'map' | 'filters';
 
-export type RidesScreenId =
-  | 'home'
-  | 'search'
-  | 'map'
-  | 'filters'
-  | 'offer'
-  | 'request'
-  | 'saved'
-  | 'mine'
-  | 'history'
-  | 'details'
-  | 'manage'
-  | 'seat-requests'
-  | 'participants'
-  | 'rate';
+const SEARCH_DELAY_MS = 300;
+const MAP_HEIGHT = 480;
 
-type RidesScreenProps = {
-  screenId?: RidesScreenId;
-};
+const WHEN_OPTIONS = [
+  { id: 'any', label: 'Any time' },
+  { id: 'today', label: 'Today' },
+  { id: 'tomorrow', label: 'Tomorrow' },
+  { id: 'week', label: 'Next 7 days' },
+] as const;
+type When = (typeof WHEN_OPTIONS)[number]['id'];
 
-// ─── City Options ─────────────────────────────────────────────────────────────
-// Metro areas only set the shared location context; ride counts always come from the API.
-type CityOption = {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-};
+const SORT_OPTIONS = [
+  { id: 'soonest', label: 'Soonest' },
+  { id: 'cheapest', label: 'Lowest price' },
+  { id: 'seats', label: 'Most seats' },
+] as const;
+type Sort = (typeof SORT_OPTIONS)[number]['id'];
 
-const CITIES: CityOption[] = [
-  { id: 'austin', name: 'Austin, TX', latitude: 30.2672, longitude: -97.7431 },
-  { id: 'dfw', name: 'Dallas-Fort Worth, TX', latitude: 32.7767, longitude: -96.797 },
-  { id: 'houston', name: 'Houston, TX', latitude: 29.7604, longitude: -95.3698 },
-  { id: 'bayarea', name: 'Bay Area, CA', latitude: 37.3382, longitude: -121.8863 },
-  { id: 'seattle', name: 'Seattle, WA', latitude: 47.6062, longitude: -122.3321 },
-];
-
-// ─── Ride view model (only fields derived from the RideOffer API record) ────────
-export type EnrichedRide = RideOffer & {
-  driverName: string;
-  departureTimeDisplay: string;
-  tags: string[];
-  commuteType: 'daily' | 'intercity' | 'one-time';
-};
-
-const INTERCITY_MILES = 50;
-
-// Departure window filter, applied to each ride's real departureAt.
-const WHEN_OPTIONS = ['Any time', 'Today', 'Tomorrow', 'Next 7 days'] as const;
-
-const filterCategories = [
-  { id: 'all', label: '🚗 All Carpools' },
-  { id: 'notolls', label: '🚫 No Tolls' },
-  { id: 'daily', label: '🔁 Daily Commute' },
-  { id: 'intercity', label: '🛣️ Intercity' },
-  { id: 'women', label: '👩 Women Only' },
-  { id: 'luggage', label: '🧳 Luggage Space' },
-];
-
-type SortOption = 'recommended' | 'price_low' | 'seats_most' | 'earliest';
-
-const SORT_OPTIONS: { id: SortOption; label: string; icon: string }[] = [
-  { id: 'recommended', label: 'Soonest Departure', icon: '✦' },
-  { id: 'price_low', label: 'Contribution: Low to High', icon: '↑' },
-  { id: 'seats_most', label: 'Seats: Most Available', icon: '👥' },
-  { id: 'earliest', label: 'Departure: Earliest', icon: '⚡' },
-];
-
-export function RidesScreen({ screenId = 'home' }: RidesScreenProps) {
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= breakpoint.medium;
-  const isLargeDesktop = width >= breakpoint.expanded;
-  const insets = useSafeAreaInsets();
-
-  // Search & Filter State (Global Location sync)
-  const globalLocation = useLocationStore((s) => s.currentLocation);
-  const setGlobalLocation = useLocationStore((s) => s.setLocation);
-
-  const selectedCity: CityOption = useMemo(() => {
-    const matched = CITIES.find(
-      (c) =>
-        c.name.toLowerCase().includes(globalLocation.cityName.toLowerCase()) ||
-        globalLocation.name.toLowerCase().includes(c.name.toLowerCase()),
-    );
-    if (matched) return matched;
-    return {
-      id: globalLocation.id,
-      name: globalLocation.name,
-      latitude: globalLocation.latitude,
-      longitude: globalLocation.longitude,
-    };
-  }, [globalLocation]);
-
-  const setSelectedCity = (city: CityOption) => {
-    setGlobalLocation({
-      id: city.id,
-      name: city.name,
-      cityName: city.name.split(',')[0]?.trim() || city.name,
-      stateCode: city.name.split(',')[1]?.trim() || 'US',
-      latitude: city.latitude,
-      longitude: city.longitude,
-    });
-  };
-  const [showCityModal, setShowCityModal] = useState(false);
-  const searchParams = useLocalSearchParams<{ from?: string; to?: string }>();
-  const [pickupQuery, setPickupQuery] = useState(searchParams.from ?? '');
-  const [dropoffQuery, setDropoffQuery] = useState(searchParams.to ?? '');
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [sortBy, setSortBy] = useState<SortOption>('recommended');
-  const [viewMode, setViewMode] = useState<'list' | 'map'>(screenId === 'map' ? 'map' : 'list');
-  const [showFilterModal, setShowFilterModal] = useState(screenId === 'filters');
-
+function useDebounced<T>(value: T, delay: number) {
+  const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (showFilterModal) {
-        setShowFilterModal(false);
-        return true;
-      }
-      if (showCityModal) {
-        setShowCityModal(false);
-        return true;
-      }
-      if (viewMode === 'map' && screenId !== 'map') {
-        setViewMode('list');
-        return true;
-      }
-      router.back();
-      return true;
-    });
-    return () => sub.remove();
-  }, [showFilterModal, showCityModal, viewMode, screenId]);
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
-  // Filter selections
-  const [filterWomenOnly, setFilterWomenOnly] = useState(false);
-  const [filterDailyOnly, setFilterDailyOnly] = useState(false);
-  const [filterNoTolls, _setFilterNoTolls] = useState(false);
+function departsInWindow(iso: string, when: When, now = new Date()) {
+  if (when === 'any') return true;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const day = 24 * 60 * 60 * 1000;
+  const t = new Date(iso).getTime();
+  if (when === 'today') return t >= start && t < start + day;
+  if (when === 'tomorrow') return t >= start + day && t < start + 2 * day;
+  return t < start + 7 * day;
+}
 
-  // Interactive pill state & chat loading
-  const [chatLoadingRideId, setChatLoadingRideId] = useState<string | null>(null);
-  const [whenIndex, setWhenIndex] = useState(0);
-  const [commuteModeIndex, setCommuteModeIndex] = useState(0);
+/** Rides home, search, map and filters: upcoming active rides from `GET /rides/offers`. */
+export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId }) {
+  const params = useLocalSearchParams<{ from?: string; to?: string }>();
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
+  const location = useLocationStore((s) => s.currentLocation);
 
-  const COMMUTE_OPTIONS = [
-    { label: 'All Modes 🚙', dailyOnly: false },
-    { label: 'Daily Commute 🔁', dailyOnly: true },
-    { label: 'One-time Trip 🚗', dailyOnly: false },
-  ];
+  const [origin, setOrigin] = useState(typeof params.from === 'string' ? params.from : '');
+  const [destination, setDestination] = useState(typeof params.to === 'string' ? params.to : '');
+  const [noTolls, setNoTolls] = useState(false);
+  const [womenOnly, setWomenOnly] = useState(false);
+  const [recurringOnly, setRecurringOnly] = useState(false);
+  const [luggageOnly, setLuggageOnly] = useState(false);
+  const [when, setWhen] = useState<When>('any');
+  const [sort, setSort] = useState<Sort>('soonest');
+  const [showFilters, setShowFilters] = useState(screenId === 'filters');
+  const [view, setView] = useState<'list' | 'map'>(screenId === 'map' ? 'map' : 'list');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [boundary, setBoundary] = useState<Coordinate[] | null>(null);
 
-  const handleCycleWhen = () => {
-    setWhenIndex((prev) => (prev + 1) % WHEN_OPTIONS.length);
-  };
+  const search = useDebounced(
+    { origin: origin.trim(), destination: destination.trim() },
+    SEARCH_DELAY_MS,
+  );
 
-  const handleCycleCommuteMode = () => {
-    const nextIdx = (commuteModeIndex + 1) % COMMUTE_OPTIONS.length;
-    setCommuteModeIndex(nextIdx);
-    setFilterDailyOnly(COMMUTE_OPTIONS[nextIdx].dailyOnly);
-  };
-
-  const handleCardChat = async (rideId: string) => {
-    try {
-      setChatLoadingRideId(rideId);
-      const conv = await provisionRideChat(rideId);
-      if (!conv?.conversationId) throw new Error('No conversation was created for this ride.');
-      router.push(`/chat/${conv.conversationId}` as Href);
-    } catch (e) {
-      Alert.alert(
-        'Unable to open ride chat',
-        e instanceof Error ? e.message : 'Please try again in a moment.',
-      );
-    } finally {
-      setChatLoadingRideId(null);
-    }
-  };
-
-  // Active highlighted ride on map
-  const [selectedMapRideId, setSelectedMapRideId] = useState<string | null>(null);
-  const [drawnBoundary, setDrawnBoundary] = useState<Coordinate[] | null>(null);
-
-  // Query Backend Rides API
-  const {
-    data: rawRides,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ['rides', 'offers', pickupQuery, dropoffQuery, activeCategory, filterNoTolls],
+  const query = useQuery({
+    queryKey: [
+      'rides',
+      'offers',
+      search.origin,
+      search.destination,
+      noTolls,
+      womenOnly,
+      recurringOnly,
+    ],
     queryFn: () =>
       listRideOffers({
-        origin: pickupQuery || undefined,
-        destination: dropoffQuery || undefined,
-        avoidTolls: activeCategory === 'notolls' || filterNoTolls ? true : undefined,
+        origin: search.origin || undefined,
+        destination: search.destination || undefined,
+        avoidTolls: noTolls || undefined,
+        genderPreference: womenOnly ? 'FEMALE_ONLY' : undefined,
+        isRecurring: recurringOnly ? true : undefined,
+        size: 50,
       }),
   });
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const onRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [refetch]);
-
-  // Presentation fields derived only from the ride record (no invented ratings or profiles)
-  const enrichedRides: EnrichedRide[] = useMemo(() => {
-    if (!rawRides || rawRides.length === 0) return [];
-    return rawRides.map((ride) => {
-      const departureTimeDisplay = ride.departureAt
-        ? new Date(ride.departureAt).toLocaleString([], {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-        : 'Time not set';
-      const tags: string[] = [];
-      if (ride.genderPreference?.toUpperCase() === 'FEMALE_ONLY') tags.push('👩 Women only');
-      if (ride.luggageCapacity) {
-        tags.push(`🧳 Luggage: ${ride.luggageCapacity.toLowerCase().replace(/_/g, ' ')}`);
+  const rides = useMemo(() => {
+    const list = (query.data ?? []).filter((ride) => {
+      if (!departsInWindow(ride.departureAt, when)) return false;
+      if (luggageOnly && !['MEDIUM', 'LARGE_SUITCASE'].includes(ride.luggageCapacity ?? ''))
+        return false;
+      if (boundary && boundary.length >= 3) {
+        if (ride.originLat == null || ride.originLng == null) return false;
+        if (!isPointInPolygon({ latitude: ride.originLat, longitude: ride.originLng }, boundary))
+          return false;
       }
-      if (ride.distanceMiles) tags.push(`📏 ~${Math.round(ride.distanceMiles)} mi`);
-      const commuteType: EnrichedRide['commuteType'] = ride.isRecurring
-        ? 'daily'
-        : (ride.distanceMiles ?? 0) > INTERCITY_MILES
-          ? 'intercity'
-          : 'one-time';
-      return { ...ride, driverName: 'Driver', departureTimeDisplay, tags, commuteType };
+      return true;
     });
-  }, [rawRides]);
+    return [...list].sort((a, b) => {
+      if (sort === 'cheapest') {
+        return (a.contributionAmount ?? Infinity) - (b.contributionAmount ?? Infinity);
+      }
+      if (sort === 'seats') return b.seatsAvailable - a.seatsAvailable;
+      return new Date(a.departureAt).getTime() - new Date(b.departureAt).getTime();
+    });
+  }, [query.data, when, luggageOnly, boundary, sort]);
 
-  // Apply Client Filters & Sorting
-  const filteredRides = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const dayMs = 24 * 60 * 60 * 1000;
-    const whenLabel = WHEN_OPTIONS[whenIndex];
-    return enrichedRides
-      .filter((ride) => {
-        // Hand-drawn boundary filter (only rides with real coordinates can match)
-        if (drawnBoundary && drawnBoundary.length >= 3) {
-          if (ride.originLat == null || ride.originLng == null) return false;
-          if (
-            !isPointInPolygon(
-              { latitude: Number(ride.originLat), longitude: Number(ride.originLng) },
-              drawnBoundary,
-            )
-          ) {
-            return false;
-          }
-        }
+  const filtersActive =
+    noTolls ||
+    womenOnly ||
+    recurringOnly ||
+    luggageOnly ||
+    when !== 'any' ||
+    Boolean(boundary) ||
+    Boolean(origin.trim() || destination.trim());
 
-        // Departure window
-        const departs = new Date(ride.departureAt).getTime();
-        if (whenLabel === 'Today' && (departs < startOfToday || departs >= startOfToday + dayMs))
-          return false;
-        if (
-          whenLabel === 'Tomorrow' &&
-          (departs < startOfToday + dayMs || departs >= startOfToday + 2 * dayMs)
-        )
-          return false;
-        if (whenLabel === 'Next 7 days' && departs >= startOfToday + 7 * dayMs) return false;
+  const resetFilters = () => {
+    setOrigin('');
+    setDestination('');
+    setNoTolls(false);
+    setWomenOnly(false);
+    setRecurringOnly(false);
+    setLuggageOnly(false);
+    setWhen('any');
+    setBoundary(null);
+  };
 
-        // Category filter
-        const womenOnly = ride.genderPreference?.toUpperCase() === 'FEMALE_ONLY';
-        if (activeCategory === 'daily' && !ride.isRecurring) return false;
-        if (activeCategory === 'intercity' && ride.commuteType !== 'intercity') return false;
-        if (activeCategory === 'women' && !womenOnly) return false;
-        if (
-          activeCategory === 'luggage' &&
-          !['MEDIUM', 'LARGE_SUITCASE'].includes(ride.luggageCapacity?.toUpperCase() ?? '')
-        )
-          return false;
-
-        // Modal Filters
-        if (filterWomenOnly && !womenOnly) return false;
-        if (filterDailyOnly && !ride.isRecurring) return false;
-        if (
-          (activeCategory === 'notolls' || filterNoTolls) &&
-          ride.tollPreference &&
-          ride.tollPreference !== 'AVOID_TOLLS'
-        )
-          return false;
-
-        return true;
-      })
-      .sort((a, b) => {
-        const priceA = parseFloat(a.contribution.replace(/[^0-9.]/g, '')) || 0;
-        const priceB = parseFloat(b.contribution.replace(/[^0-9.]/g, '')) || 0;
-        if (sortBy === 'price_low') return priceA - priceB;
-        if (sortBy === 'seats_most') return b.seatsAvailable - a.seatsAvailable;
-        return new Date(a.departureAt).getTime() - new Date(b.departureAt).getTime();
-      });
-  }, [
-    enrichedRides,
-    activeCategory,
-    filterWomenOnly,
-    filterDailyOnly,
-    filterNoTolls,
-    sortBy,
-    drawnBoundary,
-    whenIndex,
-  ]);
-
-  function handleSwapRoute() {
-    const temp = pickupQuery;
-    setPickupQuery(dropoffQuery);
-    setDropoffQuery(temp);
-  }
+  const results = () => {
+    if (query.isLoading) {
+      return <LoadingState count={3} label="Loading rides…" variant="skeleton" />;
+    }
+    if (query.isError) {
+      return (
+        <ErrorState
+          body={errorMessage(query.error)}
+          onRetry={() => query.refetch()}
+          retryLabel="Retry"
+          title="Could not load rides"
+        />
+      );
+    }
+    if (view === 'map')
+      return (
+        <RidesMap {...{ rides, selectedId, setSelectedId, boundary, setBoundary, location }} />
+      );
+    if (rides.length === 0) {
+      return (
+        <YStack gap="$x3">
+          <EmptyState
+            actionLabel="Offer a ride"
+            body={
+              filtersActive
+                ? 'No upcoming rides match. Clear the filters, or offer this trip yourself.'
+                : 'No one has offered an upcoming ride yet. Offer yours and riders can book it.'
+            }
+            iconName="car"
+            onAction={() => router.push('/rides/offer' as Href)}
+            title={filtersActive ? 'No rides match' : 'No upcoming rides'}
+          />
+          {filtersActive ? (
+            <XStack justifyContent="center">
+              <AppButton label="Clear filters" onPress={resetFilters} variant="ghost" />
+            </XStack>
+          ) : null}
+        </YStack>
+      );
+    }
+    return (
+      <ResponsiveGrid>
+        {rides.map((ride) => (
+          <RideResultCard key={ride.id} ride={ride} />
+        ))}
+      </ResponsiveGrid>
+    );
+  };
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={[styles.safeArea, { paddingBottom: Math.max(insets.bottom, 0) }]}
-    >
-      {/* ── Top App Bar ────────────────────────────────────────────────────────── */}
-      <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
-        <View style={styles.topBarLeft}>
-          <Pressable
-            accessibilityLabel="ManaBandhu Home"
-            accessibilityRole="button"
-            onPress={() => router.push('/')}
-            style={styles.logoBadge}
-          >
-            <View style={styles.logoCircle}>
-              <AppIcon color={colors.surfaceContainerLowest} name="car" size={20} />
-            </View>
-          </Pressable>
-          <View>
-            <View style={styles.brandRow}>
-              <Text style={styles.brandTitle}>ManaBandhu</Text>
-              <View style={styles.moduleBadge}>
-                <Text style={styles.moduleBadgeText}>Rides</Text>
-              </View>
-            </View>
-            {/* City Selector Pill */}
-            <Pressable
-              accessibilityLabel={`Select City: ${selectedCity.name}`}
-              accessibilityRole="button"
-              onPress={() => setShowCityModal(true)}
-              style={styles.citySelector}
-            >
-              <AppIcon color={colors.appPrimary} name="compass" size={13} />
-              <Text numberOfLines={1} style={styles.cityName}>
-                {selectedCity.name}
-              </Text>
-              <AppIcon color={colors.inkSecondary} name="chevron-down" size={13} />
-            </Pressable>
-          </View>
-        </View>
+    <Screen onRefresh={() => query.refetch()} refreshing={query.isRefetching}>
+      <YStack gap="$x4">
+        <XStack alignItems="center" flexWrap="wrap" gap="$x3" justifyContent="space-between">
+          <YStack flex={1} gap={2} minWidth={200}>
+            <AppText role="heading" variant="h1">
+              Rides
+            </AppText>
+            <AppText tone="muted" variant="caption">
+              Carpools from people in your community
+            </AppText>
+          </YStack>
+          <XStack gap="$x2">
+            <IconButton
+              icon="bookmark"
+              label="Saved rides"
+              onPress={() => router.push((isAuthenticated ? '/rides/saved' : '/sign-in') as Href)}
+            />
+            <IconButton
+              icon="clock"
+              label="Ride history"
+              onPress={() => router.push((isAuthenticated ? '/rides/history' : '/sign-in') as Href)}
+            />
+          </XStack>
+        </XStack>
 
-        <View style={styles.topBarRight}>
-          <Link asChild href={'/rides/mine' as Href}>
-            <Pressable
-              accessibilityLabel="My Created Rides"
-              accessibilityRole="button"
-              style={styles.myRidesBtn}
-            >
-              <AppIcon color={colors.appPrimary} name="car" size={16} />
-              <Text style={styles.myRidesBtnText}>My Rides</Text>
-            </Pressable>
-          </Link>
-          <Link asChild href={'/rides/saved' as Href}>
-            <Pressable
-              accessibilityLabel="Saved Rides"
-              accessibilityRole="button"
-              style={styles.iconBtn}
-            >
-              <AppIcon color={colors.ink} name="star" size={22} />
-              <View style={styles.badgeCount}>
-                <Text style={styles.badgeCountText}>3</Text>
-              </View>
-            </Pressable>
-          </Link>
-          <Link asChild href={'/rides/offer' as Href}>
-            <Pressable
-              accessibilityLabel="Offer Ride"
-              accessibilityRole="button"
-              style={styles.offerRideBtn}
-            >
-              <AppIcon color={colors.surfaceContainerLowest} name="plus" size={18} />
-              <Text style={styles.offerRideBtnText}>Offer</Text>
-            </Pressable>
-          </Link>
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.appPrimary}
-            colors={[colors.appPrimary]}
+        <XStack flexWrap="wrap" gap="$x2">
+          <AppButton
+            icon="plus"
+            label="Offer a ride"
+            onPress={() => router.push('/rides/offer' as Href)}
           />
-        }
-      >
-        <View style={[styles.mainContainer, isDesktop && styles.mainContainerDesktop]}>
-          {/* ── Route Search Card ───────────────────────────────────────────── */}
-          <View style={styles.searchCard}>
-            <View style={styles.searchInputsGroup}>
-              {/* Origin Field */}
-              <View style={styles.searchInputRow}>
-                <View style={styles.originIndicator} />
-                <View style={styles.inputInner}>
-                  <Text style={styles.inputLabel}>Pickup Origin</Text>
-                  <TextInput
-                    accessibilityLabel="Pickup origin input"
-                    onChangeText={setPickupQuery}
-                    placeholder="Pickup origin (e.g. Brushy Creek / Domain)"
-                    placeholderTextColor="#9ca3af"
-                    style={styles.textInput}
-                    value={pickupQuery}
+          <AppButton
+            icon="search"
+            label="Find a ride"
+            onPress={() => router.push('/rides/request' as Href)}
+            variant="secondary"
+          />
+          <AppButton
+            icon="car"
+            label="My rides"
+            onPress={() => router.push((isAuthenticated ? '/rides/mine' : '/sign-in') as Href)}
+            variant="secondary"
+          />
+        </XStack>
+
+        <Card gap="$x3" variant="outlined">
+          <TextField
+            label="From"
+            onChangeText={setOrigin}
+            placeholder="Pickup area, e.g. Irving"
+            returnKeyType="search"
+            value={origin}
+          />
+          <TextField
+            label="To"
+            onChangeText={setDestination}
+            placeholder="Destination, e.g. Downtown"
+            returnKeyType="search"
+            value={destination}
+          />
+          <XStack flexWrap="wrap" gap="$x2">
+            <AppButton
+              icon="refresh"
+              label="Swap"
+              onPress={() => {
+                setOrigin(destination);
+                setDestination(origin);
+              }}
+              variant="ghost"
+            />
+            <AppButton
+              icon="filter"
+              label={showFilters ? 'Hide filters' : 'Filters'}
+              onPress={() => setShowFilters((v) => !v)}
+              variant="ghost"
+            />
+            {filtersActive ? (
+              <AppButton label="Clear all" onPress={resetFilters} variant="ghost" />
+            ) : null}
+          </XStack>
+          <XStack flexWrap="wrap" gap="$x2">
+            <ChoiceChip label="No tolls" onPress={() => setNoTolls((v) => !v)} selected={noTolls} />
+            <ChoiceChip
+              label="Women only"
+              onPress={() => setWomenOnly((v) => !v)}
+              selected={womenOnly}
+            />
+            <ChoiceChip
+              label="Recurring commutes"
+              onPress={() => setRecurringOnly((v) => !v)}
+              selected={recurringOnly}
+            />
+            <ChoiceChip
+              label="Luggage space"
+              onPress={() => setLuggageOnly((v) => !v)}
+              selected={luggageOnly}
+            />
+          </XStack>
+          {showFilters ? (
+            <YStack gap="$x3">
+              <AppText variant="label">Departs</AppText>
+              <XStack aria-label="Departs" flexWrap="wrap" gap="$x2" role="radiogroup">
+                {WHEN_OPTIONS.map((o) => (
+                  <ChoiceChip
+                    key={o.id}
+                    label={o.label}
+                    onPress={() => setWhen(o.id)}
+                    radio
+                    selected={when === o.id}
                   />
-                </View>
-                {pickupQuery.length > 0 ? (
-                  <Pressable onPress={() => setPickupQuery('')} style={styles.inputActionBtn}>
-                    <Text style={{ fontSize: 13, color: colors.inkSecondary }}>✕</Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={() => setPickupQuery('Brushy Creek, Round Rock')}
-                    style={styles.inputActionBtn}
-                  >
-                    <AppIcon color={colors.appPrimary} name="compass" size={18} />
-                  </Pressable>
-                )}
-              </View>
-
-              {/* Swap Route Button */}
-              <View style={styles.swapContainer}>
-                <Pressable
-                  accessibilityLabel="Swap origin and destination"
-                  accessibilityRole="button"
-                  onPress={handleSwapRoute}
-                  style={styles.swapBtn}
-                >
-                  <Text style={{ fontSize: 15, color: colors.appPrimary, fontWeight: '700' }}>
-                    ⇅
-                  </Text>
-                </Pressable>
-              </View>
-
-              {/* Destination Field */}
-              <View style={styles.searchInputRow}>
-                <AppIcon color={colors.warm} name="compass" size={18} />
-                <View style={styles.inputInner}>
-                  <Text style={styles.inputLabel}>Dropoff Destination</Text>
-                  <TextInput
-                    accessibilityLabel="Dropoff destination input"
-                    onChangeText={setDropoffQuery}
-                    placeholder="Dropoff destination (e.g. Apple Riata / Downtown)"
-                    placeholderTextColor="#9ca3af"
-                    style={styles.textInput}
-                    value={dropoffQuery}
+                ))}
+              </XStack>
+              <AppText variant="label">Sort by</AppText>
+              <XStack aria-label="Sort by" flexWrap="wrap" gap="$x2" role="radiogroup">
+                {SORT_OPTIONS.map((o) => (
+                  <ChoiceChip
+                    key={o.id}
+                    label={o.label}
+                    onPress={() => setSort(o.id)}
+                    radio
+                    selected={sort === o.id}
                   />
-                </View>
-                {dropoffQuery.length > 0 ? (
-                  <Pressable onPress={() => setDropoffQuery('')} style={styles.inputActionBtn}>
-                    <Text style={{ fontSize: 13, color: colors.inkSecondary }}>✕</Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={() => setDropoffQuery('Apple Riata Campus (Parmer Ln)')}
-                    style={styles.inputActionBtn}
-                  >
-                    <AppIcon color={colors.teal} name="calendar" size={18} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
+                ))}
+              </XStack>
+            </YStack>
+          ) : null}
+        </Card>
 
-            {/* Date/Time & Frequency Settings */}
-            <View style={styles.searchDetailsRow}>
-              <Pressable
-                accessibilityLabel={`Departure time: ${WHEN_OPTIONS[whenIndex]}. Tap to cycle.`}
-                accessibilityRole="button"
-                onPress={handleCycleWhen}
-                style={({ pressed }) => [
-                  styles.searchDetailPill,
-                  pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
-                ]}
-              >
-                <AppIcon color={colors.appPrimary} name="calendar" size={16} />
-                <View>
-                  <Text style={styles.detailPillSmall}>Departs (tap to change)</Text>
-                  <Text style={styles.detailPillVal}>{WHEN_OPTIONS[whenIndex]}</Text>
-                </View>
-              </Pressable>
-              <Pressable
-                accessibilityLabel={`Commute mode: ${COMMUTE_OPTIONS[commuteModeIndex].label}. Tap to cycle.`}
-                accessibilityRole="button"
-                onPress={handleCycleCommuteMode}
-                style={({ pressed }) => [
-                  styles.searchDetailPill,
-                  pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
-                ]}
-              >
-                <Text style={{ fontSize: 14 }}>🔁</Text>
-                <View>
-                  <Text style={styles.detailPillSmall}>Commute Mode</Text>
-                  <Text style={[styles.detailPillVal, { color: colors.teal }]}>
-                    {COMMUTE_OPTIONS[commuteModeIndex].label}
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
+        <SegmentedControl
+          label="Results view"
+          onChange={setView}
+          options={[
+            {
+              value: 'list',
+              label: query.isSuccess ? `List (${rides.length})` : 'List',
+              icon: 'car',
+            },
+            { value: 'map', label: 'Map', icon: 'map' },
+          ]}
+          value={view}
+        />
 
-            {/* Find Rides Button */}
-            <Pressable
-              accessibilityLabel="Find Carpools"
-              accessibilityRole="button"
-              onPress={() => refetch()}
-              style={styles.findRidesBtn}
-            >
-              <AppIcon color={colors.surfaceContainerLowest} name="search" size={20} />
-              <Text style={styles.findRidesBtnText}>Find Carpools</Text>
-            </Pressable>
-          </View>
-
-          {/* ── View Segmented Control (List vs Map) ────────────────────────── */}
-          <View style={styles.segmentedContainer}>
-            <Pressable
-              accessibilityLabel="Available Rides list view"
-              accessibilityRole="button"
-              onPress={() => setViewMode('list')}
-              style={[styles.segmentBtn, viewMode === 'list' && styles.segmentBtnActive]}
-            >
-              <AppIcon
-                color={viewMode === 'list' ? colors.surfaceContainerLowest : colors.inkSecondary}
-                name="car"
-                size={18}
-              />
-              <Text
-                style={[styles.segmentBtnText, viewMode === 'list' && styles.segmentBtnTextActive]}
-              >
-                {isLoading || isError
-                  ? 'Available Rides'
-                  : `Available Rides (${filteredRides.length})`}
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityLabel="Live Route Map view"
-              accessibilityRole="button"
-              onPress={() => setViewMode('map')}
-              style={[styles.segmentBtn, viewMode === 'map' && styles.segmentBtnActive]}
-            >
-              <AppIcon
-                color={viewMode === 'map' ? colors.surfaceContainerLowest : colors.inkSecondary}
-                name="map"
-                size={18}
-              />
-              <Text
-                style={[styles.segmentBtnText, viewMode === 'map' && styles.segmentBtnTextActive]}
-              >
-                Live Route Map
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* ── Quick Filter Chips Horizontal Scroll ───────────────────────── */}
-          <View style={styles.filterChipsRow}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.chipsScroll}
-            >
-              {filterCategories.map((cat) => {
-                const isActive = activeCategory === cat.id;
-                return (
-                  <Pressable
-                    key={cat.id}
-                    accessibilityLabel={cat.label}
-                    accessibilityRole="button"
-                    onPress={() => setActiveCategory(cat.id)}
-                    style={[styles.chip, isActive && styles.chipActive]}
-                  >
-                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                      {cat.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            <Pressable
-              accessibilityLabel="Open Filters and Sort Modal"
-              accessibilityRole="button"
-              onPress={() => setShowFilterModal(true)}
-              style={styles.filterTriggerBtn}
-            >
-              <AppIcon color={colors.appPrimary} name="wrench" size={18} />
-              <Text style={styles.filterTriggerText}>Filter</Text>
-            </Pressable>
-          </View>
-
-          {/* ── Trust & Verified Commute Banner ────────────────────────────── */}
-          <View style={styles.trustBanner}>
-            <View style={styles.trustIconWrap}>
-              <AppIcon color={colors.teal} name="verified-user" size={18} />
-            </View>
-            <Text style={styles.trustText}>
-              <Text style={styles.trustTextBold}>Community carpools</Text> · Drivers set a fuel
-              contribution per seat. Review the route and chat with the driver before booking.
-            </Text>
-          </View>
-
-          {/* ── Content View: Map or List ──────────────────────────────────── */}
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator color={colors.appPrimary} size="large" />
-              <Text style={styles.loadingText}>Loading carpools...</Text>
-            </View>
-          ) : isError ? (
-            <View style={styles.emptyContainer}>
-              <AppIcon color={colors.warm} name="warning" size={36} />
-              <Text style={styles.emptyTitle}>Unable to load carpools</Text>
-              <Text style={styles.emptySubtitle}>Please verify network connection and retry.</Text>
-              <Pressable onPress={() => refetch()} style={styles.retryBtn}>
-                <Text style={styles.retryBtnText}>Retry</Text>
-              </Pressable>
-            </View>
-          ) : viewMode === 'map' ? (
-            /* ── Interactive Live Route Map View ─────────────────────────────── */
-            <View style={[styles.mapCanvas, { padding: 0, overflow: 'hidden' }]}>
-              {(() => {
-                const rideMarkers = filteredRides
-                  .filter((ride) => ride.originLat != null && ride.originLng != null)
-                  .map((ride) => ({
-                    id: ride.id,
-                    latitude: Number(ride.originLat),
-                    longitude: Number(ride.originLng),
-                    title: `${ride.originArea} ➔ ${ride.destinationArea}`,
-                    price: ride.contribution.split('/')[0].trim().replace('$', ''),
-                    subtitle: `${ride.originArea} ➔ ${ride.destinationArea}`,
-                    isSelected: selectedMapRideId === ride.id,
-                  }));
-
-                const initialLat = rideMarkers[0]?.latitude ?? selectedCity.latitude;
-                const initialLng = rideMarkers[0]?.longitude ?? selectedCity.longitude;
-
-                return (
-                  <UniversalMapView
-                    initialRegion={{
-                      latitude: initialLat,
-                      longitude: initialLng,
-                      latitudeDelta: 0.18,
-                      longitudeDelta: 0.18,
-                    }}
-                    markers={rideMarkers}
-                    selectedMarkerId={selectedMapRideId}
-                    onSelectMarker={(id) => setSelectedMapRideId(id)}
-                    style={StyleSheet.absoluteFill}
-                    enableDrawing={true}
-                    drawnPolygon={drawnBoundary}
-                    onPolygonComplete={(poly) => setDrawnBoundary(poly)}
-                    onClearPolygon={() => setDrawnBoundary(null)}
-                  />
-                );
-              })()}
-
-              {/* Zillow-style Floating Switch to List View Button (Visible only when area is drawn) */}
-              {drawnBoundary && drawnBoundary.length >= 3 && (
-                <View
-                  style={[
-                    styles.zillowFloatingSwitchWrapper,
-                    selectedMapRideId
-                      ? styles.zillowFloatingSwitchWrapperTop
-                      : styles.zillowFloatingSwitchWrapperBottom,
-                  ]}
-                  pointerEvents="box-none"
-                >
-                  <Pressable
-                    onPress={() => setViewMode('list')}
-                    style={({ pressed }) => [
-                      styles.zillowFloatingSwitchBtn,
-                      pressed && styles.zillowFloatingSwitchBtnPressed,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`View ${filteredRides.length} carpools in drawn area`}
-                  >
-                    <Text style={styles.zillowFloatingSwitchIcon}>🚗</Text>
-                    <Text style={styles.zillowFloatingSwitchText}>
-                      View {filteredRides.length}{' '}
-                      {filteredRides.length === 1 ? 'Carpool' : 'Carpools'} in Area
-                    </Text>
-                    <Text style={styles.zillowFloatingSwitchArrow}>➔</Text>
-                  </Pressable>
-                </View>
-              )}
-
-              {/* Selected Ride Quick Preview Sheet in Map */}
-              {selectedMapRideId ? (
-                <View style={styles.mapPreviewSheet}>
-                  {(() => {
-                    const ride = filteredRides.find((r) => r.id === selectedMapRideId);
-                    if (!ride) return null;
-                    return (
-                      <View style={styles.mapPreviewInner}>
-                        <View style={styles.mapPreviewHeader}>
-                          <View>
-                            <Text style={styles.mapPreviewTitle}>
-                              Departs {ride.departureTimeDisplay}
-                            </Text>
-                            <Text style={styles.mapPreviewRoute}>
-                              {ride.originArea} ➔ {ride.destinationArea}
-                            </Text>
-                          </View>
-                          <Pressable onPress={() => setSelectedMapRideId(null)}>
-                            <Text style={{ fontSize: 14, color: colors.inkSecondary }}>✕</Text>
-                          </Pressable>
-                        </View>
-                        <View style={styles.mapPreviewFooter}>
-                          <Text style={styles.mapPreviewPrice}>{ride.contribution}</Text>
-                          <Link asChild href={`/rides/${ride.id}` as Href}>
-                            <Pressable style={styles.mapPreviewCta}>
-                              <Text style={styles.mapPreviewCtaText}>View Details & Book</Text>
-                            </Pressable>
-                          </Link>
-                        </View>
-                      </View>
-                    );
-                  })()}
-                </View>
-              ) : null}
-            </View>
-          ) : (
-            /* ── Active Ride Cards List ──────────────────────────────────────── */
-            <View style={styles.cardsList}>
-              {filteredRides.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <AppIcon color={colors.appPrimary} name="car" size={44} />
-                  <Text style={styles.emptyTitle}>No carpools match your filter</Text>
-                  <Text style={styles.emptySubtitle}>
-                    Try changing your pickup area or clearing filters.
-                  </Text>
-                  <Pressable
-                    onPress={() => {
-                      setPickupQuery('');
-                      setDropoffQuery('');
-                      setActiveCategory('all');
-                      setFilterWomenOnly(false);
-                      setFilterDailyOnly(false);
-                    }}
-                    style={styles.retryBtn}
-                  >
-                    <Text style={styles.retryBtnText}>Reset All Filters</Text>
-                  </Pressable>
-                </View>
-              ) : isLargeDesktop ? (
-                <View style={styles.comparisonTable}>
-                  <View style={styles.tableHeaderRow}>
-                    <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Driver</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Route</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 1.6 }]}>Schedule</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Tolls</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Seats</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Price</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 1.3, textAlign: 'right' }]}>
-                      Action
-                    </Text>
-                  </View>
-                  {filteredRides.map((ride, idx) => (
-                    <View
-                      key={ride.id}
-                      style={[styles.tableRow, idx % 2 === 1 && styles.tableRowEven]}
-                    >
-                      <View
-                        style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center', gap: 8 }}
-                      >
-                        <View style={styles.avatarCircleSmall}>
-                          <Text style={styles.avatarInitialSmall}>{ride.driverName.charAt(0)}</Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            numberOfLines={1}
-                            style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}
-                          >
-                            {ride.driverName}
-                          </Text>
-                          <Text style={{ fontSize: 11, color: colors.muted }}>
-                            {ride.seatsTotal} {ride.seatsTotal === 1 ? 'seat' : 'seats'} offered
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={{ flex: 2, paddingRight: 8 }}>
-                        <Text
-                          numberOfLines={1}
-                          style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}
-                        >
-                          {ride.originArea}
-                        </Text>
-                        <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>
-                          → {ride.destinationArea}
-                        </Text>
-                      </View>
-
-                      <View style={{ flex: 1.6 }}>
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.ink }}>
-                          {ride.departureTimeDisplay}
-                        </Text>
-                        <Text style={{ fontSize: 11, color: colors.muted }}>
-                          {ride.isRecurring ? 'Daily Commute' : 'One-Time Trip'}
-                        </Text>
-                      </View>
-
-                      <View style={{ flex: 1.2 }}>
-                        <View
-                          style={[
-                            styles.tollBadgeSmall,
-                            ride.tollPreference === 'AVOID_TOLLS'
-                              ? styles.tollBadgeAvoid
-                              : styles.tollBadgeIncluded,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.tollBadgeTextSmall,
-                              ride.tollPreference === 'AVOID_TOLLS'
-                                ? styles.tollAvoidText
-                                : styles.tollIncludedText,
-                            ]}
-                          >
-                            {ride.tollPreference === 'AVOID_TOLLS'
-                              ? 'No Tolls'
-                              : ride.tollPreference === 'TOLLS_INCLUDED'
-                                ? 'Tolls Inc.'
-                                : 'Split Tolls'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>
-                          {ride.seatsAvailable} left
-                        </Text>
-                      </View>
-
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: colors.appPrimary }}>
-                          {ride.contribution.split('/')[0].trim()}
-                        </Text>
-                      </View>
-
-                      <View style={{ flex: 1.3, alignItems: 'flex-end' }}>
-                        <Link asChild href={`/rides/${ride.id}` as Href}>
-                          <Pressable style={styles.tableActionBtn}>
-                            <Text style={styles.tableActionBtnText}>View & Book</Text>
-                          </Pressable>
-                        </Link>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                filteredRides.map((ride) => (
-                  <View key={ride.id} style={styles.rideCard}>
-                    {/* Driver & Verification Header */}
-                    <View style={styles.cardHeader}>
-                      <View style={styles.driverInfoRow}>
-                        <View style={styles.avatarWrap}>
-                          <View style={styles.avatarCircle}>
-                            <Text style={styles.avatarInitial}>{ride.driverName.charAt(0)}</Text>
-                          </View>
-                        </View>
-
-                        <View>
-                          <View style={styles.driverNameRow}>
-                            <Text style={styles.driverName}>{ride.driverName}</Text>
-                          </View>
-                          <Text style={styles.driverSub}>
-                            {ride.commuteType === 'daily'
-                              ? 'Recurring commute'
-                              : ride.commuteType === 'intercity'
-                                ? 'Intercity trip'
-                                : 'One-time trip'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Contribution Price Pill */}
-                      <View style={styles.priceColumn}>
-                        <Text style={styles.priceAmount}>
-                          {ride.contribution.split('/')[0].trim()}
-                        </Text>
-                        <Text style={styles.pricePer}>/ seat</Text>
-                      </View>
-                    </View>
-
-                    {/* Route Visualizer */}
-                    <View style={styles.routeBox}>
-                      <View style={styles.routePoint}>
-                        <View style={styles.originBullet} />
-                        <Text numberOfLines={1} style={styles.pointText}>
-                          {ride.originArea}
-                        </Text>
-                      </View>
-
-                      <View style={styles.routeMid}>
-                        <View style={styles.dashedConnector} />
-                        <View style={styles.routeScheduleRow}>
-                          <AppIcon color={colors.appPrimary} name="calendar" size={13} />
-                          <Text style={styles.routeScheduleText}>
-                            Departs {ride.departureTimeDisplay}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.routePoint}>
-                        <AppIcon color={colors.teal} name="compass" size={15} />
-                        <Text numberOfLines={1} style={[styles.pointText, styles.pointTextBold]}>
-                          {ride.destinationArea}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Vehicle & Seats Badge */}
-                    <View style={styles.vehicleRow}>
-                      <View style={styles.vehicleSpec}>
-                        <AppIcon color={colors.appPrimary} name="car" size={16} />
-                        <Text numberOfLines={1} style={styles.vehicleText}>
-                          {ride.seatsTotal} {ride.seatsTotal === 1 ? 'seat' : 'seats'} offered
-                        </Text>
-                      </View>
-                      <View style={styles.seatsLeftPill}>
-                        <Text style={styles.seatsLeftText}>{ride.seatsAvailable} seats left</Text>
-                      </View>
-                    </View>
-
-                    {/* Toll & Recurrence Badges */}
-                    <View
-                      style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 6 }}
-                    >
-                      {ride.isRecurring ? (
-                        <View
-                          style={{
-                            backgroundColor: 'rgba(0,105,107,0.1)',
-                            paddingHorizontal: 8,
-                            paddingVertical: 4,
-                            borderRadius: 12,
-                          }}
-                        >
-                          <Text style={{ color: colors.teal, fontSize: 11, fontWeight: '700' }}>
-                            🔄{' '}
-                            {ride.recurrencePattern === 'WEEKDAYS'
-                              ? 'Weekdays Commute'
-                              : 'Daily Commute'}
-                          </Text>
-                        </View>
-                      ) : null}
-                      <View
-                        style={{
-                          backgroundColor:
-                            ride.tollPreference === 'AVOID_TOLLS'
-                              ? 'rgba(16,185,129,0.12)'
-                              : 'rgba(255,126,51,0.12)',
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          borderRadius: 12,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: ride.tollPreference === 'AVOID_TOLLS' ? '#059669' : colors.warm,
-                            fontSize: 11,
-                            fontWeight: '700',
-                          }}
-                        >
-                          {ride.tollPreference === 'AVOID_TOLLS'
-                            ? '🚫 Free Route (No Tolls)'
-                            : ride.tollPreference === 'TOLLS_INCLUDED'
-                              ? '🛣️ Tollway (Included)'
-                              : '⚖️ Split Tolls'}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Ride attributes from the offer record */}
-                    {ride.tags.length > 0 ? (
-                      <View style={styles.vibesContainer}>
-                        {ride.tags.map((tag) => (
-                          <View key={tag} style={styles.vibeTag}>
-                            <Text style={styles.vibeTagText}>{tag}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : null}
-
-                    {/* Card Action Buttons */}
-                    <View style={styles.cardActions}>
-                      <Link asChild href={`/rides/${ride.id}` as Href}>
-                        <Pressable
-                          accessibilityLabel={`Request seat with ${ride.driverName}`}
-                          accessibilityRole="button"
-                          style={styles.requestSeatBtn}
-                        >
-                          <AppIcon color={colors.surfaceContainerLowest} name="check" size={16} />
-                          <Text style={styles.requestSeatBtnText}>Request Seat</Text>
-                        </Pressable>
-                      </Link>
-
-                      <Pressable
-                        accessibilityLabel={`Chat with ${ride.driverName}`}
-                        accessibilityRole="button"
-                        disabled={chatLoadingRideId === ride.id}
-                        onPress={() => handleCardChat(ride.id)}
-                        style={styles.chatBtn}
-                      >
-                        {chatLoadingRideId === ride.id ? (
-                          <ActivityIndicator color={colors.appPrimary} size="small" />
-                        ) : (
-                          <AppIcon color={colors.appPrimary} name="message" size={18} />
-                        )}
-                      </Pressable>
-                    </View>
-                  </View>
-                ))
-              )}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* ── City Selector Modal ────────────────────────────────────────────── */}
-      <Modal
-        animationType="fade"
-        onRequestClose={() => setShowCityModal(false)}
-        transparent
-        visible={showCityModal}
-      >
-        <Pressable onPress={() => setShowCityModal(false)} style={styles.modalOverlay}>
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.cityModalContent}>
-            <View style={styles.cityModalHeader}>
-              <Text style={styles.cityModalTitle}>Select Metro Area</Text>
-              <Pressable onPress={() => setShowCityModal(false)} style={styles.modalCloseBtn}>
-                <Text style={{ fontSize: 16, color: colors.inkSecondary }}>✕</Text>
-              </Pressable>
-            </View>
-            <View style={styles.cityList}>
-              {CITIES.map((city) => {
-                const isSelected = selectedCity.id === city.id;
-                return (
-                  <Pressable
-                    key={city.id}
-                    onPress={() => {
-                      setSelectedCity(city);
-                      setShowCityModal(false);
-                    }}
-                    style={[styles.cityItem, isSelected && styles.cityItemSelected]}
-                  >
-                    <View>
-                      <Text
-                        style={[styles.cityNameText, isSelected && styles.cityNameTextSelected]}
-                      >
-                        {city.name}
-                      </Text>
-                    </View>
-                    <View style={styles.cityItemRight}>
-                      {isSelected ? (
-                        <AppIcon color={colors.appPrimary} name="check" size={18} />
-                      ) : null}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* ── Responsive Filter & Sort Modal (Bottom-up on Mobile, Centered on Web) ── */}
-      <Modal
-        animationType={isDesktop ? 'fade' : 'slide'}
-        onRequestClose={() => setShowFilterModal(false)}
-        transparent
-        visible={showFilterModal}
-      >
-        <Pressable onPress={() => setShowFilterModal(false)} style={styles.modalOverlay}>
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            style={[
-              styles.filterModalCard,
-              isDesktop ? styles.filterModalDesktop : styles.filterModalMobile,
-            ]}
-          >
-            {/* Modal Header */}
-            <View style={styles.filterModalHeader}>
-              <View style={styles.filterModalHeaderLeft}>
-                <AppIcon color={colors.appPrimary} name="wrench" size={20} />
-                <Text style={styles.filterModalTitle}>Filter & Sort Carpools</Text>
-              </View>
-              <Pressable onPress={() => setShowFilterModal(false)} style={styles.modalCloseBtn}>
-                <Text style={{ fontSize: 16, color: colors.inkSecondary }}>✕</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.filterModalBody}>
-              {/* Sort By Section */}
-              <Text style={styles.filterSectionTitle}>Sort By</Text>
-              <View style={styles.sortOptionsGrid}>
-                {SORT_OPTIONS.map((opt) => {
-                  const isSelected = sortBy === opt.id;
-                  return (
-                    <Pressable
-                      key={opt.id}
-                      onPress={() => setSortBy(opt.id)}
-                      style={[styles.sortPill, isSelected && styles.sortPillSelected]}
-                    >
-                      <Text style={styles.sortIcon}>{opt.icon}</Text>
-                      <Text style={[styles.sortLabel, isSelected && styles.sortLabelSelected]}>
-                        {opt.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {/* Commute & Safety Preferences */}
-              <Text style={styles.filterSectionTitle}>Ride Preferences</Text>
-              <View style={styles.preferenceRows}>
-                <Pressable
-                  onPress={() => setFilterWomenOnly(!filterWomenOnly)}
-                  style={[styles.toggleRow, filterWomenOnly && styles.toggleRowActive]}
-                >
-                  <View style={styles.toggleRowLeft}>
-                    <Text style={styles.toggleEmoji}>👩</Text>
-                    <View>
-                      <Text style={styles.toggleTitle}>Women Only Carpools</Text>
-                      <Text style={styles.toggleDesc}>Rides the driver marked as women only</Text>
-                    </View>
-                  </View>
-                  <View
-                    style={[styles.toggleCheckbox, filterWomenOnly && styles.toggleCheckboxActive]}
-                  >
-                    {filterWomenOnly ? <AppIcon color="#fff" name="check" size={14} /> : null}
-                  </View>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setFilterDailyOnly(!filterDailyOnly)}
-                  style={[styles.toggleRow, filterDailyOnly && styles.toggleRowActive]}
-                >
-                  <View style={styles.toggleRowLeft}>
-                    <Text style={styles.toggleEmoji}>🔁</Text>
-                    <View>
-                      <Text style={styles.toggleTitle}>Daily Work Commute Only</Text>
-                      <Text style={styles.toggleDesc}>Rides the driver marked as recurring</Text>
-                    </View>
-                  </View>
-                  <View
-                    style={[styles.toggleCheckbox, filterDailyOnly && styles.toggleCheckboxActive]}
-                  >
-                    {filterDailyOnly ? <AppIcon color="#fff" name="check" size={14} /> : null}
-                  </View>
-                </Pressable>
-              </View>
-            </ScrollView>
-
-            {/* Modal Bottom Actions */}
-            <View style={styles.filterModalFooter}>
-              <Pressable
-                onPress={() => {
-                  setFilterWomenOnly(false);
-                  setFilterDailyOnly(false);
-                  setSortBy('recommended');
-                }}
-                style={styles.filterResetBtn}
-              >
-                <Text style={styles.filterResetBtnText}>Reset</Text>
-              </Pressable>
-              <Pressable onPress={() => setShowFilterModal(false)} style={styles.filterApplyBtn}>
-                <Text style={styles.filterApplyBtnText}>Show {filteredRides.length} Carpools</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </SafeAreaView>
+        {results()}
+      </YStack>
+    </Screen>
   );
 }
 
-// ─── StyleSheet ───────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: '#f6f6ff',
-    flex: 1,
-  },
-  topBar: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderBottomColor: '#e5e7eb',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-    zIndex: 10,
-  },
-  topBarDesktop: {
-    alignSelf: 'center',
-    maxWidth: 960,
-    width: '100%',
-  },
-  topBarLeft: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x2,
-  },
-  logoBadge: {
-    borderRadius: radius.pill,
-  },
-  logoCircle: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: 18,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  brandRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  brandTitle: {
-    color: colors.appPrimary,
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  moduleBadge: {
-    backgroundColor: 'rgba(0,105,107,0.12)',
-    borderRadius: radius.pill,
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-  },
-  moduleBadgeText: {
-    color: colors.teal,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  citySelector: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 1,
-  },
-  cityName: {
-    color: '#4b5563',
-    fontSize: 11,
-    fontWeight: '600',
-    maxWidth: 180,
-  },
-  topBarRight: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x2,
-  },
-  iconBtn: {
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: radius.pill,
-    height: 36,
-    justifyContent: 'center',
-    position: 'relative',
-    width: 36,
-  },
-  badgeCount: {
-    backgroundColor: colors.warm,
-    borderRadius: radius.pill,
-    height: 16,
-    position: 'absolute',
-    right: -2,
-    top: -2,
-    width: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeCountText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  myRidesBtn: {
-    alignItems: 'center',
-    backgroundColor: palette.surfaceContainerLow,
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: palette.surfaceContainer,
-  },
-  myRidesBtnText: {
-    color: colors.appPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  offerRideBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    shadowColor: colors.appPrimary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  offerRideBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  mainContainer: {
-    paddingHorizontal: space.x4,
-    paddingTop: space.x3,
-  },
-  mainContainerDesktop: {
-    alignSelf: 'center',
-    maxWidth: 960,
-    width: '100%',
-  },
+function RideResultCard({ ride }: { ride: Ride }) {
+  const tags = [
+    ride.isRecurring ? (recurrenceLabel(ride.recurrencePattern) ?? 'Recurring') : null,
+    isWomenOnly(ride.genderPreference) ? 'Women only' : null,
+    tollLabel(ride.tollPreference),
+    luggageLabel(ride.luggageCapacity),
+    ride.distanceMiles ? `${Math.round(ride.distanceMiles)} mi` : null,
+  ].filter((t): t is string => Boolean(t));
+  return (
+    <Card
+      aria-label={`${ride.routeLabel}, departs ${formatDeparture(ride.departureAt)}, ${ride.seatsAvailable} seats open. View and book.`}
+      gap="$x2"
+      href={`/rides/${ride.id}`}
+      variant="outlined"
+    >
+      <XStack alignItems="flex-start" gap="$x2" justifyContent="space-between">
+        <AppText flex={1} numberOfLines={2} variant="bodyStrong">
+          {ride.routeLabel}
+        </AppText>
+        {ride.contributionLabel ? (
+          <AppText tone="primary" variant="bodyStrong">
+            {ride.contributionLabel}
+          </AppText>
+        ) : null}
+      </XStack>
+      <AppText tone="muted" variant="caption">
+        Departs {formatDeparture(ride.departureAt)}
+      </AppText>
+      <AppText tone={ride.seatsAvailable > 0 ? 'teal' : 'danger'} variant="caption">
+        {ride.seatsAvailable > 0
+          ? `${ride.seatsAvailable} of ${ride.seatsTotal} ${ride.seatsTotal === 1 ? 'seat' : 'seats'} open`
+          : 'Full'}
+      </AppText>
+      {tags.length > 0 ? (
+        <XStack flexWrap="wrap" gap="$x1">
+          {tags.map((t) => (
+            <Chip key={t} label={t} />
+          ))}
+        </XStack>
+      ) : null}
+    </Card>
+  );
+}
 
-  // Search Card
-  searchCard: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: space.x4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-  },
-  searchInputsGroup: {
-    position: 'relative',
-  },
-  searchInputRow: {
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderColor: '#f3f4f6',
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  originIndicator: {
-    backgroundColor: colors.appPrimary,
-    borderRadius: 6,
-    height: 12,
-    width: 12,
-  },
-  inputInner: {
-    flex: 1,
-  },
-  inputLabel: {
-    color: '#6b7280',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  textInput: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 2,
-    padding: 0,
-  },
-  inputActionBtn: {
-    padding: 4,
-  },
-  swapContainer: {
-    alignItems: 'flex-end',
-    marginVertical: -10,
-    paddingRight: 16,
-    zIndex: 2,
-  },
-  swapBtn: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    elevation: 2,
-    height: 28,
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    width: 28,
-  },
-  searchDetailsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  searchDetailPill: {
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderRadius: 14,
-    flex: 1,
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  detailPillSmall: {
-    color: '#6b7280',
-    fontSize: 9,
-    fontWeight: '600',
-  },
-  detailPillVal: {
-    color: '#111827',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  findRidesBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: 16,
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
-    marginTop: 12,
-    paddingVertical: 12,
-  },
-  findRidesBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  // Segmented View Control
-  segmentedContainer: {
-    backgroundColor: palette.surfaceContainer,
-    borderRadius: 16,
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: space.x3,
-    padding: 4,
-  },
-  segmentBtn: {
-    alignItems: 'center',
-    borderRadius: 12,
-    flex: 1,
-    flexDirection: 'row',
-    gap: 6,
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  segmentBtnActive: {
-    backgroundColor: colors.appPrimary,
-    shadowColor: colors.appPrimary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-  },
-  segmentBtnText: {
-    color: '#4b5563',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  segmentBtnTextActive: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-
-  // Filter Chips Row
-  filterChipsRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: space.x3,
-  },
-  chipsScroll: {
-    flex: 1,
-  },
-  chip: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    marginRight: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  chipActive: {
-    backgroundColor: colors.appPrimary,
-    borderColor: colors.appPrimary,
-  },
-  chipText: {
-    color: '#374151',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  chipTextActive: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  filterTriggerBtn: {
-    alignItems: 'center',
-    backgroundColor: palette.surfaceContainer,
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  filterTriggerText: {
-    color: colors.appPrimary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
-  // Trust Banner
-  trustBanner: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,105,107,0.06)',
-    borderColor: 'rgba(0,105,107,0.2)',
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: space.x3,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  trustIconWrap: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,105,107,0.15)',
-    borderRadius: 8,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  trustText: {
-    color: '#374151',
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  trustTextBold: {
-    color: colors.teal,
-    fontWeight: '700',
-  },
-
-  // Loading & Empty States
-  loadingContainer: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 48,
-  },
-  loadingText: {
-    color: '#4b5563',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 8,
-    marginTop: space.x3,
-    paddingHorizontal: 24,
-    paddingVertical: 36,
-  },
-  emptyTitle: {
-    color: '#111827',
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 6,
-  },
-  emptySubtitle: {
-    color: '#6b7280',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  retryBtn: {
-    backgroundColor: colors.appPrimary,
-    borderRadius: radius.pill,
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  retryBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  // Cards List
-  cardsList: {
-    gap: space.x3,
-    marginTop: space.x3,
-  },
-  rideCard: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: space.x4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-  },
-  cardHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  driverInfoRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-  },
-  avatarWrap: {
-    position: 'relative',
-  },
-  avatarCircle: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: 22,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  avatarInitial: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  driverNameRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  driverName: {
-    color: '#111827',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  driverSub: {
-    color: '#6b7280',
-    fontSize: 11,
-    marginTop: 1,
-  },
-  priceColumn: {
-    alignItems: 'flex-end',
-  },
-  priceAmount: {
-    color: colors.appPrimary,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  pricePer: {
-    color: '#6b7280',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-
-  // Route Box
-  routeBox: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 16,
-    marginTop: 12,
-    padding: 10,
-  },
-  routePoint: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  originBullet: {
-    backgroundColor: colors.appPrimary,
-    borderRadius: 5,
-    height: 10,
-    width: 10,
-  },
-  pointText: {
-    color: '#1f2937',
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  pointTextBold: {
-    color: '#111827',
-    fontWeight: '700',
-  },
-  routeMid: {
-    flexDirection: 'row',
-    gap: 8,
-    marginVertical: 4,
-    paddingLeft: 4,
-  },
-  dashedConnector: {
-    borderLeftColor: '#d1d5db',
-    borderLeftWidth: 1.5,
-    height: 16,
-    marginLeft: 0.5,
-  },
-  routeScheduleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
-  },
-  routeScheduleText: {
-    color: '#6b7280',
-    fontSize: 10,
-    fontWeight: '500',
-  },
-
-  // Vehicle Row
-  vehicleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  vehicleSpec: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-    gap: 6,
-  },
-  vehicleText: {
-    color: '#4b5563',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  seatsLeftPill: {
-    backgroundColor: 'rgba(0,105,107,0.12)',
-    borderRadius: radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  seatsLeftText: {
-    color: colors.teal,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-
-  // Vibes
-  vibesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 8,
-  },
-  vibeTag: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  vibeTagText: {
-    color: '#4b5563',
-    fontSize: 10,
-    fontWeight: '500',
-  },
-
-  // Card Actions
-  cardActions: {
-    borderTopColor: '#f3f4f6',
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-    paddingTop: 10,
-  },
-  requestSeatBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: 14,
-    flex: 1,
-    flexDirection: 'row',
-    gap: 6,
-    justifyContent: 'center',
-    paddingVertical: 9,
-    shadowColor: colors.appPrimary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-  },
-  requestSeatBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  chatBtn: {
-    alignItems: 'center',
-    backgroundColor: palette.surfaceContainer,
-    borderRadius: 14,
-    height: 38,
-    justifyContent: 'center',
-    width: 42,
-  },
-
-  // Map View
-  mapCanvas: {
-    backgroundColor: '#e5e7eb',
-    borderRadius: 24,
-    height: 380,
-    marginTop: space.x3,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  highwayCorridor1: {
-    backgroundColor: 'rgba(67,30,190,0.4)',
-    height: 6,
-    position: 'absolute',
-    top: '40%',
-    transform: [{ rotate: '-25deg' }],
-    width: '120%',
-  },
-  highwayCorridor2: {
-    backgroundColor: 'rgba(0,105,107,0.35)',
-    height: 6,
-    position: 'absolute',
-    top: '60%',
-    transform: [{ rotate: '35deg' }],
-    width: '120%',
-  },
-  mapPreviewSheet: {
-    bottom: 12,
-    left: 12,
-    position: 'absolute',
-    right: 12,
-    zIndex: 20,
-  },
-  mapPreviewInner: {
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  mapPreviewHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  mapPreviewTitle: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  mapPreviewRoute: {
-    color: '#6b7280',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  mapPreviewFooter: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  mapPreviewPrice: {
-    color: colors.appPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  mapPreviewCta: {
-    backgroundColor: colors.appPrimary,
-    borderRadius: radius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  mapPreviewCtaText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
-  // Modal Styles
-  modalOverlay: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    flex: 1,
-    justifyContent: 'center',
-    padding: space.x4,
-  },
-  cityModalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    maxWidth: 440,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  cityModalHeader: {
-    alignItems: 'center',
-    borderBottomColor: '#f3f4f6',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  cityModalTitle: {
-    color: '#111827',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  modalCloseBtn: {
-    padding: 4,
-  },
-  cityList: {
-    padding: space.x3,
-  },
-  cityItem: {
-    alignItems: 'center',
-    borderRadius: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: space.x3,
-  },
-  cityItemSelected: {
-    backgroundColor: palette.surfaceContainer,
-  },
-  cityNameText: {
-    color: '#1f2937',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  cityNameTextSelected: {
-    color: colors.appPrimary,
-  },
-  cityItemRight: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-
-  // Responsive Filter Modal (Bottom up on mobile, centered on desktop)
-  filterModalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  filterModalMobile: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    bottom: 0,
-    maxHeight: '80%',
-    position: 'absolute',
-  },
-  filterModalDesktop: {
-    maxWidth: 520,
-  },
-  filterModalHeader: {
-    alignItems: 'center',
-    borderBottomColor: '#f3f4f6',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  filterModalHeaderLeft: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterModalTitle: {
-    color: '#111827',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  filterModalBody: {
-    padding: space.x4,
-  },
-  filterSectionTitle: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 8,
-    marginTop: 8,
-  },
-  sortOptionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sortPill: {
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderColor: '#e5e7eb',
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  sortPillSelected: {
-    backgroundColor: palette.surfaceContainer,
-    borderColor: colors.appPrimary,
-  },
-  sortIcon: {
-    fontSize: 13,
-  },
-  sortLabel: {
-    color: '#374151',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  sortLabelSelected: {
-    color: colors.appPrimary,
-    fontWeight: '700',
-  },
-  preferenceRows: {
-    gap: 8,
-    marginTop: 4,
-  },
-  toggleRow: {
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 12,
-  },
-  toggleRowActive: {
-    backgroundColor: palette.surfaceContainerLow,
-    borderColor: colors.appPrimary,
-  },
-  toggleRowLeft: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  toggleEmoji: {
-    fontSize: 20,
-  },
-  toggleTitle: {
-    color: '#111827',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  toggleDesc: {
-    color: '#6b7280',
-    fontSize: 10,
-    marginTop: 1,
-  },
-  toggleCheckbox: {
-    alignItems: 'center',
-    borderColor: '#d1d5db',
-    borderRadius: 6,
-    borderWidth: 1.5,
-    height: 20,
-    justifyContent: 'center',
-    width: 20,
-  },
-  toggleCheckboxActive: {
-    backgroundColor: colors.appPrimary,
-    borderColor: colors.appPrimary,
-  },
-  filterModalFooter: {
-    alignItems: 'center',
-    borderTopColor: '#f3f4f6',
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    padding: space.x4,
-  },
-  filterResetBtn: {
-    alignItems: 'center',
-    borderColor: '#d1d5db',
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  filterResetBtnText: {
-    color: '#4b5563',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  filterApplyBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.appPrimary,
-    borderRadius: 14,
-    flex: 1,
-    paddingVertical: 10,
-  },
-  filterApplyBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  comparisonTable: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: palette.border,
-    overflow: 'hidden',
-    marginTop: space.x3,
-  },
-  tableHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    paddingVertical: space.x3,
-    paddingHorizontal: space.x4,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-  },
-  tableHeaderCell: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.ink,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: space.x3,
-    paddingHorizontal: space.x4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  tableRowEven: {
-    backgroundColor: '#fafbff',
-  },
-  avatarCircleSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.surfaceContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitialSmall: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.appPrimary,
-  },
-  tollBadgeSmall: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    alignSelf: 'flex-start',
-  },
-  tollBadgeAvoid: {
-    backgroundColor: 'rgba(16,185,129,0.12)',
-  },
-  tollBadgeIncluded: {
-    backgroundColor: 'rgba(255,126,51,0.12)',
-  },
-  tollBadgeTextSmall: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tollAvoidText: {
-    color: '#059669',
-  },
-  tollIncludedText: {
-    color: colors.warm,
-  },
-  tableActionBtn: {
-    backgroundColor: colors.appPrimary,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-  },
-  tableActionBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  zillowFloatingSwitchWrapper: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  zillowFloatingSwitchWrapperBottom: {
-    bottom: 24,
-  },
-  zillowFloatingSwitchWrapperTop: {
-    top: 14,
-  },
-  zillowFloatingSwitchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0f172a',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-  },
-  zillowFloatingSwitchBtnPressed: {
-    transform: [{ scale: 0.96 }],
-    opacity: 0.92,
-  },
-  zillowFloatingSwitchIcon: {
-    fontSize: 14,
-  },
-  zillowFloatingSwitchText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  zillowFloatingSwitchArrow: {
-    color: '#38bdf8',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-});
+function RidesMap({
+  rides,
+  selectedId,
+  setSelectedId,
+  boundary,
+  setBoundary,
+  location,
+}: {
+  rides: Ride[];
+  selectedId: string | null;
+  setSelectedId: (id: string | null) => void;
+  boundary: Coordinate[] | null;
+  setBoundary: (b: Coordinate[] | null) => void;
+  location: { latitude: number; longitude: number };
+}) {
+  const markers = rides
+    .filter((r) => r.originLat != null && r.originLng != null)
+    .map((r) => ({
+      id: r.id,
+      latitude: r.originLat as number,
+      longitude: r.originLng as number,
+      title: r.routeLabel,
+      price: r.contributionAmount != null ? r.contributionAmount : undefined,
+      subtitle: formatDeparture(r.departureAt),
+      isSelected: selectedId === r.id,
+    }));
+  const selected = rides.find((r) => r.id === selectedId) ?? null;
+  return (
+    <YStack gap="$x3">
+      <AppText tone="muted" variant="caption">
+        Pins show approximate pickup areas ({markers.length} of {rides.length} rides have a map
+        position). Draw an area to filter by pickup.
+      </AppText>
+      <YStack borderRadius="$card" height={MAP_HEIGHT} overflow="hidden">
+        <UniversalMapView
+          drawnPolygon={boundary}
+          enableDrawing
+          initialRegion={{
+            latitude: markers[0]?.latitude ?? location.latitude,
+            longitude: markers[0]?.longitude ?? location.longitude,
+            latitudeDelta: 0.18,
+            longitudeDelta: 0.18,
+          }}
+          markers={markers}
+          onClearPolygon={() => setBoundary(null)}
+          onPolygonComplete={(poly) => setBoundary(poly)}
+          onSelectMarker={(id) => setSelectedId(id)}
+          selectedMarkerId={selectedId}
+          style={StyleSheet.absoluteFill}
+        />
+      </YStack>
+      {selected ? (
+        <Card gap="$x2" variant="outlined">
+          <AppText variant="bodyStrong">{selected.routeLabel}</AppText>
+          <AppText tone="muted" variant="caption">
+            Departs {formatDeparture(selected.departureAt)} · {selected.seatsAvailable} seats open
+            {selected.contributionLabel ? ` · ${selected.contributionLabel}` : ''}
+          </AppText>
+          <XStack flexWrap="wrap" gap="$x2">
+            <AppButton
+              label="View and book"
+              onPress={() => router.push(`/rides/${selected.id}` as Href)}
+            />
+            <AppButton label="Close" onPress={() => setSelectedId(null)} variant="ghost" />
+          </XStack>
+        </Card>
+      ) : null}
+      {rides.length === 0 ? (
+        <EmptyState
+          actionLabel="Offer a ride"
+          body="No upcoming rides match these filters."
+          compact
+          iconName="map"
+          onAction={() => router.push('/rides/offer' as Href)}
+          title="No rides on the map"
+        />
+      ) : null}
+    </YStack>
+  );
+}

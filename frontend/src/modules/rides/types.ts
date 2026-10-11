@@ -1,132 +1,116 @@
-export type RideListing = {
+/** Ride lifecycle values as the backend stores them (always lowercase). Compare with `statusIs`. */
+export type RideStatus = 'draft' | 'active' | 'in_progress' | 'completed' | 'cancelled';
+
+export type TollPreference = 'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT';
+export type RecurrencePattern = 'ONE_TIME' | 'WEEKDAYS' | 'DAILY' | 'WEEKLY' | 'CUSTOM';
+export type LuggageCapacity = 'BACKPACK_ONLY' | 'MEDIUM' | 'LARGE_SUITCASE';
+export type GenderPreference = 'ANY' | 'FEMALE_ONLY' | 'MALE_ONLY';
+export type WeekDay = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
+
+/**
+ * A ride as every screen sees it. `api.ts` builds it from the backend `RideOfferView` in one place (`toRide`).
+ * `driverId`, `conversationId` and `routePolyline` are only present for members (driver, passengers, admins);
+ * non-members get coordinates rounded to two decimals.
+ */
+export type Ride = {
   id: string;
-  ownerId: string;
+  driverId: string | null;
+  /** The viewer drives this ride. */
+  isDriver: boolean;
+  /** The viewer is the driver, a passenger with a live booking or accepted request, or an admin. */
+  isMember: boolean;
+  originArea: string;
+  destinationArea: string;
+  /** `originArea → destinationArea`, for lists and headings. */
+  routeLabel: string;
+  originLat: number | null;
+  originLng: number | null;
+  destinationLat: number | null;
+  destinationLng: number | null;
+  routePolyline: string | null;
+  distanceMiles: number | null;
+  estimatedDurationMins: number | null;
+  tollPreference: string | null;
+  estimatedTollAmount: number | null;
+  isRecurring: boolean;
+  recurrencePattern: string | null;
+  recurringDays: string[];
+  luggageCapacity: string | null;
+  genderPreference: string | null;
+  completedAt: string | null;
+  conversationId: string | null;
+  chatExpiresAt: string | null;
+  departureAt: string;
+  seatsTotal: number;
+  seatsAvailable: number;
+  /** Raw stored contribution text (e.g. `$12 / seat`). */
+  contribution: string | null;
+  /** Numeric amount per seat parsed from `contribution`, or null when it has none. */
+  contributionAmount: number | null;
+  /** Display label such as `$12 / seat` or `Free`, or null when the driver did not set one. */
+  contributionLabel: string | null;
+  /** Lowercased status. */
+  status: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  /**
+   * Legacy aliases kept for the foundation Saved screen, which still reads these names. New code uses
+   * `routeLabel`, `originArea` and `destinationArea`.
+   */
   title: string;
-  description?: string;
   pickupArea: string;
   destination: string;
-  departureAt: string;
-  seatsAvailable: number;
-  seatsTotal: number;
-  contribution?: number | string;
-  status: 'DRAFT' | 'ACTIVE' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED';
-  luggageAllowed: boolean;
-  childSeatAvailable: boolean;
-  verifiedDriver: boolean;
-  tripSharingEnabled: boolean;
-  savedByViewer: boolean;
-  originLat?: number;
-  originLng?: number;
-  destinationLat?: number;
-  destinationLng?: number;
-  routePolyline?: string;
-  distanceMiles?: number;
-  estimatedDurationMins?: number;
-  tollPreference?: 'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT' | string;
-  estimatedTollAmount?: number;
-  isRecurring?: boolean;
-  recurrencePattern?: 'ONE_TIME' | 'WEEKDAYS' | 'DAILY' | 'WEEKLY' | string;
-  recurringDays?: string[];
-  luggageCapacity?: 'NONE' | 'BACKPACK_ONLY' | 'MEDIUM' | 'LARGE_SUITCASE' | string;
-  genderPreference?: 'ANY' | 'FEMALE_ONLY' | 'MALE_ONLY' | string;
-  completedAt?: string;
-  conversationId?: string;
-  chatExpiresAt?: string;
-  createdAt: string;
-  updatedAt: string;
 };
 
-export type OwnerRideListing = RideListing & {
-  exactPickup?: string;
+/** @deprecated Use `Ride`. Kept so other modules that import the old name keep compiling. */
+export type RideListing = Ride;
+
+export type RideBookingStatus = 'pending' | 'confirmed' | 'cancelled';
+
+export type RideBooking = {
+  id: string;
+  rideId: string;
+  userId: string;
+  seatsBooked: number;
+  /** Lowercased. */
+  status: string;
+  createdAt: string | null;
+};
+
+export type RideSeatRequest = {
+  id: string;
+  rideId: string;
+  riderId: string;
+  seatsRequested: number;
+  message: string | null;
+  /** Lowercased: `pending|accepted|rejected|withdrawn`. */
+  status: string;
+  createdAt: string | null;
 };
 
 export type RideParticipant = {
   id: string;
   rideId: string;
   userId: string;
-  name: string;
-  role: 'DRIVER' | 'RIDER';
-  status: 'CONFIRMED' | 'PENDING';
-  tripShared: boolean;
-};
-
-export type RideSeatRequest = {
-  id: string;
-  rideId: string;
-  requesterId: string;
-  requesterName: string;
-  pickupArea: string;
-  seatsRequested: number;
-  message?: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
-  createdAt: string;
+  /** Lowercased: `driver|rider`. */
+  role: string;
+  joinedAt: string | null;
 };
 
 export type RideRating = {
   id: string;
-  rideId: string;
-  raterId: string;
-  ratedId: string;
-  safetyRating: number;
-  timelinessRating: number;
-  comfortRating: number;
-  comment?: string;
-  createdAt: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string | null;
 };
 
 export type CreateRideOfferInput = {
-  title?: string;
-  description?: string;
-  pickupArea?: string;
-  destination?: string;
-  originArea?: string;
-  destinationArea?: string;
-  departureAt: string;
-  seatsTotal: number;
-  contribution?: number | string;
-  luggageAllowed?: boolean;
-  childSeatAvailable?: boolean;
-  originLat?: number;
-  originLng?: number;
-  destinationLat?: number;
-  destinationLng?: number;
-  routePolyline?: string;
-  distanceMiles?: number;
-  estimatedDurationMins?: number;
-  tollPreference?: 'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT' | string;
-  estimatedTollAmount?: number;
-  isRecurring?: boolean;
-  recurrencePattern?: 'ONE_TIME' | 'WEEKDAYS' | 'DAILY' | 'WEEKLY' | string;
-  recurringDays?: string[];
-  luggageCapacity?: 'NONE' | 'BACKPACK_ONLY' | 'MEDIUM' | 'LARGE_SUITCASE' | string;
-  genderPreference?: 'ANY' | 'FEMALE_ONLY' | 'MALE_ONLY' | string;
-};
-
-export type UpdateRideOfferInput = Partial<CreateRideOfferInput> & {
-  status?: string;
-  seatsAvailable?: number;
-  completedAt?: string;
-  conversationId?: string;
-  chatExpiresAt?: string;
-};
-
-export type CreateRideRatingInput = {
-  safetyRating: number;
-  timelinessRating: number;
-  comfortRating: number;
-  comment?: string;
-};
-
-export type RideOffer = {
-  id: string;
-  driverId: string;
   originArea: string;
   destinationArea: string;
   departureAt: string;
   seatsTotal: number;
-  seatsAvailable: number;
-  contribution: string;
-  status: string;
+  /** Amount per seat in dollars; 0 means free. */
+  contributionAmount: number;
   originLat?: number;
   originLng?: number;
   destinationLat?: number;
@@ -134,24 +118,32 @@ export type RideOffer = {
   routePolyline?: string;
   distanceMiles?: number;
   estimatedDurationMins?: number;
-  tollPreference?: 'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT' | string;
-  estimatedTollAmount?: number;
-  isRecurring?: boolean;
-  recurrencePattern?: 'ONE_TIME' | 'WEEKDAYS' | 'DAILY' | 'WEEKLY' | string;
-  recurringDays?: string[];
-  luggageCapacity?: 'NONE' | 'BACKPACK_ONLY' | 'MEDIUM' | 'LARGE_SUITCASE' | string;
-  genderPreference?: 'ANY' | 'FEMALE_ONLY' | 'MALE_ONLY' | string;
-  completedAt?: string;
-  conversationId?: string;
-  chatExpiresAt?: string;
-  createdAt: string;
-  updatedAt: string;
-  reported: boolean;
+  tollPreference: TollPreference;
+  isRecurring: boolean;
+  recurrencePattern: RecurrencePattern;
+  recurringDays: WeekDay[];
+  luggageCapacity: LuggageCapacity;
+  genderPreference: GenderPreference;
+};
+
+/** Driver edits. Status, completion and the chat are server-managed (`PATCH /status`, `POST /chat`). */
+export type UpdateRideOfferInput = {
+  seatsTotal?: number;
+  seatsAvailable?: number;
+  /** Amount per seat in dollars; sent as the stored `$N / seat` text. */
+  contributionAmount?: number;
+};
+
+export type CreateRideRatingInput = {
+  /** Omit to rate the driver (passengers); the driver must name a rider. */
+  rateeId?: string;
+  rating: number;
+  comment?: string;
 };
 
 export type RideChatResponse = {
   conversationId: string;
   rideId?: string;
-  chatExpiresAt?: string;
-  message?: string;
+  chatExpiresAt?: string | null;
+  notice?: string | null;
 };

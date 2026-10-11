@@ -1,577 +1,450 @@
-import { color as colors, palette, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
 import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import {
+  cancelBooking,
+  deleteRide,
   getRideForOwner,
+  listRideBookings,
+  listSeatRequests,
   provisionRideChat,
-  reactivateRideOffer,
   updateRideOffer,
   updateRideStatus,
 } from '@/modules/rides/api';
+import { RepeatTripSheet } from '@/modules/rides/components/RepeatTripSheet';
+import { formatDeparture } from '@/modules/rides/components/RideListCard';
+import type { RideBooking, UpdateRideOfferInput } from '@/modules/rides/types';
+import { confirmAction, showError } from '@/modules/rides/utils/notify';
+import {
+  amountError,
+  errorMessage,
+  isNotFound,
+  memberLabel,
+  seatsError,
+  statusIs,
+  statusLabel,
+} from '@/modules/rides/utils/rideFormat';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { Screen } from '@/modules/shared/ui/Screen';
 import { TextField } from '@/modules/shared/ui/TextField';
 
+type Transition = 'in_progress' | 'completed' | 'cancelled';
+
+const TRANSITION_COPY: Record<
+  Transition,
+  { title: string; body: string; confirm: string; error: string; done: string }
+> = {
+  in_progress: {
+    title: 'Start this trip?',
+    body: 'The ride leaves search and is marked in progress.',
+    confirm: 'Start trip',
+    error: 'Could not start the trip',
+    done: 'Trip started.',
+  },
+  completed: {
+    title: 'Mark the trip completed?',
+    body: 'Riders can then rate the trip. The ride chat deletes itself 2 hours after completion. This cannot be undone.',
+    confirm: 'Mark completed',
+    error: 'Could not complete the trip',
+    done: 'Trip completed. Riders can now rate it; the ride chat deletes itself in 2 hours.',
+  },
+  cancelled: {
+    title: 'Cancel this ride?',
+    body: 'Every booking is cancelled, open requests are declined, riders leave the ride chat, and they are notified. This cannot be undone.',
+    confirm: 'Cancel ride',
+    error: 'Could not cancel the ride',
+    done: 'Ride cancelled. Your riders have been notified.',
+  },
+};
+
+/** Driver control panel: lifecycle, seats and price, bookings, requests, chat, repeat and delete. */
 export function RideManageScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.back();
-      return true;
-    });
-    return () => sub.remove();
-  }, [router]);
-
-  const [seats, setSeats] = useState('');
-  const [contribution, setContribution] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  const { data, isLoading, isError, refetch } = useQuery({
+  const rideQuery = useQuery({
     queryKey: ['rides', 'owner', rideId],
     queryFn: () => getRideForOwner(rideId),
-    enabled: Boolean(rideId),
+    enabled: Boolean(rideId) && isAuthenticated,
   });
+  const bookingsQuery = useQuery({
+    queryKey: ['rides', 'bookings', rideId],
+    queryFn: () => listRideBookings(rideId),
+    enabled: Boolean(rideQuery.data),
+  });
+  const requestsQuery = useQuery({
+    queryKey: ['rides', 'seat-requests', rideId],
+    queryFn: () => listSeatRequests(rideId),
+    enabled: Boolean(rideQuery.data),
+  });
+  const ride = rideQuery.data;
 
-  const mutation = useMutation({
-    mutationFn: (input: { seatsAvailable?: number; contribution?: number }) =>
-      updateRideOffer(rideId, input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rides', 'owner', rideId] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
-      setSuccess(true);
+  const [seatsTotal, setSeatsTotal] = useState('');
+  const [seatsAvailable, setSeatsAvailable] = useState('');
+  const [amount, setAmount] = useState('');
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [notice, setNotice] = useState<string | null>(null);
+  const [repeatOpen, setRepeatOpen] = useState(false);
+
+  // Start the form from the stored values whenever the ride (re)loads.
+  useEffect(() => {
+    if (!ride) return;
+    setSeatsTotal(String(ride.seatsTotal));
+    setSeatsAvailable(String(ride.seatsAvailable));
+    setAmount(ride.contributionAmount != null ? String(ride.contributionAmount) : '');
+  }, [ride]);
+
+  const invalidate = () =>
+    Promise.allSettled([
+      queryClient.invalidateQueries({ queryKey: ['rides', 'owner', rideId] }),
+      queryClient.invalidateQueries({ queryKey: ['rides', 'detail', rideId] }),
+      queryClient.invalidateQueries({ queryKey: ['rides', 'bookings', rideId] }),
+      queryClient.invalidateQueries({ queryKey: ['rides', 'seat-requests', rideId] }),
+      queryClient.invalidateQueries({ queryKey: ['rides', 'participants', rideId] }),
+      queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] }),
+      queryClient.invalidateQueries({ queryKey: ['rides', 'offers'] }),
+    ]);
+
+  const edit = useMutation({
+    mutationFn: (input: UpdateRideOfferInput) => updateRideOffer(rideId, input),
+    onSuccess: () => setNotice('Changes saved.'),
+    onError: (e) => {
+      setNotice(null);
+      showError('Could not save changes', e);
     },
-    onError: (err: Error) => setError(err.message),
+    onSettled: invalidate,
   });
 
-  function handleSubmit() {
-    setError(null);
-    const input: { seatsAvailable?: number; contribution?: number } = {};
-    if (seats.trim()) input.seatsAvailable = parseInt(seats, 10);
-    if (contribution.trim()) input.contribution = parseFloat(contribution);
+  const status = useMutation({
+    mutationFn: (next: Transition) => updateRideStatus(rideId, next),
+    onSuccess: (_ride, next) => setNotice(TRANSITION_COPY[next].done),
+    onError: (e, next) => showError(TRANSITION_COPY[next].error, e),
+    onSettled: invalidate,
+  });
+
+  const removeBooking = useMutation({
+    mutationFn: (bookingId: string) => cancelBooking(bookingId),
+    onSuccess: () => setNotice('Booking cancelled. The seats are open again.'),
+    onError: (e) => showError('Could not cancel the booking', e),
+    onSettled: invalidate,
+  });
+
+  const remove = useMutation({
+    mutationFn: () => deleteRide(rideId),
+    onSuccess: async () => {
+      await invalidate();
+      router.replace('/rides/mine' as Href);
+    },
+    onError: (e) => showError('Could not delete the ride', e),
+  });
+
+  const chat = useMutation({
+    mutationFn: () => provisionRideChat(rideId),
+    onSuccess: (res) => router.push(`/chat/${res.conversationId}` as Href),
+    onError: (e) => showError('Could not open the ride chat', e),
+  });
+
+  const onTransition = async (next: Transition) => {
+    const copy = TRANSITION_COPY[next];
+    if (await confirmAction(copy.title, copy.body, copy.confirm)) status.mutate(next);
+  };
+
+  const onSave = () => {
+    if (!ride) return;
+    setNotice(null);
+    const next: Record<string, string | null> = {
+      seatsTotal: seatsError(seatsTotal),
+      seatsAvailable: null,
+      amount: amount.trim() ? amountError(amount) : null,
+    };
+    if (!next.seatsTotal) {
+      const avail = seatsAvailable.trim();
+      if (!/^\d+$/.test(avail)) next.seatsAvailable = 'Use a whole number (0 or more).';
+      else if (Number(avail) > Number(seatsTotal))
+        next.seatsAvailable = 'Open seats cannot exceed the total.';
+    }
+    setErrors(next);
+    if (Object.values(next).some(Boolean)) return;
+    const input: UpdateRideOfferInput = {};
+    if (Number(seatsTotal) !== ride.seatsTotal) input.seatsTotal = Number(seatsTotal);
+    if (Number(seatsAvailable) !== ride.seatsAvailable)
+      input.seatsAvailable = Number(seatsAvailable);
+    if (amount.trim() && Number(amount) !== ride.contributionAmount)
+      input.contributionAmount = Number(amount);
     if (Object.keys(input).length === 0) {
-      setError('Enter at least one field to update.');
+      setNotice('Nothing changed.');
       return;
     }
-    mutation.mutate(input);
-  }
+    edit.mutate(input);
+  };
 
-  // Lifecycle action: Start trip
-  async function handleStartTrip() {
-    try {
-      setActionLoading('start');
-      await updateRideStatus(rideId, 'IN_PROGRESS');
-      queryClient.invalidateQueries({ queryKey: ['rides', 'owner', rideId] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
-      Alert.alert('Trip Started', 'Ride status is now IN_PROGRESS. Passengers have been notified.');
-    } catch (e: unknown) {
-      Alert.alert('Error', (e as Error)?.message || 'Failed to start trip.');
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  // Lifecycle action: Mark completed (triggers 2-hour chat purge countdown)
-  function handleMarkCompleted() {
-    Alert.alert(
-      'Complete Trip (Arrived)?',
-      'This will mark the ride as COMPLETED and remove it from active search feeds. The temporary coordination chat will automatically self-delete 2 hours from now.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm Arrival',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setActionLoading('complete');
-              await updateRideStatus(rideId, 'COMPLETED');
-              queryClient.invalidateQueries({ queryKey: ['rides', 'owner', rideId] });
-              queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
-              Alert.alert(
-                'Ride Completed 🎉',
-                'Ride is marked COMPLETED. Ephemeral chat will self-delete in 2 hours.',
-              );
-            } catch (e: unknown) {
-              Alert.alert('Error', (e as Error)?.message || 'Failed to complete trip.');
-            } finally {
-              setActionLoading(null);
-            }
-          },
-        },
-      ],
+  const onCancelBooking = async (booking: RideBooking) => {
+    const ok = await confirmAction(
+      'Cancel this rider’s booking?',
+      'Their seats open up again and they leave the ride chat.',
+      'Cancel booking',
     );
-  }
+    if (ok) removeBooking.mutate(booking.id);
+  };
 
-  // Deactivate / Re-activate trip
-  async function handleToggleDeactivate() {
-    const isCurrentlyActive =
-      (data?.status as string) === 'ACTIVE' || (data?.status as string) === 'OPEN';
-    const nextStatus = isCurrentlyActive ? 'CANCELLED' : 'ACTIVE';
-    try {
-      setActionLoading('toggle');
-      await updateRideStatus(rideId, nextStatus);
-      queryClient.invalidateQueries({ queryKey: ['rides', 'owner', rideId] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
-      Alert.alert(
-        isCurrentlyActive ? 'Ride Deactivated ⏸️' : 'Ride Re-activated 🟢',
-        isCurrentlyActive
-          ? 'Ride has been deactivated and paused from search.'
-          : 'Ride has been activated and is live in discovery.',
-      );
-    } catch (e: unknown) {
-      Alert.alert('Error', (e as Error)?.message || 'Failed to change status.');
-    } finally {
-      setActionLoading(null);
-    }
-  }
+  const onDelete = async () => {
+    const ok = await confirmAction(
+      'Delete this ride?',
+      'Riders are released and notified, then the ride is removed permanently.',
+      'Delete',
+    );
+    if (ok) remove.mutate();
+  };
 
-  // 1-Click action: Repeat this trip tomorrow
-  async function handleRepeatTrip() {
-    try {
-      setActionLoading('repeat');
-      const tomorrow = new Date(Date.now() + 86400000).toISOString();
-      const cloned = await reactivateRideOffer(rideId, tomorrow);
-      queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'offers'] });
-      Alert.alert('Ride Re-activated! 🚗', 'Trip cloned and scheduled for tomorrow.', [
-        { text: 'Go to My Rides', onPress: () => router.push('/rides/mine') },
-        { text: 'View New Offer', onPress: () => router.push(`/rides/${cloned.id}`) },
-      ]);
-    } catch (e: unknown) {
-      Alert.alert('Error', (e as Error)?.message || 'Failed to clone ride.');
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  // Open Ephemeral Chat
-  async function handleOpenChat() {
-    try {
-      setActionLoading('chat');
-      const res = await provisionRideChat(rideId);
-      if (res.conversationId) {
-        router.push(`/chat/${res.conversationId}`);
-      } else {
-        router.push('/chat');
+  const content = () => {
+    if (!isAuthenticated || rideQuery.isLoading) return <LoadingState label="Loading ride…" />;
+    if (rideQuery.isError || !ride) {
+      if (isNotFound(rideQuery.error)) {
+        return <ErrorState body="This ride no longer exists." title="Ride not found" />;
       }
-    } catch (e: unknown) {
-      Alert.alert('Error', (e as Error)?.message || 'Failed to open coordination chat.');
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <LoadingState />
-      </SafeAreaView>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
+      return (
         <ErrorState
-          title="Unable to load ride"
-          body="Please check your connection and try again."
+          body={errorMessage(rideQuery.error)}
+          onRetry={() => rideQuery.refetch()}
           retryLabel="Retry"
-          onRetry={refetch}
+          title="Could not load this ride"
         />
-      </SafeAreaView>
-    );
-  }
+      );
+    }
+    const isActive = statusIs(ride.status, 'active');
+    const isInProgress = statusIs(ride.status, 'in_progress');
+    const finished = statusIs(ride.status, 'completed', 'cancelled');
+    const busy = status.isPending;
+    const pendingRequests = (requestsQuery.data ?? []).filter((r) =>
+      statusIs(r.status, 'pending'),
+    ).length;
+    const bookings = bookingsQuery.data ?? [];
 
-  const isCompleted = data.status?.toUpperCase() === 'COMPLETED';
-  const isInProgress = data.status?.toUpperCase() === 'IN_PROGRESS';
+    return (
+      <YStack gap="$x5">
+        <Card gap="$x3" variant="outlined">
+          <XStack alignItems="center" gap="$x2" justifyContent="space-between">
+            <AppText variant="h4">Trip status</AppText>
+            <Chip label={statusLabel(ride.status)} selected={isActive || isInProgress} />
+          </XStack>
+          <AppText tone="muted" variant="caption">
+            Departs {formatDeparture(ride.departureAt)} · {ride.seatsAvailable} of {ride.seatsTotal}{' '}
+            seats open
+          </AppText>
+          {finished ? (
+            <AppText tone="muted">
+              {statusIs(ride.status, 'completed')
+                ? 'This trip is completed. It can no longer be edited; repeat it to post it again.'
+                : 'This ride was cancelled. It can no longer be edited; repeat it to post it again.'}
+            </AppText>
+          ) : (
+            <XStack flexWrap="wrap" gap="$x2">
+              {isActive ? (
+                <AppButton
+                  disabled={busy}
+                  icon="car"
+                  label="Start trip"
+                  loading={busy && status.variables === 'in_progress'}
+                  onPress={() => onTransition('in_progress')}
+                />
+              ) : null}
+              <AppButton
+                disabled={busy}
+                icon="check"
+                label="Mark completed"
+                loading={busy && status.variables === 'completed'}
+                onPress={() => onTransition('completed')}
+                variant={isInProgress ? 'primary' : 'secondary'}
+              />
+              <AppButton
+                disabled={busy}
+                label="Cancel ride"
+                loading={busy && status.variables === 'cancelled'}
+                onPress={() => onTransition('cancelled')}
+                variant="danger"
+              />
+            </XStack>
+          )}
+        </Card>
+
+        <YStack gap="$x3">
+          <XStack alignItems="center" gap="$x2" justifyContent="space-between">
+            <AppText role="heading" variant="h4">
+              Bookings
+            </AppText>
+            <AppButton
+              label={pendingRequests ? `Seat requests (${pendingRequests})` : 'Seat requests'}
+              onPress={() => router.push(`/rides/${rideId}/seat-requests` as Href)}
+              variant="secondary"
+            />
+          </XStack>
+          {bookingsQuery.isLoading ? (
+            <LoadingState label="Loading bookings…" />
+          ) : bookingsQuery.isError ? (
+            <ErrorState
+              body={errorMessage(bookingsQuery.error)}
+              compact
+              onRetry={() => bookingsQuery.refetch()}
+              retryLabel="Retry"
+              title="Could not load bookings"
+            />
+          ) : bookings.length === 0 ? (
+            <EmptyState
+              body="Riders who book a seat appear here."
+              compact
+              iconName="user"
+              title="No bookings yet"
+            />
+          ) : (
+            bookings.map((b) => (
+              <Card gap="$x2" key={b.id} variant="outlined">
+                <XStack alignItems="center" gap="$x2" justifyContent="space-between">
+                  <AppText variant="bodyStrong">{memberLabel(b.userId, 'rider')}</AppText>
+                  <Chip label={statusLabel(b.status)} selected={statusIs(b.status, 'confirmed')} />
+                </XStack>
+                <AppText tone="muted" variant="caption">
+                  {b.seatsBooked} {b.seatsBooked === 1 ? 'seat' : 'seats'}
+                  {b.createdAt ? ` · booked ${formatDeparture(b.createdAt)}` : ''}
+                </AppText>
+                {!finished && !statusIs(b.status, 'cancelled') ? (
+                  <XStack>
+                    <AppButton
+                      label="Cancel booking"
+                      loading={removeBooking.isPending && removeBooking.variables === b.id}
+                      onPress={() => onCancelBooking(b)}
+                      variant="secondary"
+                    />
+                  </XStack>
+                ) : null}
+              </Card>
+            ))
+          )}
+        </YStack>
+
+        {!finished ? (
+          <YStack gap="$x3">
+            <AppText role="heading" variant="h4">
+              Seats and price
+            </AppText>
+            <TextField
+              error={errors.seatsTotal}
+              helper="1 to 8. Cannot go below the seats riders already hold."
+              keyboardType="number-pad"
+              label="Total seats"
+              onChangeText={setSeatsTotal}
+              value={seatsTotal}
+            />
+            <TextField
+              error={errors.seatsAvailable}
+              helper="Seats still open for booking."
+              keyboardType="number-pad"
+              label="Open seats"
+              onChangeText={setSeatsAvailable}
+              value={seatsAvailable}
+            />
+            <TextField
+              error={errors.amount}
+              helper="Dollars per seat; 0 means free."
+              keyboardType="decimal-pad"
+              label="Contribution per seat ($)"
+              onChangeText={setAmount}
+              placeholder="Not set"
+              value={amount}
+            />
+            <XStack>
+              <AppButton label="Save changes" loading={edit.isPending} onPress={onSave} />
+            </XStack>
+          </YStack>
+        ) : null}
+
+        <XStack flexWrap="wrap" gap="$x2">
+          <AppButton
+            icon="message"
+            label="Ride chat"
+            loading={chat.isPending}
+            onPress={() => chat.mutate()}
+            variant="secondary"
+          />
+          <AppButton
+            label="Participants"
+            onPress={() => router.push(`/rides/${rideId}/participants` as Href)}
+            variant="secondary"
+          />
+          <AppButton
+            icon="refresh"
+            label="Repeat trip"
+            onPress={() => setRepeatOpen(true)}
+            variant="secondary"
+          />
+          <AppButton
+            label="View ride"
+            onPress={() => router.push(`/rides/${rideId}` as Href)}
+            variant="ghost"
+          />
+          <AppButton
+            label="Delete ride"
+            loading={remove.isPending}
+            onPress={onDelete}
+            variant="danger"
+          />
+        </XStack>
+      </YStack>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={[styles.page, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <Screen
+        onRefresh={() => {
+          rideQuery.refetch();
+          bookingsQuery.refetch();
+          requestsQuery.refetch();
+        }}
+        refreshing={rideQuery.isRefetching}
       >
-        <View style={styles.container}>
-          <View style={styles.headerBar}>
-            <Pressable
-              aria-label="Back to My Rides"
-              onPress={() => router.back()}
-              style={styles.backBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <AppIcon color={colors.ink} name="chevron-left" size={20} />
-            </Pressable>
-            <Text style={styles.eyebrow}>Driver Control Panel</Text>
-          </View>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>Manage Ride</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                isCompleted
-                  ? styles.statusBadgeCompleted
-                  : isInProgress
-                    ? styles.statusBadgeInProgress
-                    : styles.statusBadgeActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusBadgeText,
-                  isCompleted
-                    ? styles.statusTextCompleted
-                    : isInProgress
-                      ? styles.statusTextInProgress
-                      : styles.statusTextActive,
-                ]}
-              >
-                {data.status || 'ACTIVE'}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.subtitle}>{data.title}</Text>
-
-          {/* 1. Trip Lifecycle Controls */}
-          <View style={styles.lifecycleCard}>
-            <Text style={styles.cardHeaderTitle}>Live Trip Actions</Text>
-            <Text style={styles.cardHeaderDesc}>
-              Update status along your journey to keep passengers informed.
-            </Text>
-
-            <View style={styles.lifecycleActions}>
-              {!isCompleted && !isInProgress && (
-                <Pressable
-                  style={styles.startTripBtn}
-                  disabled={actionLoading !== null}
-                  onPress={handleStartTrip}
-                >
-                  {actionLoading === 'start' ? (
-                    <ActivityIndicator color="#ffffff" size="small" />
-                  ) : (
-                    <>
-                      <AppIcon name="car" size={16} color="#ffffff" />
-                      <Text style={styles.startTripBtnText}>Start Trip (In Progress)</Text>
-                    </>
-                  )}
-                </Pressable>
-              )}
-
-              {isInProgress && (
-                <Pressable
-                  style={styles.completeTripBtn}
-                  disabled={actionLoading !== null}
-                  onPress={handleMarkCompleted}
-                >
-                  {actionLoading === 'complete' ? (
-                    <ActivityIndicator color="#ffffff" size="small" />
-                  ) : (
-                    <>
-                      <AppIcon name="check" size={16} color="#ffffff" />
-                      <Text style={styles.completeTripBtnText}>Mark Completed (Arrived)</Text>
-                    </>
-                  )}
-                </Pressable>
-              )}
-
-              {/* 1-Tap Toggle Active / Deactivate */}
-              {!isCompleted &&
-                (() => {
-                  const isActive =
-                    (data.status as string) === 'ACTIVE' || (data.status as string) === 'OPEN';
-                  return (
-                    <Pressable
-                      style={[
-                        styles.toggleDeactivateBtn,
-                        isActive
-                          ? styles.toggleDeactivateBtnActive
-                          : styles.toggleDeactivateBtnInactive,
-                      ]}
-                      disabled={actionLoading !== null}
-                      onPress={handleToggleDeactivate}
-                    >
-                      {actionLoading === 'toggle' ? (
-                        <ActivityIndicator color={palette.primary} size="small" />
-                      ) : (
-                        <>
-                          <AppIcon
-                            name={isActive ? 'warning' : 'check'}
-                            size={16}
-                            color={isActive ? palette.error : '#16a34a'}
-                          />
-                          <Text
-                            style={[
-                              styles.toggleDeactivateText,
-                              isActive
-                                ? styles.toggleDeactivateTextDanger
-                                : styles.toggleDeactivateTextSuccess,
-                            ]}
-                          >
-                            {isActive ? 'Pause / Deactivate Ride' : 'Re-activate Ride in Discovery'}
-                          </Text>
-                        </>
-                      )}
-                    </Pressable>
-                  );
-                })()}
-
-              {/* 1-Click Repeat Trip Tomorrow */}
-              <Pressable
-                style={styles.repeatTripBtn}
-                disabled={actionLoading !== null}
-                onPress={handleRepeatTrip}
-              >
-                {actionLoading === 'repeat' ? (
-                  <ActivityIndicator color={colors.primary} size="small" />
-                ) : (
-                  <>
-                    <AppIcon name="sparks" size={16} color={colors.primary} />
-                    <Text style={styles.repeatTripBtnText}>
-                      Repeat This Trip Tomorrow (1-Click)
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-
-              {/* Open Coordination Chat */}
-              <Pressable
-                style={styles.chatActionBtn}
-                disabled={actionLoading !== null}
-                onPress={handleOpenChat}
-              >
-                {actionLoading === 'chat' ? (
-                  <ActivityIndicator color={colors.teal} size="small" />
-                ) : (
-                  <>
-                    <AppIcon name="message" size={16} color={colors.teal} />
-                    <Text style={styles.chatActionBtnText}>Open Coordination Chat</Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
-
-            {isCompleted && (
-              <View style={styles.ephemeralNoticeBox}>
-                <AppIcon name="shield" size={16} color={colors.teal} />
-                <Text style={styles.ephemeralNoticeText}>
-                  🔒 Trip is COMPLETED. The temporary group chat is active and scheduled to
-                  permanently self-delete 2 hours after arrival.
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {success ? <Text style={styles.successText}>Ride settings updated</Text> : null}
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-          {/* 2. Seat & Contribution Editing */}
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Seats Available</Text>
-              <TextField
-                placeholder={`Current: ${data.seatsAvailable}`}
-                keyboardType="number-pad"
-                value={seats}
-                onChangeText={setSeats}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Contribution ($)</Text>
-              <TextField
-                placeholder={data.contribution ? `$${data.contribution}` : 'Optional'}
-                keyboardType="decimal-pad"
-                value={contribution}
-                onChangeText={setContribution}
-              />
-            </View>
-            <View style={styles.actions}>
-              <AppButton label="Save changes" onPress={handleSubmit} loading={mutation.isPending} />
-              <AppButton
-                label="View details"
-                onPress={() => router.push(`/rides/${rideId}`)}
-                variant="secondary"
-              />
-              <AppButton
-                label="Participants"
-                route={`/rides/${rideId}/participants`}
-                variant="secondary"
-              />
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        <YStack gap="$x4">
+          <BackButton fallback="/rides/mine" />
+          <YStack gap="$x1">
+            <AppText role="heading" variant="h2">
+              Manage ride
+            </AppText>
+            {ride ? (
+              <AppText tone="muted" variant="caption">
+                {ride.routeLabel}
+              </AppText>
+            ) : null}
+          </YStack>
+          {notice ? (
+            <Card aria-live="polite" variant="tinted">
+              <AppText variant="label">{notice}</AppText>
+            </Card>
+          ) : null}
+          {content()}
+        </YStack>
+      </Screen>
+      <RepeatTripSheet
+        onClose={() => setRepeatOpen(false)}
+        onPosted={(newRide) => {
+          setRepeatOpen(false);
+          router.push(`/rides/${newRide.id}/manage` as Href);
+        }}
+        ride={repeatOpen ? (ride ?? null) : null}
+      />
+    </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x5, maxWidth: 640, width: '100%' },
-  eyebrow: {
-    color: colors.teal,
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { ...typography.h1, color: colors.ink },
-  subtitle: { ...typography.body, color: colors.muted },
-
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
-  statusBadgeActive: { backgroundColor: 'rgba(16,185,129,0.12)' },
-  statusBadgeInProgress: { backgroundColor: 'rgba(255,126,51,0.12)' },
-  statusBadgeCompleted: { backgroundColor: 'rgba(107,114,128,0.12)' },
-  statusBadgeText: { fontSize: 12, fontWeight: '800' },
-  statusTextActive: { color: '#059669' },
-  statusTextInProgress: { color: colors.warm },
-  statusTextCompleted: { color: colors.muted },
-
-  lifecycleCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: radius.card,
-    padding: space.x4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-    gap: space.x3,
-  },
-  cardHeaderTitle: { ...typography.h4, color: colors.ink, fontWeight: '800' },
-  cardHeaderDesc: { ...typography.caption, color: colors.muted },
-  lifecycleActions: { gap: space.x2, marginTop: space.x1 },
-
-  startTripBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x2,
-    backgroundColor: colors.primary,
-    paddingVertical: space.x3,
-    borderRadius: radius.control,
-  },
-  startTripBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 14 },
-
-  completeTripBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x2,
-    backgroundColor: '#059669',
-    paddingVertical: space.x3,
-    borderRadius: radius.control,
-  },
-  completeTripBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 14 },
-  toggleDeactivateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x2,
-    paddingVertical: space.x3,
-    borderRadius: radius.control,
-    borderWidth: 1,
-  },
-  toggleDeactivateBtnActive: {
-    backgroundColor: 'rgba(186,26,26,0.06)',
-    borderColor: palette.error,
-  },
-  toggleDeactivateBtnInactive: {
-    backgroundColor: 'rgba(22,163,74,0.08)',
-    borderColor: '#16a34a',
-  },
-  toggleDeactivateText: {
-    fontWeight: '800',
-    fontSize: 14,
-  },
-  toggleDeactivateTextDanger: {
-    color: palette.error,
-  },
-  toggleDeactivateTextSuccess: {
-    color: '#16a34a',
-  },
-
-  repeatTripBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x2,
-    backgroundColor: 'rgba(67,30,190,0.08)',
-    borderWidth: 1,
-    borderColor: colors.primary,
-    paddingVertical: space.x3,
-    borderRadius: radius.control,
-  },
-  repeatTripBtnText: { color: colors.primary, fontWeight: '800', fontSize: 14 },
-
-  chatActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x2,
-    backgroundColor: 'rgba(0,105,107,0.08)',
-    borderWidth: 1,
-    borderColor: colors.teal,
-    paddingVertical: space.x3,
-    borderRadius: radius.control,
-  },
-  chatActionBtnText: { color: colors.teal, fontWeight: '800', fontSize: 14 },
-
-  ephemeralNoticeBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-    backgroundColor: '#f0faf8',
-    padding: space.x3,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: 'rgba(0,105,107,0.15)',
-    marginTop: space.x2,
-  },
-  ephemeralNoticeText: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.teal,
-    fontWeight: '600',
-    lineHeight: 16,
-  },
-
-  form: { gap: space.x4 },
-  inputGroup: { gap: space.x2 },
-  inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
-  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
-  successText: { color: colors.success, fontSize: 14, fontWeight: '700' },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    marginBottom: space.x2,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(67,30,190,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

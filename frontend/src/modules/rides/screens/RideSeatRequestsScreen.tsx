@@ -1,162 +1,203 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { listSeatRequests, updateSeatRequestStatus } from '@/modules/rides/api';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import { getRide, listSeatRequests, updateSeatRequestStatus } from '@/modules/rides/api';
+import { formatDeparture } from '@/modules/rides/components/RideListCard';
+import type { RideSeatRequest } from '@/modules/rides/types';
+import { confirmAction, showError } from '@/modules/rides/utils/notify';
+import { errorMessage, memberLabel, statusIs, statusLabel } from '@/modules/rides/utils/rideFormat';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { Screen } from '@/modules/shared/ui/Screen';
 
+type Decision = 'accepted' | 'rejected' | 'withdrawn';
+
+const DECISION_ERRORS: Record<Decision, string> = {
+  accepted: 'Could not accept request',
+  rejected: 'Could not decline request',
+  withdrawn: 'Could not withdraw request',
+};
+
+/**
+ * Seat requests on one ride. The driver sees every request and accepts or declines; a rider sees only their own
+ * and can withdraw it. Accepting reserves seats, so the server can refuse (full, departed, inactive) and says why.
+ */
 export function RideSeatRequestsScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
-  const _router = useRouter();
+  const router = useRouter();
   const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const rideQuery = useQuery({
+    queryKey: ['rides', 'detail', rideId],
+    queryFn: () => getRide(rideId),
+    enabled: Boolean(rideId) && isAuthenticated,
+  });
+  const query = useQuery({
     queryKey: ['rides', 'seat-requests', rideId],
     queryFn: () => listSeatRequests(rideId),
-    enabled: Boolean(rideId),
+    enabled: Boolean(rideId) && isAuthenticated,
+  });
+  const ride = rideQuery.data;
+  const isDriver = Boolean(ride?.isDriver);
+
+  const decide = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: Decision }) =>
+      updateSeatRequestStatus(id, status),
+    onError: (e, { status }) => showError(DECISION_ERRORS[status], e),
+    onSettled: () =>
+      Promise.allSettled([
+        queryClient.invalidateQueries({ queryKey: ['rides', 'seat-requests', rideId] }),
+        queryClient.invalidateQueries({ queryKey: ['rides', 'detail', rideId] }),
+        queryClient.invalidateQueries({ queryKey: ['rides', 'participants', rideId] }),
+        queryClient.invalidateQueries({ queryKey: ['rides', 'owner', rideId] }),
+      ]),
   });
 
-  // Accepting reserves seats on the ride, so the server can refuse (full, departed, inactive).
-  const showError = (title: string) => (err: unknown) =>
-    Alert.alert(title, err instanceof Error ? err.message : 'Please try again.');
-
-  const approve = useMutation({
-    mutationFn: (requestId: string) => updateSeatRequestStatus(requestId, 'ACCEPTED'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rides', 'seat-requests', rideId] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'detail', rideId] });
-    },
-    onError: showError('Could not accept request'),
-  });
-
-  const reject = useMutation({
-    mutationFn: (requestId: string) => updateSeatRequestStatus(requestId, 'REJECTED'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rides', 'seat-requests', rideId] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'detail', rideId] });
-    },
-    onError: showError('Could not reject request'),
-  });
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <LoadingState />
-      </SafeAreaView>
+  const onDecline = async (request: RideSeatRequest) => {
+    const ok = await confirmAction(
+      'Decline this request?',
+      statusIs(request.status, 'accepted')
+        ? 'The rider loses their seat and is removed from the ride.'
+        : 'The rider will see that you declined.',
+      'Decline',
     );
-  }
+    if (ok) decide.mutate({ id: request.id, status: 'rejected' });
+  };
 
-  if (isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
+  const onWithdraw = async (request: RideSeatRequest) => {
+    const ok = await confirmAction(
+      'Withdraw your request?',
+      statusIs(request.status, 'accepted')
+        ? 'You give up the seat the driver reserved for you.'
+        : 'The driver will no longer see this request.',
+      'Withdraw',
+    );
+    if (ok) decide.mutate({ id: request.id, status: 'withdrawn' });
+  };
+
+  const body = () => {
+    if (!isAuthenticated || query.isLoading || rideQuery.isLoading) {
+      return <LoadingState count={3} label="Loading seat requests…" variant="skeleton" />;
+    }
+    if (query.isError) {
+      return (
         <ErrorState
-          title="Unable to load seat requests"
-          body="Please check your connection and try again."
+          body={errorMessage(query.error)}
+          onRetry={() => query.refetch()}
           retryLabel="Retry"
-          onRetry={refetch}
+          title="Could not load seat requests"
         />
-      </SafeAreaView>
+      );
+    }
+    const requests = query.data ?? [];
+    if (requests.length === 0) {
+      return (
+        <EmptyState
+          body={
+            isDriver
+              ? 'Requests appear here when riders ask the driver for a seat.'
+              : 'You have not requested a seat on this ride.'
+          }
+          iconName="user"
+          title="No seat requests"
+        />
+      );
+    }
+    return (
+      <YStack gap="$x3">
+        {requests.map((request) => {
+          const busy = decide.isPending && decide.variables?.id === request.id;
+          const pending = statusIs(request.status, 'pending');
+          const accepted = statusIs(request.status, 'accepted');
+          return (
+            <Card gap="$x2" key={request.id} variant="outlined">
+              <XStack alignItems="center" gap="$x2" justifyContent="space-between">
+                <AppText variant="bodyStrong">
+                  {isDriver ? memberLabel(request.riderId, 'rider') : 'Your request'}
+                </AppText>
+                <Chip label={statusLabel(request.status)} selected={accepted} />
+              </XStack>
+              <AppText tone="muted" variant="caption">
+                {request.seatsRequested} {request.seatsRequested === 1 ? 'seat' : 'seats'}
+                {request.createdAt ? ` · sent ${formatDeparture(request.createdAt)}` : ''}
+              </AppText>
+              {request.message ? <AppText>“{request.message}”</AppText> : null}
+              <XStack flexWrap="wrap" gap="$x2">
+                {isDriver && pending ? (
+                  <AppButton
+                    label="Accept"
+                    loading={busy && decide.variables?.status === 'accepted'}
+                    onPress={() => decide.mutate({ id: request.id, status: 'accepted' })}
+                  />
+                ) : null}
+                {isDriver && (pending || accepted) ? (
+                  <AppButton
+                    disabled={busy}
+                    label="Decline"
+                    onPress={() => onDecline(request)}
+                    variant="secondary"
+                  />
+                ) : null}
+                {!isDriver && (pending || accepted) ? (
+                  <AppButton
+                    disabled={busy}
+                    label="Withdraw"
+                    onPress={() => onWithdraw(request)}
+                    variant="secondary"
+                  />
+                ) : null}
+              </XStack>
+            </Card>
+          );
+        })}
+      </YStack>
     );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.container}>
-          <Text style={styles.eyebrow}>Rides</Text>
-          <Text style={styles.title}>Seat requests</Text>
-          <Text style={styles.subtitle}>Review and manage seat requests for your ride.</Text>
-
-          {data && data.length > 0 ? (
-            data.map((request) => (
-              <View key={request.id} style={styles.card}>
-                <Text style={styles.cardTitle}>{request.requesterName}</Text>
-                <Text style={styles.cardBody}>
-                  {request.pickupArea} · {request.seatsRequested} seat(s)
-                </Text>
-                {request.message ? <Text style={styles.cardMeta}>"{request.message}"</Text> : null}
-                <Text
-                  style={[
-                    styles.statusBadge,
-                    request.status?.toUpperCase() === 'PENDING' && styles.statusPending,
-                    request.status?.toUpperCase() === 'ACCEPTED' && styles.statusApproved,
-                    request.status?.toUpperCase() === 'REJECTED' && styles.statusRejected,
-                  ]}
-                >
-                  {request.status}
-                </Text>
-                {request.status?.toUpperCase() === 'PENDING' ? (
-                  <View style={styles.cardActions}>
-                    <AppButton
-                      label="Approve"
-                      onPress={() => approve.mutate(request.id)}
-                      loading={approve.isPending}
-                    />
-                    <AppButton
-                      label="Reject"
-                      onPress={() => reject.mutate(request.id)}
-                      variant="secondary"
-                      loading={reject.isPending}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No seat requests</Text>
-              <Text style={styles.emptyBody}>
-                Requests will appear here when riders ask for a seat.
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.actions}>
-            <AppButton label="Participants" route={`/rides/${rideId}/participants`} />
-            <AppButton label="Manage ride" route={`/rides/${rideId}/manage`} variant="secondary" />
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Screen
+      onRefresh={() => {
+        query.refetch();
+        rideQuery.refetch();
+      }}
+      refreshing={query.isRefetching}
+    >
+      <YStack gap="$x4">
+        <BackButton fallback={`/rides/${rideId}`} />
+        <YStack gap="$x1">
+          <AppText role="heading" variant="h2">
+            Seat requests
+          </AppText>
+          {ride ? (
+            <AppText tone="muted" variant="caption">
+              {ride.routeLabel} · {formatDeparture(ride.departureAt)}
+            </AppText>
+          ) : null}
+        </YStack>
+        {body()}
+        {isDriver ? (
+          <XStack flexWrap="wrap" gap="$x2">
+            <AppButton
+              label="Participants"
+              onPress={() => router.push(`/rides/${rideId}/participants` as Href)}
+              variant="secondary"
+            />
+            <AppButton
+              label="Manage ride"
+              onPress={() => router.push(`/rides/${rideId}/manage` as Href)}
+              variant="secondary"
+            />
+          </XStack>
+        ) : null}
+      </YStack>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x5, maxWidth: 640, width: '100%' },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
-  title: { ...typography.h1, color: colors.ink },
-  subtitle: { ...typography.body, color: colors.muted, marginBottom: space.x4 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  cardTitle: { ...typography.h4, color: colors.ink },
-  cardBody: { ...typography.body, color: colors.muted },
-  cardMeta: { ...typography.caption, color: colors.muted, fontStyle: 'italic' },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    borderRadius: radius.pill,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x1,
-    ...typography.caption,
-    fontWeight: '700',
-  },
-  statusPending: { backgroundColor: colors.warning, color: colors.surface },
-  statusApproved: { backgroundColor: colors.success, color: colors.surface },
-  statusRejected: { backgroundColor: colors.error, color: colors.surface },
-  cardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2, marginTop: space.x2 },
-  emptyState: { alignItems: 'center', gap: space.x2, padding: space.x6 },
-  emptyTitle: { ...typography.h3, color: colors.ink, textAlign: 'center' },
-  emptyBody: { ...typography.body, color: colors.muted, textAlign: 'center' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
-});

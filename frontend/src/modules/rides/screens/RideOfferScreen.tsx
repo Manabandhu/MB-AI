@@ -1,955 +1,492 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
 import { createRideOffer, getMyRides } from '@/modules/rides/api';
+import { ChoiceChip } from '@/modules/rides/components/ChoiceChip';
+import { DeparturePicker, type DepartureValue } from '@/modules/rides/components/DeparturePicker';
 import { RideLocationPicker } from '@/modules/rides/components/RideLocationPicker';
 import {
   fetchGoogleRoute,
   geocodeAddress,
   type RouteInfo,
 } from '@/modules/rides/services/googleMapsService';
-import type { RideListing, RideOffer } from '@/modules/rides/types';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import type {
+  GenderPreference,
+  LuggageCapacity,
+  RecurrencePattern,
+  Ride,
+  TollPreference,
+  WeekDay,
+} from '@/modules/rides/types';
+import { showError } from '@/modules/rides/utils/notify';
+import {
+  amountError,
+  contributionText,
+  departureError,
+  departureFrom,
+  durationLabel,
+  seatsError,
+} from '@/modules/rides/utils/rideFormat';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { TextField } from '@/modules/shared/ui/TextField';
 
-const TRIP_MODES = [
-  { id: 'ONE_TIME', label: 'One-Time Trip' },
-  { id: 'RECURRING', label: 'Daily Commute' },
+const ALL_DAYS: { id: WeekDay; label: string; name: string }[] = [
+  { id: 'MON', label: 'Mon', name: 'Monday' },
+  { id: 'TUE', label: 'Tue', name: 'Tuesday' },
+  { id: 'WED', label: 'Wed', name: 'Wednesday' },
+  { id: 'THU', label: 'Thu', name: 'Thursday' },
+  { id: 'FRI', label: 'Fri', name: 'Friday' },
+  { id: 'SAT', label: 'Sat', name: 'Saturday' },
+  { id: 'SUN', label: 'Sun', name: 'Sunday' },
+];
+const WEEKDAYS: WeekDay[] = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
+
+const TOLL_OPTIONS: { id: TollPreference; label: string }[] = [
+  { id: 'AVOID_TOLLS', label: 'Avoid tolls' },
+  { id: 'TOLLS_INCLUDED', label: 'Tolls included in price' },
+  { id: 'TOLLS_SPLIT', label: 'Split tolls with riders' },
+];
+const LUGGAGE_OPTIONS: { id: LuggageCapacity; label: string }[] = [
+  { id: 'BACKPACK_ONLY', label: 'Backpack only' },
+  { id: 'MEDIUM', label: 'Medium bags' },
+  { id: 'LARGE_SUITCASE', label: 'Large suitcases' },
+];
+const GENDER_OPTIONS: { id: GenderPreference; label: string }[] = [
+  { id: 'ANY', label: 'Open to all riders' },
+  { id: 'FEMALE_ONLY', label: 'Women only' },
 ];
 
-const ALL_DAYS = [
-  { id: 'MON', label: 'M' },
-  { id: 'TUE', label: 'T' },
-  { id: 'WED', label: 'W' },
-  { id: 'THU', label: 'Th' },
-  { id: 'FRI', label: 'F' },
-  { id: 'SAT', label: 'Sa' },
-  { id: 'SUN', label: 'Su' },
-];
-
-type TollPreference = 'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT';
-
-const TOLL_OPTIONS: { id: TollPreference; label: string; desc: string }[] = [
-  { id: 'AVOID_TOLLS', label: 'Avoid Tolls', desc: 'Free Routes Only' },
-  { id: 'TOLLS_INCLUDED', label: 'Tolls Included', desc: 'No extra cost' },
-  { id: 'TOLLS_SPLIT', label: 'Split Tolls', desc: 'Split with riders' },
-];
-
-const LUGGAGE_OPTIONS = [
-  { id: 'BACKPACK_ONLY', label: 'Backpack' },
-  { id: 'MEDIUM', label: 'Medium Bag' },
-  { id: 'LARGE_SUITCASE', label: 'Large Luggage' },
-];
-
-const GENDER_OPTIONS = [
-  { id: 'ANY', label: 'Open to All' },
-  { id: 'FEMALE_ONLY', label: 'Women Only' },
-];
-
-type RideTemplate = {
+type Template = {
   id: string;
   origin: string;
   destination: string;
   seats: number;
-  price: string;
-  isRecurring: boolean;
-  pattern: string;
-  days: string[];
-  tollPref: string;
+  amount: number | null;
+  ride: Ride;
 };
 
-/** Builds re-post templates from the driver's own previous offers (GET /api/v1/rides/mine). */
-function toTemplates(rides: Array<Partial<RideOffer & RideListing>>): RideTemplate[] {
+/** Re-post shortcuts built from the driver's own previous rides (never fixtures). */
+function toTemplates(rides: Ride[]): Template[] {
   const seen = new Set<string>();
-  const templates: RideTemplate[] = [];
+  const out: Template[] = [];
   for (const ride of rides) {
-    const origin = ride.originArea ?? ride.pickupArea;
-    const destination = ride.destinationArea ?? ride.destination;
-    if (!ride.id || !origin || !destination) continue;
-    const key = `${origin}|${destination}`.toLowerCase();
+    const key = `${ride.originArea}|${ride.destinationArea}`.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    templates.push({
+    out.push({
       id: ride.id,
-      origin,
-      destination,
-      seats: ride.seatsTotal ?? 1,
-      price: String(ride.contribution ?? '').replace(/[^0-9.]/g, ''),
-      isRecurring: Boolean(ride.isRecurring),
-      pattern: ride.recurrencePattern ?? 'ONE_TIME',
-      days: ride.recurringDays ?? [],
-      tollPref: ride.tollPreference ?? 'AVOID_TOLLS',
+      origin: ride.originArea,
+      destination: ride.destinationArea,
+      seats: ride.seatsTotal,
+      amount: ride.contributionAmount,
+      ride,
     });
-    if (templates.length >= 5) break;
+    if (out.length >= 5) break;
   }
-  return templates;
+  return out;
 }
 
-/**
- * Parses the driver's departure inputs. Date accepts YYYY-MM-DD, "today" or "tomorrow";
- * time accepts 24h "17:30" or "5:30 PM". Returns null when either part is not understood.
- */
-function parseDeparture(dateText: string, timeText: string, now = new Date()): Date | null {
-  const dateRaw = dateText.trim().toLowerCase();
-  let base: Date;
-  if (dateRaw === 'today') {
-    base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  } else if (dateRaw === 'tomorrow') {
-    base = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  } else {
-    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(dateRaw);
-    if (!m) return null;
-    base = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    if (base.getMonth() !== Number(m[2]) - 1) return null;
-  }
-  const t = /^(\d{1,2}):(\d{2})\s*(am|pm)?$/.exec(timeText.trim().toLowerCase());
-  if (!t) return null;
-  let hours = Number(t[1]);
-  const minutes = Number(t[2]);
-  if (minutes > 59) return null;
-  if (t[3]) {
-    if (hours < 1 || hours > 12) return null;
-    if (t[3] === 'pm' && hours !== 12) hours += 12;
-    if (t[3] === 'am' && hours === 12) hours = 0;
-  } else if (hours > 23) {
-    return null;
-  }
-  base.setHours(hours, minutes, 0, 0);
-  return base;
+function patternFor(days: WeekDay[]): RecurrencePattern {
+  if (days.length === 7) return 'DAILY';
+  if (days.length === 5 && WEEKDAYS.every((d) => days.includes(d))) return 'WEEKDAYS';
+  return 'CUSTOM';
 }
+
+type Coords = { lat: number; lng: number } | null;
 
 export function RideOfferScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const insets = useSafeAreaInsets();
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.back();
-      return true;
-    });
-    return () => sub.remove();
-  }, [router]);
-
-  // Form states
   const [origin, setOrigin] = useState('');
-  const [originCoords, setOriginCoords] = useState<{ lat: number; lng: number } | null>(null);
-
+  const [originCoords, setOriginCoords] = useState<Coords>(null);
   const [destination, setDestination] = useState('');
-  const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | null>(
-    null,
-  );
+  const [destinationCoords, setDestinationCoords] = useState<Coords>(null);
+  const [tollPref, setTollPref] = useState<TollPreference>('AVOID_TOLLS');
+  const [route, setRoute] = useState<RouteInfo | null>(null);
+  const [routeMessage, setRouteMessage] = useState<string | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
-  // Toll Preference & Route Info
-  const [tollPref, setTollPref] = useState<'AVOID_TOLLS' | 'TOLLS_INCLUDED' | 'TOLLS_SPLIT'>(
-    'AVOID_TOLLS',
-  );
-  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-  const [calculatingRoute, setCalculatingRoute] = useState(false);
-
-  // Schedule & Recurrence
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrencePattern, setRecurrencePattern] = useState<string>('WEEKDAYS');
-  const [selectedDays, setSelectedDays] = useState<string[]>(['MON', 'TUE', 'WED', 'THU', 'FRI']);
-  const [departureDate, setDepartureDate] = useState('');
-  const [departureTime, setDepartureTime] = useState('');
+  const [days, setDays] = useState<WeekDay[]>(WEEKDAYS);
+  const [departure, setDeparture] = useState<DepartureValue>({ dayOffset: 1, hour: 8, minute: 0 });
 
-  // Seats & Price
-  const [seats, setSeats] = useState(3);
-  const [pricePerSeat, setPricePerSeat] = useState('');
+  const [seats, setSeats] = useState('3');
+  const [amount, setAmount] = useState('');
+  const [luggage, setLuggage] = useState<LuggageCapacity>('MEDIUM');
+  const [gender, setGender] = useState<GenderPreference>('ANY');
 
-  // Re-post templates come from the driver's own previous offers, never from fixtures.
-  const { data: myRides } = useQuery({ queryKey: ['rides', 'mine'], queryFn: getMyRides });
-  const recentTemplates = useMemo(
-    () => toTemplates((myRides ?? []) as Array<Partial<RideOffer & RideListing>>),
-    [myRides],
-  );
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [published, setPublished] = useState<Ride | null>(null);
 
-  // Preferences
-  const [luggageCapacity, setLuggageCapacity] = useState('MEDIUM');
-  const [genderPref, setGenderPref] = useState('ANY');
+  const myRides = useQuery({
+    queryKey: ['rides', 'mine'],
+    queryFn: getMyRides,
+    enabled: isAuthenticated,
+  });
+  const templates = useMemo(() => toTemplates(myRides.data ?? []), [myRides.data]);
 
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [published, setPublished] = useState(false);
-
-  // Fetch route geometry whenever coords or toll preference changes
+  // Route facts come only from the Directions proxy; when it fails they stay empty.
   useEffect(() => {
-    async function updateRoute() {
-      if (!originCoords || !destinationCoords) return;
-      setCalculatingRoute(true);
-      try {
-        const route = await fetchGoogleRoute(
-          originCoords,
-          destinationCoords,
-          tollPref === 'AVOID_TOLLS',
-        );
-        if (route) {
-          setRouteInfo(route);
-        }
-      } catch (err) {
-        console.warn('Failed to calculate route:', err);
-      } finally {
-        setCalculatingRoute(false);
-      }
+    if (!originCoords || !destinationCoords) {
+      setRoute(null);
+      setRouteMessage(null);
+      return;
     }
-    updateRoute();
+    let live = true;
+    setRouteLoading(true);
+    fetchGoogleRoute(originCoords, destinationCoords, tollPref === 'AVOID_TOLLS').then((result) => {
+      if (!live) return;
+      setRoute(result.route);
+      setRouteMessage(result.message ?? null);
+      setRouteLoading(false);
+    });
+    return () => {
+      live = false;
+    };
   }, [originCoords, destinationCoords, tollPref]);
 
-  // Apply quick re-post template
-  const applyTemplate = async (template: RideTemplate) => {
-    setOrigin(template.origin);
-    setDestination(template.destination);
-    setSeats(template.seats);
-    setPricePerSeat(template.price);
-    setIsRecurring(template.isRecurring);
-    setRecurrencePattern(template.pattern);
-    setSelectedDays(template.days);
-    setTollPref(template.tollPref as TollPreference);
-
-    // Geocode both
-    const [c1, c2] = await Promise.all([
-      geocodeAddress(template.origin),
-      geocodeAddress(template.destination),
-    ]);
-    if (c1) setOriginCoords(c1);
-    if (c2) setDestinationCoords(c2);
+  const applyTemplate = async (t: Template) => {
+    setOrigin(t.origin);
+    setDestination(t.destination);
+    setSeats(String(t.seats));
+    setAmount(t.amount != null ? String(t.amount) : '');
+    setIsRecurring(t.ride.isRecurring);
+    if (t.ride.recurringDays.length) setDays(t.ride.recurringDays as WeekDay[]);
+    if (t.ride.tollPreference) setTollPref(t.ride.tollPreference as TollPreference);
+    if (t.ride.luggageCapacity) setLuggage(t.ride.luggageCapacity as LuggageCapacity);
+    if (t.ride.genderPreference) setGender(t.ride.genderPreference as GenderPreference);
+    try {
+      const [a, b] = await Promise.all([geocodeAddress(t.origin), geocodeAddress(t.destination)]);
+      setOriginCoords(a);
+      setDestinationCoords(b);
+    } catch (e) {
+      setOriginCoords(null);
+      setDestinationCoords(null);
+      setRouteMessage(e instanceof Error ? e.message : 'Could not look up these places.');
+    }
   };
 
-  const toggleDay = (dayId: string) => {
-    setSelectedDays((prev) =>
-      prev.includes(dayId) ? prev.filter((d) => d !== dayId) : [...prev, dayId],
-    );
-  };
-
-  const handleSwap = () => {
-    const tempO = origin;
-    const tempC = originCoords;
+  const swap = () => {
     setOrigin(destination);
+    setDestination(origin);
     setOriginCoords(destinationCoords);
-    setDestination(tempO);
-    setDestinationCoords(tempC);
+    setDestinationCoords(originCoords);
   };
+
+  const toggleDay = (d: WeekDay) =>
+    setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
 
   const mutation = useMutation({
     mutationFn: createRideOffer,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
-      queryClient.invalidateQueries({ queryKey: ['rides'] });
-      setPublished(true);
+    onSuccess: (ride) => {
+      Promise.allSettled([
+        queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] }),
+        queryClient.invalidateQueries({ queryKey: ['rides', 'offers'] }),
+        queryClient.invalidateQueries({ queryKey: ['rides', 'home-widget'] }),
+      ]);
+      setPublished(ride);
     },
-    onError: (err: Error) => {
-      setErrorMsg(err.message);
-      Alert.alert('Publish Failed', err.message);
-    },
+    onError: (e) => showError('Ride not published', e),
   });
 
-  const handlePublish = () => {
-    setErrorMsg(null);
-    if (!origin.trim() || !destination.trim()) {
-      setErrorMsg('Please enter a valid pickup and dropoff point.');
-      return;
-    }
-
-    const title = `${origin.split(',')[0].trim()} to ${destination.split(',')[0].trim()} Carpool`;
-    const numPrice = Number.parseFloat(pricePerSeat);
-    if (!Number.isFinite(numPrice) || numPrice < 0) {
-      setErrorMsg('Please enter a contribution per seat (0 for free).');
-      return;
-    }
-    const departure = parseDeparture(departureDate, departureTime);
-    if (!departure) {
-      setErrorMsg('Enter the departure date as YYYY-MM-DD (or today/tomorrow) and time as HH:MM.');
-      return;
-    }
-    if (departure.getTime() <= Date.now()) {
-      setErrorMsg('Departure must be in the future.');
-      return;
-    }
-
+  const publish = () => {
+    const at = departureFrom(departure.dayOffset, departure.hour, departure.minute);
+    const next: Record<string, string | null> = {
+      origin: origin.trim() ? null : 'Enter where you start.',
+      destination: destination.trim() ? null : 'Enter where you are going.',
+      seats: seatsError(seats),
+      amount: amountError(amount),
+      departure: departureError(at),
+      days: isRecurring && days.length === 0 ? 'Choose at least one day.' : null,
+    };
+    setErrors(next);
+    if (Object.values(next).some(Boolean)) return;
+    const orderedDays = ALL_DAYS.map((d) => d.id).filter((d) => days.includes(d));
     mutation.mutate({
-      title,
-      pickupArea: origin.trim(),
-      destination: destination.trim(),
-      departureAt: departure.toISOString(),
-      seatsTotal: seats,
-      contribution: numPrice,
+      originArea: origin,
+      destinationArea: destination,
+      departureAt: at.toISOString(),
+      seatsTotal: Number(seats),
+      contributionAmount: Number(amount),
       originLat: originCoords?.lat,
       originLng: originCoords?.lng,
       destinationLat: destinationCoords?.lat,
       destinationLng: destinationCoords?.lng,
-      routePolyline: routeInfo?.polyline || undefined,
-      distanceMiles: routeInfo?.distanceMiles || undefined,
-      estimatedDurationMins: routeInfo?.durationMinutes || undefined,
+      routePolyline: route?.polyline || undefined,
+      distanceMiles: route ? Math.round(route.distanceMiles * 100) / 100 : undefined,
+      estimatedDurationMins: route ? Math.round(route.durationMinutes) : undefined,
       tollPreference: tollPref,
       isRecurring,
-      recurrencePattern: isRecurring ? recurrencePattern : 'ONE_TIME',
-      recurringDays: isRecurring ? selectedDays : [],
-      luggageCapacity,
-      genderPreference: genderPref,
+      recurrencePattern: isRecurring ? patternFor(orderedDays) : 'ONE_TIME',
+      recurringDays: isRecurring ? orderedDays : [],
+      luggageCapacity: luggage,
+      genderPreference: gender,
     });
   };
 
   if (published) {
     return (
-      <SafeAreaView style={s.safe}>
-        <View style={s.successContainer}>
-          <View style={s.successIconCircle}>
-            <AppIcon name="car" size={36} color="#ffffff" />
-          </View>
-          <Text style={s.successTitle}>Ride Offer Published! 🚗</Text>
-          <Text style={s.successSubtitle}>
-            Your carpool from {origin.split(',')[0].trim()} to {destination.split(',')[0].trim()} is
-            active in discovery feeds. Travelers can request seats.
-          </Text>
-          <View style={s.successCard}>
-            <Text style={s.successRouteText}>
-              {origin} → {destination}
-            </Text>
-            <Text style={s.successMetaText}>
-              📅 {isRecurring ? `Recurring (${selectedDays.join(', ')})` : departureDate} •{' '}
-              {departureTime}
-            </Text>
-            <Text style={s.successSeatsText}>
-              💺 {seats} Seats Available • ${pricePerSeat}/seat • {tollPref.replace('_', ' ')}
-            </Text>
-          </View>
-          <View style={s.successActions}>
-            <Pressable style={s.primaryBtn} onPress={() => router.replace('/rides/mine')}>
-              <Text style={s.primaryBtnText}>View My Offered Rides</Text>
-            </Pressable>
-            <Pressable
-              style={s.outlineBtn}
-              onPress={() => {
-                setPublished(false);
-                router.replace('/rides');
-              }}
-            >
-              <Text style={s.outlineBtnText}>Explore Feed</Text>
-            </Pressable>
-          </View>
-        </View>
-      </SafeAreaView>
+      <Screen>
+        <YStack gap="$x4">
+          <Card aria-live="polite" gap="$x3" variant="tinted">
+            <AppText role="heading" variant="h2">
+              Ride published
+            </AppText>
+            <AppText>{published.routeLabel}</AppText>
+            <AppText tone="muted">
+              Departs {new Date(published.departureAt).toLocaleString()} · {published.seatsTotal}{' '}
+              {published.seatsTotal === 1 ? 'seat' : 'seats'} ·{' '}
+              {published.contributionLabel ?? contributionText(Number(amount))}
+            </AppText>
+            <AppText tone="muted" variant="caption">
+              Riders can find and book it now. You will see bookings and requests under My rides.
+            </AppText>
+            <XStack flexWrap="wrap" gap="$x2">
+              <AppButton
+                label="View ride"
+                onPress={() => router.replace(`/rides/${published.id}` as Href)}
+              />
+              <AppButton
+                label="My rides"
+                onPress={() => router.replace('/rides/mine' as Href)}
+                variant="secondary"
+              />
+            </XStack>
+          </Card>
+        </YStack>
+      </Screen>
     );
   }
 
-  return (
-    <SafeAreaView style={s.safe}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Header */}
-          <View
-            style={[s.header, { paddingTop: Math.max(insets.top > 0 ? 8 : space.x3, space.x3) }]}
-          >
-            <Pressable
-              onPress={() => router.back()}
-              style={s.backBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={s.backText}>← Back</Text>
-            </Pressable>
-            <Text style={s.headerTitle}>Offer a Carpool</Text>
-            <View style={{ width: 44 }} />
-          </View>
+  const seatsNumber = Number(seats);
+  const stepSeats = (delta: number) => {
+    const base = Number.isFinite(seatsNumber) ? seatsNumber : 1;
+    setSeats(String(Math.min(8, Math.max(1, base + delta))));
+  };
 
-          {/* 1. Re-post one of the driver's own previous trips (hidden when there are none) */}
-          {recentTemplates.length > 0 ? (
-            <View style={s.templateSection}>
-              <View style={s.sectionHeaderRow}>
-                <AppIcon name="sparks" size={16} color={colors.primary} />
-                <Text style={s.sectionEyebrow}>RE-POST ONE OF YOUR TRIPS</Text>
-              </View>
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <Screen>
+        <YStack gap="$x5">
+          <BackButton fallback="/rides" />
+          <YStack gap="$x1">
+            <AppText role="heading" variant="h2">
+              Offer a ride
+            </AppText>
+            <AppText tone="muted" variant="caption">
+              Share your trip and split costs with people going your way
+            </AppText>
+          </YStack>
+
+          {templates.length > 0 ? (
+            <YStack gap="$x2">
+              <AppText variant="label">Post one of your earlier routes again</AppText>
               <ScrollView
                 horizontal
+                keyboardShouldPersistTaps="handled"
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.templateScroll}
               >
-                {recentTemplates.map((item) => (
-                  <Pressable
-                    key={item.id}
-                    style={s.templateCard}
-                    onPress={() => applyTemplate(item)}
-                  >
-                    <View style={s.templateTop}>
-                      <Text style={s.templateBadge}>
-                        {item.isRecurring ? '🔄 Commute' : '⚡ One-Time'}
-                      </Text>
-                      <Text style={s.templatePrice}>${item.price}/seat</Text>
-                    </View>
-                    <Text numberOfLines={1} style={s.templateRoute}>
-                      {item.origin.split(',')[0]} → {item.destination.split(',')[0]}
-                    </Text>
-                    <Text style={s.templateMeta}>
-                      {item.seats} seats •{' '}
-                      {item.tollPref === 'AVOID_TOLLS' ? 'No Tolls' : 'Tolls Inc.'}
-                    </Text>
-                  </Pressable>
-                ))}
+                <XStack gap="$x2" paddingVertical="$x1">
+                  {templates.map((t) => (
+                    <ChoiceChip
+                      accessibilityLabel={`Fill in ${t.origin} to ${t.destination}`}
+                      key={t.id}
+                      label={`${t.origin.split(',')[0]} → ${t.destination.split(',')[0]}`}
+                      onPress={() => applyTemplate(t)}
+                      selected={false}
+                    />
+                  ))}
+                </XStack>
               </ScrollView>
-            </View>
+            </YStack>
           ) : null}
 
-          {/* 2. Route & Address Inputs with Autocomplete */}
-          <View style={s.card}>
-            <View style={s.cardTitleRow}>
-              <Text style={s.cardTitle}>Route & Coordinates</Text>
-              <Pressable style={s.swapBtn} onPress={handleSwap}>
-                <AppIcon name="compass" size={14} color={colors.primary} />
-                <Text style={s.swapText}>Swap</Text>
-              </Pressable>
-            </View>
-
-            {/* Origin Input */}
+          <Card gap="$x3" variant="outlined">
+            <XStack alignItems="center" justifyContent="space-between">
+              <AppText variant="h4">Route</AppText>
+              <AppButton icon="refresh" label="Swap" onPress={swap} variant="ghost" />
+            </XStack>
             <RideLocationPicker
-              label="PICKUP LOCATION"
-              value={origin}
-              onValueChange={setOrigin}
+              error={errors.origin}
+              label="Pickup area"
               onCoordsChange={setOriginCoords}
-              pinColor="#10b981"
-              placeholder="Enter city, suburb, or address"
+              onValueChange={setOrigin}
+              value={origin}
             />
+            <RideLocationPicker
+              error={errors.destination}
+              label="Destination"
+              onCoordsChange={setDestinationCoords}
+              onValueChange={setDestination}
+              placeholder="Work hub, campus, or city"
+              value={destination}
+            />
+            <AppText aria-live="polite" tone={routeMessage ? 'warm' : 'muted'} variant="caption">
+              {routeLoading
+                ? 'Looking up the route…'
+                : route
+                  ? `${route.distanceMiles.toFixed(1)} mi · ${durationLabel(route.durationMinutes) ?? ''}${route.hasTolls ? ' · route has toll roads' : ''}`
+                  : (routeMessage ??
+                    'Choose both places from the suggestions to add distance and travel time.')}
+            </AppText>
+          </Card>
 
-            {/* Destination Input */}
-            <View style={{ marginTop: space.x3 }}>
-              <RideLocationPicker
-                label="DROPOFF DESTINATION"
-                value={destination}
-                onValueChange={setDestination}
-                onCoordsChange={setDestinationCoords}
-                pinColor="#ef4444"
-                placeholder="Enter work hub, college, or city"
+          <Card gap="$x3" variant="outlined">
+            <AppText variant="h4">Tolls</AppText>
+            <XStack aria-label="Tolls" flexWrap="wrap" gap="$x2" role="radiogroup">
+              {TOLL_OPTIONS.map((o) => (
+                <ChoiceChip
+                  key={o.id}
+                  label={o.label}
+                  onPress={() => setTollPref(o.id)}
+                  radio
+                  selected={tollPref === o.id}
+                />
+              ))}
+            </XStack>
+          </Card>
+
+          <Card gap="$x3" variant="outlined">
+            <AppText variant="h4">When</AppText>
+            <XStack aria-label="Schedule" flexWrap="wrap" gap="$x2" role="radiogroup">
+              <ChoiceChip
+                label="One-time trip"
+                onPress={() => setIsRecurring(false)}
+                radio
+                selected={!isRecurring}
               />
-            </View>
-
-            {/* Route Stats & Polyline Summary */}
-            <View style={s.routeStatsCard}>
-              <View style={s.routeStatsLeft}>
-                <AppIcon name="car" size={18} color={colors.teal} />
-                <View>
-                  <Text style={s.routeStatsHeadline}>
-                    {calculatingRoute
-                      ? 'Calculating Google route...'
-                      : routeInfo
-                        ? `~${routeInfo.distanceMiles} mi • ${Math.floor(routeInfo.durationMinutes / 60) > 0 ? `${Math.floor(routeInfo.durationMinutes / 60)}h ` : ''}${routeInfo.durationMinutes % 60}m`
-                        : 'Direct Corridor Route'}
-                  </Text>
-                  <Text style={s.routeStatsSub}>
-                    {routeInfo?.hasTolls
-                      ? '⚠️ Toll roads present on highway route'
-                      : '✅ Zero Tolls / Free Route Selected'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* 3. Toll Preference (Segmented Control) */}
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Tollway Preference</Text>
-            <Text style={s.cardSubtitle}>Specify how toll costs are handled for this carpool.</Text>
-            <View style={s.tollSelectorRow}>
-              {TOLL_OPTIONS.map((opt) => {
-                const isSelected = tollPref === opt.id;
-                return (
-                  <Pressable
-                    key={opt.id}
-                    style={[s.tollOptionCard, isSelected && s.tollOptionCardSelected]}
-                    onPress={() => setTollPref(opt.id)}
-                  >
-                    <Text style={[s.tollOptionTitle, isSelected && s.tollOptionTitleSelected]}>
-                      {opt.label}
-                    </Text>
-                    <Text style={[s.tollOptionDesc, isSelected && s.tollOptionDescSelected]}>
-                      {opt.desc}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* 4. Schedule Mode (One-Time vs Daily Commute) */}
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Schedule Mode</Text>
-            <View style={s.modeSelectorRow}>
-              {TRIP_MODES.map((m) => {
-                const active = (m.id === 'RECURRING') === isRecurring;
-                return (
-                  <Pressable
-                    key={m.id}
-                    style={[s.modePill, active && s.modePillActive]}
-                    onPress={() => setIsRecurring(m.id === 'RECURRING')}
-                  >
-                    <Text style={[s.modePillText, active && s.modePillTextActive]}>{m.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
+              <ChoiceChip
+                label="Repeats weekly"
+                onPress={() => setIsRecurring(true)}
+                radio
+                selected={isRecurring}
+              />
+            </XStack>
             {isRecurring ? (
-              <View style={s.recurringSection}>
-                <View style={s.recurringShortcutsRow}>
-                  <Text style={s.fieldLabel}>ACTIVE COMMUTE DAYS</Text>
-                  <Pressable
-                    onPress={() => setSelectedDays(['MON', 'TUE', 'WED', 'THU', 'FRI'])}
-                    style={s.shortcutBtn}
-                  >
-                    <Text style={s.shortcutBtnText}>Weekdays (Mon–Fri)</Text>
-                  </Pressable>
-                </View>
-                <View style={s.daysRow}>
-                  {ALL_DAYS.map((day) => {
-                    const isDaySelected = selectedDays.includes(day.id);
-                    return (
-                      <Pressable
-                        key={day.id}
-                        style={[s.dayPill, isDaySelected && s.dayPillSelected]}
-                        onPress={() => toggleDay(day.id)}
-                      >
-                        <Text style={[s.dayPillText, isDaySelected && s.dayPillTextSelected]}>
-                          {day.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
+              <YStack gap="$x2">
+                <AppText variant="label">Days</AppText>
+                <XStack flexWrap="wrap" gap="$x2">
+                  {ALL_DAYS.map((d) => (
+                    <ChoiceChip
+                      accessibilityLabel={d.name}
+                      key={d.id}
+                      label={d.label}
+                      onPress={() => toggleDay(d.id)}
+                      selected={days.includes(d.id)}
+                    />
+                  ))}
+                </XStack>
+                {errors.days ? (
+                  <AppText aria-live="polite" tone="danger" variant="caption">
+                    {errors.days}
+                  </AppText>
+                ) : null}
+              </YStack>
             ) : null}
-            <View style={s.dateTimeRow}>
-              <View style={s.dateTimeBox}>
-                <Text style={s.fieldLabel}>
-                  {isRecurring ? 'FIRST DEPARTURE DATE' : 'DEPARTURE DATE'}
-                </Text>
-                <TextInput
-                  style={s.textInput}
-                  value={departureDate}
-                  onChangeText={setDepartureDate}
-                  placeholder="YYYY-MM-DD or tomorrow"
-                  autoCapitalize="none"
+            <DeparturePicker
+              dateLabel={isRecurring ? 'First departure date' : 'Departure date'}
+              error={errors.departure}
+              onChange={(v) => {
+                setDeparture(v);
+                setErrors((e) => ({ ...e, departure: null }));
+              }}
+              value={departure}
+            />
+          </Card>
+
+          <Card gap="$x3" variant="outlined">
+            <AppText variant="h4">Seats and price</AppText>
+            <XStack alignItems="flex-start" gap="$x2">
+              <YStack flex={1}>
+                <TextField
+                  error={errors.seats}
+                  helper="1 to 8 seats"
+                  keyboardType="number-pad"
+                  label="Seats offered"
+                  maxLength={1}
+                  onChangeText={(t) => {
+                    setSeats(t);
+                    setErrors((e) => ({ ...e, seats: seatsError(t) }));
+                  }}
+                  value={seats}
                 />
-              </View>
-              <View style={s.dateTimeBox}>
-                <Text style={s.fieldLabel}>DEPARTURE TIME</Text>
-                <TextInput
-                  style={s.textInput}
-                  value={departureTime}
-                  onChangeText={setDepartureTime}
-                  placeholder="17:30 or 5:30 PM"
-                  autoCapitalize="none"
+              </YStack>
+              <XStack gap="$x2" paddingTop="$x6">
+                <AppButton label="−" onPress={() => stepSeats(-1)} variant="secondary" />
+                <AppButton label="+" onPress={() => stepSeats(1)} variant="secondary" />
+              </XStack>
+            </XStack>
+            <TextField
+              error={errors.amount}
+              helper="What each rider pays you toward fuel; 0 for free."
+              keyboardType="decimal-pad"
+              label="Contribution per seat ($)"
+              onChangeText={(t) => {
+                setAmount(t);
+                setErrors((e) => ({ ...e, amount: null }));
+              }}
+              placeholder="e.g. 12"
+              value={amount}
+            />
+          </Card>
+
+          <Card gap="$x3" variant="outlined">
+            <AppText variant="h4">Preferences</AppText>
+            <AppText variant="label">Luggage space</AppText>
+            <XStack aria-label="Luggage space" flexWrap="wrap" gap="$x2" role="radiogroup">
+              {LUGGAGE_OPTIONS.map((o) => (
+                <ChoiceChip
+                  key={o.id}
+                  label={o.label}
+                  onPress={() => setLuggage(o.id)}
+                  radio
+                  selected={luggage === o.id}
                 />
-              </View>
-            </View>
-          </View>
-
-          {/* 5. Seats & Fuel Share Contribution */}
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Seats & Fuel Contribution</Text>
-            <View style={s.seatsRow}>
-              <View style={s.seatCounterBox}>
-                <Text style={s.fieldLabel}>AVAILABLE SEATS</Text>
-                <View style={s.counterControls}>
-                  <Pressable
-                    style={s.counterBtn}
-                    onPress={() => setSeats((c) => Math.max(1, c - 1))}
-                  >
-                    <Text style={s.counterBtnText}>−</Text>
-                  </Pressable>
-                  <Text style={s.counterValue}>{seats}</Text>
-                  <Pressable
-                    style={s.counterBtn}
-                    onPress={() => setSeats((c) => Math.min(6, c + 1))}
-                  >
-                    <Text style={s.counterBtnText}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              <View style={s.priceBox}>
-                <Text style={s.fieldLabel}>PRICE / SEAT ($)</Text>
-                <TextInput
-                  style={s.priceInput}
-                  keyboardType="numeric"
-                  value={pricePerSeat}
-                  onChangeText={setPricePerSeat}
+              ))}
+            </XStack>
+            <AppText variant="label">Who can book</AppText>
+            <XStack aria-label="Who can book" flexWrap="wrap" gap="$x2" role="radiogroup">
+              {GENDER_OPTIONS.map((o) => (
+                <ChoiceChip
+                  key={o.id}
+                  label={o.label}
+                  onPress={() => setGender(o.id)}
+                  radio
+                  selected={gender === o.id}
                 />
-              </View>
-            </View>
+              ))}
+            </XStack>
+            {gender === 'FEMALE_ONLY' ? (
+              <AppText tone="muted" variant="caption">
+                Only riders whose gender ManaBandhu has verified can book a women-only ride. Riders
+                who are not verified yet will be refused, so you may get fewer bookings.
+              </AppText>
+            ) : null}
+          </Card>
 
-            {/* Luggage Capacity */}
-            <View style={{ marginTop: space.x4 }}>
-              <Text style={s.fieldLabel}>LUGGAGE CAPACITY</Text>
-              <View style={s.pillsRow}>
-                {LUGGAGE_OPTIONS.map((lug) => (
-                  <Pressable
-                    key={lug.id}
-                    style={[s.filterPill, luggageCapacity === lug.id && s.filterPillActive]}
-                    onPress={() => setLuggageCapacity(lug.id)}
-                  >
-                    <Text
-                      style={[
-                        s.filterPillText,
-                        luggageCapacity === lug.id && s.filterPillTextActive,
-                      ]}
-                    >
-                      {lug.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Gender Preference */}
-            <View style={{ marginTop: space.x4 }}>
-              <Text style={s.fieldLabel}>TRAVELER PREFERENCE</Text>
-              <View style={s.pillsRow}>
-                {GENDER_OPTIONS.map((g) => (
-                  <Pressable
-                    key={g.id}
-                    style={[s.filterPill, genderPref === g.id && s.filterPillActive]}
-                    onPress={() => setGenderPref(g.id)}
-                  >
-                    <Text style={[s.filterPillText, genderPref === g.id && s.filterPillTextActive]}>
-                      {g.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          </View>
-
-          {errorMsg && <Text style={s.errorText}>{errorMsg}</Text>}
-          <View style={{ height: 100 }} />
-        </ScrollView>
-
-        {/* Sticky Bottom Bar */}
-        <View style={s.bottomBar}>
-          <View style={s.bottomSummaryCol}>
-            <Text style={s.totalContributionText}>${pricePerSeat} / seat</Text>
-            <Text style={s.totalSeatsText}>{seats} seats offered</Text>
-          </View>
-          <Pressable
-            style={[s.publishBtn, mutation.isPending && s.publishBtnDisabled]}
-            disabled={mutation.isPending}
-            onPress={handlePublish}
-          >
-            {mutation.isPending ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <Text style={s.publishBtnText}>Publish Ride Offer</Text>
-            )}
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          <YStack gap="$x2">
+            <AppButton
+              fullWidth
+              label="Publish ride"
+              loading={mutation.isPending}
+              onPress={publish}
+              size="lg"
+            />
+          </YStack>
+        </YStack>
+      </Screen>
+    </KeyboardAvoidingView>
   );
 }
-
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8f9ff' },
-  scroll: { padding: space.x4, gap: space.x4 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: space.x2,
-  },
-  backBtn: { padding: space.x2 },
-  backText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
-  headerTitle: { ...typography.h3, color: colors.ink, fontWeight: '800' },
-
-  templateSection: { gap: space.x2 },
-  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  sectionEyebrow: { color: colors.teal, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
-  templateScroll: { gap: space.x3, paddingVertical: space.x1 },
-  templateCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: radius.card,
-    padding: space.x3,
-    borderWidth: 1,
-    borderColor: 'rgba(67,30,190,0.12)',
-    width: 200,
-    gap: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  templateTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  templateBadge: { fontSize: 11, fontWeight: '700', color: colors.teal },
-  templatePrice: { fontSize: 13, fontWeight: '800', color: colors.primary },
-  templateRoute: { fontSize: 13, fontWeight: '700', color: colors.ink },
-  templateMeta: { fontSize: 11, color: colors.muted },
-
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: radius.card,
-    padding: space.x4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    gap: space.x3,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 5,
-    elevation: 1,
-  },
-  cardTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTitle: { ...typography.h4, color: colors.ink, fontWeight: '800' },
-  cardSubtitle: { ...typography.caption, color: colors.muted },
-  swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 4 },
-  swapText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
-
-  inputContainer: { gap: 4 },
-  inputHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  fieldLabel: { fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 0.5 },
-  clearText: { fontSize: 12, color: colors.primary, fontWeight: '700' },
-  inputWithMarker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f5f6ff',
-    borderRadius: radius.control,
-    paddingHorizontal: space.x3,
-    height: 48,
-    gap: space.x2,
-  },
-  greenPin: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#10b981' },
-  redPin: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#ef4444' },
-  locationInput: { flex: 1, fontSize: 14, color: colors.ink, fontWeight: '600' },
-
-  suggestionBox: {
-    backgroundColor: '#ffffff',
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: 'rgba(67,30,190,0.15)',
-    marginTop: 4,
-    overflow: 'hidden',
-  },
-  suggestionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: space.x3,
-    gap: space.x2,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f8',
-  },
-  suggestionMainText: { fontSize: 13, fontWeight: '700', color: colors.ink },
-  suggestionSubText: { fontSize: 11, color: colors.muted },
-
-  routeStatsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f0faf8',
-    borderRadius: radius.card,
-    padding: space.x3,
-    borderWidth: 1,
-    borderColor: 'rgba(0,105,107,0.15)',
-  },
-  routeStatsLeft: { flexDirection: 'row', alignItems: 'center', gap: space.x3 },
-  routeStatsHeadline: { fontSize: 13, fontWeight: '800', color: colors.ink },
-  routeStatsSub: { fontSize: 11, color: colors.teal, fontWeight: '600' },
-
-  tollSelectorRow: { flexDirection: 'row', gap: space.x2 },
-  tollOptionCard: {
-    flex: 1,
-    padding: space.x3,
-    borderRadius: radius.card,
-    backgroundColor: '#f6f7fb',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    gap: 2,
-  },
-  tollOptionCardSelected: {
-    backgroundColor: 'rgba(67,30,190,0.06)',
-    borderColor: colors.primary,
-  },
-  tollOptionTitle: { fontSize: 12, fontWeight: '700', color: colors.ink, textAlign: 'center' },
-  tollOptionTitleSelected: { color: colors.primary, fontWeight: '800' },
-  tollOptionDesc: { fontSize: 10, color: colors.muted, textAlign: 'center' },
-  tollOptionDescSelected: { color: colors.teal, fontWeight: '600' },
-
-  modeSelectorRow: { flexDirection: 'row', gap: space.x2 },
-  modePill: {
-    flex: 1,
-    paddingVertical: space.x2,
-    borderRadius: radius.pill,
-    backgroundColor: '#f0f1f7',
-    alignItems: 'center',
-  },
-  modePillActive: { backgroundColor: colors.primary },
-  modePillText: { fontSize: 13, fontWeight: '700', color: colors.ink },
-  modePillTextActive: { color: '#ffffff' },
-
-  recurringSection: { gap: space.x2, marginTop: space.x2 },
-  recurringShortcutsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  shortcutBtn: { padding: 4 },
-  shortcutBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
-  daysRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  dayPill: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f1f7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayPillSelected: { backgroundColor: colors.teal },
-  dayPillText: { fontSize: 13, fontWeight: '700', color: colors.ink },
-  dayPillTextSelected: { color: '#ffffff' },
-
-  dateTimeRow: { flexDirection: 'row', gap: space.x3, marginTop: space.x2 },
-  dateTimeBox: { flex: 1, gap: 4 },
-  textInput: {
-    backgroundColor: '#f5f6ff',
-    borderRadius: radius.control,
-    paddingHorizontal: space.x3,
-    height: 44,
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.ink,
-  },
-
-  seatsRow: { flexDirection: 'row', gap: space.x4 },
-  seatCounterBox: { flex: 1, gap: 4 },
-  counterControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    backgroundColor: '#f5f6ff',
-    borderRadius: radius.control,
-    height: 44,
-    paddingHorizontal: space.x2,
-    justifyContent: 'space-between',
-  },
-  counterBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  counterBtnText: { fontSize: 18, fontWeight: '700', color: colors.primary },
-  counterValue: { fontSize: 16, fontWeight: '800', color: colors.ink },
-  priceBox: { flex: 1, gap: 4 },
-  priceInput: {
-    backgroundColor: '#f5f6ff',
-    borderRadius: radius.control,
-    height: 44,
-    paddingHorizontal: space.x3,
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-
-  pillsRow: { flexDirection: 'row', gap: space.x2, marginTop: 4 },
-  filterPill: {
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-    borderRadius: radius.pill,
-    backgroundColor: '#f0f1f7',
-  },
-  filterPillActive: { backgroundColor: colors.teal },
-  filterPillText: { fontSize: 12, fontWeight: '700', color: colors.ink },
-  filterPillTextActive: { color: '#ffffff' },
-
-  errorText: { color: colors.error, fontSize: 13, fontWeight: '700', textAlign: 'center' },
-
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: space.x4,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#eef0f8',
-  },
-  bottomSummaryCol: { gap: 2 },
-  totalContributionText: { ...typography.h4, color: colors.ink, fontWeight: '800' },
-  totalSeatsText: { ...typography.caption, color: colors.muted },
-  publishBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: space.x5,
-    paddingVertical: space.x3,
-    borderRadius: radius.control,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  publishBtnDisabled: { opacity: 0.6 },
-  publishBtnText: { ...typography.bodyStrong, color: '#ffffff', fontSize: 14, fontWeight: '800' },
-
-  successContainer: {
-    flex: 1,
-    padding: space.x6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x4,
-  },
-  successIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successTitle: { ...typography.h2, color: colors.ink, textAlign: 'center', fontWeight: '800' },
-  successSubtitle: { ...typography.body, color: colors.muted, textAlign: 'center' },
-  successCard: {
-    width: '100%',
-    backgroundColor: '#ffffff',
-    padding: space.x4,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 4,
-  },
-  successRouteText: { ...typography.bodyStrong, color: colors.ink, fontSize: 15 },
-  successMetaText: { ...typography.caption, color: colors.muted },
-  successSeatsText: { ...typography.caption, color: colors.teal, fontWeight: '700' },
-  successActions: { width: '100%', gap: space.x3, marginTop: space.x2 },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: space.x3,
-    borderRadius: radius.control,
-    alignItems: 'center',
-  },
-  primaryBtnText: { ...typography.bodyStrong, color: '#ffffff', fontSize: 15 },
-  outlineBtn: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: space.x3,
-    borderRadius: radius.control,
-    alignItems: 'center',
-  },
-  outlineBtnText: { ...typography.bodyStrong, color: colors.ink, fontSize: 14 },
-});

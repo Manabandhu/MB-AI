@@ -375,130 +375,128 @@ Each screen entry includes:
 ### Rides Home
 - Route: `/rides`
 - Module: rides
-- Purpose: Discover available rides
+- Purpose: Upcoming rides with search, filters, list/map toggle, and entry points (Offer a ride, Find a ride, My rides, Saved, History)
 - Type: catalog
-- States: loading | empty | error
-- Components: CatalogScreen, SearchBar, FilterBar, Card, AppButton
-- Navigation: push to `/rides/search`, `/rides/map`, `/rides/filters`, `/rides/offer`
+- States: loading | empty (Offer a ride CTA) | error (retry) | refreshing
+- Components: RidesScreen, ChoiceChip, SegmentedControl, ResponsiveGrid, UniversalMapView, EmptyState, ErrorState
+- Navigation: push to `/rides/[rideId]`, `/rides/offer`, `/rides/request`, `/rides/mine`, `/rides/saved`, `/rides/history`
 
 ### Rides Search
 - Route: `/rides/search`
 - Module: rides
-- Purpose: Search and filter rides
+- Purpose: Same screen as home; `?from=&to=` prefill the server-side origin/destination filters (debounced 300 ms, `size=50`)
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SearchBar, FilterBar, ListScreen, Card
-- Navigation: push to `/rides/[rideId]`, `/rides/map`, `/rides/filters`
+- States: loading | empty | error | refreshing
+- Components: RidesScreen
+- Navigation: push to `/rides/[rideId]`
 
 ### Rides Map
 - Route: `/rides/map`
 - Module: rides
-- Purpose: View rides on map
+- Purpose: Rides home opened on the map view; pins are approximate pickup areas; draw an area to filter
 - Type: map
-- States: loading | empty | error | permission
-- Components: ScreenShell, MapView, MapPin, Card, FilterBar, SearchBar
-- Navigation: push to `/rides/[rideId]`, `/rides/search`
+- States: loading | empty | error
+- Components: RidesScreen, UniversalMapView
+- Navigation: push to `/rides/[rideId]`
 
 ### Rides Filters
 - Route: `/rides/filters`
 - Module: rides
-- Purpose: Apply ride filters
+- Purpose: Rides home with departure-window and sort filters expanded
 - Type: filter
 - States: normal
-- Components: ScreenShell, FilterBar, RangeSlider, CheckboxGroup, AppButton
-- Navigation: apply to `/rides/search`
+- Components: RidesScreen, ChoiceChip
+- Navigation: results update in place
 
 ### Offer Ride
 - Route: `/rides/offer`
 - Module: rides
-- Purpose: Offer a new ride
+- Purpose: Driver posts a ride: places with suggestions, real route facts only, date chips and time stepper, seats 1–8 and price with inline errors, tolls, recurrence, luggage, women-only note
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, DateTimePicker, MapPicker, CheckboxGroup, AppButton
-- Navigation: to `/rides` on success
+- States: normal | validation error | submitting | success | error alert
+- Components: RideOfferScreen, RideLocationPicker, DeparturePicker, ChoiceChip, TextField
+- Navigation: success links to `/rides/[rideId]` and `/rides/mine`
 
-### Request Ride
+### Find a Ride
 - Route: `/rides/request`
 - Module: rides
-- Purpose: Request a ride
+- Purpose: Rider enters pickup/destination and searches matching offers
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, DateTimePicker, AppButton
-- Navigation: to `/rides` on success
+- States: normal | validation error
+- Components: RideRequestScreen, TextField
+- Navigation: push to `/rides/search?from=&to=`
 
 ### Saved Rides
 - Route: `/rides/saved`
 - Module: rides
-- Purpose: View saved rides
+- Purpose: Bookmarked and joined rides; unsave
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
+- States: loading | empty | error (retry) | refreshing
+- Components: RideSavedScreen, RideListCard, BackButton
 - Navigation: push to `/rides/[rideId]`
 
 ### My Rides
 - Route: `/rides/mine`
 - Module: rides
-- Purpose: Manage own rides
+- Purpose: Tabs: Driving (rides you offer: Manage, Requests, Repeat trip) and My trips (`?tab=trips`, your bookings with Cancel after confirmation)
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton, SwipeAction
-- Navigation: push to `/rides/[rideId]/manage`, `/rides/[rideId]/seat-requests`
+- States: loading | empty | error (retry) | refreshing
+- Components: RideMyListingsScreen, RideListCard, RepeatTripSheet, SegmentedControl
+- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/manage`, `/rides/[rideId]/seat-requests`, `/rides/offer`, `/rides/history`
 
 ### Ride History
 - Route: `/rides/history`
 - Module: rides
-- Purpose: View past rides
+- Purpose: Completed, cancelled or departed rides you drove or rode on; rate completed rides; drivers can repeat a trip
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
-- Navigation: push to `/rides/[rideId]/rate`
+- States: loading | empty | error (retry) | refreshing
+- Components: RideHistoryScreen, RideListCard, RepeatTripSheet
+- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/rate`
 
 ### Ride Details
 - Route: `/rides/[rideId]`
 - Module: rides
-- Purpose: View ride details
+- Purpose: Ride facts from the record, seat icons from real counts, Book seat (hidden with a reason for the driver and full/cancelled/completed/departed rides), women-only note, member-only chat/participants, save and share
 - Type: detail
-- States: loading | error
-- Components: DetailScreen, MapPreview, Timeline, AppButton, SectionHeader
-- Navigation: push to `/rides/[rideId]/manage`, `/rides/[rideId]/seat-requests`
+- States: loading | not found | error (retry) | booked | blocked reason
+- Components: RideDetailScreen, ChoiceChip, IconButton
+- Navigation: push to `/rides/[rideId]/manage`, `/rides/[rideId]/participants`, `/rides/[rideId]/rate`, `/rides/mine?tab=trips`, `/chat/[id]`
 
 ### Manage Ride
 - Route: `/rides/[rideId]/manage`
 - Module: rides
-- Purpose: Manage ride settings and status
+- Purpose: Driver panel: Start/Complete/Cancel via `PATCH /status` with confirmation, bookings with cancel, seat-request count, seats and price edit with validation, chat, repeat trip, delete
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, Select, AppButton, Modal
-- Navigation: back to `/rides/[rideId]`
+- States: loading | not found | error (retry) | saving | notice
+- Components: RideManageScreen, RepeatTripSheet, TextField
+- Navigation: push to `/rides/[rideId]/seat-requests`, `/rides/[rideId]/participants`, `/chat/[id]`
 
 ### Seat Requests
 - Route: `/rides/[rideId]/seat-requests`
 - Module: rides
-- Purpose: Review and manage seat requests
+- Purpose: Driver accepts/declines requests; a rider sees and withdraws their own
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton, SwipeAction
-- Navigation: push to user profile
+- States: loading | empty | error (retry) | refreshing
+- Components: RideSeatRequestsScreen, BackButton
+- Navigation: driver only: `/rides/[rideId]/participants`, `/rides/[rideId]/manage`
 
 ### Participants
 - Route: `/rides/[rideId]/participants`
 - Module: rides
-- Purpose: View ride participants
+- Purpose: Ride members (members only)
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Avatar, Card, AppButton
-- Navigation: push to user profile
+- States: loading | empty | error (retry) | refreshing
+- Components: RideParticipantsScreen, Avatar, BackButton
+- Navigation: driver only: `/rides/[rideId]/seat-requests`, `/rides/[rideId]/manage`
 
 ### Rate Ride
 - Route: `/rides/[rideId]/rate`
 - Module: rides
-- Purpose: Rate ride experience
+- Purpose: One 1–5 rating after the ride is completed; passengers rate the driver, the driver picks a rider
 - Type: form
-- States: normal | success
-- Components: FormScreen, StarRating, TextArea, AppButton
-- Navigation: to `/rides/history` on success
-
----
+- States: loading | not found | error (retry) | not completed | submitting | sent
+- Components: RideRateScreen, ChoiceChip, TextField
+- Navigation: to `/rides/history` when sent
 
 ## Community
 
