@@ -80,45 +80,11 @@
     "colorLiteral": 22,
     "localPalette": 1
   },
-  "marketplace/screens/ListingDetailsScreen.tsx": {
-    "colorLiteral": 15,
-    "localPalette": 1
-  },
-  "marketplace/screens/MarketplaceHomeScreen.tsx": {
-    "colorLiteral": 26,
-    "localPalette": 1
-  },
-  "marketplace/screens/SellItemScreen.tsx": {
-    "colorLiteral": 17
-  },
   "referrals/screens/ReferralDetailsScreen.tsx": {
     "colorLiteral": 90
   },
   "referrals/screens/ReferralsHomeScreen.tsx": {
     "colorLiteral": 98
-  },
-  "rides/components/RideLocationPicker.tsx": {
-    "colorLiteral": 4
-  },
-  "rides/screens/RideDetailScreen.tsx": {
-    "colorLiteral": 88,
-    "localPalette": 1
-  },
-  "rides/screens/RideHistoryScreen.tsx": {
-    "colorLiteral": 5
-  },
-  "rides/screens/RideManageScreen.tsx": {
-    "colorLiteral": 23
-  },
-  "rides/screens/RideMyListingsScreen.tsx": {
-    "colorLiteral": 21
-  },
-  "rides/screens/RideOfferScreen.tsx": {
-    "colorLiteral": 36
-  },
-  "rides/screens/RidesScreen.tsx": {
-    "colorLiteral": 110,
-    "localPalette": 1
   },
   "rooms/screens/RoomsScreen.tsx": {
     "colorLiteral": 138,

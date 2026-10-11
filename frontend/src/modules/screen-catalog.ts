@@ -198,8 +198,10 @@ export const screenCatalog = [
       screen('marketplace', 'search', 'Search'),
       screen('marketplace', 'categories', 'Categories'),
       screen('marketplace', 'details', 'Listing Details', '/marketplace/[listingId]'),
+      screen('marketplace', 'edit-listing', 'Edit Listing', '/marketplace/[listingId]/edit'),
       screen('marketplace', 'sell', 'Sell Item'),
       screen('marketplace', 'saved', 'Saved Items'),
+      screen('marketplace', 'mine', 'My Listings'),
     ],
   },
   {

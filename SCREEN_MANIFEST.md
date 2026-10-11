@@ -954,56 +954,74 @@ Each screen entry includes:
 ### Marketplace Home
 - Route: `/marketplace`
 - Module: marketplace
-- Purpose: Buy and sell items
+- Purpose: Browse listings with server-side search, category, condition, price ceiling and "show reserved & sold"
 - Type: catalog
-- States: loading | empty | error
-- Components: CatalogScreen, SearchBar, FilterBar, Card, AppButton
-- Navigation: push to `/marketplace/search`, `/marketplace/[listingId]`, `/marketplace/sell`
+- States: loading (skeleton) | empty (no listings / no matches) | error (retry) | load more | pull-to-refresh
+- Components: MarketplaceHomeScreen, Screen, TextField, Chip, ResponsiveGrid, ListingCard, BottomSheet (categories)
+- Navigation: push to `/marketplace/[listingId]`, `/marketplace/sell`, `/marketplace/mine`, `/marketplace/saved` (sign-in when signed out)
 
 ### Marketplace Search
 - Route: `/marketplace/search`
 - Module: marketplace
-- Purpose: Search listings
-- Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SearchBar, FilterBar, ListScreen, Card
+- Purpose: Same as home with the search field focused
+- Type: catalog
+- States: loading | empty | error (retry)
+- Components: MarketplaceHomeScreen (`screenId="search"`)
 - Navigation: push to `/marketplace/[listingId]`
 
 ### Categories
 - Route: `/marketplace/categories`
 - Module: marketplace
-- Purpose: Browse categories
-- Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
-- Navigation: push to `/marketplace/search`
+- Purpose: Same as home with the category picker open
+- Type: catalog
+- States: loading | empty | error (retry)
+- Components: MarketplaceHomeScreen (`screenId="categories"`), BottomSheet
+- Navigation: push to `/marketplace/[listingId]`
 
 ### Listing Details
 - Route: `/marketplace/[listingId]`
 - Module: marketplace
-- Purpose: View listing details
+- Purpose: Listing with photos, status badge, details, safety tips; buyers save, chat with the seller or report; owners mark reserved/sold, relist, edit or delete
 - Type: detail
-- States: loading | error
-- Components: DetailScreen, ImageGallery, AppButton, SectionHeader, ListScreen
-- Navigation: push to `/marketplace/sell`, `/marketplace/saved`
+- States: loading | not found | error (retry) | photos error (retry)
+- Components: ListingDetailsScreen, Screen, Card, Chip, IconButton, SaveToggle, ReportListingSheet (BottomSheet)
+- Navigation: buyer → `/chat/[conversationId]`; owner → `/marketplace/[listingId]/edit`, `/marketplace/mine` after delete
+
+### Edit Listing
+- Route: `/marketplace/[listingId]/edit`
+- Module: marketplace
+- Purpose: Owner edits details and photos
+- Type: form
+- States: loading | not found | not owner | error | upload progress
+- Components: EditListingScreen, ListingForm
+- Navigation: replace with `/marketplace/[listingId]` on save
 
 ### Sell Item
 - Route: `/marketplace/sell`
 - Module: marketplace
-- Purpose: Create new listing
+- Purpose: Create a listing with up to 10 photos (attached after create; a failed attach keeps the created listing for retry)
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, TextArea, ImageUpload, Select, AppButton
-- Navigation: to `/marketplace` on success
+- States: normal | field errors | server error | upload progress | success
+- Components: SellItemScreen, ListingForm (TextField, Chip, SegmentedControl, useImageUpload)
+- Navigation: success → `/marketplace/[listingId]`, `/marketplace/mine`, or reset for another item
 
 ### Saved Items
 - Route: `/marketplace/saved`
 - Module: marketplace
-- Purpose: View saved listings
+- Purpose: The signed-in member's saved listings (`GET /favorites/listings`)
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: MarketplaceHomeScreen (`screenId="saved"`), ListingCard
 - Navigation: push to `/marketplace/[listingId]`
+
+### My Listings
+- Route: `/marketplace/mine`
+- Module: marketplace
+- Purpose: The seller's listings in every status (For sale / Sold / All) with mark reserved, mark sold, relist, edit and delete
+- Type: list
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: MyListingsScreen, SegmentedControl, Card, AppButton
+- Navigation: push to `/marketplace/[listingId]`, `/marketplace/[listingId]/edit`, `/marketplace/sell`
 
 ---
 

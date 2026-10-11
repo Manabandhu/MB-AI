@@ -98,3 +98,12 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
   - **Favorites.** Idempotent, and not allowed for your own listing or for non-active ones.
   - **Reports and contact.** `POST /listings/{id}/report` (`listing_reports`, one open report per member) and `POST /listings/{id}/contact` (opens or reuses a direct chat with the seller through `listing_conversations` and notifies the seller). V41 adds the status/price/currency checks and both tables, with RLS on and grants revoked.
   - **Tests.** `MarketplaceRulesTest`; smoke: `== marketplace production rules`.
+- Production pass (2026-10-11), frontend:
+  - **Routes.** New `/marketplace/mine` (`MyListingsScreen`: For sale / Sold / All tabs, quick status actions, edit, delete) and `/marketplace/[listingId]/edit` (`EditListingScreen`); both require sign-in and are listed in the screen catalog.
+  - **Home.** Server-side debounced search with condition (all five values), price ceiling and "show reserved & sold" (`includeClosed`), 24 per page with "Load more" and the real `totalElements`. Covers come from `coverImageUrl`, prices keep their cents, and reserved/sold items get badges. "Sell an item", "My listings" and "Saved" entry points show on every size. The client-side sort and "negotiable only" filter are removed (the backend returns newest first).
+  - **Detail.** 404 vs retry, a status badge, and a neutral seller card (no UUID avatar). "Chat with seller" calls `/contact` and opens the chat; there is a report sheet; owner actions follow the backend state machine (reserve, sold, relist, edit, delete; a moderator-removed listing can only be deleted). The share text is safe.
+  - **Sell/Edit.** `ListingForm` uploads up to 10 photos with `useImageUpload('marketplace')`, attaches them after save, and keeps the created id so a retry never duplicates the listing. Price validation is strict, the description is capped at 4000 characters and nothing is appended to it, and the location field asks for an area only. "List another item" resets everything.
+  - **Saving and errors.** `hooks/useListingSave` saves optimistically with rollback. `api.ts` throws on every failure; `listMarketplaceListings()` still returns an array for foundation's search.
+  - **Accessibility.** Every control comes from shared primitives with roles and labels, and colors use tokens only. Chips stay 36 pt because of the shared `Chip`.
+  - **"Make offer".** It was never implemented and is no longer claimed.
+  - **Tests.** `frontend/test/marketplaceRules.test.mjs`.

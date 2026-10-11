@@ -170,3 +170,4 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
   - Settings links to Account & data, Terms and Privacy, and its rows now have accessibility roles and labels.
 - Onboarding profile photo (2026-10-11): uploads a real photo with `useImageUpload('avatars')`, shows progress and errors, saves `avatar_url` to the account and deletes the previously uploaded avatar. The stock Unsplash demo toggle is gone.
 - Back buttons (2026-10-11): account & data and the legal pages use `shared/ui/BackButton`.
+- Screen catalog (2026-10-11): added `marketplace.mine` (`/marketplace/mine`) and `marketplace.edit-listing` (`/marketplace/[listingId]/edit`); both routes require sign-in.

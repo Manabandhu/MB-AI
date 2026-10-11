@@ -109,8 +109,9 @@
 │   ├── /marketplace/search
 │   ├── /marketplace/categories
 │   ├── /marketplace/[listingId]
-│   │   └── /marketplace/[listingId]/details
+│   │   └── /marketplace/[listingId]/edit
 │   ├── /marketplace/sell
+│   ├── /marketplace/mine
 │   └── /marketplace/saved
 ├── /referrals/*
 │   ├── /referrals/request
