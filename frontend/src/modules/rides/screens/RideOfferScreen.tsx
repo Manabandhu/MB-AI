@@ -5,7 +5,6 @@ import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { createRideOffer, getMyRides } from '@/modules/rides/api';
-import { ChoiceChip } from '@/modules/rides/components/ChoiceChip';
 import { DeparturePicker, type DepartureValue } from '@/modules/rides/components/DeparturePicker';
 import { RideLocationPicker } from '@/modules/rides/components/RideLocationPicker';
 import {
@@ -34,6 +33,7 @@ import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { TextField } from '@/modules/shared/ui/TextField';
 
@@ -300,7 +300,7 @@ export function RideOfferScreen() {
               >
                 <XStack gap="$x2" paddingVertical="$x1">
                   {templates.map((t) => (
-                    <ChoiceChip
+                    <Chip
                       accessibilityLabel={`Fill in ${t.origin} to ${t.destination}`}
                       key={t.id}
                       label={`${t.origin.split(',')[0]} → ${t.destination.split(',')[0]}`}
@@ -347,7 +347,7 @@ export function RideOfferScreen() {
             <AppText variant="h4">Tolls</AppText>
             <XStack aria-label="Tolls" flexWrap="wrap" gap="$x2" role="radiogroup">
               {TOLL_OPTIONS.map((o) => (
-                <ChoiceChip
+                <Chip
                   key={o.id}
                   label={o.label}
                   onPress={() => setTollPref(o.id)}
@@ -361,13 +361,13 @@ export function RideOfferScreen() {
           <Card gap="$x3" variant="outlined">
             <AppText variant="h4">When</AppText>
             <XStack aria-label="Schedule" flexWrap="wrap" gap="$x2" role="radiogroup">
-              <ChoiceChip
+              <Chip
                 label="One-time trip"
                 onPress={() => setIsRecurring(false)}
                 radio
                 selected={!isRecurring}
               />
-              <ChoiceChip
+              <Chip
                 label="Repeats weekly"
                 onPress={() => setIsRecurring(true)}
                 radio
@@ -379,7 +379,7 @@ export function RideOfferScreen() {
                 <AppText variant="label">Days</AppText>
                 <XStack flexWrap="wrap" gap="$x2">
                   {ALL_DAYS.map((d) => (
-                    <ChoiceChip
+                    <Chip
                       accessibilityLabel={d.name}
                       key={d.id}
                       label={d.label}
@@ -447,7 +447,7 @@ export function RideOfferScreen() {
             <AppText variant="label">Luggage space</AppText>
             <XStack aria-label="Luggage space" flexWrap="wrap" gap="$x2" role="radiogroup">
               {LUGGAGE_OPTIONS.map((o) => (
-                <ChoiceChip
+                <Chip
                   key={o.id}
                   label={o.label}
                   onPress={() => setLuggage(o.id)}
@@ -459,7 +459,7 @@ export function RideOfferScreen() {
             <AppText variant="label">Who can book</AppText>
             <XStack aria-label="Who can book" flexWrap="wrap" gap="$x2" role="radiogroup">
               {GENDER_OPTIONS.map((o) => (
-                <ChoiceChip
+                <Chip
                   key={o.id}
                   label={o.label}
                   onPress={() => setGender(o.id)}

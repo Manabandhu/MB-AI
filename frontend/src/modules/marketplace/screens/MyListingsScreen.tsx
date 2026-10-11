@@ -15,7 +15,7 @@ import { Card } from '@/modules/shared/ui/Card';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 import { deleteListing, getMyListings, updateListing } from '../api';
-import { PhotoPlaceholder, StatusBadge } from '../components/ListingBits';
+import { ListingStatusBadge, PhotoPlaceholder } from '../components/ListingBits';
 import type { ListingStatus, MarketplaceListing } from '../types';
 import { formatListedDate, formatListingPrice } from '../utils/format';
 import { errorMessage, ownerStatusActions, statusIs } from '../utils/listingRules';
@@ -81,6 +81,7 @@ export function MyListingsScreen() {
       `Delete "${listing.title}"?`,
       'The listing and its photos are deleted for good.',
       'Delete',
+      { destructive: true },
     );
     if (ok) deleteMutation.mutate(listing.id);
   };
@@ -186,7 +187,7 @@ export function MyListingsScreen() {
                         {formatListingPrice(listing.price, listing.currency)}
                       </AppText>
                       <XStack alignItems="center" flexWrap="wrap" gap="$x2">
-                        <StatusBadge showActive status={listing.status} />
+                        <ListingStatusBadge showActive status={listing.status} />
                         {formatListedDate(listing.createdAt) ? (
                           <AppText tone="muted" variant="caption">
                             Listed {formatListedDate(listing.createdAt)}

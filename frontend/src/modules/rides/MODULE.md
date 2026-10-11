@@ -49,9 +49,8 @@ Query keys: `['rides','offers',…]`, `['rides','detail',id]`, `['rides','owner'
 `['rides','seat-requests',id]`, `['rides','participants',id]`, `['rides','home-widget']`.
 
 ## Components and helpers
-- `components/RideListCard` (list row for saved/history/mine/trips), `ChoiceChip` (44pt selectable pill with
-  `aria-pressed`/`aria-checked`), `DeparturePicker` (date chips for 30 days plus a time stepper; works on web and
-  native, no native picker dependency), `RepeatTripSheet` (asks for the new departure, defaulting to the original time
+- `components/RideListCard` (list row for saved/history/mine/trips), `DeparturePicker` (thin wrapper over the shared
+  `DateTimeField`, today through 30 days ahead; selectable pills use the shared `Chip`), `RepeatTripSheet` (asks for the new departure, defaulting to the original time
   of day on the next future day), `RideLocationPicker` (debounced place suggestions; typing clears coordinates).
 - `services/googleMapsService.ts`: route facts come only from the Directions proxy. On failure the result has no
   route and a message, and the ride is posted without distance/duration. 429 shows `MAPS_RATE_LIMIT_MESSAGE`.

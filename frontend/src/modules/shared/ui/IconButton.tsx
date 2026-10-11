@@ -11,6 +11,8 @@ type IconButtonProps = {
   size?: number;
   /** Optional overlay such as an unread dot. */
   badge?: ReactNode;
+  /** Dims the control, removes it from the focus order, and ignores presses. */
+  disabled?: boolean;
 };
 
 /** 44pt minimum touch target around a single icon. */
@@ -21,27 +23,32 @@ export function IconButton({
   variant = 'tinted',
   size = 20,
   badge,
+  disabled,
 }: IconButtonProps) {
   const theme = useTheme();
   return (
     <YStack
       aria-label={label}
       role="button"
+      aria-disabled={disabled || undefined}
       alignItems="center"
       backgroundColor={
         variant === 'solid' ? '$primary' : variant === 'tinted' ? '$primaryTint' : 'transparent'
       }
       borderRadius="$pill"
-      cursor="pointer"
+      cursor={disabled ? 'not-allowed' : 'pointer'}
       focusVisibleStyle={{ outlineWidth: 3, outlineStyle: 'solid', outlineColor: '$outlineColor' }}
-      focusable
+      focusable={!disabled}
       height="$touch"
-      hoverStyle={{
-        backgroundColor: variant === 'solid' ? '$primaryContainer' : '$surfaceContainer',
-      }}
+      hoverStyle={
+        disabled
+          ? undefined
+          : { backgroundColor: variant === 'solid' ? '$primaryContainer' : '$surfaceContainer' }
+      }
       justifyContent="center"
-      onPress={onPress}
-      pressStyle={{ opacity: 0.8 }}
+      onPress={disabled ? undefined : onPress}
+      opacity={disabled ? 0.4 : 1}
+      pressStyle={disabled ? undefined : { opacity: 0.8 }}
       width="$touch"
     >
       <AppIcon

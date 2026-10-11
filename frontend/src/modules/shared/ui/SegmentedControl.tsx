@@ -3,7 +3,13 @@ import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { useAppearance } from '@/theme/ThemeProvider';
 
-type Option<T extends string> = { value: T; label: string; icon?: AppIconName };
+type Option<T extends string> = {
+  value: T;
+  label: string;
+  icon?: AppIconName;
+  /** Item count shown as a small badge after the label (e.g. "Requests 3"). Only pass real counts. */
+  count?: number;
+};
 
 type SegmentedControlProps<T extends string> = {
   label: string;
@@ -12,7 +18,7 @@ type SegmentedControlProps<T extends string> = {
   onChange: (value: T) => void;
 };
 
-/** A small set of mutually exclusive choices (radio group semantics). */
+/** A small set of mutually exclusive choices (radio group semantics), each segment at least 44pt tall. */
 export function SegmentedControl<T extends string>({
   label,
   options,
@@ -31,9 +37,10 @@ export function SegmentedControl<T extends string>({
     >
       {options.map((option) => {
         const selected = option.value === value;
+        const hasCount = typeof option.count === 'number';
         return (
           <XStack
-            aria-label={option.label}
+            aria-label={hasCount ? `${option.label}, ${option.count}` : option.label}
             role="radio"
             aria-checked={selected}
             alignItems="center"
@@ -41,12 +48,19 @@ export function SegmentedControl<T extends string>({
             borderRadius={10}
             cursor="pointer"
             flex={1}
+            focusVisibleStyle={{
+              outlineWidth: 3,
+              outlineStyle: 'solid',
+              outlineColor: '$outlineColor',
+            }}
             focusable
             gap="$x1"
+            hoverStyle={selected ? undefined : { backgroundColor: '$surfaceContainer' }}
             justifyContent="center"
             key={option.value}
-            minHeight={40}
+            minHeight="$touch"
             onPress={() => onChange(option.value)}
+            paddingHorizontal="$x2"
             shadowColor={selected ? '$shadowColor' : 'transparent'}
             shadowOpacity={selected ? 0.08 : 0}
             shadowRadius={4}
@@ -58,9 +72,27 @@ export function SegmentedControl<T extends string>({
                 size={16}
               />
             ) : null}
-            <AppText color={selected ? '$primary' : '$colorMuted'} variant="label">
+            <AppText
+              color={selected ? '$primary' : '$colorMuted'}
+              numberOfLines={1}
+              variant="label"
+            >
               {option.label}
             </AppText>
+            {hasCount ? (
+              <XStack
+                alignItems="center"
+                backgroundColor={selected ? '$primary' : '$surfaceContainerHigh'}
+                borderRadius="$pill"
+                justifyContent="center"
+                minWidth={20}
+                paddingHorizontal={6}
+              >
+                <AppText color={selected ? '$onPrimary' : '$colorMuted'} variant="caption">
+                  {option.count}
+                </AppText>
+              </XStack>
+            ) : null}
           </XStack>
         );
       })}

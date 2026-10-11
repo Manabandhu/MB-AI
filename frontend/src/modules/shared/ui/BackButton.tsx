@@ -3,7 +3,7 @@ import { XStack } from 'tamagui';
 import { IconButton } from './IconButton';
 
 /** Back control for stack screens without a native header; falls back to `fallback` when there is no history. */
-export function BackButton({ fallback = '/' }: { fallback?: string }) {
+export function BackButton({ fallback = '/' }: { fallback?: Href | string }) {
   return (
     <XStack>
       <IconButton

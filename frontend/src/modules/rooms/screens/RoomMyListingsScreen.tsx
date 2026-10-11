@@ -119,6 +119,7 @@ export function RoomMyListingsScreen() {
       'Delete listing?',
       `"${listing.title}" and its inquiries will be permanently removed.`,
       'Delete',
+      { destructive: true },
     );
     if (confirmed) deleteMutation.mutate(listing.id);
   };

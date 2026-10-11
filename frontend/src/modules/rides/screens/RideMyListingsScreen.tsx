@@ -227,6 +227,7 @@ function TripsList({
       'Cancel this booking?',
       `${ride ? `${ride.routeLabel}. ` : ''}Your ${booking.seatsBooked === 1 ? 'seat goes' : 'seats go'} back to the driver and you leave the ride chat.`,
       'Cancel booking',
+      { destructive: true },
     );
     if (ok) cancel.mutate(booking.id);
   };

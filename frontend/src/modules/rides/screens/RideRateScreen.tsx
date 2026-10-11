@@ -2,10 +2,9 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
-import { useTheme, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { getRide, listParticipants, submitRideRating } from '@/modules/rides/api';
-import { ChoiceChip } from '@/modules/rides/components/ChoiceChip';
 import { formatDeparture } from '@/modules/rides/components/RideListCard';
 import {
   errorMessage,
@@ -17,14 +16,13 @@ import {
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { RatingInput } from '@/modules/shared/ui/RatingInput';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { TextField } from '@/modules/shared/ui/TextField';
-
-const SCORE_WORDS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
 
 /**
  * One 1–5 rating per person per ride, only after the ride is completed. A passenger rates the driver (no
@@ -33,7 +31,6 @@ const SCORE_WORDS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
 export function RideRateScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const router = useRouter();
-  const theme = useTheme();
   const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const [score, setScore] = useState(0);
@@ -158,7 +155,7 @@ export function RideRateScreen() {
             ) : (
               <XStack aria-label="Rider to rate" flexWrap="wrap" gap="$x2" role="radiogroup">
                 {riders.map((r) => (
-                  <ChoiceChip
+                  <Chip
                     key={r.userId}
                     label={memberLabel(r.userId, 'rider')}
                     onPress={() => setRateeId(r.userId)}
@@ -175,33 +172,7 @@ export function RideRateScreen() {
 
         <YStack gap="$x2">
           <AppText variant="label">Rating</AppText>
-          <XStack aria-label="Rating" gap="$x1" role="radiogroup">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <YStack
-                alignItems="center"
-                aria-checked={score === n}
-                aria-label={`${n} ${n === 1 ? 'star' : 'stars'}, ${SCORE_WORDS[n]}`}
-                cursor="pointer"
-                focusable
-                height="$touch"
-                justifyContent="center"
-                key={n}
-                onPress={() => setScore(n)}
-                pressStyle={{ opacity: 0.7 }}
-                role="radio"
-                width="$touch"
-              >
-                <AppIcon
-                  color={n <= score ? theme.warm?.val : theme.colorMuted?.val}
-                  name="star"
-                  size={28}
-                />
-              </YStack>
-            ))}
-          </XStack>
-          <AppText tone="muted" variant="caption">
-            {score ? SCORE_WORDS[score] : 'Tap a star'}
-          </AppText>
+          <RatingInput onChange={setScore} value={score} />
         </YStack>
 
         <TextField

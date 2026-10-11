@@ -4,14 +4,14 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getReports, isOpenReport } from '@/modules/safety/api';
-import { Badge } from '@/modules/shared/components/Badge';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
-const statusVariants: Record<string, 'success' | 'warning' | 'info'> = {
+const statusTones: Record<string, 'success' | 'warning' | 'info'> = {
   OPEN: 'warning',
   IN_REVIEW: 'info',
   RESOLVED: 'success',
@@ -101,9 +101,9 @@ export function ReportsScreen() {
                 <View key={item.id} style={styles.card}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.cardTitle}>{item.category}</Text>
-                    <Badge
+                    <StatusBadge
                       label={statusLabels[item.status] ?? item.status}
-                      variant={statusVariants[item.status]}
+                      tone={statusTones[item.status] ?? 'neutral'}
                     />
                   </View>
                   <Text style={styles.cardBody}>{item.description}</Text>

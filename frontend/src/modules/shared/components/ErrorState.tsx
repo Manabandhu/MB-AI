@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { YStack } from 'tamagui';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { useAppearance } from '@/theme/ThemeProvider';
 
@@ -12,9 +12,11 @@ export type ErrorStateProps = {
   onRetry?: () => void;
   icon?: ReactNode;
   compact?: boolean;
+  /** Icon on the action button. Defaults to `refresh`; pass another (or `null`) when the action navigates. */
+  actionIcon?: AppIconName | null;
 };
 
-/** Shown when a request failed. Always offers a retry and never pretends the request succeeded. */
+/** Shown when a request failed. Offers a retry (or another way forward) and never pretends the request succeeded. */
 export function ErrorState({
   title,
   body,
@@ -22,6 +24,7 @@ export function ErrorState({
   onRetry,
   icon,
   compact,
+  actionIcon = 'refresh',
 }: ErrorStateProps) {
   const { palette } = useAppearance();
   return (
@@ -46,7 +49,7 @@ export function ErrorState({
       </AppText>
       {onRetry ? (
         <AppButton
-          icon="refresh"
+          icon={actionIcon ?? undefined}
           label={retryLabel}
           onPress={onRetry}
           size={compact ? 'sm' : 'md'}

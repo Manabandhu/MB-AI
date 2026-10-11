@@ -8,38 +8,86 @@ type ChipProps = {
   selected?: boolean;
   onPress?: () => void;
   accessibilityLabel?: string;
+  /**
+   * `filter` (default): a primary-tinted choice pill; pressable chips are 44pt tall. `tag`: a neutral, read-only
+   * label (amenities, categories) that is never focusable or pressable. Use `StatusBadge` for statuses.
+   */
+  variant?: 'filter' | 'tag';
+  /** One-of-many choice inside a `radiogroup`: announced as a radio with `aria-checked` instead of a toggle. */
+  radio?: boolean;
+  disabled?: boolean;
 };
 
-/** Filter, category, and status pill. Selectable chips expose their state to assistive tech. */
-export function Chip({ label, icon, selected, onPress, accessibilityLabel }: ChipProps) {
+const focusRing = {
+  outlineWidth: 3,
+  outlineStyle: 'solid',
+  outlineColor: '$outlineColor',
+} as const;
+
+/** Filter and choice pill (44pt when pressable), or a neutral `tag`. Selection is exposed to assistive tech. */
+export function Chip({
+  label,
+  icon,
+  selected,
+  onPress,
+  accessibilityLabel,
+  variant = 'filter',
+  radio,
+  disabled,
+}: ChipProps) {
   const theme = useTheme();
-  const color = selected ? '$onPrimary' : '$primary';
+
+  if (variant === 'tag') {
+    return (
+      <XStack
+        aria-label={accessibilityLabel ?? label}
+        alignItems="center"
+        backgroundColor="$surfaceContainer"
+        borderRadius="$pill"
+        gap="$x1"
+        minHeight={28}
+        paddingHorizontal="$x3"
+      >
+        {icon ? <AppIcon color={theme.colorMuted?.val} name={icon} size={14} /> : null}
+        <AppText numberOfLines={1} tone="muted" variant="caption">
+          {label}
+        </AppText>
+      </XStack>
+    );
+  }
+
+  const pressable = Boolean(onPress);
+  const interactive = pressable && !disabled;
+  const foreground = selected ? theme.onPrimary?.val : theme.primary?.val;
   return (
     <XStack
       aria-label={accessibilityLabel ?? label}
-      role={onPress ? 'button' : undefined}
-      aria-pressed={onPress ? Boolean(selected) : undefined}
+      role={pressable ? (radio ? 'radio' : 'button') : undefined}
+      aria-checked={pressable && radio ? Boolean(selected) : undefined}
+      aria-pressed={pressable && !radio ? Boolean(selected) : undefined}
+      aria-disabled={pressable && disabled ? true : undefined}
       alignItems="center"
       backgroundColor={selected ? '$primary' : '$primaryTint'}
       borderColor={selected ? '$primary' : '$primarySoft'}
       borderRadius="$pill"
       borderWidth={1}
-      cursor={onPress ? 'pointer' : undefined}
-      focusable={Boolean(onPress)}
+      cursor={pressable ? (disabled ? 'not-allowed' : 'pointer') : undefined}
+      focusVisibleStyle={interactive ? focusRing : undefined}
+      focusable={interactive}
       gap="$x1"
-      hoverStyle={onPress ? { borderColor: '$primary' } : undefined}
-      minHeight={onPress ? 36 : 28}
-      onPress={onPress}
-      paddingHorizontal="$x3"
+      hoverStyle={interactive ? { borderColor: '$primary' } : undefined}
+      minHeight={pressable ? '$touch' : 28}
+      onPress={interactive ? onPress : undefined}
+      opacity={disabled ? 0.5 : 1}
+      paddingHorizontal={pressable ? '$x4' : '$x3'}
+      pressStyle={interactive ? { opacity: 0.85 } : undefined}
     >
-      {icon ? (
-        <AppIcon
-          color={selected ? theme.onPrimary?.val : theme.primary?.val}
-          name={icon}
-          size={14}
-        />
-      ) : null}
-      <AppText color={color} numberOfLines={1} variant="caption">
+      {icon ? <AppIcon color={foreground} name={icon} size={pressable ? 16 : 14} /> : null}
+      <AppText
+        color={selected ? '$onPrimary' : '$primary'}
+        numberOfLines={1}
+        variant={pressable ? 'label' : 'caption'}
+      >
         {label}
       </AppText>
     </XStack>

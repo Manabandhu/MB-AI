@@ -11,6 +11,7 @@ import '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { persistOptions, queryPersister } from '@/lib/queryPersistence';
 import { useOpenPushTaps } from '@/modules/notifications/push';
+import { ConfirmProvider } from '@/modules/shared/ui/ConfirmSheet';
 import { AppThemeProvider } from '@/theme/ThemeProvider';
 
 export default function RootLayout() {
@@ -56,7 +57,9 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AppThemeProvider>
           <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-            <Stack screenOptions={{ headerShown: false }} />
+            <ConfirmProvider>
+              <Stack screenOptions={{ headerShown: false }} />
+            </ConfirmProvider>
           </PersistQueryClientProvider>
         </AppThemeProvider>
       </GestureHandlerRootView>

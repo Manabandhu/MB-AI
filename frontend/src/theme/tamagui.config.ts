@@ -119,8 +119,8 @@ const themes = {
   dark_teal: accent(dark, '#0f766e', darkPalette.tealBg),
   light_warm: accent(light, '#c2410c', palette.warmBg),
   dark_warm: accent(dark, '#c2410c', darkPalette.warmBg),
-  light_danger: accent(light, palette.error, '#fde2e2'),
-  dark_danger: accent(dark, '#b91c1c', '#3a1414'),
+  light_danger: accent(light, palette.error, palette.errorBg),
+  dark_danger: accent(dark, '#b91c1c', darkPalette.errorBg),
 } as const;
 
 export const config = createTamagui({

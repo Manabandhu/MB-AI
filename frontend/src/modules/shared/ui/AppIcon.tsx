@@ -1,5 +1,6 @@
 // One file per icon keeps unused Lucide icons out of every bundle.
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import ArrowUpDown from 'lucide-react-native/icons/arrow-up-down';
 import BadgeCheck from 'lucide-react-native/icons/badge-check';
 import BedDouble from 'lucide-react-native/icons/bed-double';
 import Bell from 'lucide-react-native/icons/bell';
@@ -16,6 +17,7 @@ import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import CircleHelp from 'lucide-react-native/icons/circle-question-mark';
 import Clock from 'lucide-react-native/icons/clock';
 import Compass from 'lucide-react-native/icons/compass';
+import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Eye from 'lucide-react-native/icons/eye';
 import EyeOff from 'lucide-react-native/icons/eye-off';
 import Globe from 'lucide-react-native/icons/globe';
@@ -25,6 +27,7 @@ import Heart from 'lucide-react-native/icons/heart';
 import Home from 'lucide-react-native/icons/house';
 import Key from 'lucide-react-native/icons/key';
 import Languages from 'lucide-react-native/icons/languages';
+import List from 'lucide-react-native/icons/list';
 import ListFilter from 'lucide-react-native/icons/list-filter';
 import Lock from 'lucide-react-native/icons/lock';
 import LogOut from 'lucide-react-native/icons/log-out';
@@ -33,6 +36,7 @@ import MapIcon from 'lucide-react-native/icons/map';
 import MapPin from 'lucide-react-native/icons/map-pin';
 import Menu from 'lucide-react-native/icons/menu';
 import MessageCircle from 'lucide-react-native/icons/message-circle';
+import Minus from 'lucide-react-native/icons/minus';
 import Monitor from 'lucide-react-native/icons/monitor';
 import Moon from 'lucide-react-native/icons/moon';
 import Package from 'lucide-react-native/icons/package';
@@ -42,6 +46,7 @@ import Plane from 'lucide-react-native/icons/plane';
 import Plus from 'lucide-react-native/icons/plus';
 import Receipt from 'lucide-react-native/icons/receipt';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
+import Repeat from 'lucide-react-native/icons/repeat';
 import Search from 'lucide-react-native/icons/search';
 import Settings from 'lucide-react-native/icons/settings';
 import Share2 from 'lucide-react-native/icons/share-2';
@@ -141,6 +146,7 @@ const iconMap = {
   help: CircleHelp,
   home: Home,
   key: Key,
+  list: List,
   language: Languages,
   lock: Lock,
   logout: LogOut,
@@ -149,15 +155,18 @@ const iconMap = {
   'map-pin': MapPin,
   marketplace: ShoppingBag,
   menu: Menu,
+  minus: Minus,
   message: MessageCircle,
   monitor: Monitor,
   moon: Moon,
+  more: Ellipsis,
   package: Package,
   phone: Phone,
   plane: Plane,
   plus: Plus,
   receipt: Receipt,
   refresh: RefreshCw,
+  repeat: Repeat,
   search: Search,
   settings: Settings,
   share: Share2,
@@ -165,6 +174,7 @@ const iconMap = {
   sparks: Sparkles,
   star: Star,
   sun: Sun,
+  swap: ArrowUpDown,
   user: User,
   'verified-user': BadgeCheck,
   wallet: Wallet,

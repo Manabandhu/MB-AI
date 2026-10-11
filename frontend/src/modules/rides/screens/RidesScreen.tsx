@@ -6,7 +6,6 @@ import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { useLocationStore } from '@/lib/locationStore';
 import { listRideOffers } from '@/modules/rides/api';
-import { ChoiceChip } from '@/modules/rides/components/ChoiceChip';
 import { formatDeparture } from '@/modules/rides/components/RideListCard';
 import type { Ride } from '@/modules/rides/types';
 import {
@@ -288,18 +287,14 @@ export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId })
             ) : null}
           </XStack>
           <XStack flexWrap="wrap" gap="$x2">
-            <ChoiceChip label="No tolls" onPress={() => setNoTolls((v) => !v)} selected={noTolls} />
-            <ChoiceChip
-              label="Women only"
-              onPress={() => setWomenOnly((v) => !v)}
-              selected={womenOnly}
-            />
-            <ChoiceChip
+            <Chip label="No tolls" onPress={() => setNoTolls((v) => !v)} selected={noTolls} />
+            <Chip label="Women only" onPress={() => setWomenOnly((v) => !v)} selected={womenOnly} />
+            <Chip
               label="Recurring commutes"
               onPress={() => setRecurringOnly((v) => !v)}
               selected={recurringOnly}
             />
-            <ChoiceChip
+            <Chip
               label="Luggage space"
               onPress={() => setLuggageOnly((v) => !v)}
               selected={luggageOnly}
@@ -310,7 +305,7 @@ export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId })
               <AppText variant="label">Departs</AppText>
               <XStack aria-label="Departs" flexWrap="wrap" gap="$x2" role="radiogroup">
                 {WHEN_OPTIONS.map((o) => (
-                  <ChoiceChip
+                  <Chip
                     key={o.id}
                     label={o.label}
                     onPress={() => setWhen(o.id)}
@@ -322,7 +317,7 @@ export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId })
               <AppText variant="label">Sort by</AppText>
               <XStack aria-label="Sort by" flexWrap="wrap" gap="$x2" role="radiogroup">
                 {SORT_OPTIONS.map((o) => (
-                  <ChoiceChip
+                  <Chip
                     key={o.id}
                     label={o.label}
                     onPress={() => setSort(o.id)}

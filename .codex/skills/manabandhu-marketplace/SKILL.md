@@ -107,3 +107,4 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
   - **Accessibility.** Every control comes from shared primitives with roles and labels, and colors use tokens only. Chips stay 36 pt because of the shared `Chip`.
   - **"Make offer".** It was never implemented and is no longer claimed.
   - **Tests.** `frontend/test/marketplaceRules.test.mjs`.
+  - **Shared primitives (2026-10-11).** `ListingBits.ListingStatusBadge` (was `StatusBadge`) maps listing statuses onto the shared `StatusBadge` tones; the home filters use the shared `FilterChipRow` (the local `ChipRow` is gone) and pressable chips are now 44 pt; `ListingDetailsScreen` uses the shared `ActionBar`; `utils/notify.ts` re-exports `shared/ui/notify`, and delete confirmations pass `{ destructive: true }`.

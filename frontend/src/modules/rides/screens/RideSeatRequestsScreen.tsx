@@ -68,6 +68,8 @@ export function RideSeatRequestsScreen() {
         ? 'The rider loses their seat and is removed from the ride.'
         : 'The rider will see that you declined.',
       'Decline',
+      // Declining an accepted request removes the rider from the ride.
+      { destructive: statusIs(request.status, 'accepted') },
     );
     if (ok) decide.mutate({ id: request.id, status: 'rejected' });
   };
@@ -79,6 +81,7 @@ export function RideSeatRequestsScreen() {
         ? 'You give up the seat the driver reserved for you.'
         : 'The driver will no longer see this request.',
       'Withdraw',
+      { destructive: true },
     );
     if (ok) decide.mutate({ id: request.id, status: 'withdrawn' });
   };

@@ -1,6 +1,6 @@
 import { BottomTabBarHeightContext } from 'expo-router/js-tabs';
 import { type ReactNode, useContext } from 'react';
-import { RefreshControl, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 import { useAdaptiveLayout } from '@/platform/adaptive';
@@ -10,6 +10,8 @@ import { useAppearance } from '@/theme/ThemeProvider';
 const TAB_SCREEN_BOTTOM_GAP = 24;
 /** Bottom breathing room on stack screens, added to the home-indicator inset. */
 const SCREEN_BOTTOM_GAP = 32;
+/** Width cap for single-column forms (`maxWidth="form"`), so fields stay readable on tablets and desktop. */
+export const FORM_MAX_WIDTH = 640;
 
 type ScreenProps = {
   children: ReactNode;
@@ -27,6 +29,10 @@ type ScreenProps = {
   bottomInset?: number;
   /** Respect the top safe-area inset (off when a parent header already does). */
   safeTop?: boolean;
+  /** Lift the content above the on-screen keyboard (forms). Uses `padding` on iOS; Android resizes itself. */
+  keyboardAvoiding?: boolean;
+  /** `form` caps the content at `FORM_MAX_WIDTH` (centred); `content` (default) uses the window-class width. */
+  maxWidth?: 'form' | 'content';
 };
 
 /**
@@ -42,6 +48,8 @@ export function Screen({
   hero,
   bottomInset = 0,
   safeTop = true,
+  keyboardAvoiding = false,
+  maxWidth = 'content',
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useContext(BottomTabBarHeightContext);
@@ -51,7 +59,9 @@ export function Screen({
   const gutter = windowClass === 'compact' ? 16 : 24;
   // A `hero` runs edge to edge under the status bar, so it must pad itself by `insets.top` (HomeHeader does).
   const padTop = safeTop && !hero;
-  return (
+  const contentWidth =
+    maxWidth === 'form' ? Math.min(FORM_MAX_WIDTH, maxContentWidth) : maxContentWidth;
+  const frame = (
     <YStack backgroundColor="$background" flex={1} paddingTop={padTop ? insets.top : 0}>
       {header}
       <ScrollView
@@ -76,7 +86,7 @@ export function Screen({
         <YStack
           alignSelf="center"
           gap={windowClass === 'compact' ? '$x5' : '$x6'}
-          maxWidth={maxContentWidth + gutter * 2}
+          maxWidth={contentWidth + gutter * 2}
           paddingHorizontal={gutter}
           paddingTop={hero ? 0 : 8}
           width="100%"
@@ -85,5 +95,14 @@ export function Screen({
         </YStack>
       </ScrollView>
     </YStack>
+  );
+  if (!keyboardAvoiding) return frame;
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1 }}
+    >
+      {frame}
+    </KeyboardAvoidingView>
   );
 }

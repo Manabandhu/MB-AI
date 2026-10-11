@@ -49,7 +49,8 @@ const Frame = styled(XStack, {
       },
     },
     size: {
-      sm: { minHeight: 36, paddingHorizontal: '$x3' },
+      // Every size keeps the 44pt touch target; `sm` only tightens padding and text.
+      sm: { minHeight: '$touch', paddingHorizontal: '$x3' },
       md: { minHeight: '$touch', paddingHorizontal: '$x4' },
       lg: { minHeight: '$control', paddingHorizontal: '$x6' },
     },

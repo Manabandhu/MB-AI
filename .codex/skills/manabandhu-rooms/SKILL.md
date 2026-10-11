@@ -181,3 +181,4 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected` 
   - Editing sends `""` to clear optional text (stored as null) and `0` to clear deposit/utility; `null` means unchanged.
   - Known gap: photo URLs (`coverImageUrl`, `/images`) contain the uploader's user id because storage keys are `rooms/<userId>/<uuid>`; hiding it needs an opaque storage prefix (tracked as follow-up).
   - Tests: `RoomsProductionRulesTest`, `frontend/test/roomLabels.test.mjs`, `RoomListingGraphqlControllerTest`, `RoomAvailabilityServiceTest`; smoke: `== rooms production rules` in `authz-smoke.mjs`.
+  - Shared primitives (2026-10-11): `RoomDetailScreen` uses the shared `ActionBar` (reserving `ACTION_BAR_SPACE`) instead of a hand-rolled bar; `utils/notify.ts` re-exports `shared/ui/notify` (confirmations show the in-app `ConfirmSheet`), and deleting a listing passes `{ destructive: true }`.

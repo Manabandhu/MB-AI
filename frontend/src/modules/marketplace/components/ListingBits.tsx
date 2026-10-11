@@ -3,31 +3,28 @@ import { useTheme, XStack, YStack } from 'tamagui';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 import type { MarketplaceListing } from '../types';
 import { formatListingPrice } from '../utils/format';
 import { statusIs, statusLabel } from '../utils/listingRules';
 
-/** Reserved / Sold / Removed badge. Renders nothing for active listings unless `showActive`. */
-export function StatusBadge({ status, showActive }: { status: string; showActive?: boolean }) {
+/** Reserved / Sold / Removed status on the shared `StatusBadge`. Renders nothing for active listings unless `showActive`. */
+export function ListingStatusBadge({
+  status,
+  showActive,
+}: {
+  status: string;
+  showActive?: boolean;
+}) {
   if (statusIs(status, 'active') && !showActive) return null;
-  const background = statusIs(status, 'active')
-    ? '$successBg'
+  const tone = statusIs(status, 'active')
+    ? 'success'
     : statusIs(status, 'reserved')
-      ? '$warmBg'
+      ? 'warning'
       : statusIs(status, 'removed')
-        ? '$warmTint'
-        : '$surfaceContainerHigh';
-  return (
-    <XStack
-      alignSelf="flex-start"
-      backgroundColor={background}
-      borderRadius="$pill"
-      paddingHorizontal="$x2"
-      paddingVertical={2}
-    >
-      <AppText variant="caption">{statusLabel(status)}</AppText>
-    </XStack>
-  );
+        ? 'danger'
+        : 'neutral';
+  return <StatusBadge label={statusLabel(status)} tone={tone} />;
 }
 
 /** 44pt save toggle; exposes its on/off state to assistive tech. */
@@ -148,7 +145,7 @@ export function ListingCard({
               </AppText>
             ) : null}
           </XStack>
-          <StatusBadge status={listing.status} />
+          <ListingStatusBadge status={listing.status} />
         </YStack>
       </Card>
       {onToggleSave ? (

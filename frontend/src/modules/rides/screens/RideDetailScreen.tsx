@@ -12,7 +12,6 @@ import {
   saveRide,
   unsaveRide,
 } from '@/modules/rides/api';
-import { ChoiceChip } from '@/modules/rides/components/ChoiceChip';
 import { formatDeparture } from '@/modules/rides/components/RideListCard';
 import type { Ride } from '@/modules/rides/types';
 import { confirmAction, showError, showMessage } from '@/modules/rides/utils/notify';
@@ -360,7 +359,7 @@ function RideDetailBody({ ride, isAuthenticated }: { ride: Ride; isAuthenticated
           <AppText variant="h4">Book a seat</AppText>
           <XStack aria-label="Number of seats" flexWrap="wrap" gap="$x2" role="radiogroup">
             {Array.from({ length: maxSeats }, (_, i) => i + 1).map((n) => (
-              <ChoiceChip
+              <Chip
                 accessibilityLabel={`${n} ${n === 1 ? 'seat' : 'seats'}`}
                 key={n}
                 label={String(n)}

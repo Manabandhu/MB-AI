@@ -34,6 +34,8 @@ export const tone = {
   tealBg: '#e6f4f4',
   warmBg: '#fff0e8',
   successBg: '#e6f7ed',
+  errorBg: '#fde2e2',
+  infoBg: '#e0ecff',
   goldBg: '#fef3c7',
   goldText: '#b45309',
 } as const;
@@ -71,6 +73,8 @@ export const darkTone = {
   tealBg: '#12343a',
   warmBg: '#3a2418',
   successBg: '#143322',
+  errorBg: '#3a1414',
+  infoBg: '#13294a',
   goldBg: '#3a2e10',
   goldText: '#fcd34d',
 } as const;

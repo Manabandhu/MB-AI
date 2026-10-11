@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
@@ -42,6 +43,8 @@ type BottomSheetProps = {
   children: ReactNode;
   /** `tall` reserves most of the screen (lists with search); `auto` fits the content. */
   size?: 'auto' | 'tall';
+  /** Scroll the body inside the sheet's max height (long lists, forms). The header and handle stay put. */
+  scrollable?: boolean;
 };
 
 /**
@@ -56,6 +59,7 @@ export function BottomSheet({
   subtitle,
   children,
   size = 'auto',
+  scrollable = false,
 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -160,7 +164,17 @@ export function BottomSheet({
                 />
               </XStack>
               <YStack flex={size === 'tall' ? 1 : undefined} flexShrink={1}>
-                {children}
+                {scrollable ? (
+                  <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    style={styles.scroll}
+                  >
+                    {children}
+                  </ScrollView>
+                ) : (
+                  children
+                )}
               </YStack>
             </YStack>
           </Animated.View>
@@ -172,6 +186,7 @@ export function BottomSheet({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  scroll: { flexGrow: 0, flexShrink: 1 },
   end: { flex: 1, justifyContent: 'flex-end' },
   // Centred and capped on tablets and desktop so the sheet does not stretch edge to edge.
   sheetWidth: { width: '100%', maxWidth: 640, alignSelf: 'center' },

@@ -2,8 +2,7 @@ import { breakpoint } from '@manabandhu/design-system';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { ScrollView } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
@@ -14,6 +13,7 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
@@ -179,7 +179,7 @@ function BrowseView({ screenId }: { screenId: Exclude<MarketplaceScreenId, 'save
         />
 
         <YStack gap="$x2">
-          <ChipRow label="Condition">
+          <FilterChipRow label="Condition">
             <Chip label="Any condition" onPress={() => setCondition(null)} selected={!condition} />
             {CONDITIONS.map((c) => (
               <Chip
@@ -189,8 +189,8 @@ function BrowseView({ screenId }: { screenId: Exclude<MarketplaceScreenId, 'save
                 selected={condition === c.id}
               />
             ))}
-          </ChipRow>
-          <ChipRow label="Price">
+          </FilterChipRow>
+          <FilterChipRow label="Price">
             {PRICE_OPTIONS.map((p) => (
               <Chip
                 key={p.label}
@@ -205,7 +205,7 @@ function BrowseView({ screenId }: { screenId: Exclude<MarketplaceScreenId, 'save
               onPress={() => setIncludeClosed((v) => !v)}
               selected={includeClosed}
             />
-          </ChipRow>
+          </FilterChipRow>
         </YStack>
 
         <XStack alignItems="center" justifyContent="space-between">
@@ -319,21 +319,6 @@ function MarketplaceNav() {
   );
 }
 
-function ChipRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <ScrollView
-      accessibilityLabel={label}
-      horizontal
-      keyboardShouldPersistTaps="handled"
-      showsHorizontalScrollIndicator={false}
-    >
-      <XStack gap="$x2" paddingVertical={4}>
-        {children}
-      </XStack>
-    </ScrollView>
-  );
-}
-
 function CategoryChips({
   categories,
   selected,
@@ -369,7 +354,7 @@ function CategoryChips({
     );
   }
   return (
-    <ChipRow label="Category">
+    <FilterChipRow label="Category">
       <Chip label="All categories" onPress={() => onSelect(null)} selected={!selected} />
       {selected && !categories.slice(0, 8).some((c) => c.id === selected.id) ? (
         <Chip label={selected.name} onPress={() => onSelect(null)} selected />
@@ -390,7 +375,7 @@ function CategoryChips({
           onPress={onOpenPicker}
         />
       ) : null}
-    </ChipRow>
+    </FilterChipRow>
   );
 }
 

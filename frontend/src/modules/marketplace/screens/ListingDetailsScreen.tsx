@@ -3,11 +3,11 @@ import type { Href } from 'expo-router';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, ScrollView, Share } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
@@ -23,7 +23,7 @@ import {
   getMarketplaceListingImages,
   updateListing,
 } from '../api';
-import { PhotoPlaceholder, SaveToggle, StatusBadge } from '../components/ListingBits';
+import { ListingStatusBadge, PhotoPlaceholder, SaveToggle } from '../components/ListingBits';
 import { ReportListingSheet } from '../components/ReportListingSheet';
 import { useListingSave } from '../hooks/useListingSave';
 import type { ListingStatus, MarketplaceListing } from '../types';
@@ -38,14 +38,14 @@ import {
 import { confirmAction, showError } from '../utils/notify';
 
 const GALLERY_HEIGHT = 300;
-const BOTTOM_BAR_SPACE = 110;
+/** The owner's bar can wrap to two rows, so reserve a little more than one bar. */
+const BOTTOM_BAR_SPACE = ACTION_BAR_SPACE + 14;
 
 /** Public listing detail. Owners get status, edit and delete actions; everyone else can save, chat, or report. */
 export function ListingDetailsScreen() {
   const { listingId: rawId } = useLocalSearchParams<{ listingId: string }>();
   const listingId = typeof rawId === 'string' ? rawId : '';
   const queryClient = useQueryClient();
-  const insets = useSafeAreaInsets();
   const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const { isSaved, toggle } = useListingSave();
   const [contacting, setContacting] = useState(false);
@@ -177,6 +177,7 @@ export function ListingDetailsScreen() {
       'Delete this listing?',
       'The listing and its photos are deleted for good. Buyers who saved it will no longer see it.',
       'Delete',
+      { destructive: true },
     );
     if (ok) deleteMutation.mutate();
   };
@@ -209,7 +210,7 @@ export function ListingDetailsScreen() {
             <XStack alignItems="center" flexWrap="wrap" gap="$x2">
               {listing.category ? <Chip label={listing.category.name} /> : null}
               {listing.isMine ? <Chip label="Your listing" selected /> : null}
-              <StatusBadge status={listing.status} />
+              <ListingStatusBadge status={listing.status} />
             </XStack>
             <AppText role="heading" variant="h2">
               {listing.title}
@@ -295,22 +296,8 @@ export function ListingDetailsScreen() {
         </YStack>
       </Screen>
 
-      <XStack
-        alignItems="center"
-        backgroundColor="$surface"
-        borderColor="$borderColor"
-        borderTopWidth={1}
-        bottom={0}
-        flexWrap="wrap"
-        gap="$x3"
-        left={0}
-        paddingBottom={Math.max(insets.bottom, 12)}
-        paddingHorizontal="$x4"
-        paddingTop="$x3"
-        position="absolute"
-        right={0}
-      >
-        {listing.isMine ? (
+      {listing.isMine ? (
+        <ActionBar label="Listing actions">
           <OwnerActions
             busy={statusMutation.isPending || deleteMutation.isPending}
             deleting={deleteMutation.isPending}
@@ -320,9 +307,12 @@ export function ListingDetailsScreen() {
             onStatus={(status) => statusMutation.mutate(status)}
             pendingStatus={statusMutation.isPending ? statusMutation.variables : undefined}
           />
-        ) : (
-          <>
-            <YStack flex={1} minWidth={120}>
+        </ActionBar>
+      ) : (
+        <ActionBar
+          label="Listing actions"
+          leading={
+            <>
               <AppText tone="primary" variant="h4">
                 {price}
               </AppText>
@@ -335,16 +325,17 @@ export function ListingDetailsScreen() {
                   This item has been sold
                 </AppText>
               ) : null}
-            </YStack>
-            <AppButton
-              icon="message"
-              label="Chat with seller"
-              loading={contacting}
-              onPress={handleChat}
-            />
-          </>
-        )}
-      </XStack>
+            </>
+          }
+        >
+          <AppButton
+            icon="message"
+            label="Chat with seller"
+            loading={contacting}
+            onPress={handleChat}
+          />
+        </ActionBar>
+      )}
 
       <ReportListingSheet
         listingId={listing.id}

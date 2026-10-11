@@ -18,8 +18,31 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 
 ## Components (`frontend/src/modules/shared/ui`, barrel `index.ts`)
 - `AppText`/`Heading` (variants `display h1 h2 h3 h4 lead body bodyStrong label caption overline`, tones `default muted primary onPrimary danger success warm teal`, font scale capped at `accessibility.maxFontScale`), `AppButton` (`primary secondary ghost danger`, sizes `sm md lg`, haptic on native, press scale from `motion.pressScale`), `Card` (`outlined elevated filled tinted`; `href`/`onPress` makes it pressable with hover lift), `ListRow` (standard listing row), `Chip`, `Avatar` (photo or initials), `IconButton` (44pt, required label), `TextField` (label/helper/error), `SegmentedControl`, `Skeleton`/`SkeletonCard`, `Section`, `Screen` (safe areas, max content width, pull-to-refresh), `ResponsiveGrid` (columns per window class), `GradientSurface`, `FadeIn` (Reanimated entrance), `AppIcon`.
-- `AppIcon` maps semantic names to Lucide icons imported one file each (`lucide-react-native/icons/<name>`, so unused icons never ship) plus Google/Apple marks, and defaults to the theme text colour. Add names there; never import an icon library elsewhere.
-- Shared states in `shared/components`: `LoadingState` (`spinner`/`skeleton`), `ErrorState` and `EmptyState` (optional action, `compact` for cards), `WidgetFrame` (Home widget chrome).
+- `AppIcon` maps semantic names (2026-10-11 added `swap`, `repeat`, `list`, `minus`, `more`) to Lucide icons imported one file each (`lucide-react-native/icons/<name>`, so unused icons never ship) plus Google/Apple marks, and defaults to the theme text colour. Add names there; never import an icon library elsewhere.
+- Shared states in `shared/components`: `LoadingState` (`spinner`/`skeleton`), `ErrorState` (optional action with `actionIcon`, default `refresh`, `null` for none) and `EmptyState` (optional action, `compact` for cards), `WidgetFrame` (Home widget chrome). The legacy `Badge` and `StarRating` were deleted.
+
+### Primitive inventory (2026-10-11, all exported from `shared/ui/index.ts`)
+- `Chip {label, icon?, selected?, onPress?, accessibilityLabel?, variant?: 'filter'|'tag', radio?, disabled?}`: pressable chips are 44pt with a focus ring; `radio` announces `role=radio` + `aria-checked`, otherwise `aria-pressed`; `tag` is neutral (`$surfaceContainer`, muted text), never focusable or pressable.
+- `FilterChipRow {label, children, role?: 'group'|'radiogroup'}`: one horizontally scrolling chip row.
+- `SegmentedControl {label, options: {value, label, icon?, count?}[], value, onChange}`: 44pt radio segments; `count` renders a small badge.
+- `AppButton` sizes `sm` (44pt, tighter padding) `md` `lg`. `IconButton` takes `disabled`. `BackButton {fallback?: Href|string}`.
+- `StatusBadge {label, tone?: 'neutral'|'primary'|'success'|'warning'|'danger'|'info', icon?}`: pastel `*Bg` token, body-colour text (AA), tone-coloured dot or icon.
+- `ScreenHeader {title, subtitle?, back?: {fallback: Href}|false, actions?, primaryAction?: {label, icon?, onPress?, route?: Href}}`: `h2` heading row that wraps when narrow; no back button unless `back` is given.
+- `ActionBar {children, leading?, label?}` + `ACTION_BAR_SPACE` (96): sticky bottom bar (surface, top border, safe-area padding, content capped at `maxContentWidth`). Render after `Screen` in a `flex: 1` parent and pass `<Screen bottomInset={ACTION_BAR_SPACE}>`.
+- `Screen` adds `keyboardAvoiding` (iOS `padding`) and `maxWidth: 'form'|'content'` (`form` = `FORM_MAX_WIDTH` 640). `BottomSheet` adds `scrollable`.
+- `ConfirmProvider` (mounted in `app/_layout.tsx`), `useConfirm()` → `confirm({title, body, confirmLabel, cancelLabel?, destructive?}): Promise<boolean>`, `ConfirmSheet`. `shared/ui/notify.ts`: `showError(title, error|message, fallback?)`, `showMessage`, `confirm(options)`, `confirmAction(title, message, confirmLabel, {destructive?, cancelLabel?})` (routes to the sheet; platform dialog fallback). Module `utils/notify.ts` files re-export it.
+- `NumberStepper {label, value, min, max, onChange, helper?, error?, step?}`: "Decrease/Increase {label}" `IconButton`s disabled at the bounds, value in an `aria-live` region. Math in `shared/ui/fieldMath.ts` (tested by `frontend/test/fieldMath.test.mjs`).
+- `RatingInput {value, onChange, labels?, label?}`: 44pt stars, radiogroup semantics.
+- `DateTimeField {label, value: Date|null, onChange, mode: 'date'|'datetime', minimumDate?, maximumDate?, error?, helper?, timeLabel?}`: web uses a token-styled `<input type="date|datetime-local">`; native shows 7 day chips, "Pick a date…" (month-grid `BottomSheet`), and in `datetime` mode a ±15 min stepper plus quick-time chips.
+- `PersonRow {name, imageUrl?, subtitle?, badge?, actions?, href?}`: avatar row; only the avatar/text area follows `href`, so actions never trigger it.
+- `OwnerItemCard {status?, trailing?, title, meta?: string[], note?, imageUrl?, href?, onPress?, actions?, overflow?: {label, icon?, onPress, destructive?}[]}`: owner list card, at most 2 inline actions, "More" `IconButton` opens a sheet with `overflow`.
+
+### Usage rules
+- `StatusBadge` for statuses, never a selected `Chip`; `Chip variant="tag"` for read-only tags.
+- `ActionBar` for a detail page's primary actions; `ScreenHeader` for page headers; `OwnerItemCard` for "my listings/rides" lists; `PersonRow` for people.
+- Confirm with `useConfirm` (or `confirmAction`); `destructive: true` only for delete, cancel and remove.
+- `heart` is the save icon app-wide (not `bookmark`).
+- Every interactive control has a 44pt target, a role, a label and a `focusVisibleStyle`.
 - Gluestack was removed (2026-10). Screens not yet migrated still use `StyleSheet` + design-system constants or Uniwind classes; migrate them to these primitives during each module's review.
 
 ## Rules
@@ -43,3 +66,4 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 - Ratchet rules also count `hsl()`/`hsla()` colours and local palette objects declared at any indentation (inside components too); the stricter rules found no new violations, so the baseline is unchanged.
 - `BottomSheet` (`shared/ui/BottomSheet.tsx`): Reanimated slide-up, drag handle (pan to close), backdrop/✕/Android-back close, height capped at `window − insets.top − 12`, keyboard-aware bottom padding, centred at most 640 wide, theme-aware. Use it for every sheet.
 - `Screen` takes `hero` (a full-bleed block that pads for the notch itself). Inside the tab navigator it detects `BottomTabBarHeightContext` and adds only 24 pt at the bottom, because the tab bar already covers the home indicator. `GradientSurface` gains `corners="bottom"` and is `position: relative` (web stacks are not positioned by default, so the absolute gradient escaped its container).
+- Tokens (2026-10-11): `tone`/`darkTone` gain `errorBg` and `infoBg` (themes pick them up through the palette spread; the `danger` sub-theme uses `errorBg`).

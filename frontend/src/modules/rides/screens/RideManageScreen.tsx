@@ -158,7 +158,10 @@ export function RideManageScreen() {
 
   const onTransition = async (next: Transition) => {
     const copy = TRANSITION_COPY[next];
-    if (await confirmAction(copy.title, copy.body, copy.confirm)) status.mutate(next);
+    const destructive = next === 'cancelled';
+    if (await confirmAction(copy.title, copy.body, copy.confirm, { destructive })) {
+      status.mutate(next);
+    }
   };
 
   const onSave = () => {
@@ -195,6 +198,7 @@ export function RideManageScreen() {
       'Cancel this rider’s booking?',
       'Their seats open up again and they leave the ride chat.',
       'Cancel booking',
+      { destructive: true },
     );
     if (ok) removeBooking.mutate(booking.id);
   };
@@ -204,6 +208,7 @@ export function RideManageScreen() {
       'Delete this ride?',
       'Riders are released and notified, then the ride is removed permanently.',
       'Delete',
+      { destructive: true },
     );
     if (ok) remove.mutate();
   };

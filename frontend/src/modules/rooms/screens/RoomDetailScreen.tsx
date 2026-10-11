@@ -4,7 +4,6 @@ import type { Href } from 'expo-router';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, ScrollView, Share } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import {
@@ -33,6 +32,7 @@ import {
 } from '@/modules/rooms/utils/roomLabels';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
@@ -55,7 +55,6 @@ const REPORT_REASONS = [
 ];
 
 const GALLERY_HEIGHT = 260;
-const BOTTOM_BAR_SPACE = 96;
 
 type OwnerAction = 'publish' | 'pause' | 'rented';
 
@@ -63,7 +62,6 @@ type OwnerAction = 'publish' | 'pause' | 'rented';
 export function RoomDetailScreen() {
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const queryClient = useQueryClient();
-  const insets = useSafeAreaInsets();
   const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const { isSaved, toggle } = useRoomSave();
   const [saving, setSaving] = useState(false);
@@ -185,7 +183,7 @@ export function RoomDetailScreen() {
 
   return (
     <YStack backgroundColor="$background" flex={1}>
-      <Screen bottomInset={BOTTOM_BAR_SPACE}>
+      <Screen bottomInset={ACTION_BAR_SPACE}>
         <YStack gap="$x4">
           <XStack alignItems="center" justifyContent="space-between">
             <BackButton fallback="/rooms" />
@@ -295,30 +293,20 @@ export function RoomDetailScreen() {
         </YStack>
       </Screen>
 
-      <XStack
-        alignItems="center"
-        backgroundColor="$surface"
-        borderColor="$borderColor"
-        borderTopWidth={1}
-        bottom={0}
-        gap="$x3"
-        left={0}
-        paddingBottom={Math.max(insets.bottom, 12)}
-        paddingHorizontal="$x4"
-        paddingTop="$x3"
-        position="absolute"
-        right={0}
-      >
-        {room.isOwner ? (
+      {room.isOwner ? (
+        <ActionBar label="Listing actions">
           <OwnerActions
             busy={ownerMutation.isPending}
             onAction={(action) => ownerMutation.mutate(action)}
             onEdit={() => router.push(`/rooms/${roomId}/edit` as Href)}
             status={room.status}
           />
-        ) : (
-          <>
-            <YStack flex={1}>
+        </ActionBar>
+      ) : (
+        <ActionBar
+          label="Room actions"
+          leading={
+            <>
               <AppText tone="primary" variant="h4">
                 {formatMoney(room.price, 'USD')}/mo
               </AppText>
@@ -327,25 +315,26 @@ export function RoomDetailScreen() {
                   Not accepting inquiries
                 </AppText>
               ) : null}
-            </YStack>
-            {isActive ? (
-              <>
-                <AppButton
-                  label="Details"
-                  onPress={() => router.push(`/rooms/${roomId}/inquiry` as Href)}
-                  variant="secondary"
-                />
-                <AppButton
-                  icon="message"
-                  label="Message host"
-                  loading={contacting}
-                  onPress={handleMessageHost}
-                />
-              </>
-            ) : null}
-          </>
-        )}
-      </XStack>
+            </>
+          }
+        >
+          {isActive ? (
+            <>
+              <AppButton
+                label="Details"
+                onPress={() => router.push(`/rooms/${roomId}/inquiry` as Href)}
+                variant="secondary"
+              />
+              <AppButton
+                icon="message"
+                label="Message host"
+                loading={contacting}
+                onPress={handleMessageHost}
+              />
+            </>
+          ) : null}
+        </ActionBar>
+      )}
 
       <ReportSheet onClose={() => setReportOpen(false)} roomId={roomId} visible={reportOpen} />
     </YStack>

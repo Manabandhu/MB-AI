@@ -44,7 +44,7 @@ const CardFrame = styled(YStack, {
 
 type CardProps = ComponentProps<typeof CardFrame> & {
   /** Navigates on press. Use `onPress` for anything else. */
-  href?: string;
+  href?: Href | string;
   'aria-label'?: string;
   children?: ReactNode;
 };
