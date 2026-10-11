@@ -131,9 +131,6 @@ export function toRide(row: BackendRide): Ride {
     status: (row.status ?? '').toLowerCase(),
     createdAt: row.createdAt ?? null,
     updatedAt: row.updatedAt ?? null,
-    title: routeLabel,
-    pickupArea: originArea,
-    destination: destinationArea,
   };
 }
 
@@ -179,25 +176,65 @@ export type RideSearchParams = {
   avoidTolls?: boolean;
   genderPreference?: string;
   isRecurring?: boolean;
+  /** Zero-based page. Defaults to 0. */
+  page?: number;
   /** Page size; the backend caps it. Defaults to 50. */
   size?: number;
 };
 
-/** Upcoming active rides, soonest first (`GET /offers`, a Spring page). */
-export async function listRideOffers(params: RideSearchParams = {}): Promise<Ride[]> {
+/** One page of search results plus what the server says about the rest. */
+export type RidePage = {
+  rides: Ride[];
+  page: number;
+  /** Total matching rides on the server, or null when the response did not say. */
+  total: number | null;
+  hasMore: boolean;
+};
+
+type BackendPage = {
+  content?: BackendRide[];
+  totalElements?: number;
+  last?: boolean;
+  /** Spring Data's DTO page format nests the counts. */
+  page?: { totalElements?: number; number?: number; size?: number; totalPages?: number };
+};
+
+/**
+ * Upcoming active rides, soonest first (`GET /offers`, a Spring page). Origin, destination, tolls, women-only and
+ * recurring are filtered by the server; the departure window and luggage are not, so screens filter loaded pages
+ * and offer "Load more".
+ */
+export async function listRideOffersPage(params: RideSearchParams = {}): Promise<RidePage> {
+  const page = params.page ?? 0;
+  const size = params.size ?? 50;
   const query = new URLSearchParams();
   if (params.origin?.trim()) query.set('origin', params.origin.trim());
   if (params.destination?.trim()) query.set('destination', params.destination.trim());
   if (params.avoidTolls) query.set('avoidTolls', 'true');
   if (params.genderPreference) query.set('genderPreference', params.genderPreference);
   if (params.isRecurring !== undefined) query.set('isRecurring', String(params.isRecurring));
-  query.set('page', '0');
-  query.set('size', String(params.size ?? 50));
-  const data = await parseJson<{ content?: BackendRide[] } | BackendRide[]>(
+  query.set('page', String(page));
+  query.set('size', String(size));
+  const data = await parseJson<BackendPage | BackendRide[]>(
     await apiFetch(`/api/v1/rides/offers?${query.toString()}`),
   );
-  const rows = Array.isArray(data) ? data : (data.content ?? []);
-  return rows.map(toRide);
+  if (Array.isArray(data)) {
+    return { rides: data.map(toRide), page, total: data.length, hasMore: false };
+  }
+  const rows = data.content ?? [];
+  const total = data.totalElements ?? data.page?.totalElements ?? null;
+  const hasMore =
+    typeof data.last === 'boolean'
+      ? !data.last
+      : total != null
+        ? (page + 1) * size < total
+        : rows.length === size;
+  return { rides: rows.map(toRide), page, total, hasMore };
+}
+
+/** First page of upcoming active rides (see `listRideOffersPage`). */
+export async function listRideOffers(params: RideSearchParams = {}): Promise<Ride[]> {
+  return (await listRideOffersPage(params)).rides;
 }
 
 /** One ride; member-only fields are present when the signed-in viewer is a member. */

@@ -1,3 +1,4 @@
+import { formatDate } from '@manabandhu/core';
 import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
@@ -8,12 +9,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Event } from '@/modules/events/api';
 import { listSavedEvents } from '@/modules/events/api';
 import { getSavedRides } from '@/modules/rides/api';
-import type { RideListing } from '@/modules/rides/types';
+import type { Ride } from '@/modules/rides/types';
 import { getFavorites } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { ListRow } from '@/modules/shared/ui/ListRow';
 
 const C = {
   primary: '#E05638', // Warm Saffron
@@ -46,7 +48,7 @@ export function SavedScreen() {
     queryKey: ['rooms', 'favorites'],
     queryFn: () => getFavorites(),
   });
-  const ridesQuery = useQuery<RideListing[]>({
+  const ridesQuery = useQuery<Ride[]>({
     queryKey: ['rides', 'saved'],
     queryFn: () => getSavedRides(),
   });
@@ -152,29 +154,19 @@ export function SavedScreen() {
                   <Text style={s.seeMoreText}>Explore More →</Text>
                 </Pressable>
               </View>
-              {savedRides.map((ride) => (
-                <Pressable
-                  key={ride.id}
-                  onPress={() => router.push(`/rides/${ride.id}` as Href)}
-                  style={s.card}
-                >
-                  <View style={s.cardLeft}>
-                    <View style={[s.cardIconBadge, { backgroundColor: '#DCFCE7' }]}>
-                      <Text style={s.cardEmoji}>🚗</Text>
-                    </View>
-                    <View style={s.cardInfo}>
-                      <Text style={s.cardTitle} numberOfLines={1}>
-                        {ride.title}
-                      </Text>
-                      <Text style={s.cardSub}>
-                        {ride.pickupArea} → {ride.destination} ·{' '}
-                        {new Date(ride.departureAt).toLocaleDateString()}
-                      </Text>
-                    </View>
-                  </View>
-                  <AppIcon name="chevron-right" size={16} color={C.secondary} />
-                </Pressable>
-              ))}
+              <View style={s.rideList}>
+                {savedRides.map((ride) => (
+                  <ListRow
+                    href={`/rides/${ride.id}`}
+                    icon="car"
+                    key={ride.id}
+                    meta={ride.contributionLabel}
+                    subtitle={`Departs ${formatDate(ride.departureAt, 'weekdayTime') ?? ''}`}
+                    title={ride.routeLabel}
+                    tone="teal"
+                  />
+                ))}
+              </View>
             </View>
           )}
 
@@ -244,6 +236,7 @@ export function SavedScreen() {
 }
 
 const s = StyleSheet.create({
+  rideList: { gap: 8 },
   safe: {
     flex: 1,
     backgroundColor: C.bg,

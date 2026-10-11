@@ -14,29 +14,31 @@ Owns ride discovery, offers, requests, seats, participants, history, ratings, lo
 | Route | Screen Component | Type | States |
 |---|---|---|---|
 | `/rides` | `RidesScreen` (`screenId="home"`) | catalog | loading, empty, error |
-| `/rides/search` | `RidesScreen` (`screenId="search"`) | list | loading, empty, error |
+| `/rides/search` | `RidesScreen` (`screenId="search"`, `?from=&to=`) | list | loading, empty, error |
 | `/rides/map` | `RidesScreen` (`screenId="map"`) | map | loading, empty, error, permission |
-| `/rides/filters` | `RidesScreen` (`screenId="filters"`) | filter | normal |
+| `/rides/filters` | `RidesScreen` (`screenId="filters"`, When/Sort sheet open) | filter | normal |
 | `/rides/offer` | `RideOfferScreen` | form | normal, error, success, loading |
-| `/rides/request` | `RideRequestScreen` | form | normal, error, success, loading |
-| `/rides/saved` | `RidesScreen` (`screenId="saved"`) | list | loading, empty, error |
-| `/rides/mine` | `RidesScreen` (`screenId="mine"`) | list | loading, empty, error |
-| `/rides/history` | `RidesScreen` (`screenId="history"`) | list | loading, empty, error |
-| `/rides/[rideId]` | `RideDetailScreen` | detail | loading, error |
-| `/rides/[rideId]/manage` | `RideManageScreen` | form | normal, error, success, loading |
-| `/rides/[rideId]/seat-requests` | `RidesScreen` (`screenId="seat-requests"`) | list | loading, empty, error |
-| `/rides/[rideId]/participants` | `RidesScreen` (`screenId="participants"`) | list | loading, empty, error |
+| `/rides/request` | redirect to `/rides/search` (keeps `from`/`to`) | redirect | — |
+| `/rides/saved` | `RideSavedScreen` | list | loading, empty, error |
+| `/rides/mine` | `RideMyListingsScreen` (`?tab=riding`; old `?tab=trips` still works) | list | loading, empty, error |
+| `/rides/history` | `RideHistoryScreen` | list | loading, empty, error |
+| `/rides/[rideId]` | `RideDetailScreen` | detail | loading, not found, error |
+| `/rides/[rideId]/manage` | `RideManageScreen` (`?tab=requests|riders`) | hub | loading, not found, error, saving |
+| `/rides/[rideId]/seat-requests` | redirect to `/rides/[rideId]/manage?tab=requests` | redirect | — |
+| `/rides/[rideId]/participants` | redirect to `/rides/[rideId]/manage?tab=riders` | redirect | — |
 | `/rides/[rideId]/rate` | `RideRateScreen` | form | normal, success |
 
 ## Component Inventory
 
-- `RidesScreen` - multi-mode catalog/list/map screen driven by `screenId` prop; uses `UniversalMapView` for real route and corridor map view with freehand draw-to-filter corridor search, point-in-polygon filtering, and Zillow-style floating switch-to-list-view button when an area boundary is drawn
-- `RideDetailScreen` - placeholder for ride detail with route, timeline, seat state, and safety controls
-- `RideManageScreen` - placeholder for ride management form
-- `RideOfferScreen` - placeholder for ride offer creation form
-- `RideRequestScreen` - placeholder for ride request creation form
-- `RideRateScreen` - placeholder for ride rating form
-- Shared: `UniversalMapView`, `geoPolygon` (`isPointInPolygon`), `FeatureScreen`, `SearchBar`, `FilterBar`, `Card`, `MapPreview`, `AppButton`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingState`, `Timeline`, `StarRating`, `DateTimePicker`, `MapPicker`, `Select`, `SwipeAction`
+- `RidesScreen` - search/map/filters: `ScreenHeader` (back; My rides, Saved, History icon actions; one primary "Offer a ride"), From/To `RideLocationPicker` with swap, one `FilterChipRow` (When ▾, Women only, No tolls, Recurring, Luggage, Sort ▾, Clear all; ▾ opens the When/Sort sheet), `SegmentedControl` List (list icon, real count) | Map on single pane, list and map side by side on dual pane, paged results with "Load more"
+- `RideDetailScreen` - `ScreenHeader` (heart save, share), price panel, seat panel (Book a seat with `NumberStepper` / Your booking / Your seat request / You drive / blocked reason), route facts, women-only note, "On this ride" (`PersonRow`, members), safety copy linking to `/safety`, sticky `ActionBar` (price + seats; Book N seats / Manage ride / Open chat / Rate driver); two columns at expanded width
+- `RideManageScreen` - driver hub with `SegmentedControl` Overview | Requests (n pending) | Riders; header Chat/View/Share; Overview: status actions, `NumberStepper` total seats (only `seatsTotal` is sent; the server derives open seats), price, Repeat trip, Danger zone (Cancel / Delete explained); Requests: `PersonRow` Accept/Decline; Riders: bookings (`PersonRow`, cancel; cancelled collapsed) and participants
+- `RideOfferScreen` - `RideFormScreen` (form width, keyboard avoiding, scroll to the first error), earlier-route template chips with feedback, Route, When, Seats and price (`NumberStepper`), Preferences (tolls, luggage, who can book), sticky Publish `ActionBar`; success view with Manage ride / View ride / My rides
+- `RideMyListingsScreen` - Driving (n) / Riding (n), upcoming only, `OwnerItemCard` (one inline action, rest in overflow), cancelled bookings collapsed, History in the header
+- `RideHistoryScreen` - `OwnerItemCard`; Rate leads on completed rides; drivers repeat
+- `RideSavedScreen` - pressable `RideCard`s whose heart removes the bookmark
+- `RideRateScreen` - shared `RatingInput`, `Screen keyboardAvoiding maxWidth="form"`
+- Local components: `RideCard` (merged list card: price, route, departure, seats, `StatusBadge`, record facts as tag `Chip`s, heart), `InlineNotice` + `hooks/useTimedNotice` (success notice beside the action, auto-clears after 6 s), `hooks/useSavedRides` (bookmarks + heart toggle), `RideFormScreen`/`useFormScroll` (the shared `Screen` exposes no scroll ref), `DeparturePicker`, `RepeatTripSheet`, `RideLocationPicker`
 
 ## API Surface
 
@@ -86,21 +88,18 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 
 ## Navigation Actions and Cross-Module Links
 
-- Home actions: Search, Map, Offer ride
-- Search actions: Filters, Map, Offer ride
-- Map actions: Search list, Filters
-- Filters actions: Apply to search, Map
-- Detail/manage actions: Seat requests, Participants, Rate
-- Cross-module: deep link from explore, saved, and community
+- Rides header: My rides, Saved, History, Offer a ride (primary)
+- Detail: Book seat (riders), Manage ride (driver), Open chat and Rate (members), Safety Center
+- Manage: tabs Overview / Requests / Riders; Chat, View, Share; Repeat trip
+- My rides: History in the header; cards open Manage (driving) or the ride (riding)
+- Cross-module: Home widget (next trip first), global Search (`/rides/search?from=&to=`), Saved (`ListRow`), notifications (`/rides/{id}`, `/rides/{id}/seat-requests` → Manage Requests)
 
 ## Implementation Notes for Expo React Native
 
 - Route files in `frontend/src/app/rides/` are thin wrappers
-- `RidesScreen` uses `useQuery` with backend API data
+- `RidesScreen` uses `useInfiniteQuery` over `listRideOffersPage` (50 per page)
 - `FeatureScreen` provides adaptive catalog/list layout
 - In `RideOfferRepository`, `searchActive` JPQL query uses explicit `cast(:param as String)` for nullable text parameters (`:origin`, `:destination`, `:genderPreference`) to prevent PostgreSQL type inference as bytea when evaluating `LOWER()`
-- Ride offer, request, manage, and rate screens are placeholders pending backend forms
-- Map view is a placeholder pending real map integration
 
 ## Accessibility and Responsive Behavior Rules
 
@@ -164,3 +163,9 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
   - **States and accessibility.** Every list has pull-to-refresh, loading, empty and error-with-retry states. Every control has a role, label and state; colors use theme tokens only (rides has no color literals left).
   - **Tests.** `frontend/test/rideFormat.test.mjs`.
 - Shared primitives (2026-10-11): `ChoiceChip` was removed; rides uses the shared `Chip` (44 pt when pressable, `radio` for one-of-many). `DeparturePicker` is now a thin wrapper over the shared `DateTimeField` (`datetime` mode, today through 30 days ahead) and keeps its `DepartureValue` API and `formatTime`/`departureSummary` exports. `RideRateScreen` uses the shared `RatingInput`. `utils/notify.ts` re-exports `shared/ui/notify` (confirmations show the in-app `ConfirmSheet`); cancel, delete, withdraw and declining an accepted rider pass `{ destructive: true }`.
+- Rides UX pass (2026-10-11), frontend only (backend unchanged):
+  - **P0 fixes.** `bookingBlockReason` treats members (live booking or accepted request) as already seated; the ride page shows "Your booking" (Open chat, Cancel booking with a destructive confirm) or "Your seat request" (Withdraw) from the rider's own `GET /offers/{id}/bookings` and `/requests` rows via `viewerSeat`, instead of "Book a seat". The "Find a ride" button is gone and `/rides/request` redirects to `/rides/search`. Copy no longer promises riders a request flow (riders book instantly; drivers see any requests in Manage). Search pages through `GET /offers` (`listRideOffersPage`: `page`, `size=50`, total from `totalElements` or `page.totalElements`) with "Load more" and a "Showing the first N of M" notice; When and Luggage are not server parameters, so the notice says they only check loaded rides. Success notices render beside their action and clear after 6 s. Book, cancel, withdraw, accept/decline, status changes and repeat invalidate the whole `['rides']` prefix. Confirms use `useConfirm`; only cancel, delete, withdraw and declining an accepted rider are destructive.
+  - **Routes.** `/rides/[rideId]/seat-requests` and `/participants` redirect to `manage?tab=requests|riders`; Manage sends non-drivers (403) to the ride page, where a rider's own request or booking is shown. `RideSeatRequestsScreen`, `RideParticipantsScreen`, `RideRequestScreen` and `RideListCard` were removed.
+  - **Data.** `Ride.title`/`pickupArea`/`destination` aliases and `RideListing` were removed (foundation Saved uses `routeLabel`). New pure helpers in `utils/rideFormat.ts`: `viewerSeat`, `departsInWindow`, `hasLuggageSpace`, `heldSeats`, `statusTone`, `isForbidden`, `rideSearchHref` (exported from `rides/index.ts` for global search). Tests: `frontend/test/rideBooking.test.mjs`.
+  - **Home widget.** Signed-in users see their next trip first (soonest upcoming ride they drive, or one of up to 3 booked rides; never persisted), then public offers (`size=10`) with the price as row meta, teal tone.
+  - **Review fixes.** `GET /saved` also returns rides the viewer rides on, with no bookmark flag, and unsaving those is a no-op: `isJoinedRide` (member, not driver) rides show a "Joined" tag instead of a heart on cards, the ride header and the Saved screen, and never count as saved. The home widget looks up every live booked ride (cap 20), lets a failed lookup fail the next-trip query, and labels "Your next trip" only when the query succeeded. Manage sends only `seatsTotal` (the server derives open seats under the lock; 409/400 are shown), the helper reads "N seats not open", delete navigates first then removes the owner query and invalidates `['rides']` in the background, the owner query does not retry 403/404, and pull-to-refresh also refetches bookings and participants. The ride page shows a compact retryable error in the seat panel when the rider's own bookings/requests fail, keeps booking disabled until they load, and shows the seated-rider UI (Your booking, Open chat, Rate driver) only when the viewer holds a seat (`!isDriver && seat`), not for admins. Publishing invalidates `['rides']`. `contributionAmount("Free")` is 0, so Manage and templates show 0. Global search shows "Rides: <query>" as a suggestion row outside the result count.

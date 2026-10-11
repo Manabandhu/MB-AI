@@ -281,11 +281,11 @@ Each screen entry includes:
 ### Rooms Home
 - Route: `/rooms`
 - Module: rooms
-- Purpose: Discover available rooms (card/list/map views, city picker, filters, sort)
+- Purpose: Discover available rooms (list/map toggle, city picker, quick filters, filter sheet with sort)
 - Type: catalog
 - States: loading | empty | error (retry) | pull-to-refresh
-- Components: RoomsScreen, BackButton, UniversalMapView
-- Navigation: push to `/rooms/[roomId]`, `/rooms/create-listing` ("Post a room"); signed-in members also get `/rooms/my-listings` ("My listings") and `/rooms/saved`
+- Components: RoomsScreen, ScreenHeader, RoomCard, RoomFilterSheet, CityPickerSheet, RoomsMap
+- Navigation: push to `/rooms/[roomId]`, `/rooms/create-listing` ("Post a room"), `/rooms/my-listings` and `/rooms/saved` (signed-out people go to sign-in)
 
 ### Rooms Search
 - Route: `/rooms/search`
@@ -302,8 +302,8 @@ Each screen entry includes:
 - Purpose: View rooms on a map and filter by a drawn area
 - Type: map
 - States: loading | empty ("no map location") | error (retry)
-- Components: RoomsScreen, UniversalMapView
-- Navigation: push to `/rooms/[roomId]`; "Show list" switches to the list view
+- Components: RoomsScreen, RoomsMap
+- Navigation: push to `/rooms/[roomId]`; "Show list" appears when some rooms have no map position; after drawing an area the button reads "Show n rooms in this area"
 
 ### Rooms Filters
 - Route: `/rooms/filters`
@@ -312,7 +312,7 @@ Each screen entry includes:
 - Type: filter
 - States: normal
 - Components: RoomsScreen (filter sheet open)
-- Navigation: closes back to the list
+- Navigation: closing replaces the screen with `/rooms` (filters persist for the session)
 
 ### Rooms Saved
 - Route: `/rooms/saved`
@@ -320,7 +320,7 @@ Each screen entry includes:
 - Purpose: The member's saved rooms from `GET /favorites`
 - Type: list
 - States: loading | empty | error (retry) | pull-to-refresh
-- Components: Screen, Card, IconButton, EmptyState, ErrorState
+- Components: Screen, RoomCard, ResponsiveGrid, EmptyState, ErrorState
 - Navigation: push to `/rooms/[roomId]`
 
 ### Rooms My Listings
@@ -329,7 +329,7 @@ Each screen entry includes:
 - Purpose: Manage own listings (Active, Drafts, Rented tabs; publish, pause, mark rented, relist, archive, delete)
 - Type: list
 - States: loading | empty | error (retry) | pull-to-refresh
-- Components: Screen, SegmentedControl, Card, Chip, AppButton
+- Components: Screen, SegmentedControl, OwnerItemCard, StatusBadge, ResponsiveGrid, useConfirm
 - Navigation: push to `/rooms/[roomId]`, `/rooms/[roomId]/edit`, `/rooms/create-listing`
 
 ### Rooms Create Listing
@@ -347,7 +347,7 @@ Each screen entry includes:
 - Purpose: Listing detail with real photos, amenities, pricing, and approximate area
 - Type: detail
 - States: loading | not found | error (retry)
-- Components: Screen, Card, Chip, IconButton, BottomSheet (report)
+- Components: Screen, ActionBar, StatusBadge, Card, Chip, BottomSheet (report, owner overflow)
 - Navigation: owner → `/rooms/[roomId]/edit`; others → `/rooms/[roomId]/inquiry` or `/chat/[conversationId]`
 
 ### Edit Listing
@@ -365,7 +365,7 @@ Each screen entry includes:
 - Purpose: Send move-in date, stay length and an introduction to the host
 - Type: form
 - States: normal | validation error | error | loading
-- Components: Screen, TextField, Chip, AppButton
+- Components: Screen, TextField, Chip, DateTimeField, EmptyState, AppButton
 - Navigation: replace with `/chat/[conversationId]`
 
 ---
@@ -375,16 +375,16 @@ Each screen entry includes:
 ### Rides Home
 - Route: `/rides`
 - Module: rides
-- Purpose: Upcoming rides with search, filters, list/map toggle, and entry points (Offer a ride, Find a ride, My rides, Saved, History)
+- Purpose: Upcoming rides: header (back; My rides, Saved, History; primary Offer a ride), From/To with swap, one filter chip row (When ▾, Women only, No tolls, Recurring, Luggage, Sort ▾), List/Map segments (side by side on dual pane), 50 per page with Load more
 - Type: catalog
-- States: loading | empty (Offer a ride CTA) | error (retry) | refreshing
-- Components: RidesScreen, ChoiceChip, SegmentedControl, ResponsiveGrid, UniversalMapView, EmptyState, ErrorState
-- Navigation: push to `/rides/[rideId]`, `/rides/offer`, `/rides/request`, `/rides/mine`, `/rides/saved`, `/rides/history`
+- States: loading | empty (Offer a ride CTA, Clear filters) | error (retry) | refreshing | more pages ("Showing the first N of M")
+- Components: RidesScreen, ScreenHeader, RideLocationPicker, FilterChipRow, Chip, BottomSheet, SegmentedControl, ResponsiveGrid, RideCard, UniversalMapView, EmptyState, ErrorState
+- Navigation: push to `/rides/[rideId]`, `/rides/offer`, `/rides/mine`, `/rides/saved`, `/rides/history`
 
 ### Rides Search
 - Route: `/rides/search`
 - Module: rides
-- Purpose: Same screen as home; `?from=&to=` prefill the server-side origin/destination filters (debounced 300 ms, `size=50`)
+- Purpose: Same screen as home; `?from=&to=` prefill the server-side origin/destination filters (debounced 300 ms, 50 per page). Global search and `/rides/request` link here.
 - Type: list
 - States: loading | empty | error | refreshing
 - Components: RidesScreen
@@ -402,92 +402,65 @@ Each screen entry includes:
 ### Rides Filters
 - Route: `/rides/filters`
 - Module: rides
-- Purpose: Rides home with departure-window and sort filters expanded
+- Purpose: Rides home with the When/Sort sheet open
 - Type: filter
 - States: normal
-- Components: RidesScreen, ChoiceChip
+- Components: RidesScreen, BottomSheet, Chip
 - Navigation: results update in place
 
 ### Offer Ride
 - Route: `/rides/offer`
 - Module: rides
-- Purpose: Driver posts a ride: places with suggestions, real route facts only, date chips and time stepper, seats 1–8 and price with inline errors, tolls, recurrence, luggage, women-only note
+- Purpose: Driver posts a ride: earlier-route template chips, places with suggestions, real route facts only, departure date/time, seats stepper 1–8 and price with inline errors, preferences (tolls, luggage, who can book), sticky Publish bar that scrolls to the first error
 - Type: form
 - States: normal | validation error | submitting | success | error alert
-- Components: RideOfferScreen, RideLocationPicker, DeparturePicker, ChoiceChip, TextField
-- Navigation: success links to `/rides/[rideId]` and `/rides/mine`
-
-### Find a Ride
-- Route: `/rides/request`
-- Module: rides
-- Purpose: Rider enters pickup/destination and searches matching offers
-- Type: form
-- States: normal | validation error
-- Components: RideRequestScreen, TextField
-- Navigation: push to `/rides/search?from=&to=`
+- Components: RideOfferScreen, RideFormScreen, RideLocationPicker, DeparturePicker, NumberStepper, Chip, TextField, ActionBar, InlineNotice
+- Navigation: success links to `/rides/[rideId]/manage`, `/rides/[rideId]` and `/rides/mine`
 
 ### Saved Rides
 - Route: `/rides/saved`
 - Module: rides
-- Purpose: Bookmarked and joined rides; unsave
+- Purpose: Bookmarked and joined rides; cards open the ride, the heart removes the bookmark
 - Type: list
 - States: loading | empty | error (retry) | refreshing
-- Components: RideSavedScreen, RideListCard, BackButton
+- Components: RideSavedScreen, RideCard, ScreenHeader
 - Navigation: push to `/rides/[rideId]`
 
 ### My Rides
 - Route: `/rides/mine`
 - Module: rides
-- Purpose: Tabs: Driving (rides you offer: Manage, Requests, Repeat trip) and My trips (`?tab=trips`, your bookings with Cancel after confirmation)
+- Purpose: Upcoming only. Tabs Driving (n) (cards open Manage; Repeat trip inline; ride page, requests, riders in More) and Riding (n) (`?tab=riding`; Open chat inline, Cancel booking in More; cancelled bookings collapsed). History in the header.
 - Type: list
-- States: loading | empty | error (retry) | refreshing
-- Components: RideMyListingsScreen, RideListCard, RepeatTripSheet, SegmentedControl
-- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/manage`, `/rides/[rideId]/seat-requests`, `/rides/offer`, `/rides/history`
+- States: loading | empty | error (retry) | refreshing | notice
+- Components: RideMyListingsScreen, OwnerItemCard, StatusBadge, RepeatTripSheet, SegmentedControl, InlineNotice
+- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/manage`, `/rides/offer`, `/rides/history`, `/chat/[id]`
 
 ### Ride History
 - Route: `/rides/history`
 - Module: rides
-- Purpose: Completed, cancelled or departed rides you drove or rode on; rate completed rides; drivers can repeat a trip
+- Purpose: Completed, cancelled or departed rides you drove or rode on; Rate leads on completed rides; drivers repeat a trip
 - Type: list
-- States: loading | empty | error (retry) | refreshing
-- Components: RideHistoryScreen, RideListCard, RepeatTripSheet
-- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/rate`
+- States: loading | empty | error (retry) | refreshing | notice
+- Components: RideHistoryScreen, OwnerItemCard, StatusBadge, RepeatTripSheet
+- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/rate`, `/rides/[rideId]/manage`
 
 ### Ride Details
 - Route: `/rides/[rideId]`
 - Module: rides
-- Purpose: Ride facts from the record, seat icons from real counts, Book seat (hidden with a reason for the driver and full/cancelled/completed/departed rides), women-only note, member-only chat/participants, save and share
+- Purpose: Price and seats first, then the seat panel (Book a seat with a seat stepper; Your booking with Open chat and Cancel; Your seat request with Withdraw; You drive; or the reason booking is closed), route facts, women-only note, who is on the ride (members), safety advice linking to `/safety`. Sticky action bar: Book N seats / Manage ride / Open chat / Rate driver. Two columns at expanded width.
 - Type: detail
 - States: loading | not found | error (retry) | booked | blocked reason
-- Components: RideDetailScreen, ChoiceChip, IconButton
-- Navigation: push to `/rides/[rideId]/manage`, `/rides/[rideId]/participants`, `/rides/[rideId]/rate`, `/rides/mine?tab=trips`, `/chat/[id]`
+- Components: RideDetailScreen, ScreenHeader, ActionBar, NumberStepper, PersonRow, StatusBadge, Chip (tag), InlineNotice
+- Navigation: push to `/rides/[rideId]/manage`, `/rides/[rideId]/rate`, `/safety`, `/chat/[id]`
 
 ### Manage Ride
 - Route: `/rides/[rideId]/manage`
 - Module: rides
-- Purpose: Driver panel: Start/Complete/Cancel via `PATCH /status` with confirmation, bookings with cancel, seat-request count, seats and price edit with validation, chat, repeat trip, delete
-- Type: form
-- States: loading | not found | error (retry) | saving | notice
-- Components: RideManageScreen, RepeatTripSheet, TextField
-- Navigation: push to `/rides/[rideId]/seat-requests`, `/rides/[rideId]/participants`, `/chat/[id]`
-
-### Seat Requests
-- Route: `/rides/[rideId]/seat-requests`
-- Module: rides
-- Purpose: Driver accepts/declines requests; a rider sees and withdraws their own
-- Type: list
-- States: loading | empty | error (retry) | refreshing
-- Components: RideSeatRequestsScreen, BackButton
-- Navigation: driver only: `/rides/[rideId]/participants`, `/rides/[rideId]/manage`
-
-### Participants
-- Route: `/rides/[rideId]/participants`
-- Module: rides
-- Purpose: Ride members (members only)
-- Type: list
-- States: loading | empty | error (retry) | refreshing
-- Components: RideParticipantsScreen, Avatar, BackButton
-- Navigation: driver only: `/rides/[rideId]/seat-requests`, `/rides/[rideId]/manage`
+- Purpose: Driver hub with tabs Overview (status actions, total-seats stepper (only the total is sent; the server derives open seats), price, Repeat trip, Danger zone with Cancel and Delete explained), Requests (n pending; accept/decline) and Riders (bookings with cancel, cancelled collapsed; who is on the ride). Header Chat, View, Share. `?tab=requests|riders`; non-drivers are sent to the ride page.
+- Type: hub
+- States: loading (skeleton) | not found | error (retry) | saving | notice
+- Components: RideManageScreen, ScreenHeader, SegmentedControl, NumberStepper, PersonRow, StatusBadge, RepeatTripSheet, InlineNotice
+- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/rate`, `/chat/[id]`; replace to `/rides/mine` after delete
 
 ### Rate Ride
 - Route: `/rides/[rideId]/rate`
@@ -495,8 +468,11 @@ Each screen entry includes:
 - Purpose: One 1–5 rating after the ride is completed; passengers rate the driver, the driver picks a rider
 - Type: form
 - States: loading | not found | error (retry) | not completed | submitting | sent
-- Components: RideRateScreen, ChoiceChip, TextField
+- Components: RideRateScreen, ScreenHeader, RatingInput, Chip, TextField
 - Navigation: to `/rides/history` when sent
+
+Redirect-only routes (not screens): `/rides/request` → `/rides/search`, `/rides/[rideId]/seat-requests` →
+`/rides/[rideId]/manage?tab=requests`, `/rides/[rideId]/participants` → `/rides/[rideId]/manage?tab=riders`.
 
 ## Community
 

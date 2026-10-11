@@ -45,7 +45,7 @@
 │   ├── /rooms/saved (sign-in required)
 │   ├── /rooms/my-listings (sign-in required; ?notice= shows the result of a save)
 │   ├── /rooms/create-listing (sign-in required → /rooms/my-listings)
-│   └── /rooms/[roomId] (owner sees Edit + status actions; others Save, Message host, Report)
+│   └── /rooms/[roomId] (owner sees Edit + status actions; others Save, Contact host, Quick hello, Report)
 │       ├── /rooms/[roomId]/edit (sign-in required, owner only)
 │       └── /rooms/[roomId]/inquiry (sign-in required → /chat/[conversationId])
 ├── /rides/*
@@ -53,14 +53,14 @@
 │   ├── /rides/map
 │   ├── /rides/filters
 │   ├── /rides/offer (sign-in required)
-│   ├── /rides/request (Find a ride → /rides/search?from=&to=)
+│   ├── /rides/request (redirect → /rides/search, keeps from/to)
 │   ├── /rides/saved (sign-in required)
-│   ├── /rides/mine (sign-in required; tabs Driving | My trips, ?tab=trips)
+│   ├── /rides/mine (sign-in required; tabs Driving | Riding, ?tab=riding; upcoming only)
 │   ├── /rides/history (sign-in required)
-│   └── /rides/[rideId] (Book seat for riders; driver sees Manage; members see Chat and Participants)
-│       ├── /rides/[rideId]/manage (sign-in required, driver only)
-│       ├── /rides/[rideId]/seat-requests (driver sees all; rider sees own)
-│       ├── /rides/[rideId]/participants (members only)
+│   └── /rides/[rideId] (sticky bar: Book seats for riders; Manage for the driver; Open chat / Rate for members)
+│       ├── /rides/[rideId]/manage (sign-in required, driver only; tabs Overview | Requests | Riders, ?tab=)
+│       ├── /rides/[rideId]/seat-requests (redirect → manage?tab=requests)
+│       ├── /rides/[rideId]/participants (redirect → manage?tab=riders)
 │       └── /rides/[rideId]/rate (after the ride is completed)
 ├── /community/*
 │   ├── /community/discover
@@ -185,10 +185,10 @@ Splash → Welcome → Sign In/Up → Onboarding → Home
 - Any list → Details → Edit Listing
 
 ### Rides
-- Home (search, filters, list/map) → Ride details → Book seat → My rides (My trips tab) → Rate after completion
-- Home → Offer a ride → My rides (Driving) → Manage (start/complete/cancel, bookings) → Seat requests / Participants
-- Home → Find a ride (`/rides/request`) → Search results; Saved and History from the header; Repeat trip from Manage, My rides, History
-- Any list → Details → Manage → Seat Requests → Participants → Rate
+- Home (search, filter chips, list/map) → Ride details → Book seats → Your booking (chat, cancel) → My rides (Riding tab) → Rate after completion
+- Home → Offer a ride → Manage (Overview: start/complete, seats and price, repeat, danger zone | Requests | Riders)
+- Header: My rides, Saved, History; global Search → `/rides/search?from=&to=`; Repeat trip from Manage, My rides, History
+- Any list → Details → Manage (Requests, Riders tabs) → Rate
 
 ### Community
 - Home → Discover → Joined → Details → Create Post → Post Details

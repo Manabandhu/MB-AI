@@ -53,17 +53,7 @@ export type Ride = {
   status: string;
   createdAt: string | null;
   updatedAt: string | null;
-  /**
-   * Legacy aliases kept for the foundation Saved screen, which still reads these names. New code uses
-   * `routeLabel`, `originArea` and `destinationArea`.
-   */
-  title: string;
-  pickupArea: string;
-  destination: string;
 };
-
-/** @deprecated Use `Ride`. Kept so other modules that import the old name keep compiling. */
-export type RideListing = Ride;
 
 export type RideBookingStatus = 'pending' | 'confirmed' | 'cancelled';
 

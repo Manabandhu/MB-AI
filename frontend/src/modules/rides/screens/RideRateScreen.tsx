@@ -1,11 +1,10 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { getRide, listParticipants, submitRideRating } from '@/modules/rides/api';
-import { formatDeparture } from '@/modules/rides/components/RideListCard';
+import { formatDeparture } from '@/modules/rides/components/RideCard';
 import {
   errorMessage,
   isNotFound,
@@ -16,12 +15,12 @@ import {
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppText } from '@/modules/shared/ui/AppText';
-import { BackButton } from '@/modules/shared/ui/BackButton';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { RatingInput } from '@/modules/shared/ui/RatingInput';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { TextField } from '@/modules/shared/ui/TextField';
 
 /**
@@ -97,7 +96,7 @@ export function RideRateScreen() {
     if (done) {
       return (
         <Card aria-live="polite" gap="$x3" variant="tinted">
-          <AppText variant="h3">Rating sent</AppText>
+          <Heading variant="h3">Rating sent</Heading>
           <AppText tone="muted">
             Thank you. Ratings help riders and drivers choose who to travel with.
           </AppText>
@@ -204,26 +203,13 @@ export function RideRateScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
-      <Screen>
-        <YStack gap="$x4">
-          <BackButton fallback="/rides/history" />
-          <YStack gap="$x1">
-            <AppText role="heading" variant="h2">
-              Rate ride
-            </AppText>
-            {ride ? (
-              <AppText tone="muted" variant="caption">
-                {ride.routeLabel} · {formatDeparture(ride.departureAt)}
-              </AppText>
-            ) : null}
-          </YStack>
-          {content()}
-        </YStack>
-      </Screen>
-    </KeyboardAvoidingView>
+    <Screen keyboardAvoiding maxWidth="form">
+      <ScreenHeader
+        back={{ fallback: '/rides/history' as Href }}
+        subtitle={ride ? `${ride.routeLabel} · ${formatDeparture(ride.departureAt)}` : null}
+        title="Rate ride"
+      />
+      {content()}
+    </Screen>
   );
 }

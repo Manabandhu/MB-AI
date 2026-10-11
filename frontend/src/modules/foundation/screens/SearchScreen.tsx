@@ -19,11 +19,13 @@ import { listJobPostings } from '@/modules/jobs/api';
 import type { JobPosting } from '@/modules/jobs/types';
 import { listMarketplaceListings } from '@/modules/marketplace/api';
 import type { MarketplaceListing } from '@/modules/marketplace/types';
+import { rideSearchHref } from '@/modules/rides';
 import { listRoomListings } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { ListRow } from '@/modules/shared/ui/ListRow';
 
 const C = {
   primary: '#E05638', // Warm Saffron
@@ -49,7 +51,11 @@ const CATEGORIES = [
 
 const POPULAR_SEARCHES = [
   { label: 'UT Austin shared room', category: 'rooms', route: '/rooms' },
-  { label: 'Austin to Dallas carpool', category: 'rides', route: '/rides' },
+  {
+    label: 'Austin to Dallas carpool',
+    category: 'rides',
+    route: '/rides/search?from=Austin&to=Dallas',
+  },
   { label: 'Diwali & Ugadi Mela', category: 'events', route: '/events' },
   { label: 'Pre-loved mixer grinder', category: 'market', route: '/marketplace' },
   { label: 'Tech employee referrals', category: 'jobs', route: '/jobs' },
@@ -234,6 +240,19 @@ export function SearchScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Rides are searched by route on the rides screen, so this is a suggestion, not a result. */}
+          {searchQuery.trim().length > 0 &&
+          (activeCategory === 'all' || activeCategory === 'rides') ? (
+            <View style={s.ridesSuggestion}>
+              <ListRow
+                href={rideSearchHref(searchQuery)}
+                icon="car"
+                subtitle="Search upcoming carpools for this route"
+                title={`Rides: ${searchQuery.trim()}`}
+                tone="teal"
+              />
+            </View>
+          ) : null}
           {searchQuery.trim().length > 0 && searchFailed ? (
             <ErrorState
               title="Search is unavailable"
@@ -367,6 +386,7 @@ export function SearchScreen() {
 }
 
 const s = StyleSheet.create({
+  ridesSuggestion: { marginBottom: 12 },
   safe: {
     flex: 1,
     backgroundColor: C.bg,

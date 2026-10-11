@@ -1,19 +1,20 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { type Href, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { useLocationStore } from '@/lib/locationStore';
-import { listRideOffers } from '@/modules/rides/api';
-import { formatDeparture } from '@/modules/rides/components/RideListCard';
+import { listRideOffersPage } from '@/modules/rides/api';
+import { formatDeparture, RideCard } from '@/modules/rides/components/RideCard';
+import { RideLocationPicker } from '@/modules/rides/components/RideLocationPicker';
+import { useSavedRides } from '@/modules/rides/hooks/useSavedRides';
 import type { Ride } from '@/modules/rides/types';
 import {
+  type DepartureWindow,
+  departsInWindow,
   errorMessage,
-  isWomenOnly,
-  luggageLabel,
-  recurrenceLabel,
-  tollLabel,
+  hasLuggageSpace,
 } from '@/modules/rides/utils/rideFormat';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -21,28 +22,31 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
-import { TextField } from '@/modules/shared/ui/TextField';
 import type { Coordinate } from '@/modules/shared/utils/geoPolygon';
 import { isPointInPolygon } from '@/modules/shared/utils/geoPolygon';
+import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export type RidesScreenId = 'home' | 'search' | 'map' | 'filters';
 
 const SEARCH_DELAY_MS = 300;
+const PAGE_SIZE = 50;
 const MAP_HEIGHT = 480;
 
-const WHEN_OPTIONS = [
+const WHEN_OPTIONS: { id: DepartureWindow; label: string }[] = [
   { id: 'any', label: 'Any time' },
   { id: 'today', label: 'Today' },
   { id: 'tomorrow', label: 'Tomorrow' },
   { id: 'week', label: 'Next 7 days' },
-] as const;
-type When = (typeof WHEN_OPTIONS)[number]['id'];
+];
 
 const SORT_OPTIONS = [
   { id: 'soonest', label: 'Soonest' },
@@ -60,41 +64,45 @@ function useDebounced<T>(value: T, delay: number) {
   return debounced;
 }
 
-function departsInWindow(iso: string, when: When, now = new Date()) {
-  if (when === 'any') return true;
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const day = 24 * 60 * 60 * 1000;
-  const t = new Date(iso).getTime();
-  if (when === 'today') return t >= start && t < start + day;
-  if (when === 'tomorrow') return t >= start + day && t < start + 2 * day;
-  return t < start + 7 * day;
-}
+const param = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '');
 
-/** Rides home, search, map and filters: upcoming active rides from `GET /rides/offers`. */
+/**
+ * Rides home, search, map and filters: upcoming active rides from `GET /rides/offers`, 50 per page. Origin,
+ * destination, tolls, women-only and recurring are server filters; the departure window, luggage and a drawn area
+ * filter the pages loaded so far, and the screen says so while more pages exist.
+ */
 export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId }) {
   const params = useLocalSearchParams<{ from?: string; to?: string }>();
   const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const location = useLocationStore((s) => s.currentLocation);
+  const { isDualPane } = useAdaptiveLayout();
+  const saved = useSavedRides();
 
-  const [origin, setOrigin] = useState(typeof params.from === 'string' ? params.from : '');
-  const [destination, setDestination] = useState(typeof params.to === 'string' ? params.to : '');
+  const [origin, setOrigin] = useState(param(params.from));
+  const [destination, setDestination] = useState(param(params.to));
   const [noTolls, setNoTolls] = useState(false);
   const [womenOnly, setWomenOnly] = useState(false);
   const [recurringOnly, setRecurringOnly] = useState(false);
   const [luggageOnly, setLuggageOnly] = useState(false);
-  const [when, setWhen] = useState<When>('any');
+  const [when, setWhen] = useState<DepartureWindow>('any');
   const [sort, setSort] = useState<Sort>('soonest');
-  const [showFilters, setShowFilters] = useState(screenId === 'filters');
+  const [sheetOpen, setSheetOpen] = useState(screenId === 'filters');
   const [view, setView] = useState<'list' | 'map'>(screenId === 'map' ? 'map' : 'list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [boundary, setBoundary] = useState<Coordinate[] | null>(null);
+
+  // Deep links (`/rides/search?from=&to=`) can change while the screen stays mounted.
+  useEffect(() => {
+    if (params.from !== undefined) setOrigin(param(params.from));
+    if (params.to !== undefined) setDestination(param(params.to));
+  }, [params.from, params.to]);
 
   const search = useDebounced(
     { origin: origin.trim(), destination: destination.trim() },
     SEARCH_DELAY_MS,
   );
 
-  const query = useQuery({
+  const query = useInfiniteQuery({
     queryKey: [
       'rides',
       'offers',
@@ -104,22 +112,38 @@ export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId })
       womenOnly,
       recurringOnly,
     ],
-    queryFn: () =>
-      listRideOffers({
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      listRideOffersPage({
         origin: search.origin || undefined,
         destination: search.destination || undefined,
         avoidTolls: noTolls || undefined,
         genderPreference: womenOnly ? 'FEMALE_ONLY' : undefined,
         isRecurring: recurringOnly ? true : undefined,
-        size: 50,
+        page: pageParam,
+        size: PAGE_SIZE,
       }),
+    getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
   });
 
+  const loaded = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Ride[] = [];
+    for (const page of query.data?.pages ?? []) {
+      for (const ride of page.rides) {
+        if (seen.has(ride.id)) continue;
+        seen.add(ride.id);
+        out.push(ride);
+      }
+    }
+    return out;
+  }, [query.data]);
+  const total = query.data?.pages[0]?.total ?? null;
+
   const rides = useMemo(() => {
-    const list = (query.data ?? []).filter((ride) => {
+    const list = loaded.filter((ride) => {
       if (!departsInWindow(ride.departureAt, when)) return false;
-      if (luggageOnly && !['MEDIUM', 'LARGE_SUITCASE'].includes(ride.luggageCapacity ?? ''))
-        return false;
+      if (luggageOnly && !hasLuggageSpace(ride.luggageCapacity)) return false;
       if (boundary && boundary.length >= 3) {
         if (ride.originLat == null || ride.originLng == null) return false;
         if (!isPointInPolygon({ latitude: ride.originLat, longitude: ride.originLng }, boundary))
@@ -134,15 +158,14 @@ export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId })
       if (sort === 'seats') return b.seatsAvailable - a.seatsAvailable;
       return new Date(a.departureAt).getTime() - new Date(b.departureAt).getTime();
     });
-  }, [query.data, when, luggageOnly, boundary, sort]);
+  }, [loaded, when, luggageOnly, boundary, sort]);
 
+  const clientFilters = luggageOnly || when !== 'any' || Boolean(boundary);
   const filtersActive =
     noTolls ||
     womenOnly ||
     recurringOnly ||
-    luggageOnly ||
-    when !== 'any' ||
-    Boolean(boundary) ||
+    clientFilters ||
     Boolean(origin.trim() || destination.trim());
 
   const resetFilters = () => {
@@ -155,6 +178,84 @@ export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId })
     setWhen('any');
     setBoundary(null);
   };
+
+  const whenLabel = WHEN_OPTIONS.find((o) => o.id === when)?.label ?? 'Any time';
+  const sortLabel = SORT_OPTIONS.find((o) => o.id === sort)?.label ?? 'Soonest';
+  const go = (route: string) => router.push((isAuthenticated ? route : '/sign-in') as Href);
+
+  const pagingNotice = query.hasNextPage ? (
+    <Card gap="$x2" variant="filled">
+      <AppText variant="caption">
+        Showing the first {loaded.length}
+        {total != null ? ` of ${total}` : ''} matching rides.
+        {clientFilters
+          ? ' The When, Luggage and drawn-area filters only check rides loaded so far.'
+          : ''}
+      </AppText>
+      <XStack>
+        <AppButton
+          icon="refresh"
+          label="Load more rides"
+          loading={query.isFetchingNextPage}
+          onPress={() => query.fetchNextPage()}
+          size="sm"
+          variant="secondary"
+        />
+      </XStack>
+    </Card>
+  ) : null;
+
+  const emptyState = (
+    <YStack gap="$x3">
+      <EmptyState
+        actionLabel="Offer a ride"
+        body={
+          filtersActive
+            ? query.hasNextPage
+              ? 'None of the rides loaded so far match. Load more, clear the filters, or offer this trip yourself.'
+              : 'No upcoming rides match. Clear the filters, or offer this trip yourself.'
+            : 'No one has offered an upcoming ride yet. Offer yours and riders can book it.'
+        }
+        iconName="car"
+        onAction={() => router.push('/rides/offer' as Href)}
+        title={filtersActive ? 'No rides match' : 'No upcoming rides'}
+      />
+      {filtersActive ? (
+        <XStack justifyContent="center">
+          <AppButton label="Clear filters" onPress={resetFilters} variant="ghost" />
+        </XStack>
+      ) : null}
+    </YStack>
+  );
+
+  const list = (columns?: number) =>
+    rides.length === 0 ? (
+      emptyState
+    ) : (
+      <ResponsiveGrid
+        columns={
+          columns ? { compact: 1, medium: columns, expanded: columns, wide: columns } : undefined
+        }
+      >
+        {rides.map((ride) => (
+          <RideCard
+            key={ride.id}
+            onToggleSave={() => saved.toggle(ride.id)}
+            ride={ride}
+            saved={saved.isSaved(ride.id)}
+            saving={saved.pendingId === ride.id}
+            selected={selectedId === ride.id}
+          />
+        ))}
+      </ResponsiveGrid>
+    );
+
+  const map = (
+    <RidesMap
+      {...{ rides, selectedId, setSelectedId, boundary, setBoundary, location }}
+      showSelection={!isDualPane}
+    />
+  );
 
   const results = () => {
     if (query.isLoading) {
@@ -170,227 +271,173 @@ export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId })
         />
       );
     }
-    if (view === 'map')
+    if (isDualPane) {
+      // Side by side on wide windows: the list scrolls with the page, the map stays beside it.
       return (
-        <RidesMap {...{ rides, selectedId, setSelectedId, boundary, setBoundary, location }} />
-      );
-    if (rides.length === 0) {
-      return (
-        <YStack gap="$x3">
-          <EmptyState
-            actionLabel="Offer a ride"
-            body={
-              filtersActive
-                ? 'No upcoming rides match. Clear the filters, or offer this trip yourself.'
-                : 'No one has offered an upcoming ride yet. Offer yours and riders can book it.'
-            }
-            iconName="car"
-            onAction={() => router.push('/rides/offer' as Href)}
-            title={filtersActive ? 'No rides match' : 'No upcoming rides'}
-          />
-          {filtersActive ? (
-            <XStack justifyContent="center">
-              <AppButton label="Clear filters" onPress={resetFilters} variant="ghost" />
-            </XStack>
-          ) : null}
-        </YStack>
+        <XStack alignItems="flex-start" gap="$x4">
+          <YStack flex={1} gap="$x3" minWidth={0}>
+            {list(1)}
+            {pagingNotice}
+          </YStack>
+          <YStack flex={1} minWidth={0}>
+            {map}
+          </YStack>
+        </XStack>
       );
     }
     return (
-      <ResponsiveGrid>
-        {rides.map((ride) => (
-          <RideResultCard key={ride.id} ride={ride} />
-        ))}
-      </ResponsiveGrid>
+      <YStack gap="$x3">
+        {view === 'map' ? map : list()}
+        {pagingNotice}
+      </YStack>
     );
   };
 
   return (
     <Screen onRefresh={() => query.refetch()} refreshing={query.isRefetching}>
       <YStack gap="$x4">
-        <XStack alignItems="center" flexWrap="wrap" gap="$x3" justifyContent="space-between">
-          <YStack flex={1} gap={2} minWidth={200}>
-            <AppText role="heading" variant="h1">
-              Rides
-            </AppText>
-            <AppText tone="muted" variant="caption">
-              Carpools from people in your community
-            </AppText>
-          </YStack>
-          <XStack gap="$x2">
-            <IconButton
-              icon="bookmark"
-              label="Saved rides"
-              onPress={() => router.push((isAuthenticated ? '/rides/saved' : '/sign-in') as Href)}
-            />
-            <IconButton
-              icon="clock"
-              label="Ride history"
-              onPress={() => router.push((isAuthenticated ? '/rides/history' : '/sign-in') as Href)}
-            />
-          </XStack>
-        </XStack>
+        <ScreenHeader
+          actions={
+            <>
+              <IconButton icon="car" label="My rides" onPress={() => go('/rides/mine')} />
+              <IconButton icon="heart" label="Saved rides" onPress={() => go('/rides/saved')} />
+              <IconButton icon="clock" label="Ride history" onPress={() => go('/rides/history')} />
+            </>
+          }
+          back={{ fallback: '/' as Href }}
+          primaryAction={{ label: 'Offer a ride', icon: 'plus', route: '/rides/offer' as Href }}
+          subtitle="Carpools from people in your community"
+          title="Rides"
+        />
 
-        <XStack flexWrap="wrap" gap="$x2">
-          <AppButton
-            icon="plus"
-            label="Offer a ride"
-            onPress={() => router.push('/rides/offer' as Href)}
-          />
-          <AppButton
-            icon="search"
-            label="Find a ride"
-            onPress={() => router.push('/rides/request' as Href)}
-            variant="secondary"
-          />
-          <AppButton
-            icon="car"
-            label="My rides"
-            onPress={() => router.push((isAuthenticated ? '/rides/mine' : '/sign-in') as Href)}
-            variant="secondary"
-          />
-        </XStack>
-
-        <Card gap="$x3" variant="outlined">
-          <TextField
-            label="From"
-            onChangeText={setOrigin}
-            placeholder="Pickup area, e.g. Irving"
-            returnKeyType="search"
-            value={origin}
-          />
-          <TextField
-            label="To"
-            onChangeText={setDestination}
-            placeholder="Destination, e.g. Downtown"
-            returnKeyType="search"
-            value={destination}
-          />
-          <XStack flexWrap="wrap" gap="$x2">
-            <AppButton
-              icon="refresh"
-              label="Swap"
-              onPress={() => {
-                setOrigin(destination);
-                setDestination(origin);
-              }}
-              variant="ghost"
-            />
-            <AppButton
-              icon="filter"
-              label={showFilters ? 'Hide filters' : 'Filters'}
-              onPress={() => setShowFilters((v) => !v)}
-              variant="ghost"
-            />
-            {filtersActive ? (
-              <AppButton label="Clear all" onPress={resetFilters} variant="ghost" />
-            ) : null}
-          </XStack>
-          <XStack flexWrap="wrap" gap="$x2">
-            <Chip label="No tolls" onPress={() => setNoTolls((v) => !v)} selected={noTolls} />
-            <Chip label="Women only" onPress={() => setWomenOnly((v) => !v)} selected={womenOnly} />
-            <Chip
-              label="Recurring commutes"
-              onPress={() => setRecurringOnly((v) => !v)}
-              selected={recurringOnly}
-            />
-            <Chip
-              label="Luggage space"
-              onPress={() => setLuggageOnly((v) => !v)}
-              selected={luggageOnly}
-            />
-          </XStack>
-          {showFilters ? (
-            <YStack gap="$x3">
-              <AppText variant="label">Departs</AppText>
-              <XStack aria-label="Departs" flexWrap="wrap" gap="$x2" role="radiogroup">
-                {WHEN_OPTIONS.map((o) => (
-                  <Chip
-                    key={o.id}
-                    label={o.label}
-                    onPress={() => setWhen(o.id)}
-                    radio
-                    selected={when === o.id}
-                  />
-                ))}
-              </XStack>
-              <AppText variant="label">Sort by</AppText>
-              <XStack aria-label="Sort by" flexWrap="wrap" gap="$x2" role="radiogroup">
-                {SORT_OPTIONS.map((o) => (
-                  <Chip
-                    key={o.id}
-                    label={o.label}
-                    onPress={() => setSort(o.id)}
-                    radio
-                    selected={sort === o.id}
-                  />
-                ))}
-              </XStack>
+        <Card gap="$x2" variant="outlined">
+          <XStack alignItems="flex-end" gap="$x2">
+            <YStack flex={1} gap="$x2" minWidth={0}>
+              <RideLocationPicker
+                label="From"
+                onCoordsChange={() => undefined}
+                onValueChange={setOrigin}
+                placeholder="Pickup area, e.g. Irving"
+                value={origin}
+              />
+              <RideLocationPicker
+                label="To"
+                onCoordsChange={() => undefined}
+                onValueChange={setDestination}
+                placeholder="Destination, e.g. Downtown"
+                value={destination}
+              />
             </YStack>
-          ) : null}
+            <YStack paddingBottom="$x6">
+              <IconButton
+                icon="swap"
+                label="Swap pickup and destination"
+                onPress={() => {
+                  setOrigin(destination);
+                  setDestination(origin);
+                }}
+              />
+            </YStack>
+          </XStack>
         </Card>
 
-        <SegmentedControl
-          label="Results view"
-          onChange={setView}
-          options={[
-            {
-              value: 'list',
-              label: query.isSuccess ? `List (${rides.length})` : 'List',
-              icon: 'car',
-            },
-            { value: 'map', label: 'Map', icon: 'map' },
-          ]}
-          value={view}
-        />
+        <FilterChipRow label="Ride filters">
+          <Chip
+            accessibilityLabel={`Departs: ${whenLabel}. Change`}
+            icon="calendar"
+            label={`${when === 'any' ? 'When' : whenLabel} ▾`}
+            onPress={() => setSheetOpen(true)}
+            selected={when !== 'any'}
+          />
+          <Chip label="Women only" onPress={() => setWomenOnly((v) => !v)} selected={womenOnly} />
+          <Chip label="No tolls" onPress={() => setNoTolls((v) => !v)} selected={noTolls} />
+          <Chip
+            icon="repeat"
+            label="Recurring"
+            onPress={() => setRecurringOnly((v) => !v)}
+            selected={recurringOnly}
+          />
+          <Chip
+            icon="package"
+            label="Luggage"
+            onPress={() => setLuggageOnly((v) => !v)}
+            selected={luggageOnly}
+          />
+          <Chip
+            accessibilityLabel={`Sort: ${sortLabel}. Change`}
+            icon="filter-list"
+            label={`${sortLabel} ▾`}
+            onPress={() => setSheetOpen(true)}
+            selected={sort !== 'soonest'}
+          />
+          {filtersActive ? <Chip icon="close" label="Clear all" onPress={resetFilters} /> : null}
+        </FilterChipRow>
+
+        {isDualPane ? (
+          query.isSuccess ? (
+            <AppText aria-live="polite" tone="muted" variant="caption">
+              {rides.length} {rides.length === 1 ? 'ride' : 'rides'}
+            </AppText>
+          ) : null
+        ) : (
+          <SegmentedControl
+            label="Results view"
+            onChange={setView}
+            options={[
+              {
+                value: 'list',
+                label: 'List',
+                icon: 'list',
+                count: query.isSuccess ? rides.length : undefined,
+              },
+              { value: 'map', label: 'Map', icon: 'map' },
+            ]}
+            value={view}
+          />
+        )}
 
         {results()}
       </YStack>
-    </Screen>
-  );
-}
 
-function RideResultCard({ ride }: { ride: Ride }) {
-  const tags = [
-    ride.isRecurring ? (recurrenceLabel(ride.recurrencePattern) ?? 'Recurring') : null,
-    isWomenOnly(ride.genderPreference) ? 'Women only' : null,
-    tollLabel(ride.tollPreference),
-    luggageLabel(ride.luggageCapacity),
-    ride.distanceMiles ? `${Math.round(ride.distanceMiles)} mi` : null,
-  ].filter((t): t is string => Boolean(t));
-  return (
-    <Card
-      aria-label={`${ride.routeLabel}, departs ${formatDeparture(ride.departureAt)}, ${ride.seatsAvailable} seats open. View and book.`}
-      gap="$x2"
-      href={`/rides/${ride.id}`}
-      variant="outlined"
-    >
-      <XStack alignItems="flex-start" gap="$x2" justifyContent="space-between">
-        <AppText flex={1} numberOfLines={2} variant="bodyStrong">
-          {ride.routeLabel}
-        </AppText>
-        {ride.contributionLabel ? (
-          <AppText tone="primary" variant="bodyStrong">
-            {ride.contributionLabel}
-          </AppText>
-        ) : null}
-      </XStack>
-      <AppText tone="muted" variant="caption">
-        Departs {formatDeparture(ride.departureAt)}
-      </AppText>
-      <AppText tone={ride.seatsAvailable > 0 ? 'teal' : 'danger'} variant="caption">
-        {ride.seatsAvailable > 0
-          ? `${ride.seatsAvailable} of ${ride.seatsTotal} ${ride.seatsTotal === 1 ? 'seat' : 'seats'} open`
-          : 'Full'}
-      </AppText>
-      {tags.length > 0 ? (
-        <XStack flexWrap="wrap" gap="$x1">
-          {tags.map((t) => (
-            <Chip key={t} label={t} />
-          ))}
-        </XStack>
-      ) : null}
-    </Card>
+      <BottomSheet
+        onClose={() => setSheetOpen(false)}
+        scrollable
+        title="When and sort"
+        visible={sheetOpen}
+      >
+        <YStack gap="$x4" paddingBottom="$x2">
+          <YStack gap="$x2">
+            <AppText variant="label">Departs</AppText>
+            <XStack aria-label="Departs" flexWrap="wrap" gap="$x2" role="radiogroup">
+              {WHEN_OPTIONS.map((o) => (
+                <Chip
+                  key={o.id}
+                  label={o.label}
+                  onPress={() => setWhen(o.id)}
+                  radio
+                  selected={when === o.id}
+                />
+              ))}
+            </XStack>
+          </YStack>
+          <YStack gap="$x2">
+            <AppText variant="label">Sort by</AppText>
+            <XStack aria-label="Sort by" flexWrap="wrap" gap="$x2" role="radiogroup">
+              {SORT_OPTIONS.map((o) => (
+                <Chip
+                  key={o.id}
+                  label={o.label}
+                  onPress={() => setSort(o.id)}
+                  radio
+                  selected={sort === o.id}
+                />
+              ))}
+            </XStack>
+          </YStack>
+          <AppButton fullWidth label="Show rides" onPress={() => setSheetOpen(false)} />
+        </YStack>
+      </BottomSheet>
+    </Screen>
   );
 }
 
@@ -401,6 +448,7 @@ function RidesMap({
   boundary,
   setBoundary,
   location,
+  showSelection,
 }: {
   rides: Ride[];
   selectedId: string | null;
@@ -408,6 +456,8 @@ function RidesMap({
   boundary: Coordinate[] | null;
   setBoundary: (b: Coordinate[] | null) => void;
   location: { latitude: number; longitude: number };
+  /** Show the selected ride under the map (single pane; on dual pane the list highlights it). */
+  showSelection: boolean;
 }) {
   const markers = rides
     .filter((r) => r.originLat != null && r.originLng != null)
@@ -445,21 +495,18 @@ function RidesMap({
           style={StyleSheet.absoluteFill}
         />
       </YStack>
-      {selected ? (
-        <Card gap="$x2" variant="outlined">
-          <AppText variant="bodyStrong">{selected.routeLabel}</AppText>
-          <AppText tone="muted" variant="caption">
-            Departs {formatDeparture(selected.departureAt)} · {selected.seatsAvailable} seats open
-            {selected.contributionLabel ? ` · ${selected.contributionLabel}` : ''}
-          </AppText>
-          <XStack flexWrap="wrap" gap="$x2">
+      {showSelection && selected ? (
+        <YStack gap="$x2">
+          <RideCard ride={selected} selected />
+          <XStack>
             <AppButton
-              label="View and book"
-              onPress={() => router.push(`/rides/${selected.id}` as Href)}
+              label="Close"
+              onPress={() => setSelectedId(null)}
+              size="sm"
+              variant="ghost"
             />
-            <AppButton label="Close" onPress={() => setSelectedId(null)} variant="ghost" />
           </XStack>
-        </Card>
+        </YStack>
       ) : null}
       {rides.length === 0 ? (
         <EmptyState

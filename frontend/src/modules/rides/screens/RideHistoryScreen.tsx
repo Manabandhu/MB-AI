@@ -1,28 +1,33 @@
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { getRideHistory } from '@/modules/rides/api';
+import { InlineNotice } from '@/modules/rides/components/InlineNotice';
 import { RepeatTripSheet } from '@/modules/rides/components/RepeatTripSheet';
-import { RideListCard } from '@/modules/rides/components/RideListCard';
+import { formatDeparture } from '@/modules/rides/components/RideCard';
+import { useTimedNotice } from '@/modules/rides/hooks/useTimedNotice';
 import type { Ride } from '@/modules/rides/types';
-import { errorMessage, statusIs } from '@/modules/rides/utils/rideFormat';
+import { errorMessage, statusIs, statusLabel, statusTone } from '@/modules/rides/utils/rideFormat';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppText } from '@/modules/shared/ui/AppText';
-import { BackButton } from '@/modules/shared/ui/BackButton';
-import { Card } from '@/modules/shared/ui/Card';
+import { OwnerItemCard, type OwnerItemOverflowAction } from '@/modules/shared/ui/OwnerItemCard';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 
-/** Completed, cancelled or departed rides the user drove or rode on (`GET /rides/history`). */
+/**
+ * Completed, cancelled or departed rides the user drove or rode on (`GET /rides/history`). Completed rides lead
+ * with Rate (the server refuses a second rating and says so); drivers can repeat any past trip.
+ */
 export function RideHistoryScreen() {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const [repeatRide, setRepeatRide] = useState<Ride | null>(null);
-  const [notice, setNotice] = useState<{ text: string; rideId: string } | null>(null);
+  const notices = useTimedNotice();
   const query = useQuery({
     queryKey: ['rides', 'history'],
     queryFn: getRideHistory,
@@ -49,7 +54,7 @@ export function RideHistoryScreen() {
         <EmptyState
           actionLabel="Find a ride"
           body="Rides you drove or rode on appear here once they finish, are cancelled, or depart."
-          iconName="car"
+          iconName="clock"
           onAction={() => router.push('/rides/search' as Href)}
           title="No ride history yet"
         />
@@ -57,58 +62,77 @@ export function RideHistoryScreen() {
     }
     return (
       <YStack gap="$x3">
-        {rides.map((ride) => (
-          <RideListCard key={ride.id} note={ride.isDriver ? 'You drove' : 'You rode'} ride={ride}>
-            <AppButton
-              label="View"
-              onPress={() => router.push(`/rides/${ride.id}` as Href)}
-              variant="ghost"
-            />
-            {statusIs(ride.status, 'completed') ? (
-              <AppButton
-                label={ride.isDriver ? 'Rate riders' : 'Rate driver'}
-                onPress={() => router.push(`/rides/${ride.id}/rate` as Href)}
-                variant="secondary"
+        {rides.map((ride) => {
+          const completed = statusIs(ride.status, 'completed');
+          const repeat = () => setRepeatRide(ride);
+          const overflow: OwnerItemOverflowAction[] = [];
+          if (ride.isDriver && completed) {
+            overflow.push({ label: 'Repeat trip', icon: 'repeat', onPress: repeat });
+          }
+          if (ride.isDriver) {
+            overflow.push({
+              label: 'Manage ride',
+              icon: 'settings',
+              onPress: () => router.push(`/rides/${ride.id}/manage` as Href),
+            });
+          }
+          return (
+            <Fragment key={ride.id}>
+              <OwnerItemCard
+                actions={
+                  completed ? (
+                    <AppButton
+                      icon="star"
+                      label={ride.isDriver ? 'Rate riders' : 'Rate driver'}
+                      onPress={() => router.push(`/rides/${ride.id}/rate` as Href)}
+                      size="sm"
+                    />
+                  ) : ride.isDriver ? (
+                    <AppButton
+                      icon="repeat"
+                      label="Repeat trip"
+                      onPress={repeat}
+                      size="sm"
+                      variant="secondary"
+                    />
+                  ) : undefined
+                }
+                href={`/rides/${ride.id}` as Href}
+                meta={[formatDeparture(ride.departureAt), ride.isDriver ? 'You drove' : 'You rode']}
+                overflow={overflow.length ? overflow : undefined}
+                status={
+                  <StatusBadge label={statusLabel(ride.status)} tone={statusTone(ride.status)} />
+                }
+                title={ride.routeLabel}
+                trailing={ride.contributionLabel ?? undefined}
               />
-            ) : null}
-            {ride.isDriver ? (
-              <AppButton icon="refresh" label="Repeat trip" onPress={() => setRepeatRide(ride)} />
-            ) : null}
-          </RideListCard>
-        ))}
+              <InlineNotice notice={notices.at(ride.id)} />
+            </Fragment>
+          );
+        })}
       </YStack>
     );
   };
 
   return (
     <Screen onRefresh={() => query.refetch()} refreshing={query.isRefetching}>
-      <YStack gap="$x4">
-        <BackButton fallback="/rides" />
-        <YStack gap="$x1">
-          <AppText role="heading" variant="h2">
-            Ride history
-          </AppText>
-          <AppText tone="muted" variant="caption">
-            Rate finished trips or post a past route again
-          </AppText>
-        </YStack>
-        {notice ? (
-          <Card aria-live="polite" gap="$x2" variant="tinted">
-            <AppText variant="label">{notice.text}</AppText>
-            <AppButton
-              label="View new ride"
-              onPress={() => router.push(`/rides/${notice.rideId}` as Href)}
-              variant="secondary"
-            />
-          </Card>
-        ) : null}
-        {body()}
-      </YStack>
+      <ScreenHeader
+        back={{ fallback: '/rides/mine' as Href }}
+        subtitle="Rate finished trips or post a past route again"
+        title="Ride history"
+      />
+      {body()}
       <RepeatTripSheet
         onClose={() => setRepeatRide(null)}
         onPosted={(newRide) => {
+          const from = repeatRide?.id ?? newRide.id;
           setRepeatRide(null);
-          setNotice({ text: 'Repeat trip posted. Riders can book it now.', rideId: newRide.id });
+          notices.show({
+            anchor: from,
+            text: 'Repeat trip posted. Riders can book it now.',
+            href: `/rides/${newRide.id}/manage`,
+            hrefLabel: 'Manage new ride',
+          });
         }}
         ride={repeatRide}
       />

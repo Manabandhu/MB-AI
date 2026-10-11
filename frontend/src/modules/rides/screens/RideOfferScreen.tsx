@@ -1,12 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { createRideOffer, getMyRides } from '@/modules/rides/api';
 import { DeparturePicker, type DepartureValue } from '@/modules/rides/components/DeparturePicker';
+import { InlineNotice } from '@/modules/rides/components/InlineNotice';
+import { formatDeparture } from '@/modules/rides/components/RideCard';
+import { RideFormScreen, useFormScroll } from '@/modules/rides/components/RideFormScreen';
 import { RideLocationPicker } from '@/modules/rides/components/RideLocationPicker';
+import { useTimedNotice } from '@/modules/rides/hooks/useTimedNotice';
 import {
   fetchGoogleRoute,
   geocodeAddress,
@@ -29,12 +32,16 @@ import {
   durationLabel,
   seatsError,
 } from '@/modules/rides/utils/rideFormat';
+import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppText } from '@/modules/shared/ui/AppText';
-import { BackButton } from '@/modules/shared/ui/BackButton';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { NumberStepper } from '@/modules/shared/ui/NumberStepper';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { TextField } from '@/modules/shared/ui/TextField';
 
 const ALL_DAYS: { id: WeekDay; label: string; name: string }[] = [
@@ -101,6 +108,16 @@ function patternFor(days: WeekDay[]): RecurrencePattern {
 
 type Coords = { lat: number; lng: number } | null;
 
+/** Which form section holds each field, in screen order, for scrolling to the first error. */
+const FIELD_SECTION: [field: string, section: string][] = [
+  ['origin', 'route'],
+  ['destination', 'route'],
+  ['days', 'when'],
+  ['departure', 'when'],
+  ['seats', 'seats'],
+  ['amount', 'seats'],
+];
+
 export function RideOfferScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -119,13 +136,16 @@ export function RideOfferScreen() {
   const [days, setDays] = useState<WeekDay[]>(WEEKDAYS);
   const [departure, setDeparture] = useState<DepartureValue>({ dayOffset: 1, hour: 8, minute: 0 });
 
-  const [seats, setSeats] = useState('3');
+  const [seats, setSeats] = useState(3);
   const [amount, setAmount] = useState('');
   const [luggage, setLuggage] = useState<LuggageCapacity>('MEDIUM');
   const [gender, setGender] = useState<GenderPreference>('ANY');
 
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [published, setPublished] = useState<Ride | null>(null);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const notices = useTimedNotice();
+  const form = useFormScroll();
 
   const myRides = useQuery({
     queryKey: ['rides', 'mine'],
@@ -139,6 +159,7 @@ export function RideOfferScreen() {
     if (!originCoords || !destinationCoords) {
       setRoute(null);
       setRouteMessage(null);
+      setRouteLoading(false);
       return;
     }
     let live = true;
@@ -157,7 +178,9 @@ export function RideOfferScreen() {
   const applyTemplate = async (t: Template) => {
     setOrigin(t.origin);
     setDestination(t.destination);
-    setSeats(String(t.seats));
+    setTemplateId(t.id);
+    setErrors({});
+    setSeats(Math.min(8, Math.max(1, t.seats)));
     setAmount(t.amount != null ? String(t.amount) : '');
     setIsRecurring(t.ride.isRecurring);
     if (t.ride.recurringDays.length) setDays(t.ride.recurringDays as WeekDay[]);
@@ -168,10 +191,18 @@ export function RideOfferScreen() {
       const [a, b] = await Promise.all([geocodeAddress(t.origin), geocodeAddress(t.destination)]);
       setOriginCoords(a);
       setDestinationCoords(b);
+      notices.show({
+        anchor: 'template',
+        text: `Filled in from ${t.origin.split(',')[0]} → ${t.destination.split(',')[0]}. Check the date and time.`,
+      });
     } catch (e) {
       setOriginCoords(null);
       setDestinationCoords(null);
       setRouteMessage(e instanceof Error ? e.message : 'Could not look up these places.');
+      notices.show({
+        anchor: 'template',
+        text: 'Filled in the route and preferences. Choose both places again to add distance.',
+      });
     }
   };
 
@@ -188,11 +219,7 @@ export function RideOfferScreen() {
   const mutation = useMutation({
     mutationFn: createRideOffer,
     onSuccess: (ride) => {
-      Promise.allSettled([
-        queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] }),
-        queryClient.invalidateQueries({ queryKey: ['rides', 'offers'] }),
-        queryClient.invalidateQueries({ queryKey: ['rides', 'home-widget'] }),
-      ]);
+      queryClient.invalidateQueries({ queryKey: ['rides'] });
       setPublished(ride);
     },
     onError: (e) => showError('Ride not published', e),
@@ -209,13 +236,17 @@ export function RideOfferScreen() {
       days: isRecurring && days.length === 0 ? 'Choose at least one day.' : null,
     };
     setErrors(next);
-    if (Object.values(next).some(Boolean)) return;
+    const firstError = FIELD_SECTION.find(([field]) => next[field]);
+    if (firstError) {
+      form.scrollTo(firstError[1]);
+      return;
+    }
     const orderedDays = ALL_DAYS.map((d) => d.id).filter((d) => days.includes(d));
     mutation.mutate({
       originArea: origin,
       destinationArea: destination,
       departureAt: at.toISOString(),
-      seatsTotal: Number(seats),
+      seatsTotal: seats,
       contributionAmount: Number(amount),
       originLat: originCoords?.lat,
       originLng: originCoords?.lng,
@@ -235,101 +266,95 @@ export function RideOfferScreen() {
 
   if (published) {
     return (
-      <Screen>
-        <YStack gap="$x4">
-          <Card aria-live="polite" gap="$x3" variant="tinted">
-            <AppText role="heading" variant="h2">
-              Ride published
-            </AppText>
-            <AppText>{published.routeLabel}</AppText>
-            <AppText tone="muted">
-              Departs {new Date(published.departureAt).toLocaleString()} · {published.seatsTotal}{' '}
-              {published.seatsTotal === 1 ? 'seat' : 'seats'} ·{' '}
-              {published.contributionLabel ?? contributionText(Number(amount))}
-            </AppText>
-            <AppText tone="muted" variant="caption">
-              Riders can find and book it now. You will see bookings and requests under My rides.
-            </AppText>
-            <XStack flexWrap="wrap" gap="$x2">
-              <AppButton
-                label="View ride"
-                onPress={() => router.replace(`/rides/${published.id}` as Href)}
-              />
-              <AppButton
-                label="My rides"
-                onPress={() => router.replace('/rides/mine' as Href)}
-                variant="secondary"
-              />
-            </XStack>
-          </Card>
-        </YStack>
+      <Screen maxWidth="form">
+        <ScreenHeader back={{ fallback: '/rides' as Href }} title="Ride published" />
+        <Card aria-live="polite" gap="$x3" variant="tinted">
+          <Heading variant="h3">{published.routeLabel}</Heading>
+          <AppText tone="muted">
+            Departs {formatDeparture(published.departureAt)} · {published.seatsTotal}{' '}
+            {published.seatsTotal === 1 ? 'seat' : 'seats'} ·{' '}
+            {published.contributionLabel ?? contributionText(Number(amount))}
+          </AppText>
+          <AppText tone="muted" variant="caption">
+            Riders can find and book it now. Bookings and any seat requests show up on its Manage
+            page.
+          </AppText>
+          <XStack flexWrap="wrap" gap="$x2">
+            <AppButton
+              icon="settings"
+              label="Manage ride"
+              onPress={() => router.replace(`/rides/${published.id}/manage` as Href)}
+            />
+            <AppButton
+              label="View ride"
+              onPress={() => router.replace(`/rides/${published.id}` as Href)}
+              variant="secondary"
+            />
+            <AppButton
+              label="My rides"
+              onPress={() => router.replace('/rides/mine' as Href)}
+              variant="ghost"
+            />
+          </XStack>
+        </Card>
       </Screen>
     );
   }
 
-  const seatsNumber = Number(seats);
-  const stepSeats = (delta: number) => {
-    const base = Number.isFinite(seatsNumber) ? seatsNumber : 1;
-    setSeats(String(Math.min(8, Math.max(1, base + delta))));
-  };
+  const errorCount = Object.values(errors).filter(Boolean).length;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
-      <Screen>
-        <YStack gap="$x5">
-          <BackButton fallback="/rides" />
-          <YStack gap="$x1">
-            <AppText role="heading" variant="h2">
-              Offer a ride
-            </AppText>
-            <AppText tone="muted" variant="caption">
-              Share your trip and split costs with people going your way
-            </AppText>
+    <YStack backgroundColor="$background" flex={1}>
+      <RideFormScreen bottomInset={ACTION_BAR_SPACE} scrollRef={form.scrollRef}>
+        <ScreenHeader
+          back={{ fallback: '/rides' as Href }}
+          subtitle="Share your trip and split costs with people going your way"
+          title="Offer a ride"
+        />
+
+        {templates.length > 0 ? (
+          <YStack gap="$x2">
+            <AppText variant="label">Start from one of your earlier routes</AppText>
+            <FilterChipRow label="Earlier routes">
+              {templates.map((t) => (
+                <Chip
+                  accessibilityLabel={`Fill in ${t.origin} to ${t.destination}`}
+                  icon="repeat"
+                  key={t.id}
+                  label={`${t.origin.split(',')[0]} → ${t.destination.split(',')[0]}`}
+                  onPress={() => applyTemplate(t)}
+                  selected={templateId === t.id}
+                />
+              ))}
+            </FilterChipRow>
+            <InlineNotice notice={notices.at('template')} />
           </YStack>
+        ) : null}
 
-          {templates.length > 0 ? (
-            <YStack gap="$x2">
-              <AppText variant="label">Post one of your earlier routes again</AppText>
-              <ScrollView
-                horizontal
-                keyboardShouldPersistTaps="handled"
-                showsHorizontalScrollIndicator={false}
-              >
-                <XStack gap="$x2" paddingVertical="$x1">
-                  {templates.map((t) => (
-                    <Chip
-                      accessibilityLabel={`Fill in ${t.origin} to ${t.destination}`}
-                      key={t.id}
-                      label={`${t.origin.split(',')[0]} → ${t.destination.split(',')[0]}`}
-                      onPress={() => applyTemplate(t)}
-                      selected={false}
-                    />
-                  ))}
-                </XStack>
-              </ScrollView>
-            </YStack>
-          ) : null}
-
+        <YStack onLayout={form.anchor('route')}>
           <Card gap="$x3" variant="outlined">
             <XStack alignItems="center" justifyContent="space-between">
-              <AppText variant="h4">Route</AppText>
-              <AppButton icon="refresh" label="Swap" onPress={swap} variant="ghost" />
+              <Heading variant="h4">Route</Heading>
+              <IconButton icon="swap" label="Swap pickup and destination" onPress={swap} />
             </XStack>
             <RideLocationPicker
               error={errors.origin}
               label="Pickup area"
               onCoordsChange={setOriginCoords}
-              onValueChange={setOrigin}
+              onValueChange={(t) => {
+                setOrigin(t);
+                setErrors((e) => ({ ...e, origin: null }));
+              }}
               value={origin}
             />
             <RideLocationPicker
               error={errors.destination}
               label="Destination"
               onCoordsChange={setDestinationCoords}
-              onValueChange={setDestination}
+              onValueChange={(t) => {
+                setDestination(t);
+                setErrors((e) => ({ ...e, destination: null }));
+              }}
               placeholder="Work hub, campus, or city"
               value={destination}
             />
@@ -342,24 +367,11 @@ export function RideOfferScreen() {
                     'Choose both places from the suggestions to add distance and travel time.')}
             </AppText>
           </Card>
+        </YStack>
 
+        <YStack onLayout={form.anchor('when')}>
           <Card gap="$x3" variant="outlined">
-            <AppText variant="h4">Tolls</AppText>
-            <XStack aria-label="Tolls" flexWrap="wrap" gap="$x2" role="radiogroup">
-              {TOLL_OPTIONS.map((o) => (
-                <Chip
-                  key={o.id}
-                  label={o.label}
-                  onPress={() => setTollPref(o.id)}
-                  radio
-                  selected={tollPref === o.id}
-                />
-              ))}
-            </XStack>
-          </Card>
-
-          <Card gap="$x3" variant="outlined">
-            <AppText variant="h4">When</AppText>
+            <Heading variant="h4">When</Heading>
             <XStack aria-label="Schedule" flexWrap="wrap" gap="$x2" role="radiogroup">
               <Chip
                 label="One-time trip"
@@ -368,6 +380,7 @@ export function RideOfferScreen() {
                 selected={!isRecurring}
               />
               <Chip
+                icon="repeat"
                 label="Repeats weekly"
                 onPress={() => setIsRecurring(true)}
                 radio
@@ -377,13 +390,16 @@ export function RideOfferScreen() {
             {isRecurring ? (
               <YStack gap="$x2">
                 <AppText variant="label">Days</AppText>
-                <XStack flexWrap="wrap" gap="$x2">
+                <XStack aria-label="Days" flexWrap="wrap" gap="$x2" role="group">
                   {ALL_DAYS.map((d) => (
                     <Chip
                       accessibilityLabel={d.name}
                       key={d.id}
                       label={d.label}
-                      onPress={() => toggleDay(d.id)}
+                      onPress={() => {
+                        toggleDay(d.id);
+                        setErrors((e) => ({ ...e, days: null }));
+                      }}
                       selected={days.includes(d.id)}
                     />
                   ))}
@@ -405,29 +421,23 @@ export function RideOfferScreen() {
               value={departure}
             />
           </Card>
+        </YStack>
 
+        <YStack onLayout={form.anchor('seats')}>
           <Card gap="$x3" variant="outlined">
-            <AppText variant="h4">Seats and price</AppText>
-            <XStack alignItems="flex-start" gap="$x2">
-              <YStack flex={1}>
-                <TextField
-                  error={errors.seats}
-                  helper="1 to 8 seats"
-                  keyboardType="number-pad"
-                  label="Seats offered"
-                  maxLength={1}
-                  onChangeText={(t) => {
-                    setSeats(t);
-                    setErrors((e) => ({ ...e, seats: seatsError(t) }));
-                  }}
-                  value={seats}
-                />
-              </YStack>
-              <XStack gap="$x2" paddingTop="$x6">
-                <AppButton label="−" onPress={() => stepSeats(-1)} variant="secondary" />
-                <AppButton label="+" onPress={() => stepSeats(1)} variant="secondary" />
-              </XStack>
-            </XStack>
+            <Heading variant="h4">Seats and price</Heading>
+            <NumberStepper
+              error={errors.seats}
+              helper="1 to 8 seats"
+              label="Seats offered"
+              max={8}
+              min={1}
+              onChange={(n) => {
+                setSeats(n);
+                setErrors((e) => ({ ...e, seats: null }));
+              }}
+              value={seats}
+            />
             <TextField
               error={errors.amount}
               helper="What each rider pays you toward fuel; 0 for free."
@@ -441,52 +451,83 @@ export function RideOfferScreen() {
               value={amount}
             />
           </Card>
-
-          <Card gap="$x3" variant="outlined">
-            <AppText variant="h4">Preferences</AppText>
-            <AppText variant="label">Luggage space</AppText>
-            <XStack aria-label="Luggage space" flexWrap="wrap" gap="$x2" role="radiogroup">
-              {LUGGAGE_OPTIONS.map((o) => (
-                <Chip
-                  key={o.id}
-                  label={o.label}
-                  onPress={() => setLuggage(o.id)}
-                  radio
-                  selected={luggage === o.id}
-                />
-              ))}
-            </XStack>
-            <AppText variant="label">Who can book</AppText>
-            <XStack aria-label="Who can book" flexWrap="wrap" gap="$x2" role="radiogroup">
-              {GENDER_OPTIONS.map((o) => (
-                <Chip
-                  key={o.id}
-                  label={o.label}
-                  onPress={() => setGender(o.id)}
-                  radio
-                  selected={gender === o.id}
-                />
-              ))}
-            </XStack>
-            {gender === 'FEMALE_ONLY' ? (
-              <AppText tone="muted" variant="caption">
-                Only riders whose gender ManaBandhu has verified can book a women-only ride. Riders
-                who are not verified yet will be refused, so you may get fewer bookings.
-              </AppText>
-            ) : null}
-          </Card>
-
-          <YStack gap="$x2">
-            <AppButton
-              fullWidth
-              label="Publish ride"
-              loading={mutation.isPending}
-              onPress={publish}
-              size="lg"
-            />
-          </YStack>
         </YStack>
-      </Screen>
-    </KeyboardAvoidingView>
+
+        <Card gap="$x3" variant="outlined">
+          <Heading variant="h4">Preferences</Heading>
+          <AppText variant="label">Tolls</AppText>
+          <XStack aria-label="Tolls" flexWrap="wrap" gap="$x2" role="radiogroup">
+            {TOLL_OPTIONS.map((o) => (
+              <Chip
+                key={o.id}
+                label={o.label}
+                onPress={() => setTollPref(o.id)}
+                radio
+                selected={tollPref === o.id}
+              />
+            ))}
+          </XStack>
+          <AppText variant="label">Luggage space</AppText>
+          <XStack aria-label="Luggage space" flexWrap="wrap" gap="$x2" role="radiogroup">
+            {LUGGAGE_OPTIONS.map((o) => (
+              <Chip
+                key={o.id}
+                label={o.label}
+                onPress={() => setLuggage(o.id)}
+                radio
+                selected={luggage === o.id}
+              />
+            ))}
+          </XStack>
+          <AppText variant="label">Who can book</AppText>
+          <XStack aria-label="Who can book" flexWrap="wrap" gap="$x2" role="radiogroup">
+            {GENDER_OPTIONS.map((o) => (
+              <Chip
+                key={o.id}
+                label={o.label}
+                onPress={() => setGender(o.id)}
+                radio
+                selected={gender === o.id}
+              />
+            ))}
+          </XStack>
+          {gender === 'FEMALE_ONLY' ? (
+            <AppText tone="muted" variant="caption">
+              Only riders whose gender ManaBandhu has verified can book a women-only ride. Riders
+              who are not verified yet will be refused, so you may get fewer bookings.
+            </AppText>
+          ) : null}
+        </Card>
+      </RideFormScreen>
+      <ActionBar
+        label="Publish ride"
+        leading={
+          errorCount > 0 ? (
+            <AppText aria-live="polite" tone="danger" variant="label">
+              Fix {errorCount} {errorCount === 1 ? 'field' : 'fields'} above to publish.
+            </AppText>
+          ) : (
+            <YStack gap={2}>
+              <AppText numberOfLines={1} variant="bodyStrong">
+                {seats} {seats === 1 ? 'seat' : 'seats'}
+                {amount.trim() && !amountError(amount)
+                  ? ` · ${contributionText(Number(amount))}`
+                  : ''}
+              </AppText>
+              <AppText numberOfLines={1} tone="muted" variant="caption">
+                {isAuthenticated ? 'Riders can book as soon as it is live' : 'Sign in to publish'}
+              </AppText>
+            </YStack>
+          )
+        }
+      >
+        <AppButton
+          icon="check"
+          label="Publish ride"
+          loading={mutation.isPending}
+          onPress={publish}
+        />
+      </ActionBar>
+    </YStack>
   );
 }
