@@ -88,3 +88,12 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
   - `SupabaseAdminClient` (auth package) is the one service-role client, also used by `AdminDirectoryService`.
   - V36 sets `room_reports.reviewer_id` to `ON DELETE SET NULL`.
   - Local start uses `SUPABASE_PROJECT_URL=http://localhost:9999` with the stub's admin API. Smoke: 162 checks.
+- Media (2026-10-11):
+  - **Upload rules:** `MediaService` owns them; `UploadController` is thin.
+    - `POST /api/v1/media/upload-url {bucket, contentType, size}`: the server picks `<userId>/<uuid>.<ext>`, so client paths are gone.
+    - Images (JPEG/PNG/WebP/HEIC/GIF) up to 5 MB; PDFs up to 10 MB in `documents` only.
+  - **Delete:** `POST /api/v1/media/delete {bucket, path}` works on the caller's folder only (404 otherwise).
+  - **Listing images:** `StorageUrls.requireOwnedImage` rejects any listing image URL that is not a public object in the right bucket under the listing owner's (or acting admin's) folder. It is used by `RoomImageService.add` and `ListingImageService.add`.
+  - **Marketplace image authz:** moved from the controller into `ListingImageService` (`Actor`).
+  - **V37:** configures the storage buckets with the same MIME and size limits (Supabase only; skipped locally).
+  - Smoke suite: 168 checks.

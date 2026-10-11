@@ -49,6 +49,8 @@ interface AuthActions {
   updatePassword: (password: string) => Promise<void>;
   /** Saves the name we greet the member by (auth user metadata `nickname`). Throws on failure. */
   updateNickname: (nickname: string) => Promise<void>;
+  /** Saves profile fields (for example `avatar_url`) to the account's metadata; throws on failure. */
+  updateProfile: (fields: Record<string, string>) => Promise<void>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
   loadIdentity: () => Promise<void>;
@@ -311,6 +313,12 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       set({ error: message, isLoading: false });
       throw err;
     }
+  },
+
+  updateProfile: async (fields) => {
+    const { data, error } = await supabase.auth.updateUser({ data: fields });
+    if (error) throw error;
+    if (data.user) set({ user: data.user });
   },
 
   updateNickname: async (nickname) => {

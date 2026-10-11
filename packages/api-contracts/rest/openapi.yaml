@@ -1809,6 +1809,62 @@ paths:
       responses:
         '200': { description: 'The export ({userId, exportedAt, data})' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /media/upload-url:
+    post:
+      operationId: createUploadUrl
+      summary: Get a signed URL to upload one file to storage
+      description: >-
+        The server picks the object key (<userId>/<uuid>.<ext>). Images (JPEG, PNG, WebP, HEIC, GIF) up to 5 MB in
+        avatars, rooms, rides, posts, marketplace and community; PDFs up to 10 MB only in documents. Upload the file
+        with PUT to uploadUrl within 15 minutes, then use publicUrl (for example as a listing image).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bucket, contentType, size]
+              properties:
+                bucket: { type: string, enum: [avatars, rooms, rides, posts, marketplace, community, documents] }
+                contentType: { type: string, example: image/jpeg }
+                size: { type: integer, minimum: 1, description: Bytes }
+      responses:
+        '200':
+          description: Upload ticket
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uploadUrl, bucket, path, publicUrl, contentType, maxBytes]
+                properties:
+                  uploadUrl: { type: string }
+                  bucket: { type: string }
+                  path: { type: string }
+                  publicUrl: { type: string }
+                  contentType: { type: string }
+                  maxBytes: { type: integer }
+        '400': { description: 'Unknown bucket, unsupported type, or too large' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '502': { description: Storage provider unavailable }
+        '503': { description: Storage is not configured }
+  /media/delete:
+    post:
+      operationId: deleteUpload
+      summary: Delete one of the caller's uploaded files
+      description: POST with a body so object paths stay out of URLs. Paths outside the caller's folder read as 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bucket, path]
+              properties:
+                bucket: { type: string }
+                path: { type: string }
+      responses:
+        '204': { description: Deleted }
+        '404': { description: Not one of the caller's files }
   /referrals/public:
     get:
       operationId: listPublicReferrals

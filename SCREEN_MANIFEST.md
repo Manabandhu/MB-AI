@@ -44,10 +44,10 @@ Each screen entry includes:
 ### Onboarding Photo
 - Route: `/onboarding/profile-photo` (step 2)
 - Module: foundation
-- Purpose: Add profile photo
+- Purpose: Add profile photo (picked from the library, uploaded to the avatars bucket, saved as `avatar_url`)
 - Type: form
-- States: normal
-- Components: FormScreen, Avatar, AppButton, ProgressBar
+- States: normal | uploading (progress %) | upload error | permission denied
+- Components: FormScreen, Avatar, AppButton, ProgressBar, useImageUpload
 - Navigation: next to `/onboarding/what-brings-you-here`
 
 ### Onboarding Reason

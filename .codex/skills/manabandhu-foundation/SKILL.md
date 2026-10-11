@@ -168,3 +168,4 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
   - `foundation/legal/` (`content.ts` with `TERMS_VERSION`, `LegalScreen` with `TermsScreen`/`PrivacyScreen`) serves public routes `/terms` and `/privacy`, also the store-listing URLs. Have the text reviewed by counsel and add the operator's legal name before launch.
   - `foundation/account/AccountDataScreen` at `/settings/account` (sign-in required) handles email/phone change, data export (web download or native share sheet) and account deletion (type DELETE → re-auth → `DELETE /api/v1/me` → sign out).
   - Settings links to Account & data, Terms and Privacy, and its rows now have accessibility roles and labels.
+- Onboarding profile photo (2026-10-11): uploads a real photo with `useImageUpload('avatars')`, shows progress and errors, saves `avatar_url` to the account and deletes the previously uploaded avatar. The stock Unsplash demo toggle is gone.

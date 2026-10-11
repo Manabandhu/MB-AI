@@ -13,10 +13,13 @@ public class RoomImageService {
 
     private final RoomImageRepository repository;
     private final RoomListingRepository listingRepository;
+    private final com.manabandhu.backend.media.StorageUrls storageUrls;
 
-    RoomImageService(RoomImageRepository repository, RoomListingRepository listingRepository) {
+    RoomImageService(RoomImageRepository repository, RoomListingRepository listingRepository,
+                     com.manabandhu.backend.media.StorageUrls storageUrls) {
         this.repository = repository;
         this.listingRepository = listingRepository;
+        this.storageUrls = storageUrls;
     }
 
     @Transactional(readOnly = true)
@@ -26,7 +29,9 @@ public class RoomImageService {
 
     @Transactional
     public RoomImage add(UUID listingId, UUID actorId, boolean isAdmin, String url, int sortOrder) {
-        requireOwnedListing(listingId, actorId, isAdmin);
+        var listing = requireOwnedListing(listingId, actorId, isAdmin);
+        // Only images the owner uploaded through ManaBandhu storage; never arbitrary or local URLs.
+        storageUrls.requireOwnedImage(url, java.util.Set.of("rooms"), listing.getOwnerId(), actorId);
         return repository.save(new RoomImage(listingId, url, sortOrder));
     }
 
@@ -38,11 +43,12 @@ public class RoomImageService {
         repository.deleteById(imageId);
     }
 
-    private void requireOwnedListing(UUID listingId, UUID actorId, boolean isAdmin) {
+    private RoomListing requireOwnedListing(UUID listingId, UUID actorId, boolean isAdmin) {
         var listing = listingRepository.findById(listingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
         if (!isAdmin && !listing.getOwnerId().equals(actorId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this listing");
         }
+        return listing;
     }
 }

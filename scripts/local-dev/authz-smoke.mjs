@@ -713,10 +713,63 @@ if (categories.length > 0) {
   skip += 1;
   console.log('  skip event checks (no event categories seeded)');
 }
-await status('upload path traversal rejected', 400, 'A', 'POST', '/api/v1/media/upload-url', {
+await status('uploads reject non-image types', 400, 'A', 'POST', '/api/v1/media/upload-url', {
   bucket: 'avatars',
-  path: '../x.png',
+  contentType: 'text/html',
+  size: 100,
 });
+await status('uploads reject files over 5 MB', 400, 'A', 'POST', '/api/v1/media/upload-url', {
+  bucket: 'avatars',
+  contentType: 'image/jpeg',
+  size: 6 * 1024 * 1024,
+});
+await status('uploads reject unknown buckets', 400, 'A', 'POST', '/api/v1/media/upload-url', {
+  bucket: 'secrets',
+  contentType: 'image/png',
+  size: 100,
+});
+await status("cannot delete someone else's file", 404, 'C', 'POST', '/api/v1/media/delete', {
+  bucket: 'avatars',
+  path: `${A}/00000000-0000-0000-0000-000000000000.png`,
+});
+{
+  const room = await call('A', 'POST', '/api/v1/rooms/listings', {
+    title: 'Image check',
+    price: 700,
+    roomType: 'private',
+    broadLocation: 'Irving',
+  });
+  await status(
+    'listing images must be uploads, not arbitrary URLs',
+    400,
+    'A',
+    'POST',
+    `/api/v1/rooms/listings/${room.body?.id}/images`,
+    { url: 'https://images.unsplash.com/photo.jpg', sortOrder: 0 },
+  );
+  await status(
+    "listing images cannot point into someone else's folder",
+    400,
+    'A',
+    'POST',
+    `/api/v1/rooms/listings/${room.body?.id}/images`,
+    {
+      url: `http://localhost:9999/storage/v1/object/public/rooms/${C}/00000000-0000-0000-0000-000000000000.jpg`,
+      sortOrder: 0,
+    },
+  );
+  await status(
+    'owner adds an image from their own upload folder',
+    201,
+    'A',
+    'POST',
+    `/api/v1/rooms/listings/${room.body?.id}/images`,
+    {
+      url: `http://localhost:9999/storage/v1/object/public/rooms/${A}/00000000-0000-0000-0000-000000000000.jpg`,
+      sortOrder: 0,
+    },
+  );
+}
 
 console.log('== token validation');
 {

@@ -164,3 +164,8 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - New routes (2026-10-11):
   - `/terms` and `/privacy` (public).
   - `/settings/account` (sign-in required); its data export uses the RN `Share` sheet on native and a Blob download on web, with no new dependency.
+- Uploads (2026-10-11):
+  - `shared/hooks/useImageUpload(bucket)` picks one image (expo-image-picker), checks type and size (`uploadTypes.ts`, tested), gets a signed URL, and uploads with XHR progress.
+  - Its state is `idle | picking | uploading(progress) | done(url) | error(message)`, with cancel. `deleteUpload` removes a replaced file.
+  - First consumer: the onboarding avatar, which replaced the stock Unsplash photo and saves `avatar_url` via `authStore.updateProfile`.
+  - Rooms, marketplace, community and chat still need wiring.

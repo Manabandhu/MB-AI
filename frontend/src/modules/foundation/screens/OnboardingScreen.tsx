@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/lib/authStore';
 import {
   useCompleteOnboarding,
   useOnboardingConfig,
@@ -22,6 +23,7 @@ import {
 } from '@/modules/foundation/onboardingApi';
 import { updateNotificationSettings } from '@/modules/notifications/api';
 import { requestPermissionAndRegister } from '@/modules/notifications/push';
+import { deleteUpload, useImageUpload } from '@/modules/shared/hooks/useImageUpload';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
@@ -199,6 +201,20 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
   const [interestTags, setInterestTags] = useState<string[]>([]);
   const [bio, setBio] = useState<string>('');
   const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const avatarUpload = useImageUpload('avatars');
+  // Uploads the picked photo, then saves it on the account so every avatar in the app shows it.
+  const chooseAvatar = async () => {
+    const url = await avatarUpload.pickAndUpload();
+    if (!url) return;
+    const previous = avatarUrl;
+    setAvatarUrl(url);
+    try {
+      await useAuthStore.getState().updateProfile({ avatar_url: url });
+      if (previous) await deleteUpload('avatars', previous).catch(() => undefined);
+    } catch {
+      setSaveError('Your photo uploaded but could not be saved to your profile. Try again.');
+    }
+  };
   const [notificationPreferences, setNotificationPreferences] = useState<Record<string, boolean>>({
     emergency_sos: true,
     ride_matches: true,
@@ -668,22 +684,26 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                   </View>
                 )}
                 <Pressable
-                  onPress={() => {
-                    // Demo avatar toggle
-                    setAvatarUrl((prev) =>
-                      prev
-                        ? ''
-                        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-                    );
-                  }}
+                  accessibilityLabel={avatarUrl ? 'Change profile photo' : 'Add a profile photo'}
+                  accessibilityRole="button"
+                  disabled={avatarUpload.state.status === 'uploading'}
+                  hitSlop={8}
+                  onPress={chooseAvatar}
                   style={styles.cameraBadge}
                 >
                   <AppIcon color={colors.surface} name="user" size={18} />
                 </Pressable>
               </View>
               <Text style={styles.photoHint}>
-                A friendly photo helps roommates and carpool partners recognize you
+                {avatarUpload.state.status === 'uploading'
+                  ? `Uploading photo… ${avatarUpload.state.progress}%`
+                  : 'A friendly photo helps roommates and carpool partners recognize you'}
               </Text>
+              {avatarUpload.state.status === 'error' ? (
+                <Text accessibilityRole="alert" style={styles.photoError}>
+                  {avatarUpload.state.message}
+                </Text>
+              ) : null}
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Short 1-line Bio (Optional)</Text>
@@ -1311,6 +1331,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     width: 36,
+  },
+  photoError: {
+    color: colors.error,
+    fontSize: 13,
+    marginTop: 6,
+    textAlign: 'center',
   },
   photoHint: {
     color: colors.muted,

@@ -139,32 +139,13 @@ public class MarketplaceController {
     @PostMapping("/listings/{listingId}/images")
     ResponseEntity<ListingImage> addImage(Authentication authentication, @PathVariable UUID listingId,
                                           @Valid @RequestBody AddListingImageInput input) {
-        var actorId = actorId(authentication);
-        var listing = listingService.findById(listingId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Listing not found"));
-        if (!listing.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to add images to this listing");
-        }
-        var image = imageService.add(listingId, input.url(), input.sortOrder());
+        var image = imageService.add(Actor.require(authentication), listingId, input.url(), input.sortOrder());
         return ResponseEntity.created(URI.create("/api/v1/marketplace/images/" + image.getId())).body(image);
     }
 
     @DeleteMapping("/images/{imageId}")
     ResponseEntity<Void> deleteImage(Authentication authentication, @PathVariable UUID imageId) {
-        var actorId = actorId(authentication);
-        var image = imageService.findById(imageId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Image not found"));
-        var listing = listingService.findById(image.getListingId())
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Listing not found"));
-        if (!listing.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to delete this image");
-        }
-        imageService.delete(imageId);
+        imageService.delete(Actor.require(authentication), imageId);
         return ResponseEntity.noContent().build();
     }
 

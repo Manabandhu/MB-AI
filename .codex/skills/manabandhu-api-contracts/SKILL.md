@@ -36,3 +36,4 @@ description: Maintain ManaBandhu's canonical OpenAPI, GraphQL, and AsyncAPI cont
   - The settings description covers quiet hours and the 400.
   - `NotificationPreference` is `{channel, enabled}`.
 - Account (2026-10-11): `GET /me/export` and `DELETE /me` (401 `reauth_required`, 502, 503) are documented under the existing `/me` path.
+- Media (2026-10-11): `POST /media/upload-url` (bucket, contentType, size → ticket with publicUrl) and `POST /media/delete` documented.
