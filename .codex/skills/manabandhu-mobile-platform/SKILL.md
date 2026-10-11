@@ -154,3 +154,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Events: `SavedEventsScreen` is the second auth-gated personal list (sign-in prompt, pull-to-refresh).
 - Expenses: `SettlementsScreen` adds confirm/cancel actions for pending payments; its hex colours were replaced with `palette` tokens.
 - Admin: `AdminUsersScreen` alerts when a status change is refused.
+- `Screen`'s `hero` slot contract: a hero runs under the status bar and must pad itself by `insets.top`. Bottom gaps are `TAB_SCREEN_BOTTOM_GAP` (24, inside tabs) and `SCREEN_BOTTOM_GAP` (32 plus inset). `BottomSheet` thresholds are named constants.

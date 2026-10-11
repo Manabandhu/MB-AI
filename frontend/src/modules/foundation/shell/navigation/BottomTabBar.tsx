@@ -7,6 +7,13 @@ import { useAppearance } from '@/theme/ThemeProvider';
 import { primaryTabs } from './tabs';
 import { useTabPress } from './useTabPress';
 
+/**
+ * Native iOS tab bars sit slightly into the home-indicator inset; trimming this much from the inset (and using it
+ * as the top padding) matches that height. Devices without an indicator still get MIN_BAR_PADDING.
+ */
+const INDICATOR_OVERLAP = 6;
+const MIN_BAR_PADDING = 8;
+
 /** Phone navigation: five tabs pinned to the bottom edge, above the home indicator. */
 export function BottomTabBar(props: BottomTabBarProps) {
   const { palette, reduceMotion } = useAppearance();
@@ -20,9 +27,9 @@ export function BottomTabBar(props: BottomTabBarProps) {
       borderTopColor="$borderColor"
       borderTopWidth={1}
       // Closer to the native iOS tab bar: the home-indicator inset already provides breathing room.
-      paddingBottom={Math.max(props.insets.bottom - 6, 8)}
+      paddingBottom={Math.max(props.insets.bottom - INDICATOR_OVERLAP, MIN_BAR_PADDING)}
       paddingHorizontal="$x2"
-      paddingTop={6}
+      paddingTop={INDICATOR_OVERLAP}
     >
       {primaryTabs.map((tab) => {
         const selected = tab.name === active;

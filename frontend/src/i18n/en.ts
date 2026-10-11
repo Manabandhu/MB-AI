@@ -72,7 +72,7 @@ export const en = {
     placeholder: 'e.g. Sai',
     save: 'Save',
     tooShort: 'Use at least 2 characters.',
-    tooLong: 'Keep it to 20 characters or fewer.',
+    tooLong: 'Keep it to 10 characters or fewer.',
     failed: 'Could not save your nickname. Please try again.',
     row: 'Nickname',
     notSet: 'Not set',

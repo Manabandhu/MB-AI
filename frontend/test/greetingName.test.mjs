@@ -19,5 +19,6 @@ test('greeting name only when it fits', () => {
 test('nickname validation trims and bounds length', () => {
   assert.deepEqual(validateNickname('  Sai  '), { ok: true, value: 'Sai' });
   assert.deepEqual(validateNickname('S'), { ok: false, error: 'tooShort' });
-  assert.deepEqual(validateNickname('x'.repeat(21)), { ok: false, error: 'tooLong' });
+  assert.deepEqual(validateNickname('x'.repeat(11)), { ok: false, error: 'tooLong' });
+  assert.equal(validateNickname('x'.repeat(10)).ok, true);
 });

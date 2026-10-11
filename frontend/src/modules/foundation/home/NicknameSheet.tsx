@@ -5,7 +5,7 @@ import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { TextField } from '@/modules/shared/ui/TextField';
-import { preferredName, validateNickname } from './greetingName';
+import { NICKNAME_MAX, preferredName, validateNickname } from './greetingName';
 
 /** Lets the member set the short name we greet them with. Saved to their account; errors stay visible. */
 export function NicknameSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -19,10 +19,14 @@ export function NicknameSheet({ visible, onClose }: { visible: boolean; onClose:
   useEffect(() => {
     if (visible) {
       const existing = user?.user_metadata?.nickname;
-      // Pre-fill only a real nickname or a first name short enough to keep; never a too-long name.
-      const candidate =
-        typeof existing === 'string' ? existing : (preferredName(user?.user_metadata) ?? '');
-      setValue(validateNickname(candidate).ok ? candidate : '');
+      if (typeof existing === 'string' && existing.trim()) {
+        // Keep a saved nickname as is, even one an older version allowed to be longer; Save validates it.
+        setValue(existing);
+      } else {
+        // Suggest the first name only when it can be saved unchanged.
+        const first = preferredName(user?.user_metadata) ?? '';
+        setValue(validateNickname(first).ok ? first : '');
+      }
       setError(null);
     }
   }, [visible, user]);
@@ -58,7 +62,7 @@ export function NicknameSheet({ visible, onClose }: { visible: boolean; onClose:
           autoFocus
           error={error}
           label={t('nickname.label')}
-          maxLength={24}
+          maxLength={NICKNAME_MAX}
           onChangeText={setValue}
           onSubmitEditing={save}
           placeholder={t('nickname.placeholder')}

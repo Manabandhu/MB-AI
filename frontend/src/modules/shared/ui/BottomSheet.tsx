@@ -23,6 +23,17 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { useAppearance } from '@/theme/ThemeProvider';
 
+/** Gap kept between the sheet's top edge and the status bar / notch. */
+const SHEET_TOP_MARGIN = 12;
+/** Drag distance (px) or fling speed (px/s) on the handle that dismisses the sheet. */
+const DISMISS_DISTANCE = 90;
+const DISMISS_VELOCITY = 900;
+/** `size="tall"` sheets take this share of the available height. */
+const TALL_SHEET_RATIO = 0.88;
+/** Bottom padding above the keyboard, and the minimum when there is no home indicator. */
+const KEYBOARD_GAP = 12;
+const MIN_BOTTOM_PADDING = 16;
+
 type BottomSheetProps = {
   visible: boolean;
   onClose: () => void;
@@ -54,7 +65,7 @@ export function BottomSheet({
   const offscreen = height;
   const translateY = useSharedValue(offscreen);
   const backdrop = useSharedValue(0);
-  const maxHeight = height - insets.top - 12;
+  const maxHeight = height - insets.top - SHEET_TOP_MARGIN;
 
   useEffect(() => {
     const show = Keyboard.addListener(
@@ -90,7 +101,8 @@ export function BottomSheet({
       translateY.value = Math.max(0, event.translationY);
     })
     .onEnd((event) => {
-      if (event.translationY > 90 || event.velocityY > 900) runOnJS(onClose)();
+      if (event.translationY > DISMISS_DISTANCE || event.velocityY > DISMISS_VELOCITY)
+        runOnJS(onClose)();
       else translateY.value = withSpring(0, spring.snappy);
     });
 
@@ -116,9 +128,11 @@ export function BottomSheet({
               backgroundColor="$surface"
               borderTopLeftRadius={28}
               borderTopRightRadius={28}
-              height={size === 'tall' ? maxHeight * 0.88 : undefined}
+              height={size === 'tall' ? maxHeight * TALL_SHEET_RATIO : undefined}
               maxHeight={maxHeight}
-              paddingBottom={keyboardOpen ? 12 : Math.max(insets.bottom, 16)}
+              paddingBottom={
+                keyboardOpen ? KEYBOARD_GAP : Math.max(insets.bottom, MIN_BOTTOM_PADDING)
+              }
               paddingHorizontal="$x4"
             >
               <GestureDetector gesture={drag}>

@@ -127,6 +127,7 @@ export function ProfileTab() {
         onPress={() => useAuthStore.getState().signOut()}
         variant="ghost"
       />
+      <NicknameSheet onClose={() => setNicknameOpen(false)} visible={nicknameOpen} />
     </Screen>
   );
 }

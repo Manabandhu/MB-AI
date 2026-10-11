@@ -10,6 +10,11 @@ import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { TextField } from '@/modules/shared/ui/TextField';
 import { useAppearance } from '@/theme/ThemeProvider';
 
+/** Shortest query that searches every US city (shorter text keeps the nearby list). */
+const MIN_SEARCH_LENGTH = 3;
+/** Cap on city matches so the list stays fast on low-end phones. */
+const MAX_SEARCH_RESULTS = 40;
+
 type LocationSelectorModalProps = { visible: boolean; onClose: () => void };
 
 type Row =
@@ -72,11 +77,11 @@ export function LocationSelectorModal({ visible, onClose }: LocationSelectorModa
   const setLocation = useLocationStore((s) => s.setLocation);
 
   const trimmed = query.trim();
-  const searching = trimmed.length >= 3;
+  const searching = trimmed.length >= MIN_SEARCH_LENGTH;
 
   const rows = useMemo<Row[]>(() => {
     if (searching) {
-      return searchAllUSCities(trimmed, 40).map((city) => ({
+      return searchAllUSCities(trimmed, MAX_SEARCH_RESULTS).map((city) => ({
         kind: 'city',
         key: `s-${city.id}`,
         location: city,
@@ -175,7 +180,10 @@ export function LocationSelectorModal({ visible, onClose }: LocationSelectorModa
                     <CityRow
                       detail={isDetecting ? t('location.detecting') : 'GPS'}
                       icon="compass"
-                      onPress={() => detect()}
+                      // Ignore taps while a lookup is running so two GPS requests never race.
+                      onPress={() => {
+                        if (!isDetecting) void detect();
+                      }}
                       selected={false}
                       title={t('location.detect')}
                     />

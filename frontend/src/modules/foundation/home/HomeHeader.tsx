@@ -16,6 +16,15 @@ import { GradientSurface } from '@/modules/shared/ui/GradientSurface';
 import { useFormFactor } from '@/platform/formFactor';
 import { greetingName } from './greetingName';
 
+/** How far the Ask card on Home slides up over the strip; the strip reserves that space below its content. */
+export const ASK_CARD_OVERLAP = 28;
+/** Space between the strip's content and the overlapping card. */
+const STRIP_BOTTOM_GAP = 12;
+/** Space below the status bar / notch. */
+const STRIP_TOP_GAP = 8;
+/** Horizontal padding on wide layouts ($x6); the strip is wider than the content column by twice this. */
+const WIDE_GUTTER = 24;
+
 function greetingKey(hour: number) {
   if (hour < 5) return 'greeting.evening' as const;
   if (hour < 12) return 'greeting.morning' as const;
@@ -89,10 +98,10 @@ export function HomeHeader() {
       <YStack
         alignSelf="center"
         gap="$x2"
-        maxWidth={maxContentWidth + 48}
-        paddingBottom={40}
+        maxWidth={maxContentWidth + 2 * WIDE_GUTTER}
+        paddingBottom={ASK_CARD_OVERLAP + STRIP_BOTTOM_GAP}
         paddingHorizontal={phoneChrome ? '$x4' : '$x6'}
-        paddingTop={insets.top + 8}
+        paddingTop={insets.top + STRIP_TOP_GAP}
         width="100%"
       >
         <XStack alignItems="center" gap="$x3">

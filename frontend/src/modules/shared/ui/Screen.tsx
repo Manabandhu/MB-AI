@@ -6,6 +6,11 @@ import { YStack } from 'tamagui';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 import { useAppearance } from '@/theme/ThemeProvider';
 
+/** Bottom breathing room inside the tab navigator (the tab bar already covers the home indicator). */
+const TAB_SCREEN_BOTTOM_GAP = 24;
+/** Bottom breathing room on stack screens, added to the home-indicator inset. */
+const SCREEN_BOTTOM_GAP = 32;
+
 type ScreenProps = {
   children: ReactNode;
   /** Pull-to-refresh handler; omit for static screens. */
@@ -44,13 +49,15 @@ export function Screen({
   const { maxContentWidth, windowClass } = useAdaptiveLayout();
   const { palette } = useAppearance();
   const gutter = windowClass === 'compact' ? 16 : 24;
+  // A `hero` runs edge to edge under the status bar, so it must pad itself by `insets.top` (HomeHeader does).
   const padTop = safeTop && !hero;
   return (
     <YStack backgroundColor="$background" flex={1} paddingTop={padTop ? insets.top : 0}>
       {header}
       <ScrollView
         contentContainerStyle={{
-          paddingBottom: (insideTabs ? 24 : 32 + insets.bottom) + bottomInset,
+          paddingBottom:
+            (insideTabs ? TAB_SCREEN_BOTTOM_GAP : SCREEN_BOTTOM_GAP + insets.bottom) + bottomInset,
         }}
         keyboardShouldPersistTaps="handled"
         refreshControl={

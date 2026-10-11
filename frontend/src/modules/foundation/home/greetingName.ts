@@ -1,7 +1,8 @@
 /** Longest name shown beside the greeting on one line of a phone header. Longer names trigger the nickname nudge. */
 export const MAX_GREETING_NAME = 10;
 export const NICKNAME_MIN = 2;
-export const NICKNAME_MAX = 20;
+/** A saved nickname must always fit beside the greeting, otherwise the nudge would keep coming back. */
+export const NICKNAME_MAX = MAX_GREETING_NAME;
 
 type Metadata = { nickname?: unknown; full_name?: unknown } | null | undefined;
 
