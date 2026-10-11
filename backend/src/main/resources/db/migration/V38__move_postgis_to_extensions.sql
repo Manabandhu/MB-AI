@@ -2,9 +2,10 @@
 -- V20 installed it into public, so public.spatial_ref_sys (owned by supabase_admin, no RLS, writable by anon and
 -- authenticated) was reachable through the Data API. The migration role does not own that table, so it cannot enable
 -- RLS or revoke grants; the Supabase-recommended fix is to reinstall the extension in the `extensions` schema.
--- PostGIS is not relocatable, so the extension is dropped and recreated. The only dependents are three location
+-- PostGIS is not relocatable, so the extension is dropped and recreated. The expected dependents are three location
 -- columns (no application code reads them); their values are kept as EWKT and restored. If the extension cannot be
--- dropped (insufficient privilege), the block rolls back to its savepoint and logs a warning instead of failing startup.
+-- dropped (insufficient privilege, or a dependent other than those columns), the block rolls back to its savepoint
+-- and logs a warning instead of failing startup.
 
 create schema if not exists extensions;
 
@@ -30,7 +31,11 @@ begin
             from public.ride_offers
             where origin_location is not null or destination_location is not null;
 
-        drop extension postgis cascade;
+        -- Drop the known dependents explicitly; without CASCADE any unexpected dependent makes the drop fail and the
+        -- handler below leaves everything in place.
+        alter table public.room_listings drop column location;
+        alter table public.ride_offers drop column origin_location, drop column destination_location;
+        drop extension postgis;
         create extension postgis schema extensions;
 
         alter table public.room_listings

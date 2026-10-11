@@ -20,7 +20,9 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
    - `ApiExceptionHandler` (REST) and `GraphqlExceptionResolver` map errors to 400/401/403/404/409 and never return exception messages or SQL for 5xx.
    - Only community, rooms, rides and events have GraphQL controllers; do not add resolvers for fields that are not in the schema.
    - New tables must enable RLS and revoke `anon`/`authenticated` unless a policy is intended (see V31).
-   - PostGIS is installed in the `extensions` schema (V38), not `public`; qualify `extensions.st_*` in SQL.
+   - PostGIS is installed in the `extensions` schema (V38), not `public`; qualify `extensions.st_*` in SQL. V38 drops
+     only the three known location columns before `DROP EXTENSION` (no CASCADE); any other dependent makes it log a
+     warning and leave PostGIS in `public` rather than destroy objects.
    - Run locally against plain Postgres + PostGIS using `scripts/local-dev/supabase-stub.sql` (auth schema, roles and realtime publication stand-ins).
 9. Baseline existing Supabase schemas at Flyway version `0` so repository migrations still run from `V1`. New V2 (`room_listings`, `room_images`, `room_availabilities`, `room_bookings`, `room_favorites`) and V3 (`ride_offers`, `ride_requests`, `ride_participants`, `ride_bookings`, `ride_ratings`) migrations follow this baseline.
 10. Use `pnpm dev:backend` for local backend startup; it loads `backend/.env` when present while preserving shell environment overrides, then runs the Maven wrapper.
