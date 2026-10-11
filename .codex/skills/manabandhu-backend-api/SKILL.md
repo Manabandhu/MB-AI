@@ -83,3 +83,8 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
   - There is one settings store with quiet hours, a paged inbox, read/read-all, Expo device tokens (V35), and Expo push dispatch behind `PUSH_NOTIFICATIONS_ENABLED`.
   - Smoke suite: 155 checks.
 - Notification settings: safety notices ignore the "all notifications" pause (they still need `inApp` and `safetyAlerts`).
+- Account (2026-10-11):
+  - `AccountService`/`AccountController` provide `GET /api/v1/me/export` and `DELETE /api/v1/me` (recent sign-in from JWT `amr`, else 401 `reauth_required`).
+  - `SupabaseAdminClient` (auth package) is the one service-role client, also used by `AdminDirectoryService`.
+  - V36 sets `room_reports.reviewer_id` to `ON DELETE SET NULL`.
+  - Local start uses `SUPABASE_PROJECT_URL=http://localhost:9999` with the stub's admin API. Smoke: 162 checks.

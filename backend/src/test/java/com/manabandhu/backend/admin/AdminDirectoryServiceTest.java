@@ -26,7 +26,7 @@ class AdminDirectoryServiceTest {
     private final AdminAuditService audit = mock(AdminAuditService.class);
     // Supabase is configured so a passing check would reach the network; every case here must stop before that.
     private final AdminDirectoryService service =
-            new AdminDirectoryService(jdbc, audit, "http://127.0.0.1:1", "service-role");
+            new AdminDirectoryService(jdbc, audit, mock(com.manabandhu.backend.auth.SupabaseAdminClient.class));
     private final Actor admin = new Actor(UUID.randomUUID(), true, false);
     private final Actor superAdmin = new Actor(UUID.randomUUID(), true, true);
 

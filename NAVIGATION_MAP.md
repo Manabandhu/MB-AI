@@ -25,6 +25,9 @@
 ├── /saved (Saved Items)
 ├── /profile (Profile)
 │   └── /settings (Settings)
+│       └── /settings/account (Account & data: sign-in details, export, delete; sign-in required)
+├── /terms (Terms of Service, public)
+├── /privacy (Privacy Policy, public)
 ├── /onboarding/*
 │   ├── /onboarding/about (About You)
 │   ├── /onboarding/photo (Profile Photo)

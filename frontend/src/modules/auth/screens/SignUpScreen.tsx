@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Text, type TextInput } from 'react-native';
+import type { TextInput } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import {
   friendlyAuthError,
@@ -15,9 +15,10 @@ import {
   AuthNotice,
   AuthScreen,
   AuthSwitch,
-  authStyles,
   SocialButtons,
 } from '@/modules/auth/components/AuthKit';
+import { ConsentCheckbox } from '@/modules/auth/components/ConsentCheckbox';
+import { TERMS_VERSION } from '@/modules/foundation/legal/content';
 
 type FieldErrors = { name?: string; email?: string; password?: string };
 
@@ -34,6 +35,8 @@ export function SignUpScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [socialBusy, setSocialBusy] = useState<'apple' | 'google' | null>(null);
   const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
+  const [accepted, setAccepted] = useState(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
 
   const validate = (): FieldErrors => ({
     name: name.trim().length < 2 ? 'Enter your name' : undefined,
@@ -45,11 +48,12 @@ export function SignUpScreen() {
     const next = validate();
     setErrors(next);
     setFormError(null);
-    if (next.name || next.email || next.password) return;
+    setConsentError(accepted ? null : 'Please accept the Terms of Service and Privacy Policy');
+    if (next.name || next.email || next.password || !accepted) return;
     setSubmitting(true);
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const needsConfirmation = await signUp(normalizedEmail, password, name.trim());
+      const needsConfirmation = await signUp(normalizedEmail, password, name.trim(), TERMS_VERSION);
       // With a session the route guard continues to onboarding; otherwise the member confirms by email first.
       if (needsConfirmation) setConfirmationSentTo(normalizedEmail);
     } catch (error) {
@@ -61,6 +65,10 @@ export function SignUpScreen() {
 
   const social = async (provider: 'apple' | 'google') => {
     setFormError(null);
+    if (!accepted) {
+      setConsentError('Please accept the Terms of Service and Privacy Policy');
+      return;
+    }
     setSocialBusy(provider);
     try {
       await signInWithOAuth(provider);
@@ -113,6 +121,14 @@ export function SignUpScreen() {
       }
     >
       {formError ? <AuthNotice>{formError}</AuthNotice> : null}
+      <ConsentCheckbox
+        checked={accepted}
+        error={consentError}
+        onChange={(next) => {
+          setAccepted(next);
+          if (next) setConsentError(null);
+        }}
+      />
       <SocialButtons
         busy={socialBusy}
         onApple={() => social('apple')}
@@ -177,10 +193,6 @@ export function SignUpScreen() {
         returnKeyType="go"
         onSubmitEditing={submit}
       />
-      <Text style={authStyles.legal}>
-        By creating an account you agree to use ManaBandhu respectfully and follow its community
-        guidelines.
-      </Text>
     </AuthScreen>
   );
 }

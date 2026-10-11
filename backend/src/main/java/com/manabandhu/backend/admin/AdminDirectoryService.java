@@ -2,28 +2,19 @@ package com.manabandhu.backend.admin;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.auth.SupabaseAdminClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -47,21 +38,12 @@ class AdminDirectoryService {
 
     private final JdbcTemplate jdbcTemplate;
     private final AdminAuditService audit;
-    private final RestTemplate restTemplate;
-    private final String supabaseProjectUrl;
-    private final String serviceRoleKey;
+    private final SupabaseAdminClient supabaseAdmin;
 
-    AdminDirectoryService(JdbcTemplate jdbcTemplate, AdminAuditService audit,
-                          @Value("${app.supabase.project-url:}") String supabaseProjectUrl,
-                          @Value("${app.supabase.service-role-key:}") String serviceRoleKey) {
+    AdminDirectoryService(JdbcTemplate jdbcTemplate, AdminAuditService audit, SupabaseAdminClient supabaseAdmin) {
         this.jdbcTemplate = jdbcTemplate;
         this.audit = audit;
-        this.supabaseProjectUrl = supabaseProjectUrl;
-        this.serviceRoleKey = serviceRoleKey;
-        var requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
-        requestFactory.setReadTimeout(Duration.ofSeconds(10));
-        this.restTemplate = new RestTemplate(requestFactory);
+        this.supabaseAdmin = supabaseAdmin;
     }
 
     private static String shortId(Object id) {
@@ -151,19 +133,7 @@ class AdminDirectoryService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a super admin can suspend an admin");
             }
         }
-        if (supabaseProjectUrl.isBlank() || serviceRoleKey.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Supabase admin API is not configured");
-        }
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(serviceRoleKey);
-        headers.set("apikey", serviceRoleKey);
-        try {
-            restTemplate.exchange(supabaseProjectUrl + "/auth/v1/admin/users/" + id, HttpMethod.PUT,
-                    new HttpEntity<>(Map.of("ban_duration", suspend ? SUSPEND_DURATION : "none"), headers), String.class);
-        } catch (RestClientException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Supabase rejected the status change", exception);
-        }
+        supabaseAdmin.setBanned(id, suspend ? SUSPEND_DURATION : "none");
         audit.record(actor.id().toString(), "user." + (suspend ? "suspended" : "active"), "USER", id.toString());
         return user(id);
     }

@@ -30,6 +30,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/Identity'
         '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      operationId: deleteMyAccount
+      summary: Delete the caller's account
+      description: >-
+        Requires a sign-in within the last 10 minutes (the token's amr timestamp), otherwise 401 with reason
+        reauth_required. Shared expense groups the caller owns pass to another member; then the auth user is deleted
+        and the caller's rows cascade.
+      responses:
+        '204': { description: Account deleted }
+        '401': { description: 'Not signed in, or the last sign-in is older than 10 minutes (reauth_required)' }
+        '502': { description: The identity provider refused the deletion }
+        '503': { description: Account deletion is not configured on this server }
   /foundation/welcome:
     get:
       operationId: getWelcomeFlow
@@ -1789,6 +1801,14 @@ paths:
       responses:
         '200': { description: Coordinates }
         '503': { description: Maps provider is not configured }
+  /me/export:
+    get:
+      operationId: exportMyData
+      summary: Download everything stored against the caller
+      description: JSON with one array per table of the caller's own rows (at most 1000 rows per table).
+      responses:
+        '200': { description: 'The export ({userId, exportedAt, data})' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /referrals/public:
     get:
       operationId: listPublicReferrals

@@ -924,6 +924,52 @@ await status('unknown package status is a 400', 400, 'A', 'POST', '/api/v1/utili
   status: 'teleported',
 });
 
+console.log('== account data');
+{
+  await status('anonymous cannot export data', 401, null, 'GET', '/api/v1/me/export');
+  const exported = await call('A', 'GET', '/api/v1/me/export');
+  expect('member exports their data', exported.status, 200);
+  const rows = Object.values(exported.body?.data ?? {}).flat();
+  expect(
+    'export holds only rows that belong to the caller',
+    exported.body?.userId === A && rows.length > 0,
+    true,
+  );
+  // A throwaway account: signs up through the local auth stub, creates data, then deletes itself.
+  const signup = await fetch('http://localhost:9999/auth/v1/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: `delete-${Date.now()}@example.test`, password: 'Delete-me-123' }),
+  }).then((r) => r.json());
+  const F = signup.user?.id;
+  if (F) {
+    const now = Math.floor(Date.now() / 1000);
+    token.F = mint(F, [], {}, { amr: [{ method: 'password', timestamp: now }] });
+    token.Fstale = mint(F, [], {}, { amr: [{ method: 'password', timestamp: now - 3600 }] });
+    const doomed = await status(
+      'throwaway account creates a referral',
+      201,
+      'F',
+      'POST',
+      '/api/v1/referrals',
+      {
+        title: 'Delete me',
+        description: 'x',
+        category: 'tech',
+        details: 'x',
+        urgency: 'low',
+        desiredOutcome: 'x',
+      },
+    );
+    await status('deleting needs a recent sign-in', 401, 'Fstale', 'DELETE', '/api/v1/me');
+    await status('member deletes their account', 204, 'F', 'DELETE', '/api/v1/me');
+    await status('deleted data is gone', 404, 'A', 'GET', `/api/v1/referrals/${doomed?.id}`);
+  } else {
+    console.log('  skip deletion checks (local auth signup unavailable)');
+    skip += 1;
+  }
+}
+
 console.log('== admin');
 await status('non-admin blocked from admin API', 403, 'B', 'GET', '/api/v1/admin/rooms');
 await status('admin lists users', 200, 'D', 'GET', '/api/v1/admin/users');

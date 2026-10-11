@@ -96,3 +96,13 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
   - **`authStore.signOut`:** it rejects when Supabase refuses, leaving the member signed in, and it is the only place that navigates after signing out (to `/welcome`).
   - **Sign-out callers:** Settings and Profile go through `signOutWithFeedback()` (`foundation/account/signOut.ts`). It removes this device's push token first (best effort), then shows an alert if sign-out fails. Previously the success path navigated twice and the Profile tab swallowed errors.
   - **Splash:** the root layout runs the only `checkSession`. `SplashScreen` waits for it to settle and routes once. A slow check never sends a signed-in member to Welcome; after 8 s it offers "Try again". The 2.2 s fallback and the tap-anywhere bounce were removed.
+- Legal and account (2026-10-11):
+  - **Sign-up consent:** sign-up requires the `ConsentCheckbox` (links to `/terms` and `/privacy`) before email or Apple/Google sign-up. Email sign-up stores `terms_version` and `terms_accepted_at` in `user_metadata`. OAuth sign-ups do not record the version yet.
+  - **Re-auth:** `foundation/account/reauth.ts` plus `ReauthSheet` (password, or a one-time code to the member's email or phone) run before deletion and before email/phone changes.
+  - **Contact changes:** use `supabase.auth.updateUser`; the UI says the change waits for confirmation.
+  - **Export and deletion:**
+    - `GET /api/v1/me/export` returns a JSON copy of the caller's rows (`AccountService.OWNED_DATA`, fixed table list, ≤ 1000 rows per table).
+    - `DELETE /api/v1/me` needs a sign-in within 10 minutes, read from the JWT `amr` timestamps (`RecentSignIn`); otherwise 401 `reauth_required`.
+    - Deletion hands owned expense groups to another member, then deletes the Supabase auth user through `SupabaseAdminClient`; rows cascade. V36 makes `room_reports.reviewer_id` `ON DELETE SET NULL` so deletion is never blocked.
+  - **Local stub:** it implements `DELETE/PUT /auth/v1/admin/users/{id}` (service role `local-service-role`) and puts `amr` on its tokens.
+  - **Setup docs:** dashboard setup (redirect URLs, providers, templates, secrets, store URLs) is in `docs/auth/SUPABASE_SETUP.md`.

@@ -66,6 +66,9 @@ export const screenCatalog = [
       screen('foundation', 'saved', 'Saved', '/saved'),
       screen('foundation', 'profile', 'Profile', '/profile'),
       screen('foundation', 'settings', 'Settings', '/settings'),
+      screen('foundation', 'settings/account', 'Account & Data', '/settings/account'),
+      screen('foundation', 'terms', 'Terms of Service', '/terms'),
+      screen('foundation', 'privacy', 'Privacy Policy', '/privacy'),
     ],
   },
   {

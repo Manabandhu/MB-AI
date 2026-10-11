@@ -34,7 +34,12 @@ export interface IdentityResponse {
 interface AuthActions {
   signIn: (email: string, password: string) => Promise<void>;
   /** Resolves to true when the account still needs its email confirmed before a session exists. */
-  signUp: (email: string, password: string, name?: string) => Promise<boolean>;
+  signUp: (
+    email: string,
+    password: string,
+    name?: string,
+    termsVersion?: string,
+  ) => Promise<boolean>;
   signInWithPhone: (phone: string) => Promise<void>;
   signInWithEmailOtp: (email: string) => Promise<void>;
   /** On native resolves once the in-app browser returns; on web the page navigates to the provider. */
@@ -134,13 +139,21 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     }
   },
 
-  signUp: async (email, password, name) => {
+  signUp: async (email, password, name, termsVersion) => {
     set({ isLoading: true, error: null, needsEmailConfirmation: false });
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: name ? { data: { full_name: name } } : undefined,
+        // The accepted terms version is kept on the account as the record of consent.
+        options: {
+          data: {
+            ...(name ? { full_name: name } : {}),
+            ...(termsVersion
+              ? { terms_version: termsVersion, terms_accepted_at: new Date().toISOString() }
+              : {}),
+          },
+        },
       });
       if (error) throw error;
       if (data.session) {

@@ -23,3 +23,4 @@ description: Maintain ManaBandhu build, CI/CD, environments, releases, migration
 - `CI · Frontend` also triggers on `packages/core/**` and runs `pnpm test:packages` (shared package tests) before the frontend tests.
 - `CI · Governance` runs `scripts/verify-design-system.mjs` (design-system ratchet) after the route check.
 - Backend env (2026-10-11): `PUSH_NOTIFICATIONS_ENABLED` (default false; set true where deployed to send Expo pushes) and optional `EXPO_ACCESS_TOKEN`. Migration V35 (`push_device_tokens`) dedupes `device_registrations` tokens and adds indexes.
+- Account deletion and admin suspension need `SUPABASE_PROJECT_URL` and `SUPABASE_SERVICE_ROLE_KEY` on the backend (otherwise 503). Migration V36 adjusts a `room_reports` FK. Supabase dashboard setup: `docs/auth/SUPABASE_SETUP.md`.

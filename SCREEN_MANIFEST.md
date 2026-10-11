@@ -183,11 +183,11 @@ Each screen entry includes:
 ### Sign Up
 - Route: `/sign-up`
 - Module: auth
-- Purpose: Create new account
+- Purpose: Create new account (email or Apple/Google); a required consent checkbox links to `/terms` and `/privacy` and the accepted terms version is stored on the account
 - Type: auth
-- States: normal | error | loading
-- Components: ScreenShell, FormScreen, Input, AppButton, Text, Link
-- Navigation: to `/home` on success, to `/sign-in`
+- States: normal | error | loading | consent missing | confirmation sent
+- Components: AuthScreen, AuthField, ConsentCheckbox, SocialButtons, AuthButton
+- Navigation: to onboarding on success, to `/sign-in`, `/terms`, `/privacy`
 
 ### Forgot Password
 - Route: `/forgot-password`
@@ -1157,3 +1157,34 @@ Each screen entry includes:
 - States: loading | empty | error
 - Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
 - Navigation: back to `/assistant`
+
+---
+
+## Account & legal
+
+### Account & Data
+- Route: `/settings/account`
+- Module: foundation
+- Purpose: Change email or phone, download a JSON copy of your data, delete the account
+- Type: settings
+- States: normal | busy | notice (change pending confirmation) | error | re-auth sheet | delete confirm sheet
+- Components: Screen, Section, Card, TextField, AppButton, ListRow, BottomSheet, ReauthSheet
+- Navigation: requires sign-in; links to `/terms` and `/privacy`; after deletion goes to `/welcome`
+
+### Terms of Service
+- Route: `/terms`
+- Module: foundation
+- Purpose: Terms (versioned; sign-up records the accepted version)
+- Type: document
+- States: normal
+- Components: Screen, Card, AppText, IconButton
+- Navigation: public; back
+
+### Privacy Policy
+- Route: `/privacy`
+- Module: foundation
+- Purpose: What is collected, processors, choices (export and delete)
+- Type: document
+- States: normal
+- Components: Screen, Card, AppText, IconButton
+- Navigation: public; back

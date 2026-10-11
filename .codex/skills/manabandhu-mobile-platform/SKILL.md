@@ -161,3 +161,6 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
   - The root layout calls `useOpenPushTaps`.
   - Notification screens are rebuilt on `Screen`/`Card`/`AppText` (no hex colours).
 - Auth session handling (2026-10-11): one `checkSession` (root layout); splash waits for it; sign-out navigates once from the store.
+- New routes (2026-10-11):
+  - `/terms` and `/privacy` (public).
+  - `/settings/account` (sign-in required); its data export uses the RN `Share` sheet on native and a Blob download on web, with no new dependency.

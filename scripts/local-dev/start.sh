@@ -83,7 +83,7 @@ if curl -sf http://localhost:8080/api/v1/health >/dev/null 2>&1; then
 else
   DATABASE_URL="jdbc:postgresql://$PGHOST:$PGPORT/$DB" DATABASE_USERNAME="$PGUSER" DATABASE_PASSWORD="$PGPASSWORD" \
   SUPABASE_JWKS_URI=http://localhost:9999/jwks.json SUPABASE_JWT_ISSUER=http://localhost:9999/auth/v1 \
-  SUPABASE_PROJECT_URL= SUPABASE_SERVICE_ROLE_KEY= \
+  SUPABASE_PROJECT_URL=http://localhost:9999 SUPABASE_SERVICE_ROLE_KEY=local-service-role \
     nohup "${JAVA_HOME:+$JAVA_HOME/bin/}java" -jar "$JAR" >"$STATE/backend.log" 2>&1 &
   echo $! >"$STATE/backend.pid"
   for _ in $(seq 1 90); do

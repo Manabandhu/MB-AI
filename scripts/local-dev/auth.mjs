@@ -95,6 +95,24 @@ function passwordMatches(stored, password) {
   );
 }
 
+/** Service-role key the local backend uses for the admin API (local only; never a real secret). */
+export const LOCAL_SERVICE_ROLE_KEY = 'local-service-role';
+
+/** Runs one statement against the local database with :'name' variables bound from `vars`. */
+function runSql(sql, vars) {
+  const args = ['-d', process.env.LOCAL_DB ?? 'manabandhu', '-q', '-v', 'ON_ERROR_STOP=1'];
+  for (const [key, value] of Object.entries(vars)) args.push('-v', `${key}=${value}`);
+  try {
+    execFileSync('psql', args, {
+      input: sql,
+      env: { PGHOST: 'localhost', PGUSER: 'postgres', PGPASSWORD: 'postgres', ...process.env },
+      stdio: ['pipe', 'ignore', 'ignore'],
+    });
+  } catch {
+    console.warn('Local auth could not update the database');
+  }
+}
+
 /** Mirrors a new account into the local database so foreign keys to auth.users hold. */
 function persistToDatabase(user) {
   // psql only interpolates :'variables' in scripts read from stdin, which also keeps values out of the SQL text.
@@ -154,11 +172,13 @@ function sessionFor(user) {
   refreshTokens.set(refreshToken, user.id);
   const now = Math.floor(Date.now() / 1000);
   return {
-    access_token: mint(user.id, [], {
-      email: user.email,
-      phone: user.phone,
-      metadata: user.metadata,
-    }),
+    // Like Supabase, record when this sign-in happened (amr); account deletion requires a recent one.
+    access_token: mint(
+      user.id,
+      [],
+      { email: user.email, phone: user.phone, metadata: user.metadata },
+      { amr: [{ method: 'password', timestamp: now }] },
+    ),
     token_type: 'bearer',
     expires_in: 7200,
     expires_at: now + 7200,
@@ -290,6 +310,20 @@ async function handleAuth(req, url, body) {
     return { status: 200, body: publicUser(user) };
   }
   if (req.method === 'POST' && path === '/logout') return { status: 204, body: null };
+  // Admin API (service role), used by account deletion and suspension in the backend.
+  const adminUser = path.match(/^\/admin\/users\/([0-9a-f-]{36})$/);
+  if (adminUser) {
+    if ((req.headers.authorization ?? '') !== `Bearer ${LOCAL_SERVICE_ROLE_KEY}`) {
+      return authError(401, 'no_authorization', 'Service role required');
+    }
+    const id = adminUser[1];
+    if (req.method === 'DELETE') {
+      saveUsers(users.filter((u) => u.id !== id));
+      runSql("delete from auth.users where id = :'id';", { id });
+      return { status: 200, body: {} };
+    }
+    if (req.method === 'PUT') return { status: 200, body: { id } };
+  }
   return authError(404, 'not_found', `Local auth does not implement ${req.method} ${path}`);
 }
 

@@ -1,5 +1,5 @@
 import { breakpoint, palette } from '@manabandhu/design-system';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
@@ -158,7 +158,12 @@ export function SettingsScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>Safety & Trust</Text>
             <View style={s.cardGroup}>
-              <Pressable onPress={() => router.push('/safety')} style={s.linkRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Emergency SOS and Safety Center"
+                onPress={() => router.push('/safety')}
+                style={s.linkRow}
+              >
                 <View style={s.linkLeft}>
                   <View style={[s.linkIconWrap, { backgroundColor: '#FEE2E2' }]}>
                     <AppIcon name="shield" size={16} color="#DC2626" />
@@ -173,14 +178,19 @@ export function SettingsScreen() {
 
               <View style={s.divider} />
 
-              <Pressable onPress={() => router.push('/notifications/settings')} style={s.linkRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Notification settings"
+                onPress={() => router.push('/notifications/settings')}
+                style={s.linkRow}
+              >
                 <View style={s.linkLeft}>
                   <View style={s.linkIconWrap}>
                     <AppIcon name="bell" size={16} color={C.secondary} />
                   </View>
                   <View>
-                    <Text style={s.linkLabel}>Detailed Notification Channels</Text>
-                    <Text style={s.linkSub}>SMS, email, and quiet hours configuration</Text>
+                    <Text style={s.linkLabel}>Notification settings</Text>
+                    <Text style={s.linkSub}>Push, categories, and quiet hours</Text>
                   </View>
                 </View>
                 <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
@@ -192,7 +202,68 @@ export function SettingsScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>About & Help</Text>
             <View style={s.cardGroup}>
-              <Pressable onPress={() => router.push('/splash')} style={s.linkRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Account and data: sign-in details, download your data, delete account"
+                onPress={() => router.push('/settings/account' as Href)}
+                style={s.linkRow}
+              >
+                <View style={s.linkLeft}>
+                  <View style={s.linkIconWrap}>
+                    <AppIcon name="user" size={16} color={C.secondary} />
+                  </View>
+                  <View>
+                    <Text style={s.linkLabel}>Account & data</Text>
+                    <Text style={s.linkSub}>
+                      Sign-in details, download your data, delete account
+                    </Text>
+                  </View>
+                </View>
+                <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
+              </Pressable>
+
+              <View style={s.divider} />
+
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Terms of Service"
+                onPress={() => router.push('/terms' as Href)}
+                style={s.linkRow}
+              >
+                <View style={s.linkLeft}>
+                  <View style={s.linkIconWrap}>
+                    <AppIcon name="shield" size={16} color={C.secondary} />
+                  </View>
+                  <Text style={s.linkLabel}>Terms of Service</Text>
+                </View>
+                <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
+              </Pressable>
+
+              <View style={s.divider} />
+
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Privacy Policy"
+                onPress={() => router.push('/privacy' as Href)}
+                style={s.linkRow}
+              >
+                <View style={s.linkLeft}>
+                  <View style={s.linkIconWrap}>
+                    <AppIcon name="shield" size={16} color={C.secondary} />
+                  </View>
+                  <Text style={s.linkLabel}>Privacy Policy</Text>
+                </View>
+                <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
+              </Pressable>
+
+              <View style={s.divider} />
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Replay welcome introduction"
+                onPress={() => router.push('/splash')}
+                style={s.linkRow}
+              >
                 <View style={s.linkLeft}>
                   <View style={s.linkIconWrap}>
                     <AppIcon name="help" size={16} color={C.secondary} />
