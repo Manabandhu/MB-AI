@@ -28,3 +28,10 @@ description: Maintain ManaBandhu's canonical OpenAPI, GraphQL, and AsyncAPI cont
 - P0 hardening (2026-10-10): GraphQL `savedRoomListings` returns the caller's favorites (login required), `createRoomListing` creates a validated draft, and `roomListings` returns at most 100 active listings. No schema shape changed.
 - P0 hardening (2026-10-10): `GET /events/saved` is authenticated and caller-scoped (401 documented); `POST /events` and `POST /events/{eventId}/attendance` document their 400s. GraphQL `savedEvents` requires a login; `events` returns at most 100.
 - P0 hardening (2026-10-10): `POST /expenses/groups/{groupId}/settlements` documents server-decided status and the 409, and `PATCH /expenses/settlements/{settlementId}` (confirm/cancel transitions) is documented. `settledAt` is no longer accepted from clients.
+- Notifications (2026-10-11):
+  - Paged `GET /notifications/inbox` with `unreadCount`.
+  - `GET /notifications/{id}` has no side effect.
+  - `POST /notifications/read-all`.
+  - `POST /notifications/devices` and `/devices/remove`.
+  - The settings description covers quiet hours and the 400.
+  - `NotificationPreference` is `{channel, enabled}`.

@@ -1,8 +1,11 @@
 package com.manabandhu.backend.notifications;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,43 +21,48 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Sends push notifications for undispatched rows in small batches. Rows are claimed with row locks so multiple
- * instances never double-send, and a row is only marked dispatched after the push provider accepted it.
+ * Sends push notifications for undispatched rows in small batches through the Expo push service. Rows are claimed
+ * with row locks so multiple instances never double-send. Per notification it honours the recipient's settings:
+ * push off → the row is closed without sending; quiet hours → the push waits until they end; no registered device
+ * → closed without sending. Tokens Expo reports as unregistered are disabled.
  */
 @Service
 public class NotificationDispatcherService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationDispatcherService.class);
     static final int BATCH_SIZE = 50;
+    static final String EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 
     private final NotificationService notificationService;
+    private final NotificationsContentService settings;
+    private final DeviceTokenService devices;
     private final TransactionTemplate transactionTemplate;
     private final RestTemplate restTemplate;
-    private final String supabaseProjectUrl;
-    private final String serviceRoleKey;
+    private final boolean enabled;
+    private final String expoAccessToken;
 
     NotificationDispatcherService(NotificationService notificationService,
+                                  NotificationsContentService settings,
+                                  DeviceTokenService devices,
                                   TransactionTemplate transactionTemplate,
-                                  @Value("${app.supabase.project-url:}") String supabaseProjectUrl,
-                                  @Value("${app.supabase.service-role-key:}") String serviceRoleKey) {
+                                  @Value("${app.notifications.push.enabled:false}") boolean enabled,
+                                  @Value("${app.notifications.push.expo-access-token:}") String expoAccessToken) {
         this.notificationService = notificationService;
+        this.settings = settings;
+        this.devices = devices;
         this.transactionTemplate = transactionTemplate;
-        this.supabaseProjectUrl = supabaseProjectUrl;
-        this.serviceRoleKey = serviceRoleKey;
+        this.enabled = enabled;
+        this.expoAccessToken = expoAccessToken;
         var requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(5));
         requestFactory.setReadTimeout(Duration.ofSeconds(10));
         this.restTemplate = new RestTemplate(requestFactory);
     }
 
-    boolean configured() {
-        return !supabaseProjectUrl.isBlank() && !serviceRoleKey.isBlank();
-    }
-
     @Scheduled(fixedDelayString = "${app.notifications.dispatch-interval-ms:60000}")
     public void dispatchDigests() {
-        // Without a push provider, leave rows undispatched so they are delivered once one is configured.
-        if (!configured()) return;
+        // With push disabled, rows stay undispatched so they are delivered once it is switched on.
+        if (!enabled) return;
         try {
             var sent = transactionTemplate.execute(status -> dispatchBatch());
             if (sent != null && sent > 0) log.info("notifications_dispatched count={}", sent);
@@ -63,11 +71,27 @@ public class NotificationDispatcherService {
         }
     }
 
-    private int dispatchBatch() {
+    int dispatchBatch() {
         var sent = 0;
+        var now = Instant.now();
         for (var notification : notificationService.claimPending(BATCH_SIZE)) {
+            var userId = notification.getUserId();
+            if (!settings.allowsPush(userId)) {
+                notification.markDispatched();
+                continue;
+            }
+            var quietUntil = settings.quietUntil(userId, now);
+            if (quietUntil != null) {
+                notification.deferDispatchUntil(quietUntil);
+                continue;
+            }
+            var tokens = devices.activeFor(userId).stream().map(DeviceRegistration::getDeviceToken).toList();
+            if (tokens.isEmpty()) {
+                notification.markDispatched();
+                continue;
+            }
             try {
-                sendPush(notification.getUserId(), notification.getTitle(), notification.getBody());
+                sendPush(tokens, notification);
                 notification.markDispatched();
                 sent++;
             } catch (RuntimeException exception) {
@@ -79,12 +103,29 @@ public class NotificationDispatcherService {
         return sent;
     }
 
-    private void sendPush(UUID userId, String title, String body) {
+    @SuppressWarnings("unchecked")
+    void sendPush(List<String> tokens, Notification notification) {
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(serviceRoleKey);
-        var payload = Map.of("user_id", userId.toString(), "title", title, "body", body);
-        restTemplate.exchange(supabaseProjectUrl + "/functions/v1/send-push-notification",
-                HttpMethod.POST, new HttpEntity<>(payload, headers), String.class);
+        if (!expoAccessToken.isBlank()) headers.setBearerAuth(expoAccessToken);
+        var messages = new ArrayList<Map<String, Object>>();
+        for (var token : tokens) {
+            var data = new HashMap<String, Object>();
+            data.put("notificationId", notification.getId().toString());
+            if (notification.getActionRoute() != null) data.put("route", notification.getActionRoute());
+            messages.add(Map.of("to", token, "title", notification.getTitle(), "body", notification.getBody(),
+                    "sound", "default", "data", data));
+        }
+        var response = restTemplate.exchange(EXPO_PUSH_URL, HttpMethod.POST, new HttpEntity<>(messages, headers), Map.class);
+        var body = response.getBody();
+        if (body != null && body.get("data") instanceof List<?> tickets) {
+            for (int i = 0; i < tickets.size() && i < tokens.size(); i++) {
+                if (tickets.get(i) instanceof Map<?, ?> ticket && "error".equals(ticket.get("status"))
+                        && ticket.get("details") instanceof Map<?, ?> details
+                        && "DeviceNotRegistered".equals(details.get("error"))) {
+                    devices.disable(tokens.get(i));
+                }
+            }
+        }
     }
 }

@@ -1,5 +1,7 @@
 package com.manabandhu.backend.referrals;
 
+import com.manabandhu.backend.notifications.Notification;
+import com.manabandhu.backend.notifications.NotificationPublisher;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,7 +18,10 @@ public class ReferralService {
 
     private final ReferralRepository repository;
 
-    ReferralService(ReferralRepository repository) {
+    private final NotificationPublisher notifications;
+
+    ReferralService(ReferralRepository repository, NotificationPublisher notifications) {
+        this.notifications = notifications;
         this.repository = repository;
     }
 
@@ -81,7 +86,11 @@ public class ReferralService {
         var referral = requireOwned(actor, id);
         referral.status = status.trim().toLowerCase(java.util.Locale.ROOT);
         referral.updatedAt = java.time.Instant.now();
-        return repository.save(referral);
+        var saved = repository.save(referral);
+        notifications.publish(referral.getRecipientId(), actor.id(), Notification.NotificationType.REFERRAL,
+                "Referral update", "\"" + referral.getTitle() + "\" is now " + referral.status + ".",
+                "/referrals/" + id);
+        return saved;
     }
 
     private Referral require(UUID id) {

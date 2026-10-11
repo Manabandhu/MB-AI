@@ -1,5 +1,7 @@
 package com.manabandhu.backend.expenses;
 
+import com.manabandhu.backend.notifications.Notification;
+import com.manabandhu.backend.notifications.NotificationPublisher;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -22,7 +24,11 @@ public class ExpenseService {
     private final ExpenseSplitRepository splitRepository;
     private final ExpenseAccess access;
 
-    ExpenseService(ExpenseRepository repository, ExpenseSplitRepository splitRepository, ExpenseAccess access) {
+    private final NotificationPublisher notifications;
+
+    ExpenseService(ExpenseRepository repository, ExpenseSplitRepository splitRepository, ExpenseAccess access,
+                   NotificationPublisher notifications) {
+        this.notifications = notifications;
         this.repository = repository;
         this.splitRepository = splitRepository;
         this.access = access;
@@ -57,7 +63,12 @@ public class ExpenseService {
                 input.description(), input.category() != null ? input.category() : "GENERAL",
                 input.splitType() != null ? input.splitType() : "EQUAL",
                 input.expenseDate() != null ? input.expenseDate() : LocalDate.now()));
-        splitRepository.saveAll(equalSplits(expense, participants(group, groupId)));
+        var members = participants(group, groupId);
+        splitRepository.saveAll(equalSplits(expense, members));
+        notifications.publishAll(members, actor.id(), Notification.NotificationType.EXPENSE, "New shared expense",
+                "\"" + title + "\" (" + expense.getAmount().toPlainString() + " " + currency + ") was added to "
+                        + group.getName() + ".",
+                "/expenses/groups/" + groupId);
         return expense;
     }
 

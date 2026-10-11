@@ -33,3 +33,33 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 - No fake success (2026-10): `NotificationSettingsScreen` renders toggles only after the user's saved preferences load (loading/error states otherwise); a failed save reverts and says so instead of "Saved locally"; the unsaved delivery-pace picker was removed; the "Push & In-App Enabled" pill shows only when both are on.
 - Push retries (2026-10, V32): failed pushes increment `dispatch_attempts` and set `next_dispatch_at` with 2/4/8/16-minute backoff; `claimUndispatched` skips rows that are backing off or have failed 5 times, so poison rows cannot pin the oldest-first batch.
 - Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.
+
+## Notifications platform (2026-10-11)
+
+- **Producers:** `NotificationPublisher.publish/publishAll(recipient, actor, type, title, body, route)` is the only way modules create notifications.
+  - It writes after the caller's transaction commits, in its own transaction, so a failure never undoes the action.
+  - It skips the actor and respects the recipient's `allNotifications`, `inApp` and category toggle.
+  - Category per type: RIDE `rideAlerts`, ROOM `housingAlerts`, CHAT `chatMessages`, EXPENSE `expenseAlerts`, REFERRAL `referralAlerts`, JOB `jobAlerts`, EVENT/COMMUNITY `communityEvents`, SAFETY `safetyAlerts`.
+  - Hooks:
+    - Seat request created (driver) and accepted/declined/withdrawn (`RideRequestService`).
+    - Room inquiry (`RoomInquiryService`, host).
+    - User-sent chat message (`MessageService.sendAs`, other participants; the text is never copied into the notification).
+    - Expense added (`ExpenseService`, other members).
+    - Referral status change (`ReferralService`, recipient when set).
+    - Event RSVP going/interested (`EventsService.attend`, organiser).
+    - Job application created/status changed (`JobApplicationService`).
+- **One settings store:** `notification_settings.preferences` jsonb (`NotificationsContentService`).
+  - Keys: channels (`inApp`, `push`, `email`, `sms`), the categories above, and `quietHours`/`quietStart`/`quietEnd` ("HH:mm")/`timeZone` (IANA).
+  - Invalid values are a 400, never silently dropped.
+  - `GET/POST /notifications/preferences` are views over the same channel keys.
+  - The `NotificationPreference` entity was removed; the old `notification_preferences` table is unused.
+- **Inbox:**
+  - `GET /inbox?page&size` is paged in SQL (size ≤ 50) and returns `{items, page, hasMore, unreadCount}`.
+  - `GET /{id}` is recipient-only and has no side effect.
+  - `POST /{id}/read`, `POST /read-all` and `GET /unread-count`.
+- **Push:**
+  - `device_registrations` (V13; V35 dedupes and adds a unique token index, RLS on) stores Expo push tokens.
+  - `POST /devices {token, platform}` validates the Expo token format and moves a token to the latest signed-in account. `POST /devices/remove {token}` is owner only (others get 404).
+  - `NotificationDispatcherService` sends through `https://exp.host/--/api/v2/push/send` when `PUSH_NOTIFICATIONS_ENABLED=true` (optional `EXPO_ACCESS_TOKEN`).
+  - Dispatcher decisions: push off → closed without sending; quiet hours → `next_dispatch_at` = end of quiet hours; no device → closed; `DeviceNotRegistered` tickets disable the token.
+  - The Supabase edge-function path was removed.

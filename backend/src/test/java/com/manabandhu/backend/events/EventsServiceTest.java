@@ -21,7 +21,7 @@ class EventsServiceTest {
         var attendanceRepo = mock(EventAttendanceRepository.class);
         var categoryRepo = mock(EventCategoryRepository.class);
         when(eventRepo.save(any(Event.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        var service = new EventsService(eventRepo, attendanceRepo, categoryRepo);
+        var service = new EventsService(eventRepo, attendanceRepo, categoryRepo, org.mockito.Mockito.mock(com.manabandhu.backend.notifications.NotificationPublisher.class));
         var organizerId = UUID.randomUUID();
         var categoryId = UUID.randomUUID();
         var startAt = Instant.now().plusSeconds(86400);
@@ -42,9 +42,9 @@ class EventsServiceTest {
         var attendanceRepo = mock(EventAttendanceRepository.class);
         var categoryRepo = mock(EventCategoryRepository.class);
         when(attendanceRepo.save(any(EventAttendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        var service = new EventsService(eventRepo, attendanceRepo, categoryRepo);
+        var service = new EventsService(eventRepo, attendanceRepo, categoryRepo, org.mockito.Mockito.mock(com.manabandhu.backend.notifications.NotificationPublisher.class));
         var eventId = UUID.randomUUID();
-        when(eventRepo.existsById(eventId)).thenReturn(true);
+        when(eventRepo.findById(eventId)).thenReturn(java.util.Optional.of(mock(Event.class)));
         var attendance = service.attend(eventId, UUID.randomUUID(), "GOING");
 
         assertThat(attendance).isNotNull();
@@ -59,7 +59,7 @@ class EventsServiceTest {
         var attendanceRepo = mock(EventAttendanceRepository.class);
         var categoryRepo = mock(EventCategoryRepository.class);
         when(categoryRepo.findAllByOrderByNameAsc()).thenReturn(List.of());
-        var service = new EventsService(eventRepo, attendanceRepo, categoryRepo);
+        var service = new EventsService(eventRepo, attendanceRepo, categoryRepo, org.mockito.Mockito.mock(com.manabandhu.backend.notifications.NotificationPublisher.class));
 
         var categories = service.findCategories();
         assertThat(categories).isEmpty();
@@ -69,7 +69,7 @@ class EventsServiceTest {
     @Test
     void savedEventsAreScopedToTheCaller() {
         var eventRepo = mock(EventRepository.class);
-        var service = new EventsService(eventRepo, mock(EventAttendanceRepository.class), mock(EventCategoryRepository.class));
+        var service = new EventsService(eventRepo, mock(EventAttendanceRepository.class), mock(EventCategoryRepository.class), org.mockito.Mockito.mock(com.manabandhu.backend.notifications.NotificationPublisher.class));
         var caller = new com.manabandhu.backend.auth.Actor(UUID.randomUUID(), false, false);
         when(eventRepo.findSavedByUser(org.mockito.ArgumentMatchers.eq(caller.id()), any(), any())).thenReturn(List.of());
 
@@ -88,7 +88,7 @@ class EventsServiceTest {
 
     @Test
     void endMustFollowStart() {
-        var service = new EventsService(mock(EventRepository.class), mock(EventAttendanceRepository.class), mock(EventCategoryRepository.class));
+        var service = new EventsService(mock(EventRepository.class), mock(EventAttendanceRepository.class), mock(EventCategoryRepository.class), org.mockito.Mockito.mock(com.manabandhu.backend.notifications.NotificationPublisher.class));
         var start = Instant.now().plusSeconds(3600);
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.create(UUID.randomUUID(), "t", null, "Irving",
                         null, null, start, start.minusSeconds(60), null))
@@ -100,7 +100,7 @@ class EventsServiceTest {
     void unknownAttendanceStatusIsRejected() {
         var eventRepo = mock(EventRepository.class);
         var attendanceRepo = mock(EventAttendanceRepository.class);
-        var service = new EventsService(eventRepo, attendanceRepo, mock(EventCategoryRepository.class));
+        var service = new EventsService(eventRepo, attendanceRepo, mock(EventCategoryRepository.class), org.mockito.Mockito.mock(com.manabandhu.backend.notifications.NotificationPublisher.class));
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.attend(UUID.randomUUID(), UUID.randomUUID(), "organizer"))
                 .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
         org.mockito.Mockito.verifyNoInteractions(attendanceRepo);

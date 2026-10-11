@@ -25,12 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.chat.Conversation;
-import com.manabandhu.backend.chat.ConversationParticipant;
-import com.manabandhu.backend.chat.ConversationParticipantService;
-import com.manabandhu.backend.chat.ConversationService;
-import com.manabandhu.backend.chat.Message;
-import com.manabandhu.backend.chat.MessageService;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
@@ -45,18 +39,13 @@ public class RoomsController {
     private final RoomSavedSearchService savedSearchService;
     private final RoomReportService reportService;
     private final RoomAnalyticsService analyticsService;
-    private final RoomInquiryRepository inquiryRepository;
-    private final ConversationService conversationService;
-    private final ConversationParticipantService participantService;
-    private final MessageService messageService;
+    private final RoomInquiryService inquiryService;
 
     public RoomsController(RoomsContentService contentService, RoomListingService listingService,
                            RoomAvailabilityService availabilityService, RoomBookingService bookingService,
                            RoomImageService imageService, RoomFavoriteService favoriteService,
                            RoomSavedSearchService savedSearchService, RoomReportService reportService,
-                           RoomAnalyticsService analyticsService, RoomInquiryRepository inquiryRepository,
-                           ConversationService conversationService, ConversationParticipantService participantService,
-                           MessageService messageService) {
+                           RoomAnalyticsService analyticsService, RoomInquiryService inquiryService) {
         this.contentService = contentService;
         this.listingService = listingService;
         this.availabilityService = availabilityService;
@@ -66,10 +55,7 @@ public class RoomsController {
         this.savedSearchService = savedSearchService;
         this.reportService = reportService;
         this.analyticsService = analyticsService;
-        this.inquiryRepository = inquiryRepository;
-        this.conversationService = conversationService;
-        this.participantService = participantService;
-        this.messageService = messageService;
+        this.inquiryService = inquiryService;
     }
 
     private static UUID actorId(Authentication authentication) {
@@ -291,44 +277,7 @@ public class RoomsController {
             Authentication authentication,
             @PathVariable UUID roomId,
             @Valid @RequestBody RoomInquiryInput input) {
-        var senderId = actorId(authentication);
-        var listing = listingService.findPublishedById(roomId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
-        var hostId = listing.getOwnerId();
-
-        if (senderId.equals(hostId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot inquire about your own room listing");
-        }
-
-        // Create direct conversation for room inquiry with title
-        var title = "Room Inquiry: " + listing.getTitle();
-        var conversation = conversationService.create(senderId, Conversation.ConversationType.ROOM_INQUIRY, title);
-        participantService.add(conversation.getId(), hostId, ConversationParticipant.ParticipantRole.MEMBER);
-
-        // Format and post intro chat message
-        String introText = String.format(
-                "👋 Room Inquiry for \"%s\" ($%s/mo)\n\n" +
-                "📅 Preferred Move-In: %s\n" +
-                "⏳ Stay Duration: %d months\n" +
-                "🥗 Dietary Preference: %s\n\n" +
-                "💬 Message: %s",
-                listing.getTitle(),
-                listing.getPrice() != null ? listing.getPrice().toPlainString() : "N/A",
-                input.moveInDate(),
-                input.stayDurationMonths() != null ? input.stayDurationMonths() : 6,
-                input.dietaryLifestyle() != null ? input.dietaryLifestyle() : "Flexible",
-                input.introMessage()
-        );
-        messageService.send(conversation.getId(), senderId, introText, Message.MessageType.TEXT);
-
-        // Record room inquiry
-        var inquiry = inquiryRepository.save(new RoomInquiry(
-                roomId, senderId, hostId, conversation.getId(),
-                input.moveInDate(), input.stayDurationMonths(),
-                input.dietaryLifestyle(), input.introMessage()
-        ));
-
-        return ResponseEntity.ok(new RoomInquiryResponse(inquiry.getId(), conversation.getId()));
+        return ResponseEntity.ok(inquiryService.inquire(Actor.require(authentication), roomId, input));
     }
 
     @PostMapping("/listings/{listingId}/inquire")

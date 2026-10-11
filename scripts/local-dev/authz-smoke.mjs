@@ -737,6 +737,108 @@ console.log('== token validation');
   await bearer('tampered signature is rejected', `${head}.${body}.${flipped}`);
 }
 
+console.log('== notifications');
+{
+  const inbox = (await call('A', 'GET', '/api/v1/notifications/inbox?size=50')).body ?? {
+    items: [],
+  };
+  const rideNote = inbox.items.find((n) => n.meta === 'RIDE');
+  expect('a seat request notifies the driver', Boolean(rideNote), true);
+  expect('inbox reports an unread count', typeof inbox.unreadCount, 'number');
+  const big = await call('A', 'GET', '/api/v1/notifications/inbox?size=5000');
+  expect('inbox page size is capped at 50', (big.body?.items ?? []).length <= 50, true);
+  if (rideNote) {
+    await status(
+      "member cannot read another's notification",
+      403,
+      'B',
+      'GET',
+      `/api/v1/notifications/${rideNote.id}`,
+    );
+    await status(
+      "member cannot mark another's notification read",
+      403,
+      'B',
+      'POST',
+      `/api/v1/notifications/${rideNote.id}/read`,
+    );
+    const opened = (await call('A', 'GET', `/api/v1/notifications/${rideNote.id}`)).body;
+    expect('opening a notification does not mark it read', opened?.read, rideNote.read);
+    const marked = (await call('A', 'POST', `/api/v1/notifications/${rideNote.id}/read`)).body;
+    expect('recipient marks it read', marked?.read, true);
+  } else {
+    skip += 1;
+  }
+  await status('mark all read', 200, 'A', 'POST', '/api/v1/notifications/read-all');
+  expect(
+    'unread count is zero after mark all read',
+    (await call('A', 'GET', '/api/v1/notifications/unread-count')).body,
+    0,
+  );
+  await status(
+    'invalid quiet hours are a 400',
+    400,
+    'A',
+    'PATCH',
+    '/api/v1/notifications/settings',
+    {
+      preferences: { quietStart: '25:00' },
+    },
+  );
+  const quiet = await call('A', 'PATCH', '/api/v1/notifications/settings', {
+    preferences: { quietHours: true, quietStart: '22:30', timeZone: 'America/Chicago' },
+  });
+  expect('quiet hours persist', quiet.body?.preferences?.quietStart, '22:30');
+  const channels = (await call('A', 'GET', '/api/v1/notifications/preferences')).body ?? [];
+  await call('A', 'POST', '/api/v1/notifications/preferences', { channel: 'PUSH', enabled: false });
+  expect(
+    'channel switches and settings are one store',
+    (await call('A', 'GET', '/api/v1/notifications/settings')).body?.preferences?.push,
+    false,
+  );
+  expect('channel list derives from settings', channels.length, 4);
+  await call('A', 'POST', '/api/v1/notifications/preferences', { channel: 'PUSH', enabled: true });
+  await status('non-Expo push token rejected', 400, 'A', 'POST', '/api/v1/notifications/devices', {
+    token: 'https://evil.example/hook',
+    platform: 'ios',
+  });
+  const token = `ExponentPushToken[smoke${Date.now()}]`;
+  await status('member registers a push token', 200, 'A', 'POST', '/api/v1/notifications/devices', {
+    token,
+    platform: 'ios',
+  });
+  await status(
+    "stranger cannot remove someone else's token",
+    404,
+    'C',
+    'POST',
+    '/api/v1/notifications/devices/remove',
+    {
+      token,
+    },
+  );
+  await status(
+    'owner removes their token',
+    204,
+    'A',
+    'POST',
+    '/api/v1/notifications/devices/remove',
+    { token },
+  );
+  await status(
+    'users cannot create notifications by hand',
+    403,
+    'B',
+    'POST',
+    '/api/v1/notifications',
+    {
+      title: 'x',
+      body: 'y',
+      type: 'SYSTEM',
+    },
+  );
+}
+
 console.log('== jobs, utilities');
 {
   let categories = (await call(null, 'GET', '/api/v1/jobs/categories')).body ?? [];

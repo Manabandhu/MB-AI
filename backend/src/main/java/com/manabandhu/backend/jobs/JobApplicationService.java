@@ -1,5 +1,7 @@
 package com.manabandhu.backend.jobs;
 
+import com.manabandhu.backend.notifications.Notification;
+import com.manabandhu.backend.notifications.NotificationPublisher;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -17,7 +19,11 @@ public class JobApplicationService {
     private final JobApplicationRepository repository;
     private final JobPostingRepository postingRepository;
 
-    JobApplicationService(JobApplicationRepository repository, JobPostingRepository postingRepository) {
+    private final NotificationPublisher notifications;
+
+    JobApplicationService(JobApplicationRepository repository, JobPostingRepository postingRepository,
+                          NotificationPublisher notifications) {
+        this.notifications = notifications;
         this.repository = repository;
         this.postingRepository = postingRepository;
     }
@@ -58,8 +64,10 @@ public class JobApplicationService {
         if (repository.existsByJobPostingIdAndApplicantIdAndStatusNot(jobId, applicantId, WITHDRAWN)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "You have already applied to this job");
         }
-        var application = new JobApplication(posting.id, applicantId, coverLetter, resumeUrl, SUBMITTED);
-        return repository.save(application);
+        var application = repository.save(new JobApplication(posting.id, applicantId, coverLetter, resumeUrl, SUBMITTED));
+        notifications.publish(posting.getOwnerId(), applicantId, Notification.NotificationType.JOB, "New application",
+                "Someone applied to \"" + posting.getTitle() + "\".", "/jobs/" + jobId);
+        return application;
     }
 
     /**
@@ -90,7 +98,11 @@ public class JobApplicationService {
         }
         application.status = status;
         application.updatedAt = java.time.Instant.now();
-        return repository.save(application);
+        var saved = repository.save(application);
+        var recipient = WITHDRAWN.equals(status) ? posting.getOwnerId() : application.getApplicantId();
+        notifications.publish(recipient, actor.id(), Notification.NotificationType.JOB, "Application " + status,
+                "The application for \"" + posting.getTitle() + "\" is now " + status + ".", "/jobs/" + posting.id);
+        return saved;
     }
 
     private JobPosting requirePosting(UUID jobId) {

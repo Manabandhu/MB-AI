@@ -37,7 +37,7 @@ class ReferralVisibilityTest {
 
     @BeforeEach
     void setUp() {
-        referralService = new ReferralService(referrals);
+        referralService = new ReferralService(referrals, org.mockito.Mockito.mock(com.manabandhu.backend.notifications.NotificationPublisher.class));
         requestService = new ReferralRequestService(requests, referralService);
     }
 

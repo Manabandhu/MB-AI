@@ -22,7 +22,7 @@ class JobApplicationServiceTest {
 
     private final JobApplicationRepository repository = mock(JobApplicationRepository.class);
     private final JobPostingRepository postings = mock(JobPostingRepository.class);
-    private final JobApplicationService service = new JobApplicationService(repository, postings);
+    private final JobApplicationService service = new JobApplicationService(repository, postings, org.mockito.Mockito.mock(com.manabandhu.backend.notifications.NotificationPublisher.class));
     private final UUID employerId = UUID.randomUUID();
     private final UUID applicantId = UUID.randomUUID();
     private final Actor employer = new Actor(employerId, false, false);

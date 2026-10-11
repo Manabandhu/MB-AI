@@ -78,3 +78,7 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
 - Safety/Admin: report resolve and account status checks live in services; self/super-admin suspension refused; `ADMIN_PUBLIC_ACCESS_ENABLED` is ignored for non-local issuers; admin chat access is audited.
 - Jobs: application status, duplicate, closed-job and own-posting rules in `JobApplicationService`. Utilities: tracking status parse → 400.
 - Local stack seeds a fifth smoke user E (`5555…`, verified `app_metadata.gender = female` in its minted token); the smoke suite creates a job category as admin when none exist. Full suite: 137 checks.
+- Notifications (2026-10-11):
+  - `NotificationPublisher` hooks are in rides, rooms (inquiries moved into `RoomInquiryService`), chat, expenses, events, referrals and jobs.
+  - There is one settings store with quiet hours, a paged inbox, read/read-all, Expo device tokens (V35), and Expo push dispatch behind `PUSH_NOTIFICATIONS_ENABLED`.
+  - Smoke suite: 155 checks.

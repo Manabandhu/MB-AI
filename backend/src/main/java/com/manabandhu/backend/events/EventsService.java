@@ -1,5 +1,7 @@
 package com.manabandhu.backend.events;
 
+import com.manabandhu.backend.notifications.Notification;
+import com.manabandhu.backend.notifications.NotificationPublisher;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,8 +22,11 @@ public class EventsService {
     private final EventAttendanceRepository attendanceRepository;
     private final EventCategoryRepository categoryRepository;
 
+    private final NotificationPublisher notifications;
+
     EventsService(EventRepository eventRepository, EventAttendanceRepository attendanceRepository,
-                  EventCategoryRepository categoryRepository) {
+                  EventCategoryRepository categoryRepository, NotificationPublisher notifications) {
+        this.notifications = notifications;
         this.eventRepository = eventRepository;
         this.attendanceRepository = attendanceRepository;
         this.categoryRepository = categoryRepository;
@@ -88,8 +93,11 @@ public class EventsService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Status must be one of going, interested, maybe, saved, not_going");
         }
-        if (!eventRepository.existsById(eventId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found");
+        var event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
+        if (status.equals("going") || status.equals("interested")) {
+            notifications.publish(event.getOrganizerId(), userId, Notification.NotificationType.EVENT,
+                    "New RSVP", "Someone is " + status + " for \"" + event.getTitle() + "\".", "/events/" + eventId);
         }
         // One attendance row per user and event: re-RSVPs update the existing row.
         var existing = attendanceRepository.findByEventIdAndUserId(eventId, userId);

@@ -1,5 +1,7 @@
 package com.manabandhu.backend.rides;
 
+import com.manabandhu.backend.notifications.Notification;
+import com.manabandhu.backend.notifications.NotificationPublisher;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -27,10 +29,12 @@ public class RideRequestService {
     private final RideBookingRepository bookingRepository;
     private final RideParticipantRepository participantRepository;
     private final RideAccess access;
+    private final NotificationPublisher notifications;
 
     RideRequestService(RideRequestRepository repository, RideOfferRepository offerRepository,
                        RideBookingRepository bookingRepository, RideParticipantRepository participantRepository,
-                       RideAccess access) {
+                       RideAccess access, NotificationPublisher notifications) {
+        this.notifications = notifications;
         this.repository = repository;
         this.offerRepository = offerRepository;
         this.bookingRepository = bookingRepository;
@@ -81,8 +85,11 @@ public class RideRequestService {
         if (repository.existsByRideIdAndRiderIdAndStatus(rideId, riderId, "pending")) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have a pending request for this ride");
         }
-        var request = new RideRequest(rideId, riderId, input.seatsRequested(), input.message(), "pending");
-        return repository.save(request);
+        var request = repository.save(new RideRequest(rideId, riderId, input.seatsRequested(), input.message(), "pending"));
+        notifications.publish(offer.getDriverId(), riderId, Notification.NotificationType.RIDE, "New seat request",
+                seats(request.getSeatsRequested()) + " requested on your ride to " + offer.getDestinationArea() + ".",
+                "/rides/" + rideId + "/requests");
+        return request;
     }
 
     /**
@@ -125,7 +132,23 @@ public class RideRequestService {
             releaseSeats(offer, request);
         }
         request.setStatus(status);
-        return repository.save(request);
+        var saved = repository.save(request);
+        switch (status) {
+            case ACCEPTED -> notifications.publish(request.getRiderId(), actor.id(), Notification.NotificationType.RIDE,
+                    "Seat request accepted", "You're riding to " + offer.getDestinationArea() + ".", "/rides/" + offer.getId());
+            case REJECTED -> notifications.publish(request.getRiderId(), actor.id(), Notification.NotificationType.RIDE,
+                    "Seat request declined", "Your request for the ride to " + offer.getDestinationArea() + " was declined.",
+                    "/rides/" + offer.getId());
+            case WITHDRAWN -> notifications.publish(offer.getDriverId(), actor.id(), Notification.NotificationType.RIDE,
+                    "Seat request withdrawn", "A rider withdrew their request for your ride to " + offer.getDestinationArea() + ".",
+                    "/rides/" + offer.getId() + "/requests");
+            default -> { }
+        }
+        return saved;
+    }
+
+    private static String seats(int count) {
+        return count == 1 ? "1 seat" : count + " seats";
     }
 
     private void reserveSeats(RideOffer offer, RideRequest request) {

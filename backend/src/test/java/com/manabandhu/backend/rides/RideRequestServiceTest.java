@@ -37,6 +37,9 @@ class RideRequestServiceTest {
     @Mock
     RideParticipantRepository participantRepository;
 
+    @Mock
+    com.manabandhu.backend.notifications.NotificationPublisher notifications;
+
     RideRequestService service;
 
     final UUID driverId = UUID.randomUUID();
@@ -48,7 +51,7 @@ class RideRequestServiceTest {
     @BeforeEach
     void setUp() {
         service = new RideRequestService(repository, offerRepository, bookingRepository, participantRepository,
-                new RideAccess(offerRepository, bookingRepository, repository, participantRepository));
+                new RideAccess(offerRepository, bookingRepository, repository, participantRepository), notifications);
         offer = new RideOffer(driverId, "Irving", "Dallas", Instant.now().plusSeconds(3600), 3, 3, "$15", "active");
         lenient().when(offerRepository.findById(offer.getId())).thenReturn(Optional.of(offer));
         lenient().when(offerRepository.findByIdForUpdate(offer.getId())).thenReturn(Optional.of(offer));
@@ -82,6 +85,9 @@ class RideRequestServiceTest {
         assertThat(result.getStatus()).isEqualTo("accepted");
         assertThat(offer.getSeatsAvailable()).isEqualTo(1);
         verify(participantRepository).save(any(RideParticipant.class));
+        verify(notifications).publish(org.mockito.ArgumentMatchers.eq(riderId), org.mockito.ArgumentMatchers.eq(driverId),
+                org.mockito.ArgumentMatchers.eq(com.manabandhu.backend.notifications.Notification.NotificationType.RIDE),
+                any(), any(), any());
     }
 
     @Test

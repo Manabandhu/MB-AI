@@ -99,7 +99,12 @@ public class Notification {
 
     public int getDispatchAttempts() { return dispatchAttempts; }
 
+    /** Holds the push until {@code instant} (quiet hours) without counting a failed attempt. */
+    public void deferDispatchUntil(Instant instant) {
+        this.nextDispatchAt = instant;
+    }
+
     public enum NotificationType {
-        SYSTEM, COMMUNITY, SAFETY, RIDE, ROOM, CHAT, AI
+        SYSTEM, COMMUNITY, SAFETY, RIDE, ROOM, CHAT, AI, EXPENSE, REFERRAL, EVENT, JOB
     }
 }

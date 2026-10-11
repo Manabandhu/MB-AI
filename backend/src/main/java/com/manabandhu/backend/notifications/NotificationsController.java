@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.manabandhu.backend.auth.Actor;
@@ -25,20 +26,21 @@ public class NotificationsController {
         this.notificationService = notificationService;
     }
 
-    /** The caller's own notifications, newest first (capped at 100). */
+    /** One page of the caller's notifications, newest first (size capped at 50). */
     @GetMapping("/inbox")
-    NotificationInbox inbox(Authentication authentication) {
-        var items = notificationService.findByUser(Actor.require(authentication).id()).stream()
-                .limit(100)
-                .map(NotificationDetail::of)
-                .toList();
-        return new NotificationInbox(items);
+    NotificationInbox inbox(Authentication authentication,
+                            @RequestParam(defaultValue = "0") int page,
+                            @RequestParam(defaultValue = "20") int size) {
+        var actor = Actor.require(authentication);
+        var result = notificationService.page(actor, page, size);
+        return new NotificationInbox(result.getContent().stream().map(NotificationDetail::of).toList(),
+                result.getNumber(), result.hasNext(), notificationService.countUnread(actor.id()));
     }
 
-    /** Opening a notification marks it read. Only the recipient can open it. */
+    /** Only the recipient can open a notification; opening it does not mark it read (use POST /{id}/read). */
     @GetMapping("/{id}")
     NotificationDetail detail(Authentication authentication, @PathVariable UUID id) {
-        return NotificationDetail.of(notificationService.markRead(Actor.require(authentication), id));
+        return NotificationDetail.of(notificationService.requireOwn(Actor.require(authentication), id));
     }
 
     @GetMapping("/settings")

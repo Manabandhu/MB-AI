@@ -55,6 +55,12 @@ management:
         enabled: true
 
 app:
+  notifications:
+    push:
+      # Expo push delivery. Off by default so local runs and tests never call exp.host; set true where deployed.
+      enabled: ${PUSH_NOTIFICATIONS_ENABLED:false}
+      # Optional: required only when "enhanced push security" is on in the Expo project.
+      expo-access-token: ${EXPO_ACCESS_TOKEN:}
   admin:
     public-access-enabled: ${ADMIN_PUBLIC_ACCESS_ENABLED:false}
   cors:

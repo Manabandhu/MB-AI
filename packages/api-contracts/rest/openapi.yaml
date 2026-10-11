@@ -65,10 +65,13 @@ paths:
   /notifications/inbox:
     get:
       operationId: getNotificationsInbox
-      summary: Get the signed-in user's latest notifications
+      summary: Get one page of the signed-in user's notifications
+      parameters:
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
       responses:
         '200':
-          description: Up to 100 of the caller's notifications, newest first
+          description: The caller's notifications, newest first (size capped at 50), with the total unread count
           content:
             application/json:
               schema:
@@ -420,6 +423,7 @@ paths:
     get:
       operationId: listNotifications
       summary: List notifications
+      description: The caller's newest 50 notifications. Prefer /notifications/inbox, which pages.
       responses:
         '200':
           description: Notifications
@@ -467,15 +471,75 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Notification marked read
+          description: Notification marked read (recipient only)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Notification'
+                $ref: '#/components/schemas/NotificationInboxItem'
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      summary: Mark all of the caller's notifications read
+      responses:
+        '200': { description: 'Count of notifications updated, as {"updated": n}' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /notifications/{id}:
+    get:
+      operationId: getNotification
+      summary: Get one notification
+      description: Recipient only. Reading does not mark it read; use POST /notifications/{id}/read.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Notification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationInboxItem' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Not found }
+  /notifications/devices:
+    post:
+      operationId: registerPushDevice
+      summary: Register this device's Expo push token for the caller
+      description: Re-registering a token signed in as another account moves it to the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, platform]
+              properties:
+                token: { type: string, maxLength: 200, description: 'ExponentPushToken[...]' }
+                platform: { type: string, enum: [ios, android] }
+      responses:
+        '200': { description: 'Registered device (id, platform, enabled)' }
+        '400': { description: Not an Expo push token or unknown platform }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /notifications/devices/remove:
+    post:
+      operationId: removePushDevice
+      summary: Remove one of the caller's push tokens
+      description: POST with a body so tokens never appear in URLs or access logs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, maxLength: 200 }
+      responses:
+        '204': { description: Removed }
+        '404': { description: Not one of the caller's devices }
   /notifications/preferences:
     get:
       operationId: listNotificationPreferences
-      summary: List notification preferences
+      summary: List notification channel switches
+      description: Derived from /notifications/settings (inApp, push, email, sms); the two always agree.
       responses:
         '200':
           description: Notification preferences
@@ -1768,16 +1832,21 @@ paths:
     get:
       operationId: getNotificationSettings
       summary: Get notification settings
-      description: The caller's notification toggles (defaults merged with saved values).
+      description: >-
+        The caller's notification settings (defaults merged with saved values): boolean channel and category
+        toggles plus quietHours (boolean), quietStart/quietEnd ("HH:mm") and timeZone (IANA).
       responses:
         '200': { description: Settings }
         '401': { $ref: '#/components/responses/Unauthorized' }
     patch:
       operationId: updateNotificationSettings
       summary: Update notification settings
-      description: Merges known boolean toggles into the caller's own settings; unknown keys are ignored.
+      description: >-
+        Merges known keys into the caller's own settings; unknown keys are ignored. A known key with the wrong type
+        or format is a 400, so nothing is silently dropped.
       responses:
         '200': { description: Settings }
+        '400': { description: A known key has an invalid value }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /immigration/resources/{resourceId}:
     get:
@@ -1902,8 +1971,11 @@ components:
         secondaryActionLabel: { type: string }
     NotificationInbox:
       type: object
-      required: [items]
+      required: [items, page, hasMore, unreadCount]
       properties:
+        page: { type: integer }
+        hasMore: { type: boolean }
+        unreadCount: { type: integer }
         items:
           type: array
           items: { $ref: '#/components/schemas/NotificationInboxItem' }
@@ -2203,13 +2275,10 @@ components:
     NotificationPreference:
       type: object
       additionalProperties: false
-      required: [id, userId, channel, enabled, createdAt]
+      required: [channel, enabled]
       properties:
-        id: { type: string, format: uuid }
-        userId: { type: string, format: uuid }
         channel: { type: string, enum: [IN_APP, PUSH, EMAIL, SMS] }
         enabled: { type: boolean }
-        createdAt: { type: string, format: date-time }
     SetPreferenceRequest:
       type: object
       additionalProperties: false
