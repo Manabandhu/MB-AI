@@ -22,12 +22,12 @@ public class RideRatingService {
 
     @Transactional(readOnly = true)
     public List<RideRating> findByRideId(UUID rideId) {
-        return repository.findByRideIdOrderByCreatedAtDesc(rideId);
+        return repository.findByRideIdOrderByCreatedAtDesc(rideId).stream().limit(200).toList();
     }
 
     @Transactional(readOnly = true)
     public List<RideRating> findByRatee(UUID rateeId) {
-        return repository.findByRateeIdOrderByCreatedAtDesc(rateeId);
+        return repository.findByRateeIdOrderByCreatedAtDesc(rateeId).stream().limit(200).toList();
     }
 
     @Transactional(readOnly = true)
@@ -35,20 +35,28 @@ public class RideRatingService {
         return repository.findById(id);
     }
 
+    /** People who shared a completed ride rate each other once per pair; a passenger may omit the ratee to rate the driver. */
     @Transactional
     public RideRating create(UUID rideId, UUID raterId, CreateRideRatingInput input) {
         var offer = access.requireOffer(rideId);
-        if (raterId.equals(input.rateeId())) {
+        var rateeId = input.rateeId() != null ? input.rateeId() : offer.getDriverId();
+        if (!onRide(raterId, offer)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the driver and passengers of this ride can rate each other");
+        }
+        if (!"completed".equalsIgnoreCase(offer.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You can rate a ride once it is completed");
+        }
+        if (raterId.equals(rateeId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot rate yourself");
         }
         // Only people who shared the ride can rate each other, once per pair.
-        if (!onRide(raterId, offer) || !onRide(input.rateeId(), offer)) {
+        if (!onRide(raterId, offer) || !onRide(rateeId, offer)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the driver and passengers of this ride can rate each other");
         }
-        if (repository.existsByRideIdAndRaterIdAndRateeId(rideId, raterId, input.rateeId())) {
+        if (repository.existsByRideIdAndRaterIdAndRateeId(rideId, raterId, rateeId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "You already rated this person for this ride");
         }
-        var rating = new RideRating(rideId, raterId, input.rateeId(), input.rating(), input.comment());
+        var rating = new RideRating(rideId, raterId, rateeId, input.rating(), input.comment());
         return repository.save(rating);
     }
 

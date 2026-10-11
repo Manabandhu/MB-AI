@@ -26,6 +26,16 @@ interface RideOfferRepository extends JpaRepository<RideOffer, UUID> {
 
     List<RideOffer> findByDriverIdOrderByDepartureAtDesc(UUID driverId);
 
+    List<RideOffer> findByDriverIdOrderByCreatedAtDesc(UUID driverId, Pageable pageable);
+
+    /** Past trips: rides the user drove, booked, or was accepted on that are finished, cancelled, or departed. */
+    @Query("SELECT r FROM RideOffer r WHERE (r.driverId = :userId "
+            + "OR EXISTS (SELECT 1 FROM RideBooking b WHERE b.rideId = r.id AND b.userId = :userId AND LOWER(b.status) <> 'cancelled') "
+            + "OR EXISTS (SELECT 1 FROM RideRequest q WHERE q.rideId = r.id AND q.riderId = :userId AND LOWER(q.status) = 'accepted')) "
+            + "AND (LOWER(r.status) IN ('completed', 'cancelled') OR r.departureAt < :now) "
+            + "ORDER BY r.departureAt DESC")
+    List<RideOffer> findHistoryFor(@Param("userId") UUID userId, @Param("now") Instant now, Pageable pageable);
+
     Page<RideOffer> findByStatusOrderByDepartureAtAsc(String status, Pageable pageable);
 
     @Query("SELECT r FROM RideOffer r WHERE LOWER(r.status) = 'active' AND r.departureAt > :now " +

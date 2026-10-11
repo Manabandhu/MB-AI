@@ -30,10 +30,12 @@ public class RideRequestService {
     private final RideParticipantRepository participantRepository;
     private final RideAccess access;
     private final NotificationPublisher notifications;
+    private final RideMembership membership;
 
     RideRequestService(RideRequestRepository repository, RideOfferRepository offerRepository,
                        RideBookingRepository bookingRepository, RideParticipantRepository participantRepository,
-                       RideAccess access, NotificationPublisher notifications) {
+                       RideAccess access, NotificationPublisher notifications, RideMembership membership) {
+        this.membership = membership;
         this.notifications = notifications;
         this.repository = repository;
         this.offerRepository = offerRepository;
@@ -54,7 +56,7 @@ public class RideRequestService {
 
     @Transactional(readOnly = true)
     public List<RideRequest> findByRider(UUID riderId) {
-        return repository.findByRiderIdOrderByCreatedAtDesc(riderId);
+        return repository.findByRiderIdOrderByCreatedAtDesc(riderId, org.springframework.data.domain.PageRequest.of(0, 200));
     }
 
     @Transactional(readOnly = true)
@@ -81,6 +83,12 @@ public class RideRequestService {
         access.requireEligibleRider(actor, offer);
         if (!"active".equalsIgnoreCase(offer.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This ride is not accepting requests");
+        }
+        if (offer.getDepartureAt() != null && offer.getDepartureAt().isBefore(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This ride has already departed");
+        }
+        if (input.seatsRequested() > offer.getSeatsTotal()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This ride has only " + offer.getSeatsTotal() + " seats");
         }
         if (access.hasAcceptedRequest(riderId, rideId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Your seat request on this ride was already accepted");
@@ -135,7 +143,11 @@ public class RideRequestService {
             releaseSeats(offer, request);
         }
         request.setStatus(status);
-        var saved = repository.save(request);
+        var saved = repository.saveAndFlush(request);
+        if (ACCEPTED.equals(current)) {
+            // Leaving the accepted state also ends ride-chat access unless the rider still holds a booking.
+            membership.leaveIfNoSeat(offer, request.getRiderId());
+        }
         switch (status) {
             case ACCEPTED -> notifications.publish(request.getRiderId(), actor.id(), Notification.NotificationType.RIDE,
                     "Seat request accepted", "You're riding to " + offer.getDestinationArea() + ".", "/rides/" + offer.getId());
@@ -182,10 +194,7 @@ public class RideRequestService {
         offer.setSeatsAvailable(Math.min(offer.getSeatsTotal(), offer.getSeatsAvailable() + request.getSeatsRequested()));
         offer.setUpdatedAt(Instant.now());
         offerRepository.save(offer);
-        // Keep the participant row when the rider still holds a live booking on this ride.
-        if (!bookingRepository.existsByRideIdAndUserIdAndStatusNot(offer.getId(), request.getRiderId(), RideBookingService.CANCELLED)) {
-            participantRepository.deleteByRideIdAndUserId(offer.getId(), request.getRiderId());
-        }
+        // The participant row and ride-chat access go in updateStatus via RideMembership.leaveIfNoSeat.
     }
 
     /**

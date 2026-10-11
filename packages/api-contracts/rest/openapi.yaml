@@ -1649,28 +1649,31 @@ paths:
         '403': { $ref: '#/components/responses/ModeratorRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/InvalidTransition' }
-  /rides:
+  /rides/offers:
     get:
       operationId: listRideOffers
-      summary: List ride offers
+      summary: Search ride offers
+      description: 'Public; a bearer token is optional. Returns active offers that have not departed, soonest departure first; a client-supplied sort is ignored. Page size is capped at 500. Search results treat only the driver and admins as members, so for everyone else driverId, conversationId and routePolyline are null and coordinates are rounded to 2 decimals.'
+      security: []
       parameters:
-        - name: origin
-          in: query
-          schema: { type: string }
-        - name: destination
-          in: query
-          schema: { type: string }
+        - { name: origin, in: query, required: false, description: Case-insensitive substring of originArea, schema: { type: string } }
+        - { name: destination, in: query, required: false, description: Case-insensitive substring of destinationArea, schema: { type: string } }
+        - { name: avoidTolls, in: query, required: false, description: When true only AVOID_TOLLS (or unset) offers match; false or absent does not filter, schema: { type: boolean } }
+        - { name: genderPreference, in: query, required: false, description: Matches offers with this preference or ANY (or unset), schema: { $ref: '#/components/schemas/RideGenderPreference' } }
+        - { name: isRecurring, in: query, required: false, schema: { type: boolean } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 500, default: 20 } }
       responses:
         '200':
-          description: Ride offers
+          description: One page of upcoming active ride offers
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/RideOffer' }
+              schema: { $ref: '#/components/schemas/RideOfferPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
     post:
       operationId: createRideOffer
       summary: Create ride offer
+      description: 'The caller becomes the driver. The offer starts active with seatsAvailable equal to seatsTotal.'
       requestBody:
         required: true
         content:
@@ -1679,85 +1682,406 @@ paths:
       responses:
         '201':
           description: Ride offer created
+          headers:
+            Location: { description: URL of the new offer, schema: { type: string } }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/RideOffer' }
-  /rides/saved:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rides/offers/{offerId}:
     get:
-      operationId: listSavedRides
-      summary: List saved rides
+      operationId: getRideOffer
+      summary: Get ride offer
+      description: 'Public; a bearer token is optional. Members (the driver, passengers with a live booking or accepted request, and admins) get the full view; everyone else gets null driverId, conversationId and routePolyline and coordinates rounded to 2 decimals.'
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
       responses:
         '200':
-          description: Saved rides
+          description: Ride offer
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/RideOffer' }
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateRideOffer
+      summary: Update ride offer
+      description: 'Driver or admin. Null or absent fields are left unchanged. Status, completedAt, conversationId and chatExpiresAt cannot be set here (use PATCH .../status and POST .../chat); unknown fields are ignored. seatsTotal can never drop below the seats riders hold (live bookings plus accepted requests); when only seatsTotal is sent, seatsAvailable becomes seatsTotal minus held seats, and it may never exceed that.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRideOfferInput' }
+      responses:
+        '200':
+          description: Updated ride offer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The ride is completed or cancelled and cannot be edited, or seatsTotal is below the seats riders already hold
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    delete:
+      operationId: deleteRideOffer
+      summary: Delete ride offer
+      description: 'Driver or admin. Like a cancel, first cancels live bookings, rejects pending and accepted requests, removes riders from the participants and the ride chat, and notifies them.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '204': { description: Ride offer deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/{offerId}:
+    get:
+      operationId: getRideOfferShortPath
+      summary: Get ride offer (short path)
+      description: 'Same operation as GET /rides/offers/{offerId}. Public.'
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '200':
+          description: Ride offer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateRideOfferShortPath
+      summary: Update ride offer (short path)
+      description: 'Same operation as PATCH /rides/offers/{offerId}.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRideOfferInput' }
+      responses:
+        '200':
+          description: Updated ride offer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The ride is completed or cancelled and cannot be edited, or seatsTotal is below the seats riders already hold
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    delete:
+      operationId: deleteRideOfferShortPath
+      summary: Delete ride offer (short path)
+      description: 'Same operation as DELETE /rides/offers/{offerId}.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '204': { description: Ride offer deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/offers/{offerId}/owner:
+    get:
+      operationId: getRideOfferForOwner
+      summary: Get ride offer for driver
+      description: 'Driver or admin. Returns the full member view in any status.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '200':
+          description: Driver-facing ride offer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/{offerId}/owner:
+    get:
+      operationId: getRideOfferForOwnerShortPath
+      summary: Get ride offer for driver (short path)
+      description: 'Same operation as GET /rides/offers/{offerId}/owner.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '200':
+          description: Driver-facing ride offer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/offers/{offerId}/status:
+    patch:
+      operationId: updateRideOfferStatus
+      summary: Change ride status
+      description: 'Driver or admin. The value is trimmed and matched case-insensitively and stored lowercase. Allowed transitions: draft -> active | cancelled; active -> in_progress | completed | cancelled; in_progress -> completed | cancelled; completed and cancelled are terminal. Setting the current status is a no-op. Cancelling cancels every live booking, rejects pending and accepted requests, resets seatsAvailable to seatsTotal, removes riders from the participants and the ride chat, and notifies each rider. Completing sets completedAt and chatExpiresAt (two hours later).'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRideStatusInput' }
+      responses:
+        '200':
+          description: Ride offer with the new status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+  /rides/{offerId}/status:
+    patch:
+      operationId: updateRideOfferStatusShortPath
+      summary: Change ride status (short path)
+      description: 'Same operation as PATCH /rides/offers/{offerId}/status.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRideStatusInput' }
+      responses:
+        '200':
+          description: Ride offer with the new status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+  /rides/offers/{offerId}/re-activate:
+    post:
+      operationId: reactivateRideOffer
+      summary: Re-activate ride offer
+      description: 'The driver only (admins cannot create rides for others). Clones the ride as a new active offer with the given departure; seats, route and preferences are copied, bookings and chat are not. The original is unchanged.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReactivateRideInput' }
+      responses:
+        '201':
+          description: New ride offer cloned from the original
+          headers:
+            Location: { description: URL of the new offer, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/{offerId}/re-activate:
+    post:
+      operationId: reactivateRideOfferShortPath
+      summary: Re-activate ride offer (short path)
+      description: 'Same operation as POST /rides/offers/{offerId}/re-activate.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReactivateRideInput' }
+      responses:
+        '201':
+          description: New ride offer cloned from the original
+          headers:
+            Location: { description: URL of the new offer, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/offers/{offerId}/chat:
+    post:
+      operationId: provisionRideChat
+      summary: Open ride chat
+      description: 'Members only (driver, passengers with a live booking or accepted request, admins). Creates the ride''s temporary conversation on first call (adding the driver, the caller and confirmed passengers) and adds the caller on later calls. The chat is deleted two hours after the ride is completed.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '200':
+          description: Ride chat conversation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideChatResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RideMembersOnly' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/{offerId}/chat:
+    post:
+      operationId: provisionRideChatShortPath
+      summary: Open ride chat (short path)
+      description: 'Same operation as POST /rides/offers/{offerId}/chat.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '200':
+          description: Ride chat conversation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideChatResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RideMembersOnly' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/my-offers:
+    get:
+      operationId: listMyRideOffers
+      summary: List my ride offers
+      description: 'The caller''s newest 200 offers as a driver, in every status.'
+      responses:
+        '200':
+          description: The caller's offers
+          content:
+            application/json:
+              schema: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/RideOfferView' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /rides/mine:
     get:
-      operationId: listMyRides
-      summary: List my rides
+      operationId: listMyRideOffersShortPath
+      summary: List my ride offers (short path)
+      description: 'Same operation as GET /rides/my-offers.'
       responses:
         '200':
-          description: My rides
+          description: The caller's offers
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/RideOffer' }
+              schema: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/RideOfferView' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /rides/history:
     get:
       operationId: listRideHistory
       summary: List ride history
+      description: 'Up to 200 rides the caller drove, booked (booking not cancelled) or was accepted on that are completed, cancelled or already departed, latest departure first.'
       responses:
         '200':
-          description: Ride history
+          description: Past rides
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/RideOffer' }
-  /rides/{rideId}:
+              schema: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/RideOfferView' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rides/saved:
     get:
-      operationId: getRideOffer
-      summary: Get ride offer
-      parameters:
-        - name: rideId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+      operationId: listSavedRides
+      summary: List saved rides
+      description: 'Bookmarked rides (newest bookmark first), then rides the caller participates in.'
       responses:
         '200':
-          description: Ride offer detail
+          description: Saved and joined rides
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/RideOffer' }
-  /rides/{rideId}/requests:
+              schema: { type: array, items: { $ref: '#/components/schemas/RideOfferView' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rides/offers/{rideId}/favorite:
+    post:
+      operationId: saveRide
+      summary: Save ride
+      description: 'Bookmarks the ride for the caller; saving twice is a no-op.'
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '200':
+          description: The bookmarked ride
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: unsaveRide
+      summary: Unsave ride
+      description: 'Removes the caller''s bookmark; succeeds even when none exists.'
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '204': { description: Bookmark removed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rides/{rideId}/favorite:
+    post:
+      operationId: saveRideShortPath
+      summary: Save ride (short path)
+      description: 'Same operation as POST /rides/offers/{rideId}/favorite.'
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '200':
+          description: The bookmarked ride
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: unsaveRideShortPath
+      summary: Unsave ride (short path)
+      description: 'Same operation as DELETE /rides/offers/{rideId}/favorite.'
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '204': { description: Bookmark removed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rides/offers/{offerId}/seats:
+    patch:
+      operationId: adjustRideSeats
+      summary: Open or block seats
+      description: 'Driver or admin. Adds the seats delta (negative blocks seats) to seatsAvailable, clamped between 0 and seatsTotal minus the seats riders hold.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+        - { name: seats, in: query, required: true, description: Seats to open (positive) or block (negative), schema: { type: integer } }
+      responses:
+        '200':
+          description: Ride offer with adjusted seats
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideOfferView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/offers/{offerId}/requests:
     get:
       operationId: listRideRequests
-      summary: List ride requests
+      summary: List seat requests for a ride
+      description: 'The driver and admins see every request, newest first; anyone else sees only their own.'
       parameters:
-        - name: rideId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RideOfferId'
       responses:
         '200':
-          description: Ride requests
+          description: Seat requests
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/RideRequest' }
+              schema: { type: array, items: { $ref: '#/components/schemas/RideRequest' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       operationId: createRideRequest
-      summary: Create ride request
+      summary: Request seats on a ride
+      description: 'Creates a pending request and notifies the driver. Women-only and men-only rides require a verified gender in the token.'
       parameters:
-        - name: rideId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RideOfferId'
       requestBody:
         required: true
         content:
@@ -1765,36 +2089,265 @@ paths:
             schema: { $ref: '#/components/schemas/CreateRideRequestInput' }
       responses:
         '201':
-          description: Request created
+          description: Seat request created
+          headers:
+            Location: { description: URL of the new request, schema: { type: string } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RideRequest' }
-  /rides/{rideId}/participants:
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: The ride is limited to verified riders of another gender
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The caller is the driver, the ride is not active or has departed, or the caller already has a pending or accepted request
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  /rides/requests/{requestId}:
+    get:
+      operationId: getRideRequest
+      summary: Get seat request
+      description: 'The rider, the driver, or an admin.'
+      parameters:
+        - { name: requestId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Seat request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteRideRequest
+      summary: Delete seat request
+      description: 'The rider or an admin. An accepted request holds seats, so it must be withdrawn instead.'
+      parameters:
+        - { name: requestId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Seat request deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The request is accepted; withdraw it instead
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  /rides/requests/{requestId}/status:
+    patch:
+      operationId: updateRideRequestStatus
+      summary: Answer or withdraw seat request
+      description: 'The value is matched case-insensitively. Transitions: pending -> accepted | rejected (driver or admin), pending -> withdrawn (rider), accepted -> rejected (driver) or withdrawn (rider); rejected and withdrawn are terminal. Setting the current status is a no-op. Accepting reserves the seats and adds the rider as a participant; leaving accepted returns the seats and removes the rider from the participants and chat unless they still hold a booking. The other side is notified.'
+      parameters:
+        - { name: requestId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRideRequestStatusInput' }
+      responses:
+        '200':
+          description: Updated seat request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideRequest' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The transition is not allowed, or accepting failed because the ride is not active, has departed, the rider already holds seats, or not enough seats are available
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  /rides/my-requests:
+    get:
+      operationId: listMyRideRequests
+      summary: List my seat requests
+      description: 'The caller''s newest 200 seat requests across rides.'
+      responses:
+        '200':
+          description: The caller's seat requests
+          content:
+            application/json:
+              schema: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/RideRequest' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rides/offers/{offerId}/participants:
     get:
       operationId: listRideParticipants
       summary: List ride participants
+      description: 'Members only (driver, passengers with a live booking or accepted request, admins). Oldest first.'
       parameters:
-        - name: rideId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RideOfferId'
       responses:
         '200':
           description: Ride participants
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/RideParticipant' }
-  /rides/{rideId}/rate:
+              schema: { type: array, items: { $ref: '#/components/schemas/RideParticipant' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RideMembersOnly' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: joinRide
+      summary: Join ride as participant
+      description: 'Idempotent: returns the caller''s existing participant row when there is one. The role is derived server-side (driver for the driver, rider otherwise) and there is no request body. Riders must already hold a live booking or an accepted request.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '201':
+          description: The caller's participant row (new or existing)
+          headers:
+            Location: { description: URL of the participant row, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideParticipant' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: The caller has no booking or accepted request on this ride
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/participants/{participantId}:
+    delete:
+      operationId: deleteRideParticipant
+      summary: Remove ride participant
+      description: 'The participant, the driver, or an admin. A rider who still holds seats must cancel the booking or withdraw the request instead, which also returns the seats.'
+      parameters:
+        - { name: participantId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Participant removed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The rider still holds a live booking or an accepted request
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  /rides/offers/{offerId}/bookings:
+    get:
+      operationId: listRideBookings
+      summary: List bookings for a ride
+      description: 'The driver and admins see every booking, newest first; anyone else sees only their own.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '200':
+          description: Ride bookings
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/RideBooking' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createRideBooking
+      summary: Book seats on a ride
+      description: 'Books seats instantly: the booking is created confirmed, the seats are taken and the caller is added as a rider participant. Women-only and men-only rides require a verified gender in the token.'
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRideBookingInput' }
+      responses:
+        '201':
+          description: Booking created
+          headers:
+            Location: { description: URL of the new booking, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideBooking' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: The ride is limited to verified riders of another gender
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The caller is the driver, the ride is not active or has departed, the caller already has a live booking or an accepted request, or not enough seats are available
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  /rides/bookings/{bookingId}:
+    get:
+      operationId: getRideBooking
+      summary: Get ride booking
+      description: 'The passenger, the driver, or an admin.'
+      parameters:
+        - { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Ride booking
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideBooking' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteRideBooking
+      summary: Delete ride booking
+      description: 'The passenger, the driver, or an admin. A live booking returns its seats first; the passenger leaves the participants and chat unless they still hold an accepted request.'
+      parameters:
+        - { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Booking deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/bookings/{bookingId}/status:
+    patch:
+      operationId: updateRideBookingStatus
+      summary: Change ride booking status
+      description: 'The value is matched case-insensitively. The passenger may cancel; the driver or an admin may confirm or cancel. Cancelled is terminal: it returns the seats and removes the passenger from the participants and chat unless they still hold an accepted request. Setting the current status is a no-op.'
+      parameters:
+        - { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRideBookingStatusInput' }
+      responses:
+        '200':
+          description: Updated booking
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideBooking' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The booking is cancelled and cannot be reopened; book again instead
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  /rides/my-bookings:
+    get:
+      operationId: listMyRideBookings
+      summary: List my ride bookings
+      description: 'The caller''s newest 200 bookings across rides.'
+      responses:
+        '200':
+          description: The caller's bookings
+          content:
+            application/json:
+              schema: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/RideBooking' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rides/offers/{offerId}/ratings:
+    get:
+      operationId: listRideRatings
+      summary: List ride ratings
+      description: 'Public. Up to 200 ratings, newest first, with the score and comment only (no rater or ratee ids). An unknown ride returns an empty list.'
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RideOfferId'
+      responses:
+        '200':
+          description: Ride ratings
+          content:
+            application/json:
+              schema: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/RideRatingView' } }
     post:
       operationId: rateRide
-      summary: Rate ride
+      summary: Rate a ride participant
+      description: 'The driver and passengers of a completed ride rate each other, once per pair. A passenger may omit rateeId to rate the driver.'
       parameters:
-        - name: rideId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RideOfferId'
       requestBody:
         required: true
         content:
@@ -1803,26 +2356,473 @@ paths:
       responses:
         '201':
           description: Rating created
+          headers:
+            Location: { description: URL of the new rating, schema: { type: string } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RideRating' }
-  /rides/{rideId}/ratings:
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: The caller or the ratee did not share this ride
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The ride is not completed yet, or the caller already rated this person for this ride
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  /rides/ratings/{ratingId}:
     get:
-      operationId: listRideRatings
-      summary: List ride ratings
+      operationId: getRideRating
+      summary: Get ride rating
+      description: 'Score and comment only, without who rated whom.'
       parameters:
-        - name: rideId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - { name: ratingId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         '200':
-          description: Ride ratings
+          description: Ride rating
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideRatingView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteRideRating
+      summary: Delete ride rating
+      description: 'The rater or an admin.'
+      parameters:
+        - { name: ratingId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Rating deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: The caller did not write this rating and is not an admin
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rides/my-ratings:
+    get:
+      operationId: listMyRideRatings
+      summary: List ratings about me
+      description: 'Up to 200 ratings where the caller is the ratee, newest first.'
+      responses:
+        '200':
+          description: Ratings the caller received
+          content:
+            application/json:
+              schema: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/RideRating' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /rides/maps/route:
+    get:
+      operationId: getRideRoute
+      summary: Get driving route
+      description: 'Google Directions proxy; the key stays server-side. Counts toward the caller''s 60 map lookups per minute.'
+      parameters:
+        - { name: originLat, in: query, required: true, schema: { type: number, minimum: -90, maximum: 90 } }
+        - { name: originLng, in: query, required: true, schema: { type: number, minimum: -180, maximum: 180 } }
+        - { name: destinationLat, in: query, required: true, schema: { type: number, minimum: -90, maximum: 90 } }
+        - { name: destinationLng, in: query, required: true, schema: { type: number, minimum: -180, maximum: 180 } }
+        - { name: avoidTolls, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200':
+          description: Route summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RideRoute' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: No route found
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        '429': { $ref: '#/components/responses/MapsRateLimited' }
+        '502': { $ref: '#/components/responses/MapsProviderUnavailable' }
+        '503': { $ref: '#/components/responses/MapsNotConfigured' }
+  /rides/maps/autocomplete:
+    get:
+      operationId: autocompletePlaces
+      summary: Autocomplete places
+      description: 'Google Places Autocomplete proxy limited to the US. A blank query or one over 200 characters returns an empty list without calling Google or counting toward the 60 lookups per minute.'
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Place predictions
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/PlacePrediction' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/MapsRateLimited' }
+        '502': { $ref: '#/components/responses/MapsProviderUnavailable' }
+        '503': { $ref: '#/components/responses/MapsNotConfigured' }
+  /rides/maps/geocode:
+    get:
+      operationId: geocodeAddress
+      summary: Geocode address
+      description: 'Google Geocoding proxy. Counts toward the caller''s 60 map lookups per minute.'
+      parameters:
+        - { name: address, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 300 } }
+      responses:
+        '200':
+          description: Coordinates of the best match
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LatLng' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Address not found
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        '429': { $ref: '#/components/responses/MapsRateLimited' }
+        '502': { $ref: '#/components/responses/MapsProviderUnavailable' }
+        '503': { $ref: '#/components/responses/MapsNotConfigured' }
+  /marketplace/screens/{screenId}:
+    get:
+      operationId: getMarketplaceScreenContent
+      summary: Get marketplace screen content
+      description: Public. Counts come from the database; saved and own-listing counts appear only for a signed-in viewer.
+      security: []
+      parameters:
+        - name: screenId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [home, search, categories, sell, saved]
+      responses:
+        '200':
+          description: Marketplace screen content
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogScreenContent' }
+        '404': { description: Unknown screen }
+  /marketplace/categories:
+    get:
+      operationId: listMarketplaceCategories
+      summary: List listing categories
+      description: Public. Ordered by name, at most 200.
+      security: []
+      responses:
+        '200':
+          description: Listing categories
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/RideRating' }
+                maxItems: 200
+                items: { $ref: '#/components/schemas/ListingCategory' }
+    post:
+      operationId: createMarketplaceCategory
+      summary: Create listing category
+      description: Admin (moderator) only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateListingCategoryInput' }
+      responses:
+        '201':
+          description: Category created
+          headers:
+            Location: { description: URL of the new category, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingCategory' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ModeratorRequired' }
+        '409':
+          description: A category with this slug already exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /marketplace/categories/{categoryId}:
+    get:
+      operationId: getMarketplaceCategory
+      summary: Get listing category
+      security: []
+      parameters:
+        - { name: categoryId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Listing category
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingCategory' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /marketplace/listings:
+    get:
+      operationId: listMarketplaceListings
+      summary: Search marketplace listings
+      description: >-
+        Public. Newest first; a client-supplied sort is ignored. Only active listings are returned unless
+        includeClosed also asks for reserved and sold ones; removed listings never appear. Page size is capped at 100.
+      security: []
+      parameters:
+        - { name: q, in: query, required: false, description: Text matched against the title and description, schema: { type: string } }
+        - { name: categoryId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: condition, in: query, required: false, schema: { $ref: '#/components/schemas/ListingCondition' } }
+        - { name: maxPrice, in: query, required: false, schema: { type: number, minimum: 0 } }
+        - { name: includeClosed, in: query, required: false, description: Also return reserved and sold listings, schema: { type: boolean, default: false } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: One page of public listings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    post:
+      operationId: createMarketplaceListing
+      summary: Create marketplace listing
+      description: The listing is owned by the caller and starts active. An unknown categoryId is a 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateListingInput' }
+      responses:
+        '201':
+          description: Listing created
+          headers:
+            Location: { description: URL of the new listing, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /marketplace/listings/mine:
+    get:
+      operationId: listMyMarketplaceListings
+      summary: List my marketplace listings
+      description: The caller's newest 200 listings in every status, removed included.
+      responses:
+        '200':
+          description: The caller's listings
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items: { $ref: '#/components/schemas/ListingView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /marketplace/listings/{listingId}:
+    parameters:
+      - $ref: '#/components/parameters/MarketplaceListingId'
+    get:
+      operationId: getMarketplaceListing
+      summary: Get marketplace listing
+      description: >-
+        Public for active, reserved and sold listings. A removed listing is a 404 to anyone but its owner and
+        moderators.
+      security: []
+      responses:
+        '200':
+          description: Listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingView' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateMarketplaceListing
+      summary: Update marketplace listing
+      description: >-
+        Owner or admin. Null fields are left unchanged; an empty string clears description, condition and location.
+        Owners may change status active to reserved or sold, reserved to active or sold, and sold to active; any other
+        owner change is a 409. Setting status to removed, or changing a removed listing, is moderator-only (403).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateListingInput' }
+      responses:
+        '200':
+          description: Updated listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidTransition' }
+    delete:
+      operationId: deleteMarketplaceListing
+      summary: Delete marketplace listing
+      description: Owner or admin. Also deletes the listing's photos and their stored files.
+      responses:
+        '204': { description: Listing deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /marketplace/listings/{listingId}/images:
+    parameters:
+      - $ref: '#/components/parameters/MarketplaceListingId'
+    get:
+      operationId: listMarketplaceListingImages
+      summary: List listing photos
+      description: Public for active, reserved and sold listings; a removed listing is a 404 except for its owner and moderators.
+      security: []
+      responses:
+        '200':
+          description: Photos ordered by sortOrder
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 10
+                items: { $ref: '#/components/schemas/ListingImage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: addMarketplaceListingImage
+      summary: Add listing photo
+      description: >-
+        Owner or admin. The URL must point at an image uploaded through ManaBandhu storage into the marketplace bucket
+        under the owner's or acting admin's folder (400 otherwise). A listing holds at most 10 photos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddListingImageInput' }
+      responses:
+        '201':
+          description: Photo added
+          headers:
+            Location: { description: URL of the new photo, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingImage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The listing already has 10 photos
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /marketplace/images/{imageId}:
+    delete:
+      operationId: deleteMarketplaceListingImage
+      summary: Delete listing photo
+      description: Owner of the photo's listing or admin. Also deletes the stored file.
+      parameters:
+        - { name: imageId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Photo deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /marketplace/listings/{listingId}/contact:
+    post:
+      operationId: contactMarketplaceSeller
+      summary: Chat with the seller
+      description: >-
+        Opens a direct chat between the caller and the seller about this listing, or returns the caller's existing
+        one (created false). A new chat needs the listing to be active or reserved.
+      parameters:
+        - $ref: '#/components/parameters/MarketplaceListingId'
+      responses:
+        '200':
+          description: The conversation to open
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingContactResponse' }
+        '400': { description: 'The caller owns the listing ({error, message} body)' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The item is sold or removed and the caller has no chat about it yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /marketplace/listings/{listingId}/report:
+    post:
+      operationId: reportMarketplaceListing
+      summary: Report marketplace listing
+      description: Any signed-in user who can see the listing, except its owner; one open report per listing and reporter.
+      parameters:
+        - $ref: '#/components/parameters/MarketplaceListingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateListingReportInput' }
+      responses:
+        '201':
+          description: Report created with status open
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingReportResponse' }
+        '400': { description: 'Validation failed, or the caller owns the listing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The caller already has an open report for this listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /marketplace/listings/{listingId}/favorite:
+    parameters:
+      - $ref: '#/components/parameters/MarketplaceListingId'
+    post:
+      operationId: favoriteMarketplaceListing
+      summary: Save a marketplace listing
+      description: >-
+        Idempotent; saving an already saved listing returns the existing favorite with 201. Only active listings can
+        be newly saved, and never your own.
+      responses:
+        '201':
+          description: Listing saved
+          headers:
+            Location: { description: URL of the favorite, schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListingFavorite' }
+        '400': { description: 'The caller owns the listing ({error, message} body)' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The listing is not active
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    delete:
+      operationId: unfavoriteMarketplaceListing
+      summary: Remove a saved marketplace listing
+      description: Idempotent; succeeds even when the listing was not saved.
+      responses:
+        '204': { description: Listing removed from saved }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /marketplace/favorites:
+    get:
+      operationId: listMarketplaceFavorites
+      summary: List my marketplace favorites
+      description: The caller's newest 200 favorite records.
+      responses:
+        '200':
+          description: Favorite records
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items: { $ref: '#/components/schemas/ListingFavorite' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /marketplace/favorites/listings:
+    get:
+      operationId: listMarketplaceFavoriteListings
+      summary: List my saved marketplace listings
+      description: The caller's newest 200 saved listings that are still public (active, reserved or sold).
+      responses:
+        '200':
+          description: Saved listings
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items: { $ref: '#/components/schemas/ListingView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /posts/communities:
     get:
       operationId: listCommunities
@@ -2238,69 +3238,6 @@ paths:
         - { name: communityId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         '204': { description: Left (idempotent) }
-  /rides/{rideId}/favorite:
-    post:
-      operationId: saveRide
-      summary: Save ride
-      parameters:
-        - { name: rideId, in: path, required: true, schema: { type: string, format: uuid } }
-      responses:
-        '200': { description: Bookmarked ride }
-    delete:
-      operationId: unsaveRide
-      summary: Unsave ride
-      parameters:
-        - { name: rideId, in: path, required: true, schema: { type: string, format: uuid } }
-      responses:
-        '204': { description: Bookmark removed }
-  /rides/bookings/{bookingId}/status:
-    patch:
-      operationId: updateRideBookingStatus
-      summary: Update ride booking status
-      description: Passenger may cancel; driver may confirm or cancel. Cancelled is terminal and returns seats.
-      parameters:
-        - { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { type: object, properties: { status: { type: string, enum: [pending, confirmed, cancelled] } } }
-      responses:
-        '200': { description: Updated booking }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { description: Booking already cancelled }
-  /rides/maps/route:
-    get:
-      operationId: getRideRoute
-      summary: Get ride route
-      description: Google Directions proxy (key stays server-side). 503 when no key is configured.
-      parameters:
-        - { name: originLat, in: query, required: true, schema: { type: number } }
-        - { name: originLng, in: query, required: true, schema: { type: number } }
-        - { name: destinationLat, in: query, required: true, schema: { type: number } }
-        - { name: destinationLng, in: query, required: true, schema: { type: number } }
-        - { name: avoidTolls, in: query, schema: { type: boolean } }
-      responses:
-        '200': { description: Route summary }
-        '503': { description: Maps provider is not configured }
-  /rides/maps/autocomplete:
-    get:
-      operationId: autocompletePlaces
-      summary: Autocomplete places
-      parameters:
-        - { name: q, in: query, required: true, schema: { type: string, maxLength: 200 } }
-      responses:
-        '200': { description: Place predictions }
-        '503': { description: Maps provider is not configured }
-  /rides/maps/geocode:
-    get:
-      operationId: geocodeAddress
-      summary: Geocode address
-      parameters:
-        - { name: address, in: query, required: true, schema: { type: string, maxLength: 300 } }
-      responses:
-        '200': { description: Coordinates }
-        '503': { description: Maps provider is not configured }
   /me/export:
     get:
       operationId: exportMyData
@@ -3342,50 +4279,214 @@ components:
         views: { type: integer, format: int64 }
         saves: { type: integer, format: int64 }
         inquiries: { type: integer, format: int64 }
-    RideOffer:
+    RideOfferStatus:
+      type: string
+      description: Stored lowercase. Only active offers that have not departed appear in search.
+      enum: [draft, active, in_progress, completed, cancelled]
+    RideRequestStatus:
+      type: string
+      description: Stored lowercase. Rejected and withdrawn are terminal.
+      enum: [pending, accepted, rejected, withdrawn]
+    RideBookingStatus:
+      type: string
+      description: Stored lowercase. New bookings are confirmed; cancelled is terminal.
+      enum: [pending, confirmed, cancelled]
+    RideParticipantRole:
+      type: string
+      enum: [driver, rider]
+    RideTollPreference:
+      type: string
+      enum: [AVOID_TOLLS, TOLLS_INCLUDED, TOLLS_SPLIT]
+    RideRecurrencePattern:
+      type: string
+      enum: [ONE_TIME, WEEKDAYS, DAILY, WEEKLY, CUSTOM]
+    RideLuggageCapacity:
+      type: string
+      enum: [BACKPACK_ONLY, MEDIUM, LARGE_SUITCASE]
+    RideGenderPreference:
+      type: string
+      description: FEMALE_ONLY and MALE_ONLY rides accept only riders whose gender is verified in the token.
+      enum: [ANY, FEMALE_ONLY, MALE_ONLY]
+    RideWeekday:
+      type: string
+      enum: [MON, TUE, WED, THU, FRI, SAT, SUN]
+    RideOfferView:
       type: object
       additionalProperties: false
-      required: [id, driverId, originArea, destinationArea, departureAt, seatsTotal, seatsAvailable, contribution, status, createdAt, updatedAt]
+      description: >-
+        A ride as the viewer may see it. Members (the driver, passengers with a live booking or accepted request, and
+        admins) get every field. For anyone else driverId, conversationId and routePolyline are null and the four
+        coordinates are rounded to 2 decimals (about 1 km). Search results count only the driver and admins as
+        members.
+      required: [id, driverId, isDriver, isMember, originArea, destinationArea, originLat, originLng, destinationLat, destinationLng, routePolyline, distanceMiles, estimatedDurationMins, tollPreference, estimatedTollAmount, isRecurring, recurrencePattern, recurringDays, luggageCapacity, genderPreference, completedAt, conversationId, chatExpiresAt, departureAt, seatsTotal, seatsAvailable, contribution, status, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
-        driverId: { type: string, format: uuid }
+        driverId: { type: [string, 'null'], format: uuid, description: Members only; null for everyone else }
+        isDriver: { type: boolean, description: True when the viewer is the driver }
+        isMember: { type: boolean, description: True when the viewer sees the full member view }
         originArea: { type: string, maxLength: 200 }
         destinationArea: { type: string, maxLength: 200 }
+        originLat: { type: [number, 'null'], description: 'Exact for members; rounded to 2 decimals for everyone else' }
+        originLng: { type: [number, 'null'], description: 'Exact for members; rounded to 2 decimals for everyone else' }
+        destinationLat: { type: [number, 'null'], description: 'Exact for members; rounded to 2 decimals for everyone else' }
+        destinationLng: { type: [number, 'null'], description: 'Exact for members; rounded to 2 decimals for everyone else' }
+        routePolyline: { type: [string, 'null'], description: Encoded route; members only }
+        distanceMiles: { type: [number, 'null'] }
+        estimatedDurationMins: { type: [integer, 'null'] }
+        tollPreference: { anyOf: [{ $ref: '#/components/schemas/RideTollPreference' }, { type: 'null' }] }
+        estimatedTollAmount: { type: [number, 'null'] }
+        isRecurring: { type: [boolean, 'null'] }
+        recurrencePattern: { anyOf: [{ $ref: '#/components/schemas/RideRecurrencePattern' }, { type: 'null' }] }
+        recurringDays: { type: [array, 'null'], items: { $ref: '#/components/schemas/RideWeekday' } }
+        luggageCapacity: { anyOf: [{ $ref: '#/components/schemas/RideLuggageCapacity' }, { type: 'null' }] }
+        genderPreference: { anyOf: [{ $ref: '#/components/schemas/RideGenderPreference' }, { type: 'null' }] }
+        completedAt: { type: [string, 'null'], format: date-time }
+        conversationId: { type: [string, 'null'], format: uuid, description: Ride chat id; members only }
+        chatExpiresAt: { type: [string, 'null'], format: date-time, description: Two hours after completion }
         departureAt: { type: string, format: date-time }
-        seatsTotal: { type: integer }
-        seatsAvailable: { type: integer }
+        seatsTotal: { type: integer, minimum: 1, maximum: 8 }
+        seatsAvailable: { type: integer, minimum: 0, maximum: 8 }
         contribution: { type: string, maxLength: 200 }
-        status: { type: string, enum: [DRAFT, ACTIVE, COMPLETED, CANCELLED] }
+        status: { $ref: '#/components/schemas/RideOfferStatus' }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    RideOfferPage:
+      type: object
+      description: >-
+        Spring Data page rendered directly (serialization mode direct). Only content and the page counters are part
+        of the contract; pageable and sort carry Spring's own shape.
+      required: [content, totalElements, totalPages, number, size, numberOfElements, first, last, empty]
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/RideOfferView' } }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        number: { type: integer, description: Zero-based page index }
+        size: { type: integer }
+        numberOfElements: { type: integer }
+        first: { type: boolean }
+        last: { type: boolean }
+        empty: { type: boolean }
+        pageable: { type: object }
+        sort: { type: object }
     CreateRideOfferInput:
       type: object
       additionalProperties: false
       required: [originArea, destinationArea, departureAt, seatsTotal, contribution]
       properties:
-        originArea: { type: string, maxLength: 200 }
-        destinationArea: { type: string, maxLength: 200 }
-        departureAt: { type: string, format: date-time }
-        seatsTotal: { type: integer }
-        contribution: { type: string, maxLength: 200 }
+        originArea: { type: string, minLength: 1, maxLength: 200 }
+        destinationArea: { type: string, minLength: 1, maxLength: 200 }
+        departureAt: { type: string, format: date-time, description: Must be in the future }
+        seatsTotal: { type: integer, minimum: 1, maximum: 8 }
+        contribution: { type: string, minLength: 1, maxLength: 200 }
+        originLat: { type: [number, 'null'], minimum: -90, maximum: 90 }
+        originLng: { type: [number, 'null'], minimum: -180, maximum: 180 }
+        destinationLat: { type: [number, 'null'], minimum: -90, maximum: 90 }
+        destinationLng: { type: [number, 'null'], minimum: -180, maximum: 180 }
+        routePolyline: { type: [string, 'null'], maxLength: 20000 }
+        distanceMiles: { type: [number, 'null'], minimum: 0, maximum: 9999.99, description: Up to 4 integer and 2 fraction digits }
+        estimatedDurationMins: { type: [integer, 'null'], minimum: 0, maximum: 2880 }
+        tollPreference: { anyOf: [{ $ref: '#/components/schemas/RideTollPreference' }, { type: 'null' }] }
+        estimatedTollAmount: { type: [number, 'null'], minimum: 0, maximum: 999999.99, description: Up to 6 integer and 2 fraction digits }
+        isRecurring: { type: [boolean, 'null'] }
+        recurrencePattern: { anyOf: [{ $ref: '#/components/schemas/RideRecurrencePattern' }, { type: 'null' }] }
+        recurringDays: { type: [array, 'null'], maxItems: 7, items: { $ref: '#/components/schemas/RideWeekday' } }
+        luggageCapacity: { anyOf: [{ $ref: '#/components/schemas/RideLuggageCapacity' }, { type: 'null' }] }
+        genderPreference: { anyOf: [{ $ref: '#/components/schemas/RideGenderPreference' }, { type: 'null' }] }
+    UpdateRideOfferInput:
+      type: object
+      additionalProperties: false
+      description: >-
+        Driver edits; null or absent fields are left unchanged. status, completedAt, conversationId and chatExpiresAt
+        are server-managed and not part of this input.
+      properties:
+        originArea: { type: [string, 'null'], minLength: 1, maxLength: 200, pattern: '\S', description: Must not be blank }
+        destinationArea: { type: [string, 'null'], minLength: 1, maxLength: 200, pattern: '\S', description: Must not be blank }
+        departureAt: { type: [string, 'null'], format: date-time, description: Must be in the future }
+        seatsTotal: { type: [integer, 'null'], minimum: 1, maximum: 8, description: Not below the seats riders hold }
+        seatsAvailable: { type: [integer, 'null'], minimum: 0, maximum: 8, description: At most seatsTotal minus the seats riders hold }
+        contribution: { type: [string, 'null'], minLength: 1, maxLength: 200, pattern: '\S', description: Must not be blank }
+        originLat: { type: [number, 'null'], minimum: -90, maximum: 90 }
+        originLng: { type: [number, 'null'], minimum: -180, maximum: 180 }
+        destinationLat: { type: [number, 'null'], minimum: -90, maximum: 90 }
+        destinationLng: { type: [number, 'null'], minimum: -180, maximum: 180 }
+        routePolyline: { type: [string, 'null'], maxLength: 20000 }
+        distanceMiles: { type: [number, 'null'], minimum: 0, maximum: 9999.99 }
+        estimatedDurationMins: { type: [integer, 'null'], minimum: 0, maximum: 2880 }
+        tollPreference: { anyOf: [{ $ref: '#/components/schemas/RideTollPreference' }, { type: 'null' }] }
+        estimatedTollAmount: { type: [number, 'null'], minimum: 0, maximum: 999999.99 }
+        isRecurring: { type: [boolean, 'null'] }
+        recurrencePattern: { anyOf: [{ $ref: '#/components/schemas/RideRecurrencePattern' }, { type: 'null' }] }
+        recurringDays: { type: [array, 'null'], maxItems: 7, items: { $ref: '#/components/schemas/RideWeekday' } }
+        luggageCapacity: { anyOf: [{ $ref: '#/components/schemas/RideLuggageCapacity' }, { type: 'null' }] }
+        genderPreference: { anyOf: [{ $ref: '#/components/schemas/RideGenderPreference' }, { type: 'null' }] }
+    UpdateRideStatusInput:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/RideOfferStatus' }
+    ReactivateRideInput:
+      type: object
+      additionalProperties: false
+      required: [newDepartureAt]
+      properties:
+        newDepartureAt: { type: string, format: date-time, description: Must be in the future }
+    RideChatResponse:
+      type: object
+      additionalProperties: false
+      required: [conversationId, rideId, chatExpiresAt, message]
+      properties:
+        conversationId: { type: string, format: uuid }
+        rideId: { type: string, format: uuid }
+        chatExpiresAt: { type: [string, 'null'], format: date-time, description: Null until the ride is completed }
+        message: { type: string, description: Notice that the chat self-deletes two hours after completion }
     CreateRideRequestInput:
       type: object
       additionalProperties: false
-      required: [seatsRequested, message]
+      required: [seatsRequested]
       properties:
-        seatsRequested: { type: integer }
-        message: { type: string, maxLength: 4000 }
+        seatsRequested: { type: integer, minimum: 1, description: At most the ride's seatsTotal }
+        message: { type: [string, 'null'], maxLength: 4000 }
+    UpdateRideRequestStatusInput:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/RideRequestStatus' }
     RideRequest:
       type: object
       additionalProperties: false
-      required: [id, rideId, riderId, seatsRequested, status, createdAt]
+      required: [id, rideId, riderId, seatsRequested, message, status, createdAt]
       properties:
         id: { type: string, format: uuid }
         rideId: { type: string, format: uuid }
         riderId: { type: string, format: uuid }
-        seatsRequested: { type: integer }
-        message: { type: string, maxLength: 4000 }
-        status: { type: string, enum: [PENDING, ACCEPTED, REJECTED, WITHDRAWN] }
+        seatsRequested: { type: integer, minimum: 1 }
+        message: { type: [string, 'null'], maxLength: 4000 }
+        status: { $ref: '#/components/schemas/RideRequestStatus' }
+        createdAt: { type: string, format: date-time }
+    CreateRideBookingInput:
+      type: object
+      additionalProperties: false
+      required: [seatsBooked]
+      properties:
+        seatsBooked: { type: integer, minimum: 1, description: At most the ride's seatsAvailable }
+    UpdateRideBookingStatusInput:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/RideBookingStatus' }
+    RideBooking:
+      type: object
+      additionalProperties: false
+      required: [id, rideId, userId, seatsBooked, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        rideId: { type: string, format: uuid }
+        userId: { type: string, format: uuid, description: The passenger }
+        seatsBooked: { type: integer, minimum: 1 }
+        status: { $ref: '#/components/schemas/RideBookingStatus' }
         createdAt: { type: string, format: date-time }
     RideParticipant:
       type: object
@@ -3395,28 +4496,219 @@ components:
         id: { type: string, format: uuid }
         rideId: { type: string, format: uuid }
         userId: { type: string, format: uuid }
-        role: { type: string, enum: [DRIVER, RIDER] }
+        role: { $ref: '#/components/schemas/RideParticipantRole' }
         joinedAt: { type: string, format: date-time }
     CreateRideRatingInput:
       type: object
       additionalProperties: false
-      required: [rateeId, rating]
+      required: [rating]
       properties:
-        rateeId: { type: string, format: uuid }
+        rateeId: { type: [string, 'null'], format: uuid, description: Omit (passengers only) to rate the driver }
         rating: { type: integer, minimum: 1, maximum: 5 }
-        comment: { type: string, maxLength: 4000 }
+        comment: { type: [string, 'null'], maxLength: 4000 }
     RideRating:
       type: object
       additionalProperties: false
-      required: [id, rideId, raterId, rateeId, rating, createdAt]
+      description: Full rating, returned only to its author on create and to the ratee under my-ratings.
+      required: [id, rideId, raterId, rateeId, rating, comment, createdAt]
       properties:
         id: { type: string, format: uuid }
         rideId: { type: string, format: uuid }
         raterId: { type: string, format: uuid }
         rateeId: { type: string, format: uuid }
-        rating: { type: integer }
-        comment: { type: string, maxLength: 4000 }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: [string, 'null'], maxLength: 4000 }
         createdAt: { type: string, format: date-time }
+    RideRatingView:
+      type: object
+      additionalProperties: false
+      description: Public form of a rating, without rater or ratee ids.
+      required: [id, rating, comment, createdAt]
+      properties:
+        id: { type: string, format: uuid, description: The rating's own id }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: [string, 'null'], maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
+    RideRoute:
+      type: object
+      additionalProperties: false
+      required: [polyline, distanceMiles, durationMinutes, hasTolls, warnings, summary]
+      properties:
+        polyline: { type: string, description: Encoded overview polyline; empty when Google returns none }
+        distanceMiles: { type: number, description: Rounded to 1 decimal }
+        durationMinutes: { type: integer }
+        hasTolls: { type: boolean, description: True when a warning or the summary mentions tolls }
+        warnings: { type: array, items: { type: string } }
+        summary: { type: string }
+    PlacePrediction:
+      type: object
+      additionalProperties: false
+      required: [description, placeId, mainText, secondaryText]
+      properties:
+        description: { type: string }
+        placeId: { type: string }
+        mainText: { type: [string, 'null'] }
+        secondaryText: { type: [string, 'null'] }
+    LatLng:
+      type: object
+      additionalProperties: false
+      required: [lat, lng]
+      properties:
+        lat: { type: number }
+        lng: { type: number }
+    ListingStatus:
+      type: string
+      description: >-
+        Stored lowercase. Active, reserved and sold listings are public; removed listings are visible only to the
+        owner and moderators.
+      enum: [active, reserved, sold, removed]
+    ListingCondition:
+      type: string
+      description: Stored exactly as listed (the one listing value that is not lowercase).
+      enum: [Brand New, Like New, Gently Used, Fair, Used]
+    ListingCategory:
+      type: object
+      additionalProperties: false
+      required: [id, name, slug, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 120 }
+        slug: { type: string, maxLength: 120 }
+        createdAt: { type: string, format: date-time }
+    CreateListingCategoryInput:
+      type: object
+      additionalProperties: false
+      required: [name, slug]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        slug: { type: string, minLength: 1, maxLength: 120, description: Must be unique (409 otherwise) }
+    ListingView:
+      type: object
+      additionalProperties: false
+      description: >-
+        A listing as members see it. Never carries the seller's user id; isMine tells the client whether to show owner
+        actions, and buyers reach the seller through POST /marketplace/listings/{listingId}/contact.
+      required: [id, category, title, description, price, currency, condition, location, negotiable, status, createdAt, updatedAt, isMine, savedByViewer, coverImageUrl]
+      properties:
+        id: { type: string, format: uuid }
+        category: { $ref: '#/components/schemas/ListingCategory' }
+        title: { type: string, maxLength: 200 }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        price: { type: number, minimum: 0 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        condition: { anyOf: [{ $ref: '#/components/schemas/ListingCondition' }, { type: 'null' }] }
+        location: { type: [string, 'null'], maxLength: 200 }
+        negotiable: { type: [boolean, 'null'] }
+        status: { $ref: '#/components/schemas/ListingStatus' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        isMine: { type: boolean, description: True when the viewer owns the listing; false for anonymous viewers }
+        savedByViewer: { type: boolean, description: False for anonymous viewers }
+        coverImageUrl: { type: [string, 'null'], description: URL of the first photo by sortOrder }
+    ListingPage:
+      type: object
+      description: >-
+        Spring Data page rendered directly (serialization mode direct). Only content and the page counters are part
+        of the contract; pageable and sort carry Spring's own shape.
+      required: [content, totalElements, totalPages, number, size, numberOfElements, first, last, empty]
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/ListingView' } }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        number: { type: integer, description: Zero-based page index }
+        size: { type: integer }
+        numberOfElements: { type: integer }
+        first: { type: boolean }
+        last: { type: boolean }
+        empty: { type: boolean }
+        pageable: { type: object }
+        sort: { type: object }
+    CreateListingInput:
+      type: object
+      additionalProperties: false
+      required: [categoryId, title, price, currency]
+      properties:
+        categoryId: { type: string, format: uuid, description: Must name an existing category (400 otherwise) }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        price: { type: number, minimum: 0, multipleOf: 0.01, maximum: 99999999.99 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        condition: { anyOf: [{ $ref: '#/components/schemas/ListingCondition' }, { type: 'null' }] }
+        location: { type: [string, 'null'], maxLength: 200 }
+        negotiable: { type: [boolean, 'null'] }
+    UpdateListingInput:
+      type: object
+      additionalProperties: false
+      description: Partial update; null leaves a field unchanged and an empty string clears description, condition or location.
+      properties:
+        categoryId: { type: [string, 'null'], format: uuid, description: Must name an existing category (400 otherwise) }
+        title: { type: [string, 'null'], maxLength: 200, pattern: '\S', description: Must not be blank }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        price: { type: [number, 'null'], minimum: 0, multipleOf: 0.01, maximum: 99999999.99 }
+        currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        condition:
+          anyOf:
+            - { $ref: '#/components/schemas/ListingCondition' }
+            - { type: string, enum: [''] }
+            - { type: 'null' }
+        location: { type: [string, 'null'], maxLength: 200 }
+        negotiable: { type: [boolean, 'null'] }
+        status:
+          anyOf:
+            - { $ref: '#/components/schemas/ListingStatus' }
+            - { type: 'null' }
+          description: >-
+            Owners: active to reserved|sold, reserved to active|sold, sold to active (409 otherwise). Removing a
+            listing or changing a removed one is moderator-only (403).
+    ListingImage:
+      type: object
+      additionalProperties: false
+      required: [id, listingId, url, sortOrder, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        url: { type: string, maxLength: 500 }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+    AddListingImageInput:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url: { type: string, minLength: 1, maxLength: 500, description: The owner's upload in the marketplace bucket }
+        sortOrder: { type: integer, minimum: 0, maximum: 100, default: 0 }
+    ListingFavorite:
+      type: object
+      additionalProperties: false
+      required: [id, listingId, userId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        userId: { type: string, format: uuid, description: The caller }
+        createdAt: { type: string, format: date-time }
+    ListingContactResponse:
+      type: object
+      additionalProperties: false
+      required: [conversationId, created]
+      properties:
+        conversationId: { type: string, format: uuid }
+        created: { type: boolean, description: False when the caller's existing chat about this listing was returned }
+    CreateListingReportInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 80 }
+        description: { type: [string, 'null'], maxLength: 4000 }
+    ListingReportResponse:
+      type: object
+      additionalProperties: false
+      required: [id, listingId, reason, status]
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        reason: { type: string, maxLength: 80 }
+        status: { type: string, enum: [open] }
     Community:
       type: object
       additionalProperties: false
@@ -3551,8 +4843,43 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ApiError' }
+    RideMembersOnly:
+      description: Only the ride's driver, its passengers (live booking or accepted request), and admins may do this
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    MapsRateLimited:
+      description: The caller used its 60 map lookups for this minute
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    MapsProviderUnavailable:
+      description: Google Maps failed or returned nothing
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    MapsNotConfigured:
+      description: No Maps server key is configured; clients fall back to their own estimators
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
   parameters:
     RoomListingId:
+      name: listingId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RideOfferId:
+      name: offerId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RideId:
+      name: rideId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MarketplaceListingId:
       name: listingId
       in: path
       required: true

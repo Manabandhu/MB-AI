@@ -23,7 +23,7 @@ class RideMapsControllerTest {
                         {"results":[{"geometry":{"location":{"lat":32.8,"lng":-96.9}}}]}""",
                         MediaType.APPLICATION_JSON));
 
-        var location = controller.geocode("Irving&key=stolen/../{x}");
+        var location = controller.geocode(null, "Irving&key=stolen/../{x}");
 
         assertThat(location.lat()).isEqualTo(32.8);
         server.verify();

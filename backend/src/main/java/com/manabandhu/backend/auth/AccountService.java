@@ -64,6 +64,8 @@ public class AccountService {
             new String[] {"settlements", "to_user_id"},
             new String[] {"listings", "owner_id"},
             new String[] {"listing_favorites", "user_id"},
+            new String[] {"listing_reports", "reporter_id"},
+            new String[] {"listing_conversations", "buyer_id"},
             new String[] {"immigration_checklists", "owner_id"},
             new String[] {"immigration_resources", "owner_id"},
             new String[] {"package_tracking", "owner_id"},

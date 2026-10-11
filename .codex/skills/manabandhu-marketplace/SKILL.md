@@ -88,3 +88,13 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
 - Public API: `marketplace/index.ts` exports `moduleMeta` (launcher entry).
 - Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.
 - Images (2026-10-11): `ListingImageService.add/delete(Actor, …)` enforces owner/admin in the service, and image URLs must be the owner's uploads in the `marketplace` bucket (400 otherwise). `SellItemScreen` should switch to `useImageUpload('marketplace')`; that is pending.
+- Production pass (2026-10-11), backend:
+  - **Listing views.** `ListingView` replaces the raw entity: no `ownerId`, plus `isMine`, `savedByViewer` and `coverImageUrl`, batch-loaded by `ListingViews`.
+  - **Authorization in services.** `ListingService.update/delete(Actor, …)` and `ListingCategoryService.create(Actor, …)`; the controller no longer checks roles.
+  - **Status.** Owner transitions are active↔reserved, active|reserved→sold, sold→active; `removed` and restoring are moderator-only. Active, reserved and sold listings are public; removed ones only for the owner and moderators.
+  - **Validation.** Price required, ≥ 0, `@Digits(8,2)`; currency `[A-Z]{3}`; condition ∈ Brand New|Like New|Gently Used|Fair|Used; non-blank title on update; `""` clears optional text.
+  - **Search and lists.** `GET /listings` searches server-side (`q`, `categoryId`, `condition`, `maxPrice`, `includeClosed`), newest first, size ≤ 100, client sort ignored. New `GET /listings/mine` and `GET /favorites/listings`. Categories and lists are capped at 200.
+  - **Photos.** Max 10 per listing; deleting a listing or photo also deletes the stored file (`MediaService.deleteStoredQuietly`).
+  - **Favorites.** Idempotent, and not allowed for your own listing or for non-active ones.
+  - **Reports and contact.** `POST /listings/{id}/report` (`listing_reports`, one open report per member) and `POST /listings/{id}/contact` (opens or reuses a direct chat with the seller through `listing_conversations` and notifies the seller). V41 adds the status/price/currency checks and both tables, with RLS on and grants revoked.
+  - **Tests.** `MarketplaceRulesTest`; smoke: `== marketplace production rules`.

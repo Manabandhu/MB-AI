@@ -20,6 +20,11 @@ interface RideRequestRepository extends JpaRepository<RideRequest, UUID> {
 
     boolean existsByRideIdAndRiderIdAndStatus(UUID rideId, UUID riderId, String status);
 
+    @Query("SELECT COALESCE(SUM(r.seatsRequested), 0) FROM RideRequest r WHERE r.rideId = :rideId AND LOWER(r.status) = 'accepted'")
+    long sumAcceptedSeats(@Param("rideId") UUID rideId);
+
+    List<RideRequest> findByRiderIdOrderByCreatedAtDesc(UUID riderId, org.springframework.data.domain.Pageable pageable);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM RideRequest r WHERE r.id = :id")
     Optional<RideRequest> findByIdForUpdate(@Param("id") UUID id);

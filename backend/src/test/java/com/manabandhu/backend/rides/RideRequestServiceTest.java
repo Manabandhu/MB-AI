@@ -51,11 +51,15 @@ class RideRequestServiceTest {
     @BeforeEach
     void setUp() {
         service = new RideRequestService(repository, offerRepository, bookingRepository, participantRepository,
-                new RideAccess(offerRepository, bookingRepository, repository, participantRepository), notifications);
+                new RideAccess(offerRepository, bookingRepository, repository, participantRepository), notifications,
+                new RideMembership(bookingRepository, repository, participantRepository,
+                        org.mockito.Mockito.mock(com.manabandhu.backend.chat.ConversationParticipantService.class),
+                        notifications));
         offer = new RideOffer(driverId, "Irving", "Dallas", Instant.now().plusSeconds(3600), 3, 3, "$15", "active");
         lenient().when(offerRepository.findById(offer.getId())).thenReturn(Optional.of(offer));
         lenient().when(offerRepository.findByIdForUpdate(offer.getId())).thenReturn(Optional.of(offer));
         lenient().when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     private RideRequest stored(int seats, String status) {
@@ -154,6 +158,7 @@ class RideRequestServiceTest {
         assertThatThrownBy(() -> service.create(offer.getId(), rider, new CreateRideRequestInput(1, null)))
                 .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
         verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test

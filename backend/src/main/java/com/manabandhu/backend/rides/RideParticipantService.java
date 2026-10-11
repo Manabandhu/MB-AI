@@ -39,12 +39,19 @@ public class RideParticipantService {
     public RideParticipant join(Actor actor, UUID rideId) {
         var offer = access.requireOffer(rideId);
         if (actor.is(offer.getDriverId())) {
-            return addParticipant(rideId, actor.id(), "driver");
+            return repository.findByRideIdOrderByJoinedAtAsc(rideId).stream()
+                    .filter(p -> p.getUserId().equals(actor.id()))
+                    .findFirst()
+                    .orElseGet(() -> addParticipant(rideId, actor.id(), "driver"));
         }
         if (!access.isPassenger(actor.id(), rideId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Book a seat or get your request accepted first");
         }
-        return addParticipant(rideId, actor.id(), "rider");
+        // Booking or an accepted request already adds the rider; joining again returns that row.
+        return repository.findByRideIdOrderByJoinedAtAsc(rideId).stream()
+                .filter(p -> p.getUserId().equals(actor.id()))
+                .findFirst()
+                .orElseGet(() -> addParticipant(rideId, actor.id(), "rider"));
     }
 
     @Transactional
@@ -53,6 +60,14 @@ public class RideParticipantService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Participant not found"));
         var offer = access.requireOffer(participant.getRideId());
         actor.requireAnyOf("Not authorized to remove participant", participant.getUserId(), offer.getDriverId());
+        // A rider who still holds seats leaves by cancelling the booking or withdrawing the request, which returns
+        // the seats; deleting only the participant row would leave the seats taken.
+        if (!participant.getUserId().equals(offer.getDriverId()) && access.isPassenger(participant.getUserId(), offer.getId())
+                && (access.hasAcceptedRequest(participant.getUserId(), offer.getId())
+                    || access.hasLiveBooking(participant.getUserId(), offer.getId()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cancel the booking or withdraw the request to leave this ride");
+        }
         repository.delete(participant);
     }
 

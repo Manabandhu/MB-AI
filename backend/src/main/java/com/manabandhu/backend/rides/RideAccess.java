@@ -70,6 +70,10 @@ class RideAccess {
         }
     }
 
+    boolean hasLiveBooking(UUID userId, UUID rideId) {
+        return bookingRepository.existsByRideIdAndUserIdAndStatusNot(rideId, userId, RideBookingService.CANCELLED);
+    }
+
     boolean hasAcceptedRequest(UUID userId, UUID rideId) {
         return requestRepository.existsByRideIdAndRiderIdAndStatus(rideId, userId, RideRequestService.ACCEPTED);
     }

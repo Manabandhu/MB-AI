@@ -506,6 +506,27 @@ console.log('== rides production rules');
     (await call('A', 'GET', `/api/v1/rides/offers/${rid}`)).body?.driverId,
     A,
   );
+  await status(
+    'the short ride path is public for real ids',
+    200,
+    null,
+    'GET',
+    `/api/v1/rides/${rid}`,
+  );
+  await status(
+    'anonymous callers cannot read ride history',
+    401,
+    null,
+    'GET',
+    '/api/v1/rides/history',
+  );
+  await status(
+    'anonymous callers cannot read saved rooms',
+    401,
+    null,
+    'GET',
+    '/api/v1/rooms/favorites',
+  );
   await status('strangers cannot edit a ride', 403, 'C', 'PATCH', `/api/v1/rides/offers/${rid}`, {
     contribution: '$1',
   });
@@ -1503,6 +1524,191 @@ console.log('== rooms production rules');
     `/api/v1/rooms/listings/${id}`,
   );
   await status('owner relists', 200, 'A', 'PATCH', `/api/v1/rooms/listings/${id}/publish`);
+}
+
+console.log('== marketplace production rules');
+{
+  await status(
+    'non-admins cannot create categories',
+    403,
+    'B',
+    'POST',
+    '/api/v1/marketplace/categories',
+    {
+      name: 'Nope',
+      slug: `nope-${Date.now()}`,
+    },
+  );
+  const category = await call('D', 'POST', '/api/v1/marketplace/categories', {
+    name: 'Smoke furniture',
+    slug: `smoke-furniture-${Date.now()}`,
+  });
+  expect('admins create categories', category.status, 201);
+  const created = await call('A', 'POST', '/api/v1/marketplace/listings', {
+    categoryId: category.body?.id,
+    title: 'Smoke desk',
+    price: 40,
+    currency: 'USD',
+    condition: 'Like New',
+    location: 'Irving',
+  });
+  expect('seller lists an item', created.status, 201);
+  const id = created.body?.id;
+  const pub = await call('B', 'GET', `/api/v1/marketplace/listings/${id}`);
+  expect('public listing hides the seller id', pub.body?.ownerId, undefined);
+  expect('public listing says it is not mine', pub.body?.isMine, false);
+  expect(
+    'seller sees isMine',
+    (await call('A', 'GET', `/api/v1/marketplace/listings/${id}`)).body?.isMine,
+    true,
+  );
+  await status(
+    'strangers cannot edit a listing',
+    403,
+    'C',
+    'PATCH',
+    `/api/v1/marketplace/listings/${id}`,
+    {
+      price: 1,
+    },
+  );
+  await status(
+    'strangers cannot delete a listing',
+    403,
+    'C',
+    'DELETE',
+    `/api/v1/marketplace/listings/${id}`,
+  );
+  await status('unknown status is a 400', 400, 'A', 'PATCH', `/api/v1/marketplace/listings/${id}`, {
+    status: 'banana',
+  });
+  await status(
+    'sellers cannot remove listings themselves',
+    403,
+    'A',
+    'PATCH',
+    `/api/v1/marketplace/listings/${id}`,
+    {
+      status: 'removed',
+    },
+  );
+  await status('missing price is a 400', 400, 'A', 'POST', '/api/v1/marketplace/listings', {
+    categoryId: category.body?.id,
+    title: 'No price',
+    currency: 'USD',
+  });
+  await status(
+    'unknown sort is ignored, not a 500',
+    200,
+    null,
+    'GET',
+    '/api/v1/marketplace/listings?sort=nope,desc',
+  );
+  const found = await call(
+    null,
+    'GET',
+    `/api/v1/marketplace/listings?q=smoke%20desk&categoryId=${category.body?.id}`,
+  );
+  expect(
+    'server-side search finds the item',
+    (found.body?.content ?? []).some((l) => l.id === id),
+    true,
+  );
+  await status(
+    'sellers cannot save their own listing',
+    400,
+    'A',
+    'POST',
+    `/api/v1/marketplace/listings/${id}/favorite`,
+  );
+  await status(
+    'buyer saves the listing',
+    201,
+    'B',
+    'POST',
+    `/api/v1/marketplace/listings/${id}/favorite`,
+  );
+  const saved = await call('B', 'GET', '/api/v1/marketplace/favorites/listings');
+  expect(
+    'saved listings come back as listings',
+    (saved.body ?? []).some((l) => l.id === id),
+    true,
+  );
+  const contact = await call('B', 'POST', `/api/v1/marketplace/listings/${id}/contact`);
+  expect('buyer opens a chat with the seller', Boolean(contact.body?.conversationId), true);
+  const again = await call('B', 'POST', `/api/v1/marketplace/listings/${id}/contact`);
+  expect(
+    'contacting again reuses the chat',
+    again.body?.conversationId,
+    contact.body?.conversationId,
+  );
+  await status(
+    'sellers cannot contact themselves',
+    400,
+    'A',
+    'POST',
+    `/api/v1/marketplace/listings/${id}/contact`,
+  );
+  await status(
+    'buyer reports the listing',
+    201,
+    'B',
+    'POST',
+    `/api/v1/marketplace/listings/${id}/report`,
+    {
+      reason: 'spam',
+    },
+  );
+  await status(
+    'a second open report is a 409',
+    409,
+    'B',
+    'POST',
+    `/api/v1/marketplace/listings/${id}/report`,
+    {
+      reason: 'spam',
+    },
+  );
+  const mine = await call('A', 'GET', '/api/v1/marketplace/listings/mine');
+  expect(
+    'seller sees their listings',
+    (mine.body ?? []).some((l) => l.id === id),
+    true,
+  );
+  await status(
+    'seller marks the item sold',
+    200,
+    'A',
+    'PATCH',
+    `/api/v1/marketplace/listings/${id}`,
+    {
+      status: 'sold',
+    },
+  );
+  await status(
+    'moderator removes the listing',
+    200,
+    'D',
+    'PATCH',
+    `/api/v1/marketplace/listings/${id}`,
+    {
+      status: 'removed',
+    },
+  );
+  await status(
+    'removed listings are hidden from buyers',
+    404,
+    'B',
+    'GET',
+    `/api/v1/marketplace/listings/${id}`,
+  );
+  await status(
+    'seller deletes the listing',
+    204,
+    'A',
+    'DELETE',
+    `/api/v1/marketplace/listings/${id}`,
+  );
 }
 
 console.log(`\nPASS=${pass} FAIL=${fail}${skip ? ` SKIPPED_GROUPS=${skip}` : ''}`);

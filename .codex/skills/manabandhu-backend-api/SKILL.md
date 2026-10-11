@@ -111,3 +111,4 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
   - RSVP notifications fire only on change.
   - Smoke suite: 172 checks.
 - Rooms production pass (2026-10-11): rooms services take `Actor`; public listing responses come from `RoomListingViews` (batch-loaded, no `ownerId`, rounded coordinates); V39 revokes the remaining Data API grants on ride tables, `room_inquiries` and the `room_amenities` catalog. Smoke suite: 206 checks.
+- Rides and marketplace production pass (2026-10-11): ride and marketplace services take `Actor` and return viewer-specific views (`RideOfferView`, `ListingView`) without other users' ids; V40 (one pending ride request per rider) and V41 (marketplace checks, `listing_reports`, `listing_conversations`, RLS on, grants revoked). The short public aliases `/rooms/{id}` and `/rides/{id}` in `SecurityConfig` match UUIDs only, so they never cover sibling user routes. Smoke suite: 260 checks.

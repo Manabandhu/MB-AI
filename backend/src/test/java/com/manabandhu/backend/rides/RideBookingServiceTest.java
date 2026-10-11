@@ -46,12 +46,16 @@ class RideBookingServiceTest {
     @BeforeEach
     void setUp() {
         var access = new RideAccess(offerRepository, bookingRepository, requestRepository, participantRepository);
-        service = new RideBookingService(bookingRepository, offerRepository, access);
+        var membership = new RideMembership(bookingRepository, requestRepository, participantRepository,
+                org.mockito.Mockito.mock(com.manabandhu.backend.chat.ConversationParticipantService.class),
+                org.mockito.Mockito.mock(com.manabandhu.backend.notifications.NotificationPublisher.class));
+        service = new RideBookingService(bookingRepository, offerRepository, access, membership, participantRepository);
         offer = new RideOffer(driverId, "Irving", "Dallas", Instant.now().plusSeconds(3600), 3, 3, "$15", "active");
         lenient().when(offerRepository.findByIdForUpdate(offer.getId())).thenReturn(Optional.of(offer));
         lenient().when(offerRepository.findById(offer.getId())).thenReturn(Optional.of(offer));
         lenient().when(offerRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(bookingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(bookingRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     private static Actor user(UUID id) {
@@ -93,7 +97,7 @@ class RideBookingServiceTest {
     void cancellingReleasesSeats() {
         var booking = new RideBooking(offer.getId(), riderId, 2, "confirmed");
         offer.setSeatsAvailable(1);
-        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(booking.getId())).thenReturn(Optional.of(booking));
 
         var result = service.updateStatus(user(riderId), booking.getId(), "cancelled");
 
@@ -105,7 +109,7 @@ class RideBookingServiceTest {
     @Test
     void cancelledBookingCannotBeReopened() {
         var booking = new RideBooking(offer.getId(), riderId, 2, "cancelled");
-        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(booking.getId())).thenReturn(Optional.of(booking));
 
         assertThatThrownBy(() -> service.updateStatus(user(driverId), booking.getId(), "confirmed"))
                 .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
@@ -115,7 +119,7 @@ class RideBookingServiceTest {
     @Test
     void passengerCannotConfirmTheirOwnBooking() {
         var booking = new RideBooking(offer.getId(), riderId, 1, "pending");
-        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(booking.getId())).thenReturn(Optional.of(booking));
 
         assertThatThrownBy(() -> service.updateStatus(user(riderId), booking.getId(), "confirmed"))
                 .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
@@ -124,11 +128,12 @@ class RideBookingServiceTest {
     @Test
     void strangerCannotTouchABooking() {
         var booking = new RideBooking(offer.getId(), riderId, 1, "confirmed");
-        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(booking.getId())).thenReturn(Optional.of(booking));
 
         assertThatThrownBy(() -> service.updateStatus(user(UUID.randomUUID()), booking.getId(), "cancelled"))
                 .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
         verify(bookingRepository, never()).save(any());
+        verify(bookingRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -141,7 +146,7 @@ class RideBookingServiceTest {
     void deletingALiveBookingReturnsSeats() {
         var booking = new RideBooking(offer.getId(), riderId, 2, "confirmed");
         offer.setSeatsAvailable(1);
-        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(booking.getId())).thenReturn(Optional.of(booking));
 
         service.delete(user(riderId), booking.getId());
 

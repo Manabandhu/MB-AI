@@ -29,6 +29,18 @@ public class StorageUrls {
         return projectUrl + "/storage/v1/object/public/" + bucket + "/" + path;
     }
 
+    /** The {@code bucket} and {@code owner/object} path of one of our public object URLs, or empty for anything else. */
+    public java.util.Optional<String[]> bucketAndPath(String url) {
+        if (url == null || projectUrl.isBlank()) return java.util.Optional.empty();
+        var prefix = projectUrl + "/storage/v1/object/public/";
+        if (!url.startsWith(prefix) || url.contains("..") || url.contains("?") || url.contains("#")) {
+            return java.util.Optional.empty();
+        }
+        var parts = url.substring(prefix.length()).split("/");
+        if (parts.length != 3 || !OBJECT_NAME.matcher(parts[2]).matches()) return java.util.Optional.empty();
+        return java.util.Optional.of(new String[] {parts[0], parts[1] + "/" + parts[2]});
+    }
+
     /** Fails with 400 unless {@code url} is a public object URL in one of {@code buckets} owned by one of {@code owners}. */
     public void requireOwnedImage(String url, Set<String> buckets, UUID... owners) {
         if (url == null || projectUrl.isBlank()) throw invalid();

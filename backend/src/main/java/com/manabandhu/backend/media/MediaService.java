@@ -109,6 +109,22 @@ public class MediaService {
         }
     }
 
+    /**
+     * Best-effort server-side cleanup of a stored object after the record that used it was deleted (for example a
+     * listing photo removed by its owner or a moderator). Failures are logged, never thrown: the row is already gone.
+     */
+    public void deleteStoredQuietly(String publicUrl) {
+        var target = storageUrls.bucketAndPath(publicUrl);
+        if (target.isEmpty() || projectUrl.isBlank() || serviceRoleKey.isBlank()) return;
+        try {
+            restTemplate.exchange(projectUrl + "/storage/v1/object/" + target.get()[0] + "/" + target.get()[1],
+                    HttpMethod.DELETE, new HttpEntity<>(headers()), String.class);
+        } catch (RestClientException exception) {
+            org.slf4j.LoggerFactory.getLogger(MediaService.class)
+                    .warn("Could not delete stored object {}: {}", target.get()[1], exception.getMessage());
+        }
+    }
+
     private static String normalizeBucket(String rawBucket) {
         var bucket = rawBucket == null ? "" : rawBucket.trim().toLowerCase(Locale.ROOT);
         if (!BUCKETS.contains(bucket)) {

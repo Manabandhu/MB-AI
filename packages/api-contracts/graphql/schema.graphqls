@@ -64,7 +64,10 @@ type RoomBooking {
 
 type RideOffer {
   id: ID!
-  driverId: ID!
+  "Only returned to the ride's driver, passengers, and admins."
+  driverId: ID
+  "True when the signed-in caller drives this ride."
+  isDriver: Boolean!
   originArea: String!
   destinationArea: String!
   departureAt: String!
@@ -97,8 +100,10 @@ type RideParticipant {
 type RideRating {
   id: ID!
   rideId: ID!
-  raterId: ID!
-  rateeId: ID!
+  "Not exposed; always null."
+  raterId: ID
+  "Not exposed; always null."
+  rateeId: ID
   rating: Int!
   comment: String
   createdAt: String!

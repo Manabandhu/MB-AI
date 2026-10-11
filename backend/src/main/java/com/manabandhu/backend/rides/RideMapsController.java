@@ -38,8 +38,12 @@ public class RideMapsController {
 
     private static final String GOOGLE = "https://maps.googleapis.com/maps/api";
 
+    /** Each signed-in member may make this many Maps calls per minute; the proxy spends a paid Google key. */
+    static final int CALLS_PER_MINUTE = 60;
+
     private final RestTemplate restTemplate;
     private final String apiKey;
+    private final java.util.concurrent.ConcurrentHashMap<String, long[]> windows = new java.util.concurrent.ConcurrentHashMap<>();
 
     RideMapsController(@Value("${app.maps.google-server-key:}") String apiKey) {
         this.apiKey = apiKey;
@@ -54,9 +58,11 @@ public class RideMapsController {
     }
 
     @GetMapping("/route")
-    RouteInfo route(@RequestParam double originLat, @RequestParam double originLng,
+    RouteInfo route(org.springframework.security.core.Authentication authentication,
+                    @RequestParam double originLat, @RequestParam double originLng,
                     @RequestParam double destinationLat, @RequestParam double destinationLng,
                     @RequestParam(defaultValue = "false") boolean avoidTolls) {
+        throttle(authentication);
         if (!validCoordinate(originLat, originLng) || !validCoordinate(destinationLat, destinationLng)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Coordinates are out of range");
         }
@@ -83,8 +89,10 @@ public class RideMapsController {
     }
 
     @GetMapping("/autocomplete")
-    List<Prediction> autocomplete(@RequestParam("q") String query) {
+    List<Prediction> autocomplete(org.springframework.security.core.Authentication authentication,
+                                  @RequestParam("q") String query) {
         if (query.isBlank() || query.length() > 200) return List.of();
+        throttle(authentication);
         var data = call("/place/autocomplete/json?input={input}&components=country:us&types={types}",
                 Map.of("input", query, "types", "geocode|establishment"));
         if (!(data.get("predictions") instanceof List<?> predictions)) return List.of();
@@ -98,7 +106,8 @@ public class RideMapsController {
     }
 
     @GetMapping("/geocode")
-    LatLng geocode(@RequestParam String address) {
+    LatLng geocode(org.springframework.security.core.Authentication authentication, @RequestParam String address) {
+        throttle(authentication);
         if (address.isBlank() || address.length() > 300) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Address is required");
         }
@@ -108,6 +117,20 @@ public class RideMapsController {
         }
         var location = (Map<?, ?>) ((Map<?, ?>) ((Map<?, ?>) results.get(0)).get("geometry")).get("location");
         return new LatLng(((Number) location.get("lat")).doubleValue(), ((Number) location.get("lng")).doubleValue());
+    }
+
+    /** Fixed one-minute window per caller; 429 once the window's budget is spent. */
+    void throttle(org.springframework.security.core.Authentication authentication) {
+        var caller = authentication == null ? "anonymous" : authentication.getName();
+        var minute = System.currentTimeMillis() / 60_000;
+        var window = windows.compute(caller, (key, current) ->
+                current == null || current[0] != minute ? new long[] {minute, 1} : new long[] {minute, current[1] + 1});
+        if (window[1] > CALLS_PER_MINUTE) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many map lookups; try again in a minute");
+        }
+        if (windows.size() > 10_000) {
+            windows.entrySet().removeIf(entry -> entry.getValue()[0] != minute);
+        }
     }
 
     private static boolean validCoordinate(double lat, double lng) {

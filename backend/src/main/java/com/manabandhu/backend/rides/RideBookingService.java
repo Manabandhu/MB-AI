@@ -26,14 +26,21 @@ public class RideBookingService {
     static final String CANCELLED = "cancelled";
     private static final Set<String> STATUSES = Set.of(PENDING, CONFIRMED, CANCELLED);
 
+    static final int LIST_CAP = 200;
+
     private final RideBookingRepository repository;
     private final RideOfferRepository offerRepository;
     private final RideAccess access;
+    private final RideMembership membership;
+    private final RideParticipantRepository participantRepository;
 
-    RideBookingService(RideBookingRepository repository, RideOfferRepository offerRepository, RideAccess access) {
+    RideBookingService(RideBookingRepository repository, RideOfferRepository offerRepository, RideAccess access,
+                       RideMembership membership, RideParticipantRepository participantRepository) {
         this.repository = repository;
         this.offerRepository = offerRepository;
         this.access = access;
+        this.membership = membership;
+        this.participantRepository = participantRepository;
     }
 
     /** All bookings for internal coordination (for example provisioning the ride chat). */
@@ -54,7 +61,7 @@ public class RideBookingService {
 
     @Transactional(readOnly = true)
     public List<RideBooking> findByUserId(UUID userId) {
-        return repository.findByUserIdOrderByCreatedAtDesc(userId);
+        return repository.findByUserIdOrderByCreatedAtDesc(userId, org.springframework.data.domain.PageRequest.of(0, LIST_CAP));
     }
 
     @Transactional(readOnly = true)
@@ -95,7 +102,12 @@ public class RideBookingService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Not enough seats available");
         }
         adjustSeats(offer, -input.seatsBooked());
-        return repository.save(new RideBooking(rideId, userId, input.seatsBooked(), CONFIRMED));
+        var booking = repository.save(new RideBooking(rideId, userId, input.seatsBooked(), CONFIRMED));
+        // A booked rider is part of the ride: listed with the participants and allowed into the ride chat.
+        if (!participantRepository.existsByRideIdAndUserId(rideId, userId)) {
+            participantRepository.save(new RideParticipant(rideId, userId, "rider"));
+        }
+        return booking;
     }
 
     /**
@@ -105,7 +117,8 @@ public class RideBookingService {
     @Transactional
     public RideBooking updateStatus(Actor actor, UUID id, String rawStatus) {
         var status = normalize(rawStatus);
-        var booking = requireBooking(id);
+        // Lock the booking, then the offer, so two cancellations cannot both return the same seats.
+        var booking = lockBooking(id);
         var offer = lockOffer(booking.getRideId());
         var isDriver = access.canManage(actor, offer);
         var isPassenger = actor.is(booking.getUserId());
@@ -125,23 +138,34 @@ public class RideBookingService {
             adjustSeats(offer, booking.getSeatsBooked());
         }
         booking.setStatus(status);
-        return repository.save(booking);
+        var saved = repository.saveAndFlush(booking);
+        if (CANCELLED.equals(status)) {
+            membership.leaveIfNoSeat(offer, booking.getUserId());
+        }
+        return saved;
     }
 
     /** Deleting a live booking returns its seats first. */
     @Transactional
     public void delete(Actor actor, UUID id) {
-        var booking = requireBooking(id);
+        var booking = lockBooking(id);
         var offer = lockOffer(booking.getRideId());
         actor.requireAnyOf("Not authorized to delete this booking", booking.getUserId(), offer.getDriverId());
         if (!CANCELLED.equals(booking.getStatus())) {
             adjustSeats(offer, booking.getSeatsBooked());
         }
         repository.delete(booking);
+        repository.flush();
+        membership.leaveIfNoSeat(offer, booking.getUserId());
     }
 
     private RideBooking requireBooking(UUID id) {
         return repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride booking not found"));
+    }
+
+    private RideBooking lockBooking(UUID id) {
+        return repository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride booking not found"));
     }
 
