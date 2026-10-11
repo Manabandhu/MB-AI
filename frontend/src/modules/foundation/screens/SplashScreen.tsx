@@ -1,15 +1,19 @@
 import { brand } from '@manabandhu/design-system';
 import { router, useRootNavigationState } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { routeAfterAuth } from '@/modules/auth/postAuth';
+import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { AnimatedBrandMark } from '@/modules/shared/ui/motion/AnimatedBrandMark';
 import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';
 import { useAppearance } from '@/theme/ThemeProvider';
+
+const SETTLED_DELAY_MS = 500;
+const SLOW_CHECK_MS = 8000;
 
 /** Launch screen: animated brand mark while the session check settles, then Welcome or the member's next step. */
 export function SplashScreen() {
@@ -19,54 +23,45 @@ export function SplashScreen() {
   const insets = useSafeAreaInsets();
   const { palette } = useAppearance();
 
-  useEffect(() => {
-    useAuthStore.getState().checkSession();
-  }, []);
+  // The root layout runs the one session check; this screen only waits for it to settle, then routes once.
+  const [slow, setSlow] = useState(false);
+  const settled = status !== 'loading' && !isLoading;
 
   useEffect(() => {
-    let redirected = false;
-    const doRedirect = () => {
-      if (redirected) return;
-      redirected = true;
-      if (status === 'authenticated') {
-        void routeAfterAuth();
-      } else {
-        router.replace('/welcome');
-      }
-    };
+    if (!rootNavigationState?.key || !settled) return;
+    // A short beat lets the logo animation register before leaving.
+    const timer = setTimeout(() => {
+      if (useAuthStore.getState().status === 'authenticated') void routeAfterAuth();
+      else router.replace('/welcome');
+    }, SETTLED_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [rootNavigationState?.key, settled]);
 
-    // Leave as soon as the session check settles; a short beat lets the logo animation register.
-    if (rootNavigationState?.key && !isLoading) {
-      const redirectTimer = setTimeout(doRedirect, 500);
-      return () => clearTimeout(redirectTimer);
-    }
+  // Never bounce a signed-in member to Welcome just because the check is slow: keep waiting, and after a while
+  // offer a retry instead.
+  useEffect(() => {
+    if (settled) return;
+    const timer = setTimeout(() => setSlow(true), SLOW_CHECK_MS);
+    return () => clearTimeout(timer);
+  }, [settled]);
 
-    // Safety fallback: Never trap the user on the splash screen for more than 2.2 seconds
-    const fallbackTimer = setTimeout(doRedirect, 2200);
-    return () => clearTimeout(fallbackTimer);
-  }, [isLoading, rootNavigationState?.key, status]);
-
-  const navigateToWelcome = () => {
-    const currentStatus = useAuthStore.getState().status;
-    if (currentStatus === 'authenticated') {
-      void routeAfterAuth();
-    } else {
-      router.replace('/welcome');
-    }
+  const retry = () => {
+    setSlow(false);
+    useAuthStore
+      .getState()
+      .checkSession()
+      .catch(() => setSlow(true));
   };
 
   return (
     <YStack
       alignItems="center"
-      aria-label="Continue"
       backgroundColor="$background"
       flex={1}
       gap="$x6"
       justifyContent="center"
-      onPress={navigateToWelcome}
       paddingBottom={insets.bottom + 24}
       paddingTop={insets.top + 24}
-      role="button"
     >
       <AnimatedBrandMark size={132} />
       <FadeIn delay={250}>
@@ -83,7 +78,16 @@ export function SplashScreen() {
         </YStack>
       </FadeIn>
       <FadeIn delay={450}>
-        <ActivityIndicator color={palette.primary} size="small" />
+        {slow ? (
+          <YStack alignItems="center" gap="$x3">
+            <AppText center role="alert" tone="muted" variant="caption">
+              Still connecting. Check your internet connection.
+            </AppText>
+            <AppButton label="Try again" onPress={retry} size="sm" variant="secondary" />
+          </YStack>
+        ) : (
+          <ActivityIndicator accessibilityLabel="Loading" color={palette.primary} size="small" />
+        )}
       </FadeIn>
     </YStack>
   );

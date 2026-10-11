@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
+import { signOutWithFeedback } from '@/modules/foundation/account/signOut';
 import { useMapPreferencesStore } from '@/modules/shared/stores/mapPreferencesStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 
@@ -25,21 +26,13 @@ export function SettingsScreen() {
   const isDesktop = width >= breakpoint.medium;
 
   const user = useAuthStore((s) => s.user);
-  const signOut = useAuthStore((s) => s.signOut);
   const { provider: mapProvider, setProvider: setMapProvider } = useMapPreferencesStore();
 
   const displayName = user?.user_metadata?.full_name ?? 'Community Member';
   const email = user?.email ?? user?.phone ?? null;
   const initial = displayName[0]?.toUpperCase() ?? 'M';
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.replace('/welcome');
-    } catch {
-      router.replace('/welcome');
-    }
-  };
+  const handleSignOut = () => signOutWithFeedback();
 
   return (
     <SafeAreaView style={s.safe}>

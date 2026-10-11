@@ -307,23 +307,25 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     if (data.user) set({ user: data.user });
   },
 
+  /**
+   * Ends the session and is the only place that navigates afterwards (to /welcome), so callers never double-route.
+   * Rejects when Supabase refuses, leaving the member signed in; callers show the error.
+   */
   signOut: async () => {
     set({ isLoading: true, error: null });
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      set({
-        session: null,
-        user: null,
-        identity: null,
-        status: 'unauthenticated',
-        isLoading: false,
-      });
-      router.replace('/sign-in');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sign out failed';
-      set({ error: message, isLoading: false });
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
     }
+    set({
+      session: null,
+      user: null,
+      identity: null,
+      status: 'unauthenticated',
+      isLoading: false,
+    });
+    router.replace('/welcome');
   },
 
   loadIdentity: async () => {

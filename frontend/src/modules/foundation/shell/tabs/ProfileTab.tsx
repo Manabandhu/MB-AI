@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
+import { signOutWithFeedback } from '@/modules/foundation/account/signOut';
 import { NicknameSheet } from '@/modules/foundation/home/NicknameSheet';
 import { AppearanceSettings } from '@/modules/foundation/settings/AppearanceSettings';
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -124,7 +125,7 @@ export function ProfileTab() {
       <AppButton
         icon="logout"
         label={t('profile.signOut')}
-        onPress={() => useAuthStore.getState().signOut()}
+        onPress={() => signOutWithFeedback()}
         variant="ghost"
       />
       <NicknameSheet onClose={() => setNicknameOpen(false)} visible={nicknameOpen} />

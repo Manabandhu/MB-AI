@@ -160,3 +160,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
   - `app.config.js` maps `EAS_PROJECT_ID` to `extra.eas.projectId`; push registration needs it.
   - The root layout calls `useOpenPushTaps`.
   - Notification screens are rebuilt on `Screen`/`Card`/`AppText` (no hex colours).
+- Auth session handling (2026-10-11): one `checkSession` (root layout); splash waits for it; sign-out navigates once from the store.

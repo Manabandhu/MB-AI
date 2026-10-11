@@ -24,6 +24,7 @@ export function ResetPasswordScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [linkExpired, setLinkExpired] = useState(false);
 
   // In the app the recovery link arrives as manabandhu://reset-password#access_token=...; the web client reads the
   // fragment itself (detectSessionInUrl).
@@ -31,10 +32,13 @@ export function ResetPasswordScreen() {
     if (!url) return;
     const parsed = parseAuthRedirect(url);
     if (parsed.kind === 'session') {
-      void supabase.auth.setSession({
-        access_token: parsed.accessToken,
-        refresh_token: parsed.refreshToken,
-      });
+      // A used or expired link fails here; say so now instead of after the member types a new password.
+      supabase.auth
+        .setSession({ access_token: parsed.accessToken, refresh_token: parsed.refreshToken })
+        .then(({ error }) => {
+          if (error) setLinkExpired(true);
+        })
+        .catch(() => setLinkExpired(true));
     } else if (parsed.kind === 'error') {
       setFormError(friendlyAuthError(new Error(parsed.message)));
     }
@@ -72,7 +76,7 @@ export function ResetPasswordScreen() {
     );
   }
 
-  if (status === 'unauthenticated') {
+  if (linkExpired || status === 'unauthenticated') {
     return (
       <AuthScreen
         title="Link expired"
