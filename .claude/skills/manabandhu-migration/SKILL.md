@@ -27,12 +27,15 @@ workflow, which baselines existing Supabase schemas at version 0).
 3. **`SECURITY DEFINER` functions** must declare `SET search_path = public, pg_temp` and `REVOKE ALL ... FROM PUBLIC`.
 4. **Supabase-only objects** (`auth.uid()`, `realtime.*`, the `supabase_realtime` publication) go inside guards such as
    `IF to_regprocedure('auth.uid()') IS NOT NULL THEN ... END IF;` so the migration also runs locally and in tests.
-5. **Constraints and code agree.** If you add a `CHECK (status IN (...))`, the Java code must write exactly those values.
+5. **PostGIS lives in the `extensions` schema** (V38 moved it out of `public` so `spatial_ref_sys` is not exposed
+   through PostgREST). Qualify calls and types in new SQL: `extensions.st_geogfromtext(...)`,
+   `extensions.geography(Point, 4326)`. Never `create extension` into `public`.
+6. **Constraints and code agree.** If you add a `CHECK (status IN (...))`, the Java code must write exactly those values.
    Normalize existing rows before tightening a constraint.
-6. **Idempotent where cheap:** `IF NOT EXISTS`, `ON CONFLICT DO NOTHING`, `DROP POLICY IF EXISTS`.
-7. **Entities:** map new columns on the JPA entity (Hibernate runs with `ddl-auto: validate`, so a missing or mistyped
+7. **Idempotent where cheap:** `IF NOT EXISTS`, `ON CONFLICT DO NOTHING`, `DROP POLICY IF EXISTS`.
+8. **Entities:** map new columns on the JPA entity (Hibernate runs with `ddl-auto: validate`, so a missing or mistyped
    column fails startup). Columns the app should not write use `insertable = false, updatable = false`.
-8. Foreign keys to `auth.users(id)` mean you must never insert placeholder UUIDs; make the column nullable instead.
+9. Foreign keys to `auth.users(id)` mean you must never insert placeholder UUIDs; make the column nullable instead.
 
 ## Verify on a fresh database
 
