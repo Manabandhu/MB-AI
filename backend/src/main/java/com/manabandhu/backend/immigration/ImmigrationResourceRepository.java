@@ -8,6 +8,19 @@ import org.springframework.data.jpa.repository.Query;
 
 interface ImmigrationResourceRepository extends JpaRepository<ImmigrationResource, UUID> {
     List<ImmigrationResource> findAllByOrderByCreatedAtDesc();
+
+    List<ImmigrationResource> findAllByOrderByCreatedAtDesc(org.springframework.data.domain.Pageable page);
+
+    List<ImmigrationResource> findByCategoryOrderByCreatedAtDesc(String category, org.springframework.data.domain.Pageable page);
+
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT r FROM ImmigrationResource r
+            WHERE (r.verified = true OR (:callerId IS NOT NULL AND r.ownerId = :callerId))
+              AND (:category IS NULL OR r.category = :category)
+            ORDER BY r.createdAt DESC""")
+    List<ImmigrationResource> findVisible(@org.springframework.data.repository.query.Param("callerId") UUID callerId,
+                                          @org.springframework.data.repository.query.Param("category") String category,
+                                          org.springframework.data.domain.Pageable page);
     List<ImmigrationResource> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
     List<ImmigrationResource> findByCategoryOrderByCreatedAtDesc(String category);
 

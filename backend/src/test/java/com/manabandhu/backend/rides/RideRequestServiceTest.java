@@ -171,4 +171,26 @@ class RideRequestServiceTest {
         when(repository.findByRideIdAndRiderIdOrderByCreatedAtDesc(offer.getId(), stranger)).thenReturn(java.util.List.of());
         assertThat(service.listForRide(new Actor(stranger, false, false), offer.getId())).isEmpty();
     }
+
+    @Test
+    void anAcceptedRequestCannotBeDeletedAroundTheSeatAccounting() {
+        offer.setSeatsAvailable(1);
+        var request = stored(2, "accepted");
+
+        assertThatThrownBy(() -> service.delete(rider, request.getId()))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    void aRiderCannotBeAcceptedTwiceOnOneRide() {
+        when(repository.existsByRideIdAndRiderIdAndStatus(offer.getId(), riderId, "accepted")).thenReturn(true);
+        var second = stored(1, "pending");
+
+        assertThatThrownBy(() -> service.updateStatus(driver, second.getId(), "accepted"))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
+        assertThat(offer.getSeatsAvailable()).isEqualTo(3);
+        assertThatThrownBy(() -> service.create(offer.getId(), rider, new CreateRideRequestInput(1, null)))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
+    }
 }

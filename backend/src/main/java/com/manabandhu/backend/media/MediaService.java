@@ -87,7 +87,9 @@ public class MediaService {
         if (signed == null) throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to generate upload URL");
         var uploadUrl = String.valueOf(signed);
         if (!uploadUrl.startsWith("http")) uploadUrl = projectUrl + "/storage/v1" + uploadUrl;
-        return new UploadTicket(uploadUrl, bucket, path, storageUrls.publicUrl(bucket, path), contentType, limit);
+        // The documents bucket is private, so there is no public URL to hand out.
+        var publicUrl = "documents".equals(bucket) ? null : storageUrls.publicUrl(bucket, path);
+        return new UploadTicket(uploadUrl, bucket, path, publicUrl, contentType, limit);
     }
 
     /** Deletes one of the caller's own files; paths outside their folder read as not found. */

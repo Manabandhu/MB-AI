@@ -95,12 +95,13 @@ public class EventsService {
         }
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
-        if (status.equals("going") || status.equals("interested")) {
+        // One attendance row per user and event: re-RSVPs update the existing row.
+        var existing = attendanceRepository.findByEventIdAndUserId(eventId, userId);
+        var unchanged = existing.map(a -> status.equalsIgnoreCase(a.getStatus())).orElse(false);
+        if (!unchanged && (status.equals("going") || status.equals("interested"))) {
             notifications.publish(event.getOrganizerId(), userId, Notification.NotificationType.EVENT,
                     "New RSVP", "Someone is " + status + " for \"" + event.getTitle() + "\".", "/events/" + eventId);
         }
-        // One attendance row per user and event: re-RSVPs update the existing row.
-        var existing = attendanceRepository.findByEventIdAndUserId(eventId, userId);
         if (existing.isPresent()) {
             existing.get().setStatus(status);
             return attendanceRepository.save(existing.get());

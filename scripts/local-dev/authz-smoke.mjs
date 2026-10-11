@@ -104,6 +104,26 @@ await status(
     true,
   );
 }
+{
+  await call('C', 'POST', '/api/v1/immigration/resources', {
+    title: 'Unreviewed tip',
+    description: 'x',
+    category: 'OPT',
+    url: 'https://example.test',
+    resourceType: 'LINK',
+  });
+  const publicList = (await call(null, 'GET', '/api/v1/immigration/resources')).body ?? [];
+  expect(
+    'public resources never expose submitter ids',
+    publicList.every((r) => !('ownerId' in r)),
+    true,
+  );
+  expect(
+    'unreviewed submissions are not public',
+    publicList.every((r) => r.verified === true),
+    true,
+  );
+}
 await status('unknown resource type is a 400', 400, 'A', 'POST', '/api/v1/immigration/resources', {
   title: 'Bad type',
   description: 'x',
@@ -262,6 +282,21 @@ await status('driver accepts', 200, 'A', 'PATCH', `/api/v1/rides/requests/${requ
   status: 'ACCEPTED',
 });
 expect('accepting reserves the requested seat', await seats(), 1);
+await status(
+  'an accepted request cannot be deleted around the seat count',
+  409,
+  'E',
+  'DELETE',
+  `/api/v1/rides/requests/${request?.id}`,
+);
+await status(
+  'a rider with an accepted request cannot request again',
+  409,
+  'E',
+  'POST',
+  `/api/v1/rides/offers/${rideId}/requests`,
+  { seatsRequested: 1 },
+);
 expect(
   'accepted rider becomes a participant',
   (await call('E', 'GET', `/api/v1/rides/offers/${rideId}/participants`)).status,

@@ -73,10 +73,13 @@ public class AccountService {
 
     private final JdbcTemplate jdbcTemplate;
     private final SupabaseAdminClient supabaseAdmin;
+    private final org.springframework.transaction.support.TransactionOperations transactions;
 
-    AccountService(JdbcTemplate jdbcTemplate, SupabaseAdminClient supabaseAdmin) {
+    AccountService(JdbcTemplate jdbcTemplate, SupabaseAdminClient supabaseAdmin,
+                   org.springframework.transaction.support.TransactionOperations transactions) {
         this.jdbcTemplate = jdbcTemplate;
         this.supabaseAdmin = supabaseAdmin;
+        this.transactions = transactions;
     }
 
     /** Everything stored against the caller, table by table (at most 1000 rows each). */
@@ -102,22 +105,25 @@ public class AccountService {
     }
 
     /**
-     * Deletes the caller's account. Shared expense groups they own pass to another member first so the rest of the
-     * group keeps its history; then the Supabase auth user is deleted and every row that references it cascades.
+     * Deletes the caller's account. Shared expense groups they own pass to another member first so the group itself
+     * survives (the deleted member's own expenses and settlements in it are removed with the account); then the
+     * Supabase auth user is deleted and every row that references it cascades.
+     *
+     * <p>Not transactional on purpose: the ownership transfer commits before the Supabase call, otherwise the
+     * cascade Supabase runs would wait on our uncommitted row lock until the HTTP call timed out.
      */
-    @Transactional
     public void delete(Actor actor, Instant lastSignIn, Instant now) {
         if (lastSignIn == null || lastSignIn.isBefore(now.minus(REAUTH_WINDOW))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "reauth_required");
         }
         if (columnExists("expense_groups", "owner_id") && columnExists("expense_group_members", "user_id")) {
-            jdbcTemplate.update("""
+            transactions.executeWithoutResult(status -> jdbcTemplate.update("""
                     UPDATE public.expense_groups g
                     SET owner_id = (SELECT m.user_id FROM public.expense_group_members m
                                     WHERE m.group_id = g.id AND m.user_id <> ? ORDER BY m.user_id LIMIT 1)
                     WHERE g.owner_id = ?
                       AND EXISTS (SELECT 1 FROM public.expense_group_members m WHERE m.group_id = g.id AND m.user_id <> ?)
-                    """, actor.id(), actor.id(), actor.id());
+                    """, actor.id(), actor.id(), actor.id()));
         }
         supabaseAdmin.deleteUser(actor.id());
         log.info("account_deleted user={}", actor.id());

@@ -43,8 +43,8 @@ public class ImmigrationController {
     }
 
     @GetMapping("/resources")
-    List<ImmigrationResource> resources(@RequestParam(required = false) String category) {
-        return category != null ? resourceService.findByCategory(category) : resourceService.findAll();
+    List<ImmigrationResourceView> resources(Authentication authentication, @RequestParam(required = false) String category) {
+        return resourceService.listVisible(Actor.from(authentication), category);
     }
 
     @PostMapping("/resources")
@@ -67,10 +67,8 @@ public class ImmigrationController {
     }
 
     @GetMapping("/resources/{resourceId}")
-    ImmigrationResource resource(@PathVariable UUID resourceId) {
-        return resourceService.findById(resourceId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Resource not found"));
+    ImmigrationResourceView resource(Authentication authentication, @PathVariable UUID resourceId) {
+        return resourceService.viewFor(Actor.from(authentication), resourceId);
     }
 
     @GetMapping("/guides")

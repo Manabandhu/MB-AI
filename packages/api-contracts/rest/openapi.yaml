@@ -162,9 +162,12 @@ paths:
     get:
       operationId: listImmigrationResources
       summary: List immigration resources
+      description: >-
+        Public. Verified resources for everyone plus the caller's own unreviewed submissions (admins see all), newest
+        200. Submitter ids are never returned; `mine` marks the caller's own (ImmigrationResourceView).
       responses:
         '200':
-          description: Immigration resources
+          description: Immigration resources (ImmigrationResourceView, without ownerId)
           content:
             application/json:
               schema:

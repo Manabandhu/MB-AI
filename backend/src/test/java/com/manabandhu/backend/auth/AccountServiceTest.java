@@ -28,7 +28,8 @@ class AccountServiceTest {
 
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final SupabaseAdminClient supabase = mock(SupabaseAdminClient.class);
-    private final AccountService service = new AccountService(jdbc, supabase);
+    private final AccountService service = new AccountService(jdbc, supabase,
+            org.springframework.transaction.support.TransactionOperations.withoutTransaction());
     private final Actor caller = new Actor(UUID.randomUUID(), false, false);
     private final Instant now = Instant.parse("2026-10-11T12:00:00Z");
 

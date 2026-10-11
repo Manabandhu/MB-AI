@@ -99,3 +99,11 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
   - Smoke suite: 168 checks.
 - Expense notifications show amounts with two decimals ("84.50 USD").
 - Expo push request-level errors count as dispatch failures (retried with backoff).
+- Review fixes (2026-10-11):
+  - Ride request delete is limited to unaccepted requests.
+  - Double accept is blocked.
+  - Account deletion commits the group handover before calling Supabase.
+  - Immigration resources use a view without `ownerId` and are verified-only for others.
+  - `documents` uploads return no public URL.
+  - RSVP notifications fire only on change.
+  - Smoke suite: 172 checks.

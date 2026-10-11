@@ -82,13 +82,16 @@ public class RideRequestService {
         if (!"active".equalsIgnoreCase(offer.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This ride is not accepting requests");
         }
+        if (access.hasAcceptedRequest(riderId, rideId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Your seat request on this ride was already accepted");
+        }
         if (repository.existsByRideIdAndRiderIdAndStatus(rideId, riderId, "pending")) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have a pending request for this ride");
         }
         var request = repository.save(new RideRequest(rideId, riderId, input.seatsRequested(), input.message(), "pending"));
         notifications.publish(offer.getDriverId(), riderId, Notification.NotificationType.RIDE, "New seat request",
                 seats(request.getSeatsRequested()) + " requested on your ride to " + offer.getDestinationArea() + ".",
-                "/rides/" + rideId + "/requests");
+                "/rides/" + rideId + "/seat-requests");
         return request;
     }
 
@@ -141,7 +144,7 @@ public class RideRequestService {
                     "/rides/" + offer.getId());
             case WITHDRAWN -> notifications.publish(offer.getDriverId(), actor.id(), Notification.NotificationType.RIDE,
                     "Seat request withdrawn", "A rider withdrew their request for your ride to " + offer.getDestinationArea() + ".",
-                    "/rides/" + offer.getId() + "/requests");
+                    "/rides/" + offer.getId() + "/seat-requests");
             default -> { }
         }
         return saved;
@@ -160,6 +163,9 @@ public class RideRequestService {
         }
         if (bookingRepository.existsByRideIdAndUserIdAndStatusNot(offer.getId(), request.getRiderId(), RideBookingService.CANCELLED)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This rider already has a booking on this ride");
+        }
+        if (access.hasAcceptedRequest(request.getRiderId(), offer.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This rider already has an accepted request on this ride");
         }
         if (offer.getSeatsAvailable() < request.getSeatsRequested()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Not enough seats available");
@@ -182,10 +188,18 @@ public class RideRequestService {
         }
     }
 
+    /**
+     * Deletes a request that was never answered. An accepted request holds seats and participant access, so it must
+     * go through the locked {@code accepted → withdrawn} transition instead.
+     */
     @Transactional
     public void delete(Actor actor, UUID id) {
-        var request = requireRequest(id);
+        var request = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride request not found"));
         actor.requireOwner(request.getRiderId(), "Not your ride request");
+        if (ACCEPTED.equalsIgnoreCase(request.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Withdraw an accepted request instead of deleting it");
+        }
         repository.delete(request);
     }
 
