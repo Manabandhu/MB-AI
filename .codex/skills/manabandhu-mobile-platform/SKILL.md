@@ -155,3 +155,8 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Expenses: `SettlementsScreen` adds confirm/cancel actions for pending payments; its hex colours were replaced with `palette` tokens.
 - Admin: `AdminUsersScreen` alerts when a status change is refused.
 - `Screen`'s `hero` slot contract: a hero runs under the status bar and must pad itself by `insets.top`. Bottom gaps are `TAB_SCREEN_BOTTOM_GAP` (24, inside tabs) and `SCREEN_BOTTOM_GAP` (32 plus inset). `BottomSheet` thresholds are named constants.
+- Push (2026-10-11): `expo-notifications` and `expo-device` were added.
+  - The `expo-notifications` plugin is in app.json.
+  - `app.config.js` maps `EAS_PROJECT_ID` to `extra.eas.projectId`; push registration needs it.
+  - The root layout calls `useOpenPushTaps`.
+  - Notification screens are rebuilt on `Screen`/`Card`/`AppText` (no hex colours).

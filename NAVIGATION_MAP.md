@@ -18,6 +18,8 @@
 │   ├── /rides (Rides Home)
 │   ├── /community (Community Home)
 │   └── /notifications (Notifications Inbox)
+│       ├── /notifications/[id] (Notification Detail → "Open" goes to its in-app route)
+│       └── /notifications/settings (Notification Settings, sign-in required)
 ├── /explore (Explore Shell)
 ├── /search (Global Search)
 ├── /saved (Saved Items)
@@ -231,6 +233,7 @@ Splash → Welcome → Sign In/Up → Onboarding → Home
 | `manabandhu://community` | `/community` | Community home |
 | `manabandhu://chat` | `/chat` | Chat list |
 | `manabandhu://notifications` | `/notifications` | Notifications inbox |
+| Push tap | `data.route` (in-app path) or `/notifications/{id}` | Opens the related screen; external URLs are ignored |
 | `manabandhu://profile` | `/profile` | User profile |
 | `manabandhu://admin` | `/admin` | Admin dashboard |
 
@@ -241,8 +244,8 @@ Splash → Welcome → Sign In/Up → Onboarding → Home
 | /rooms/map | Location | Show permission banner + fallback list |
 | /rides/map | Location | Show permission banner + fallback list |
 | /utilities/nearby | Location | Show permission banner + fallback list |
-| /notifications | Push Notifications | Show education banner |
-| /onboarding/notifications | Push Notifications | Show education banner |
+| /notifications/settings | Push Notifications | Asked only when the member turns push on; a refusal shows how to allow it in phone settings |
+| /onboarding/notifications | Push Notifications | Asked after the member picks at least one alert; refusing continues onboarding |
 | /assistant | Microphone (optional) | Disable voice input, show text-only mode |
 
 ## 9. Offline Behavior

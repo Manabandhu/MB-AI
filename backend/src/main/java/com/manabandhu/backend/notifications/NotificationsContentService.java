@@ -84,12 +84,15 @@ public class NotificationsContentService {
         return new NotificationSettings(Map.copyOf(merged));
     }
 
-    /** True when the user wants in-app notifications of this category ({@code null} = no category toggle). */
+    /**
+     * True when the user wants in-app notifications of this category ({@code null} = no category toggle). Safety
+     * notices ignore the "all notifications" pause so a member who mutes everything still hears about their safety.
+     */
     @Transactional(readOnly = true)
     public boolean allowsInApp(UUID userId, String categoryKey) {
         var settings = load(userId);
-        return on(settings, "allNotifications") && on(settings, "inApp")
-                && (categoryKey == null || on(settings, categoryKey));
+        var paused = !on(settings, "allNotifications") && !"safetyAlerts".equals(categoryKey);
+        return !paused && on(settings, "inApp") && (categoryKey == null || on(settings, categoryKey));
     }
 
     @Transactional(readOnly = true)

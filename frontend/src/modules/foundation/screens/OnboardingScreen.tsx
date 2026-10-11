@@ -14,13 +14,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import {
   useCompleteOnboarding,
   useOnboardingConfig,
   useOnboardingProgress,
   useSaveOnboardingStep,
 } from '@/modules/foundation/onboardingApi';
+import { updateNotificationSettings } from '@/modules/notifications/api';
+import { requestPermissionAndRegister } from '@/modules/notifications/push';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 
@@ -157,6 +158,21 @@ function resolveAppIcon(iconName?: string | null): AppIconName {
   return 'star';
 }
 
+/** Onboarding alert choices mapped onto the notification settings keys the backend uses. */
+function onboardingToSettings(choices: Record<string, boolean>): Record<string, boolean> {
+  const map: Record<string, string> = {
+    chat_messages: 'chatMessages',
+    emergency_sos: 'safetyAlerts',
+    ride_matches: 'rideAlerts',
+    room_openings: 'housingAlerts',
+  };
+  const settings: Record<string, boolean> = {};
+  for (const [option, enabled] of Object.entries(choices)) {
+    if (map[option]) settings[map[option]] = enabled;
+  }
+  return settings;
+}
+
 export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
   const insets = useSafeAreaInsets();
   const normalizedKey = normalizeStepKey(kind);
@@ -278,9 +294,17 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
         stepKey: meta.key,
         payload,
       });
+      if (meta.key === 'notifications') {
+        // The choices drive real delivery: write them to the notification settings the server reads.
+        await updateNotificationSettings(onboardingToSettings(notificationPreferences));
+      }
     } catch {
       setSaveError("We couldn't save this step. Check your connection and try again.");
       return;
+    }
+    if (meta.key === 'notifications' && Object.values(notificationPreferences).some(Boolean)) {
+      // Ask the OS only after the member chose alerts; a refusal is fine and can be changed in Settings later.
+      await requestPermissionAndRegister().catch(() => undefined);
     }
 
     router.push(meta.nextRoute as Href);

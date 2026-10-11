@@ -82,3 +82,4 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
   - `NotificationPublisher` hooks are in rides, rooms (inquiries moved into `RoomInquiryService`), chat, expenses, events, referrals and jobs.
   - There is one settings store with quiet hours, a paged inbox, read/read-all, Expo device tokens (V35), and Expo push dispatch behind `PUSH_NOTIFICATIONS_ENABLED`.
   - Smoke suite: 155 checks.
+- Notification settings: safety notices ignore the "all notifications" pause (they still need `inApp` and `safetyAlerts`).

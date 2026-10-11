@@ -89,7 +89,7 @@ Each screen entry includes:
 ### Onboarding Notifications
 - Route: `/onboarding/notifications`
 - Module: foundation
-- Purpose: Notification preferences
+- Purpose: Notification preferences (saved to notification settings; OS push prompt after choosing alerts)
 - Type: form
 - States: normal | permission
 - Components: FormScreen, CheckboxGroup, AppButton, ProgressBar, Banner
@@ -250,11 +250,29 @@ Each screen entry includes:
 ### Inbox
 - Route: `/notifications`
 - Module: notifications
-- Purpose: View in-app notifications
+- Purpose: View in-app notifications (server-paged), mark one or all read, swipe to mark read on phones
 - Type: list
-- States: loading | empty | error | offline
-- Components: ScreenShell, SectionHeader, ListScreen, FeedItem, Banner, AppButton
-- Navigation: push to related screen
+- States: loading | empty | error (retry) | refreshing (pull-to-refresh)
+- Components: Screen, NotificationRow, AppButton, EmptyState, ErrorState
+- Navigation: push to `/notifications/[id]`; Settings button to `/notifications/settings`
+
+### Notification Detail
+- Route: `/notifications/[id]`
+- Module: notifications
+- Purpose: One notification; opening it marks it read
+- Type: detail
+- States: loading | error (not found / not yours)
+- Components: Screen, Card, Chip, AppButton
+- Navigation: "Open" to the notification's in-app route; back to inbox
+
+### Notification Settings
+- Route: `/notifications/settings`
+- Module: notifications
+- Purpose: All-notifications pause, in-app and push channels, eight categories, quiet hours
+- Type: settings
+- States: loading | error (retry) | save error (switch restored) | push permission denied/unsupported
+- Components: Screen, Section, Card, SettingRow, PushSection, QuietHoursSection
+- Navigation: requires sign-in
 
 ---
 

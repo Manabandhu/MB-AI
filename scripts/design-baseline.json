@@ -53,9 +53,6 @@
   "expenses/screens/ExpensesHomeScreen.tsx": {
     "colorLiteral": 43
   },
-  "expenses/screens/SettlementsScreen.tsx": {
-    "colorLiteral": 8
-  },
   "foundation/screens/OnboardingScreen.tsx": {
     "colorLiteral": 3,
     "localPalette": 1
@@ -93,17 +90,6 @@
   },
   "marketplace/screens/SellItemScreen.tsx": {
     "colorLiteral": 17
-  },
-  "notifications/screens/NotificationDetailScreen.tsx": {
-    "colorLiteral": 3
-  },
-  "notifications/screens/NotificationSettingsScreen.tsx": {
-    "colorLiteral": 30,
-    "localPalette": 1
-  },
-  "notifications/screens/NotificationsInboxScreen.tsx": {
-    "colorLiteral": 14,
-    "localPalette": 1
   },
   "referrals/screens/ReferralDetailsScreen.tsx": {
     "colorLiteral": 90

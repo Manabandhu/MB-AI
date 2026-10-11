@@ -63,3 +63,23 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
   - `NotificationDispatcherService` sends through `https://exp.host/--/api/v2/push/send` when `PUSH_NOTIFICATIONS_ENABLED=true` (optional `EXPO_ACCESS_TOKEN`).
   - Dispatcher decisions: push off → closed without sending; quiet hours → `next_dispatch_at` = end of quiet hours; no device → closed; `DeviceNotRegistered` tickets disable the token.
   - The Supabase edge-function path was removed.
+- **Frontend (2026-10-11):**
+  - Inbox:
+    - Uses `useInfiniteQuery` over `/inbox?page`.
+    - Has a real `ErrorState` with retry, pull-to-refresh and "Mark all as read".
+    - Rows mark read optimistically via `POST /{id}/read`, with a check button plus `ReanimatedSwipeable` on phones.
+    - `notificationKeys` (inbox, unread, detail, settings) are invalidated after every read change.
+  - Detail: marks the notification read on open, and "Open" follows its route.
+  - Only in-app paths are followed (`pushRoutes.routeForPushData`, tested).
+  - The unread dot (`UnreadNotificationDot`) polls `/unread-count` every 60 s, only when signed in.
+  - Settings:
+    - The 908-line screen became `NotificationSettingsScreen` plus `SettingRow`, `PushSection` and `QuietHoursSection`, using tokens only.
+    - Email and SMS toggles were removed because nothing sends them.
+    - Quiet hours save real `HH:mm` values with the device time zone.
+    - The route uses `useRequireAuth`.
+  - Push:
+    - `expo-notifications` (app.json plugin) and `push.ts` register the Expo token. The OS prompt appears only when the member turns push on, or after choosing alerts in onboarding.
+    - Onboarding notification choices are also written to `/notifications/settings`.
+    - Push taps open the route through `useOpenPushTaps` in the root layout.
+    - Requires `EAS_PROJECT_ID` at build time.
+- Safety notices (`safetyAlerts`) are delivered even while "All notifications" is paused, matching the settings screen copy.

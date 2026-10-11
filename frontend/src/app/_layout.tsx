@@ -1,8 +1,8 @@
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { Stack } from 'expo-router';
+import { type Href, router, Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import '../../global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaListener } from 'react-native-safe-area-context';
@@ -10,9 +10,11 @@ import { Uniwind } from 'uniwind';
 import '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { persistOptions, queryPersister } from '@/lib/queryPersistence';
+import { useOpenPushTaps } from '@/modules/notifications/push';
 import { AppThemeProvider } from '@/theme/ThemeProvider';
 
 export default function RootLayout() {
+  useOpenPushTaps(useCallback((route: string) => router.push(route as Href), []));
   const [queryClient] = useState(
     () =>
       new QueryClient({

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { greetingName, preferredName, validateNickname } from '../src/modules/foundation/home/greetingName.ts';
+import {
+  greetingName,
+  preferredName,
+  validateNickname,
+} from '../src/modules/foundation/home/greetingName.ts';
 
 test('nickname wins over full name', () => {
   assert.equal(preferredName({ nickname: 'Sai', full_name: 'Venkata Sai Krishna' }), 'Sai');
