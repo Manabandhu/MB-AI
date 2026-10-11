@@ -1,9 +1,8 @@
-import { formatMoney } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import {
   archiveRoomListing,
@@ -14,18 +13,27 @@ import {
   publishRoomListing,
 } from '@/modules/rooms/api';
 import { type OwnerRoomListing, statusIs } from '@/modules/rooms/types';
-import { confirmAction, showError } from '@/modules/rooms/utils/notify';
-import { errorMessage, statusLabel } from '@/modules/rooms/utils/roomLabels';
+import { showError } from '@/modules/rooms/utils/notify';
+import { formatRent } from '@/modules/rooms/utils/roomFormat';
+import {
+  ARCHIVE_CONFIRM,
+  errorMessage,
+  statusLabel,
+  statusTone,
+} from '@/modules/rooms/utils/roomLabels';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
-import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
-import { Chip } from '@/modules/shared/ui/Chip';
+import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { OwnerItemCard, type OwnerItemOverflowAction } from '@/modules/shared/ui/OwnerItemCard';
+import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 
 type ListingTab = 'active' | 'drafts' | 'rented';
 type StatusAction = 'publish' | 'pause' | 'rented' | 'archive';
@@ -64,6 +72,7 @@ export function RoomMyListingsScreen() {
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const params = useLocalSearchParams<{ notice?: string }>();
+  const confirm = useConfirm();
   const [tab, setTab] = useState<ListingTab>('active');
 
   const listingsQuery = useQuery({
@@ -114,13 +123,18 @@ export function RoomMyListingsScreen() {
       ? (statusMutation.variables?.id ?? deleteMutation.variables)
       : undefined;
 
+  const onArchive = async (listing: OwnerRoomListing) => {
+    if (await confirm(ARCHIVE_CONFIRM))
+      statusMutation.mutate({ id: listing.id, action: 'archive' });
+  };
+
   const onDelete = async (listing: OwnerRoomListing) => {
-    const confirmed = await confirmAction(
-      'Delete listing?',
-      `"${listing.title}" and its inquiries will be permanently removed.`,
-      'Delete',
-      { destructive: true },
-    );
+    const confirmed = await confirm({
+      title: 'Delete listing?',
+      body: `"${listing.title}" and its inquiries will be permanently removed.`,
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
     if (confirmed) deleteMutation.mutate(listing.id);
   };
 
@@ -151,42 +165,34 @@ export function RoomMyListingsScreen() {
       );
     }
     return (
-      <YStack gap="$x3">
+      <ResponsiveGrid columns={{ compact: 1, medium: 1, expanded: 2, wide: 2 }} gap={12}>
         {items.map((listing) => (
           <ListingCard
             busy={busyId === listing.id}
             key={listing.id}
             listing={listing}
             onAction={(action) => statusMutation.mutate({ id: listing.id, action })}
+            onArchive={() => onArchive(listing)}
             onDelete={() => onDelete(listing)}
-            onEdit={() => router.push(`/rooms/${listing.id}/edit` as Href)}
-            onView={() => router.push(`/rooms/${listing.id}` as Href)}
           />
         ))}
-      </YStack>
+      </ResponsiveGrid>
     );
   };
 
   return (
     <Screen onRefresh={() => listingsQuery.refetch()} refreshing={listingsQuery.isRefetching}>
       <YStack gap="$x4">
-        <BackButton fallback="/rooms" />
-        <XStack alignItems="center" flexWrap="wrap" gap="$x3" justifyContent="space-between">
-          <YStack flex={1} gap={2} minWidth={200}>
-            <AppText role="heading" variant="h2">
-              My listings
-            </AppText>
-            <AppText tone="muted" variant="caption">
-              Publish, pause, and manage the rooms you posted
-            </AppText>
-          </YStack>
-          <AppButton
-            icon="plus"
-            label="Post a room"
-            onPress={() => router.push('/rooms/create-listing' as Href)}
-            size="sm"
-          />
-        </XStack>
+        <ScreenHeader
+          back={{ fallback: '/rooms' as Href }}
+          primaryAction={{
+            icon: 'plus',
+            label: 'Post a room',
+            route: '/rooms/create-listing' as Href,
+          }}
+          subtitle="Publish, pause, and manage the rooms you posted"
+          title="My listings"
+        />
         {typeof params.notice === 'string' && params.notice ? (
           <Card aria-live="polite" variant="tinted">
             <AppText variant="label">{params.notice}</AppText>
@@ -212,98 +218,76 @@ function ListingCard({
   listing,
   busy,
   onAction,
+  onArchive,
   onDelete,
-  onEdit,
-  onView,
 }: {
   listing: OwnerRoomListing;
   busy: boolean;
   onAction: (action: StatusAction) => void;
+  onArchive: () => void;
   onDelete: () => void;
-  onEdit: () => void;
-  onView: () => void;
 }) {
+  const router = useRouter();
   const status = listing.status;
   const isActive = statusIs(status, 'active');
   const isPaused = statusIs(status, 'paused');
   const isDraft = statusIs(status, 'draft');
   const isRejected = statusIs(status, 'rejected');
   const isRented = statusIs(status, 'rented');
+  const edit = () => router.push(`/rooms/${listing.id}/edit` as Href);
+
+  // One status action inline next to Edit; the rest live in the "More" sheet.
+  const primary: { label: string; action: StatusAction } | null = isActive
+    ? { label: 'Pause', action: 'pause' }
+    : isPaused || isDraft
+      ? { label: 'Publish', action: 'publish' }
+      : isRented
+        ? { label: 'Relist', action: 'publish' }
+        : null;
+  const overflow: OwnerItemOverflowAction[] = [];
+  if (isActive || isPaused) {
+    overflow.push({ label: 'Mark rented', icon: 'check', onPress: () => onAction('rented') });
+  }
+  if (isRented || isActive || isPaused || isDraft) {
+    overflow.push({ label: 'Archive', icon: 'package', onPress: onArchive, destructive: true });
+  }
+  overflow.push({ label: 'Delete listing', icon: 'close', onPress: onDelete, destructive: true });
 
   return (
-    <Card gap="$x3" variant="outlined">
-      <XStack alignItems="center" gap="$x2" justifyContent="space-between">
-        <Chip label={statusLabel(status)} selected={isActive} />
-        <AppText tone="primary" variant="bodyStrong">
-          {formatMoney(listing.price, 'USD')}/mo
-        </AppText>
-      </XStack>
-      <YStack gap={2}>
-        <AppText numberOfLines={2} variant="bodyStrong">
-          {listing.title}
-        </AppText>
-        {listing.broadLocation ? (
-          <AppText numberOfLines={1} tone="muted" variant="caption">
-            {listing.broadLocation}
-          </AppText>
-        ) : null}
-        <AppText tone="muted" variant="caption">
-          {isActive
-            ? 'Visible in search'
-            : isPaused
-              ? 'Paused: hidden from search'
-              : isDraft
-                ? 'Draft: only you can see it'
-                : isRejected
-                  ? 'Sent back by a moderator. Edit it; a moderator must approve it again.'
-                  : isRented
-                    ? 'Rented: hidden from search'
-                    : 'Archived'}
-        </AppText>
-      </YStack>
-      <XStack flexWrap="wrap" gap="$x2">
-        {isActive ? (
-          <AppButton
-            label="Pause"
-            loading={busy}
-            onPress={() => onAction('pause')}
-            size="sm"
-            variant="secondary"
-          />
-        ) : null}
-        {isPaused || isDraft ? (
-          <AppButton label="Publish" loading={busy} onPress={() => onAction('publish')} size="sm" />
-        ) : null}
-        {isActive || isPaused ? (
-          <AppButton
-            disabled={busy}
-            label="Mark rented"
-            onPress={() => onAction('rented')}
-            size="sm"
-            variant="secondary"
-          />
-        ) : null}
-        {isRented ? (
-          <>
+    <OwnerItemCard
+      actions={
+        <>
+          <AppButton disabled={busy} label="Edit" onPress={edit} size="sm" variant="secondary" />
+          {primary ? (
             <AppButton
-              label="Relist"
+              label={primary.label}
               loading={busy}
-              onPress={() => onAction('publish')}
+              onPress={() => onAction(primary.action)}
               size="sm"
             />
-            <AppButton
-              disabled={busy}
-              label="Archive"
-              onPress={() => onAction('archive')}
-              size="sm"
-              variant="secondary"
-            />
-          </>
-        ) : null}
-        <AppButton disabled={busy} label="Edit" onPress={onEdit} size="sm" variant="secondary" />
-        <AppButton label="View" onPress={onView} size="sm" variant="ghost" />
-        <AppButton disabled={busy} label="Delete" onPress={onDelete} size="sm" variant="danger" />
-      </XStack>
-    </Card>
+          ) : null}
+        </>
+      }
+      href={`/rooms/${listing.id}` as Href}
+      imageUrl={listing.coverImageUrl}
+      meta={[listing.roomType, listing.broadLocation ?? '']}
+      note={
+        isActive
+          ? 'Visible in search'
+          : isPaused
+            ? 'Paused: hidden from search'
+            : isDraft
+              ? 'Draft: only you can see it'
+              : isRejected
+                ? 'Sent back by a moderator. Edit it; a moderator must approve it again.'
+                : isRented
+                  ? 'Rented: hidden from search'
+                  : 'Archived'
+      }
+      overflow={busy ? undefined : overflow}
+      status={<StatusBadge label={statusLabel(status)} tone={statusTone(status)} />}
+      title={listing.title}
+      trailing={formatRent(listing.price)}
+    />
   );
 }

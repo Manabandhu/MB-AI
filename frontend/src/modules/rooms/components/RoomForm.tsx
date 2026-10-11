@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { ActivityIndicator, Switch } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { z } from 'zod';
 import { useAuthStore } from '@/lib/authStore';
@@ -36,18 +37,21 @@ import {
   errorMessage,
   GENDER_OPTIONS,
   LEASE_TERMS,
+  ROOM_TYPES,
 } from '@/modules/rooms/utils/roomLabels';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { deleteUpload, useImageUpload } from '@/modules/shared/hooks/useImageUpload';
+import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
-import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { TextField } from '@/modules/shared/ui/TextField';
+import { useAdaptiveLayout } from '@/platform/adaptive';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 const MAX_PHOTOS = 10;
@@ -93,14 +97,6 @@ type RoomFormProps = {
 /** A photo in the form: `imageId` is set once it is attached to the listing on the server. */
 type FormPhoto = { url: string; imageId?: string; removing?: boolean };
 
-const ROOM_TYPES = [
-  'Private Room',
-  'Shared 2B2B',
-  '1BHK Studio',
-  'Master Bed w/ Bath',
-  'Entire House / Sublease',
-];
-
 const optionalNumber = (v: string) => (v.trim() === '' ? undefined : Number(v));
 
 /** Create/edit form for a room listing, including photos (uploaded to storage, then attached) and amenities. */
@@ -109,6 +105,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const { palette } = useAppearance();
+  const { windowClass } = useAdaptiveLayout();
+  const wide = windowClass !== 'compact';
   const upload = useImageUpload('rooms');
 
   const [serverError, setServerError] = useState<string | null>(null);
@@ -394,16 +392,18 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
   const busy = saving !== null || upload.state.status === 'uploading';
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
-      <Screen>
+    <YStack backgroundColor="$background" flex={1}>
+      <Screen bottomInset={ACTION_BAR_SPACE} keyboardAvoiding maxWidth="form">
         <YStack gap="$x4">
-          <BackButton fallback={mode === 'edit' ? '/rooms/my-listings' : '/rooms'} />
-          <AppText role="heading" variant="h2">
-            {mode === 'create' ? 'Post a room' : 'Edit listing'}
-          </AppText>
+          <ScreenHeader
+            back={{ fallback: (mode === 'edit' ? '/rooms/my-listings' : '/rooms') as Href }}
+            subtitle={
+              mode === 'create'
+                ? 'Fields marked * are required. You can save a draft and finish later.'
+                : null
+            }
+            title={mode === 'create' ? 'Post a room' : 'Edit listing'}
+          />
 
           {/* 1. Basics */}
           <FormSection icon="home" title="Basics">
@@ -422,12 +422,13 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                 />
               )}
             />
-            <ChipGroup label="Room type *">
+            <ChipGroup label="Room type *" radio>
               {ROOM_TYPES.map((type) => (
                 <Chip
                   key={type}
                   label={type}
                   onPress={() => setValue('roomType', type)}
+                  radio
                   selected={watchedRoomType === type}
                 />
               ))}
@@ -512,8 +513,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                 />
               )}
             />
-            <XStack gap="$x3">
-              <YStack flex={1}>
+            <FieldPair wide={wide}>
+              <YStack flex={wide ? 1 : undefined}>
                 <Controller
                   control={control}
                   name="zipCode"
@@ -530,7 +531,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   )}
                 />
               </YStack>
-              <YStack flex={1.5}>
+              <YStack flex={wide ? 1.5 : undefined}>
                 <Controller
                   control={control}
                   name="stateCode"
@@ -548,7 +549,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   )}
                 />
               </YStack>
-            </XStack>
+            </FieldPair>
             <Controller
               control={control}
               name="broadLocation"
@@ -579,8 +580,8 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
 
           {/* 3. Pricing */}
           <FormSection icon="wallet" title="Rent and utilities">
-            <XStack flexWrap="wrap" gap="$x3">
-              <YStack flex={1} minWidth={140}>
+            <FieldPair wide={wide}>
+              <YStack flex={wide ? 1 : undefined}>
                 <Controller
                   control={control}
                   name="price"
@@ -597,7 +598,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   )}
                 />
               </YStack>
-              <YStack flex={1} minWidth={140}>
+              <YStack flex={wide ? 1 : undefined}>
                 <Controller
                   control={control}
                   name="securityDeposit"
@@ -615,7 +616,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                   )}
                 />
               </YStack>
-            </XStack>
+            </FieldPair>
             <ToggleRow
               description="Wi-Fi, electricity, water, gas, and trash are part of the rent."
               label="Utilities included in rent"
@@ -639,12 +640,13 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                 )}
               />
             ) : null}
-            <ChipGroup label="Lease">
+            <ChipGroup label="Lease" radio>
               {LEASE_TERMS.map((term) => (
                 <Chip
                   key={term.id}
                   label={term.label}
                   onPress={() => setValue('leaseTerm', term.id)}
+                  radio
                   selected={watchedLeaseTerm === term.id}
                 />
               ))}
@@ -653,32 +655,35 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
 
           {/* 4. Household */}
           <FormSection icon="community" title="Household">
-            <ChipGroup label="Kitchen / diet">
+            <ChipGroup label="Kitchen / diet" radio>
               {DIETARY_OPTIONS.map((opt) => (
                 <Chip
                   key={opt.id}
                   label={opt.label}
                   onPress={() => setValue('dietaryPreference', opt.id)}
+                  radio
                   selected={watchedDietary === opt.id}
                 />
               ))}
             </ChipGroup>
-            <ChipGroup label="Roommate gender">
+            <ChipGroup label="Roommate gender" radio>
               {GENDER_OPTIONS.map((opt) => (
                 <Chip
                   key={opt.id}
                   label={opt.label}
                   onPress={() => setValue('genderPreference', opt.id)}
+                  radio
                   selected={watchedGender === opt.id}
                 />
               ))}
             </ChipGroup>
-            <ChipGroup label="Bathroom">
+            <ChipGroup label="Bathroom" radio>
               {BATHROOM_OPTIONS.map((opt) => (
                 <Chip
                   key={opt.id}
                   label={opt.label}
                   onPress={() => setValue('bathroomType', opt.id)}
+                  radio
                   selected={watchedBathroom === opt.id}
                 />
               ))}
@@ -692,7 +697,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
           </FormSection>
 
           {/* 5. Amenities */}
-          <FormSection icon="sparks" title="Amenities">
+          <FormSection icon="check" title="Amenities">
             {amenitiesQuery.isLoading ? (
               <ActivityIndicator color={palette.primary} />
             ) : amenitiesQuery.isError ? (
@@ -724,7 +729,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
           </FormSection>
 
           {/* 6. Photos */}
-          <FormSection icon="package" title={`Photos (${photos.length}/${MAX_PHOTOS})`}>
+          <FormSection icon="eye" title={`Photos (${photos.length}/${MAX_PHOTOS})`}>
             {mode === 'edit' && imagesQuery.isError ? (
               <ErrorState
                 body={errorMessage(imagesQuery.error)}
@@ -750,6 +755,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                       >
                         <Image
                           accessibilityLabel={`Photo ${index + 1}`}
+                          contentFit="cover"
                           source={{ uri: photo.url }}
                           style={{ width: 96, height: 96, opacity: photo.removing ? 0.4 : 1 }}
                         />
@@ -820,56 +826,59 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
             )}
           </FormSection>
 
-          {/* Submit */}
-          <YStack gap="$x2">
-            {serverError ? (
-              <Card aria-live="polite" borderColor="$error" variant="outlined">
-                <XStack alignItems="flex-start" gap="$x2">
-                  <AppIcon color={palette.error} name="warning" size={18} />
-                  <AppText flex={1} tone="danger" variant="label">
-                    {serverError}
-                  </AppText>
-                </XStack>
-              </Card>
-            ) : null}
-            {canPublish ? (
-              <>
-                <AppButton
-                  disabled={busy && saving !== 'publish'}
-                  fullWidth
-                  label={mode === 'create' && !createdId ? 'Publish now' : 'Save and publish'}
-                  loading={saving === 'publish'}
-                  onPress={handleSubmit((values) => save(values, true))}
-                  size="lg"
-                />
-                <AppButton
-                  disabled={busy && saving !== 'draft'}
-                  fullWidth
-                  label={statusIs(initialStatus, 'paused') ? 'Save, keep paused' : 'Save draft'}
-                  loading={saving === 'draft'}
-                  onPress={handleSubmit((values) => save(values, false))}
-                  variant="secondary"
-                />
-              </>
-            ) : (
-              <AppButton
-                disabled={busy && saving !== 'draft'}
-                fullWidth
-                label="Save changes"
-                loading={saving === 'draft'}
-                onPress={handleSubmit((values) => save(values, false))}
-                size="lg"
-              />
-            )}
-            {upload.state.status === 'uploading' ? (
-              <AppText center tone="muted" variant="caption">
-                Wait for the photo upload to finish before saving.
-              </AppText>
-            ) : null}
-          </YStack>
+          {serverError ? (
+            <Card aria-live="polite" borderColor="$error" variant="outlined">
+              <XStack alignItems="flex-start" gap="$x2">
+                <AppIcon color={palette.error} name="warning" size={18} />
+                <AppText flex={1} tone="danger" variant="label">
+                  {serverError}
+                </AppText>
+              </XStack>
+            </Card>
+          ) : null}
         </YStack>
       </Screen>
-    </KeyboardAvoidingView>
+
+      <ActionBar
+        label="Save listing"
+        leading={
+          upload.state.status === 'uploading' ? (
+            <AppText tone="muted" variant="caption">
+              Wait for the photo upload to finish.
+            </AppText>
+          ) : serverError ? (
+            <AppText tone="danger" variant="caption">
+              Not saved yet. See the message above.
+            </AppText>
+          ) : null
+        }
+      >
+        {canPublish ? (
+          <>
+            <AppButton
+              disabled={busy && saving !== 'draft'}
+              label={statusIs(initialStatus, 'paused') ? 'Save, keep paused' : 'Save draft'}
+              loading={saving === 'draft'}
+              onPress={handleSubmit((values) => save(values, false))}
+              variant="secondary"
+            />
+            <AppButton
+              disabled={busy && saving !== 'publish'}
+              label={mode === 'create' && !createdId ? 'Publish now' : 'Save and publish'}
+              loading={saving === 'publish'}
+              onPress={handleSubmit((values) => save(values, true))}
+            />
+          </>
+        ) : (
+          <AppButton
+            disabled={busy && saving !== 'draft'}
+            label="Save changes"
+            loading={saving === 'draft'}
+            onPress={handleSubmit((values) => save(values, false))}
+          />
+        )}
+      </ActionBar>
+    </YStack>
   );
 }
 
@@ -896,17 +905,38 @@ function FormSection({
   );
 }
 
-function ChipGroup({ label, children }: { label: string; children: ReactNode }) {
+/** Two fields side by side on wider windows, stacked on phones. */
+function FieldPair({ wide, children }: { wide: boolean; children: ReactNode }) {
+  return wide ? (
+    <XStack alignItems="flex-start" gap="$x3">
+      {children}
+    </XStack>
+  ) : (
+    <YStack gap="$x4">{children}</YStack>
+  );
+}
+
+function ChipGroup({
+  label,
+  radio,
+  children,
+}: {
+  label: string;
+  /** One-of-many choice: the chips are `radio` and the group a `radiogroup`. */
+  radio?: boolean;
+  children: ReactNode;
+}) {
   return (
     <YStack gap="$x2">
       <AppText variant="label">{label}</AppText>
-      <XStack aria-label={label} flexWrap="wrap" gap="$x2" role="group">
+      <XStack aria-label={label} flexWrap="wrap" gap="$x2" role={radio ? 'radiogroup' : 'group'}>
         {children}
       </XStack>
     </YStack>
   );
 }
 
+/** Yes/no setting with a real switch; the label names the switch for screen readers. */
 function ToggleRow({
   label,
   description,
@@ -918,20 +948,15 @@ function ToggleRow({
   value: boolean;
   onToggle: () => void;
 }) {
+  const { palette } = useAppearance();
   return (
     <XStack
       alignItems="center"
-      aria-checked={value}
-      aria-label={label}
       backgroundColor="$surfaceContainerLow"
       borderRadius="$control"
-      cursor="pointer"
-      focusable
       gap="$x3"
       minHeight={52}
-      onPress={onToggle}
       padding="$x3"
-      role="switch"
     >
       <YStack flex={1} gap={2}>
         <AppText variant="label">{label}</AppText>
@@ -939,7 +964,16 @@ function ToggleRow({
           {description}
         </AppText>
       </YStack>
-      <Chip label={value ? 'Yes' : 'No'} selected={value} />
+      <Switch
+        accessibilityHint={description}
+        accessibilityLabel={label}
+        onValueChange={onToggle}
+        thumbColor={palette.surface}
+        // react-native-web colours the "on" thumb separately.
+        {...({ activeThumbColor: palette.surface } as object)}
+        trackColor={{ false: palette.border, true: palette.primary }}
+        value={value}
+      />
     </XStack>
   );
 }

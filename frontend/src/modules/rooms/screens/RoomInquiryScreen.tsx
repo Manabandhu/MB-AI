@@ -1,18 +1,18 @@
-import { formatMoney } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { getRoomDetail, inquireRoom } from '@/modules/rooms/api';
 import { type RoomInquiryInput, statusIs } from '@/modules/rooms/types';
+import { formatRent } from '@/modules/rooms/utils/roomFormat';
 import {
   errorMessage,
   isNotFound,
   localIsoDate,
   moveInDateError,
 } from '@/modules/rooms/utils/roomLabels';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -21,7 +21,9 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { DateTimeField } from '@/modules/shared/ui/DateTimeField';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { TextField } from '@/modules/shared/ui/TextField';
 
 /** `null` is "flexible" and is sent as `stayDurationMonths: null`. */
@@ -40,8 +42,8 @@ export function RoomInquiryScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [moveInDate, setMoveInDate] = useState(localIsoDate());
-  const [dateTouched, setDateTouched] = useState(false);
+  const [moveIn, setMoveIn] = useState<Date>(() => new Date());
+  const moveInDate = localIsoDate(moveIn);
   const [durationMonths, setDurationMonths] = useState<number | null>(6);
   const [dietary, setDietary] = useState<string | null>(null);
   const [message, setMessage] = useState('');
@@ -63,11 +65,12 @@ export function RoomInquiryScreen() {
     onError: (error) => setSubmitError(errorMessage(error, 'Could not send your inquiry.')),
   });
 
-  const dateError = dateTouched ? moveInDateError(moveInDate) : null;
+  const dateError = moveInDateError(moveInDate);
 
   if (roomQuery.isLoading) {
     return (
       <Screen>
+        <BackButton fallback={`/rooms/${roomId}`} />
         <LoadingState label="Loading listing…" />
       </Screen>
     );
@@ -96,7 +99,6 @@ export function RoomInquiryScreen() {
   const acceptingInquiries = statusIs(room.status, 'active');
 
   const handleSubmit = () => {
-    setDateTouched(true);
     const dateProblem = moveInDateError(moveInDate);
     const msgProblem = message.trim() ? null : 'Write a short introduction for the host.';
     setMessageError(msgProblem);
@@ -111,117 +113,111 @@ export function RoomInquiryScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
-      <Screen>
-        <YStack gap="$x4">
-          <BackButton fallback={`/rooms/${roomId}`} />
-          <AppText role="heading" variant="h2">
-            Contact the host
+    <Screen keyboardAvoiding maxWidth="form">
+      <YStack gap="$x4">
+        <ScreenHeader back={{ fallback: `/rooms/${roomId}` as Href }} title="Contact the host" />
+
+        <Card gap="$x1" variant="filled">
+          <AppText numberOfLines={2} variant="bodyStrong">
+            {room.title}
           </AppText>
+          <AppText tone="primary" variant="label">
+            {formatRent(room.price)}
+            {room.broadLocation ? ` · ${room.broadLocation}` : ''}
+          </AppText>
+        </Card>
 
-          <Card gap="$x1" variant="filled">
-            <AppText numberOfLines={2} variant="bodyStrong">
-              {room.title}
-            </AppText>
-            <AppText tone="primary" variant="label">
-              {formatMoney(room.price, 'USD')}/mo
-              {room.broadLocation ? ` · ${room.broadLocation}` : ''}
-            </AppText>
-          </Card>
+        {!acceptingInquiries ? (
+          <EmptyState
+            actionLabel="Browse other rooms"
+            body="The host paused or closed this listing, so it cannot take inquiries right now."
+            iconName="bed"
+            onAction={() => router.replace('/rooms' as Href)}
+            title="Not accepting inquiries"
+          />
+        ) : (
+          <>
+            {submitError ? (
+              <Card aria-live="polite" borderColor="$error" variant="outlined">
+                <XStack alignItems="center" gap="$x2">
+                  <AppIcon name="warning" size={18} />
+                  <AppText flex={1} tone="danger" variant="label">
+                    {submitError}
+                  </AppText>
+                </XStack>
+              </Card>
+            ) : null}
 
-          {!acceptingInquiries ? (
-            <Card variant="outlined">
-              <AppText tone="danger" variant="label">
-                This listing is not accepting inquiries right now.
-              </AppText>
-            </Card>
-          ) : null}
+            <DateTimeField
+              error={dateError}
+              helper="Today or later"
+              label="Target move-in date"
+              minimumDate={new Date()}
+              mode="date"
+              onChange={setMoveIn}
+              value={moveIn}
+            />
 
-          {submitError ? (
-            <Card aria-live="polite" borderColor="$error" variant="outlined">
-              <XStack alignItems="center" gap="$x2">
-                <AppIcon name="warning" size={18} />
-                <AppText flex={1} tone="danger" variant="label">
-                  {submitError}
-                </AppText>
+            <YStack gap="$x2">
+              <AppText variant="label">Expected stay</AppText>
+              <XStack aria-label="Expected stay" flexWrap="wrap" gap="$x2" role="radiogroup">
+                {DURATION_OPTIONS.map((opt) => (
+                  <Chip
+                    key={opt.label}
+                    label={opt.label}
+                    onPress={() => setDurationMonths(opt.value)}
+                    radio
+                    selected={durationMonths === opt.value}
+                  />
+                ))}
               </XStack>
-            </Card>
-          ) : null}
+            </YStack>
 
-          <TextField
-            autoCapitalize="none"
-            error={dateError}
-            helper="YYYY-MM-DD, today or later"
-            keyboardType="numbers-and-punctuation"
-            label="Target move-in date"
-            maxLength={10}
-            onBlur={() => setDateTouched(true)}
-            onChangeText={setMoveInDate}
-            placeholder="YYYY-MM-DD"
-            value={moveInDate}
-          />
+            <YStack gap="$x2">
+              <AppText variant="label">Your diet (optional)</AppText>
+              <XStack aria-label="Your diet" flexWrap="wrap" gap="$x2" role="radiogroup">
+                {DIETARY_OPTIONS.map((opt) => (
+                  <Chip
+                    key={opt}
+                    label={opt}
+                    onPress={() => setDietary(dietary === opt ? null : opt)}
+                    radio
+                    selected={dietary === opt}
+                  />
+                ))}
+              </XStack>
+            </YStack>
 
-          <YStack gap="$x2">
-            <AppText variant="label">Expected stay</AppText>
-            <XStack flexWrap="wrap" gap="$x2">
-              {DURATION_OPTIONS.map((opt) => (
-                <Chip
-                  key={opt.label}
-                  label={opt.label}
-                  onPress={() => setDurationMonths(opt.value)}
-                  selected={durationMonths === opt.value}
-                />
-              ))}
+            <TextField
+              error={messageError}
+              label="Introduction and questions"
+              maxLength={4000}
+              multiline
+              onChangeText={(text) => {
+                setMessage(text);
+                if (messageError && text.trim()) setMessageError(null);
+              }}
+              placeholder="Hi! I'm interested in this room. A bit about me…"
+              value={message}
+            />
+
+            <XStack alignItems="center" gap="$x2">
+              <AppIcon name="message" size={18} />
+              <AppText flex={1} tone="muted" variant="caption">
+                Sending opens a chat with the host. If you already asked about this room, you return
+                to the same chat.
+              </AppText>
             </XStack>
-          </YStack>
 
-          <YStack gap="$x2">
-            <AppText variant="label">Your diet (optional)</AppText>
-            <XStack flexWrap="wrap" gap="$x2">
-              {DIETARY_OPTIONS.map((opt) => (
-                <Chip
-                  key={opt}
-                  label={opt}
-                  onPress={() => setDietary(dietary === opt ? null : opt)}
-                  selected={dietary === opt}
-                />
-              ))}
-            </XStack>
-          </YStack>
-
-          <TextField
-            error={messageError}
-            label="Introduction and questions"
-            maxLength={4000}
-            multiline
-            onChangeText={(text) => {
-              setMessage(text);
-              if (messageError && text.trim()) setMessageError(null);
-            }}
-            placeholder="Hi! I'm interested in this room. A bit about me…"
-            value={message}
-          />
-
-          <XStack alignItems="center" gap="$x2">
-            <AppIcon name="message" size={18} />
-            <AppText flex={1} tone="muted" variant="caption">
-              Sending opens a chat with the host. If you already asked about this room, you return
-              to the same chat.
-            </AppText>
-          </XStack>
-
-          <AppButton
-            disabled={!acceptingInquiries}
-            fullWidth
-            label="Send inquiry and open chat"
-            loading={mutation.isPending}
-            onPress={handleSubmit}
-          />
-        </YStack>
-      </Screen>
-    </KeyboardAvoidingView>
+            <AppButton
+              fullWidth
+              label="Send inquiry and open chat"
+              loading={mutation.isPending}
+              onPress={handleSubmit}
+            />
+          </>
+        )}
+      </YStack>
+    </Screen>
   );
 }

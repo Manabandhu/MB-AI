@@ -1,3 +1,12 @@
+/** Room types offered by the form and the filters (stored as the label itself, ≤50 chars). */
+export const ROOM_TYPES = [
+  'Private Room',
+  'Shared 2B2B',
+  '1BHK Studio',
+  'Master Bed w/ Bath',
+  'Entire House / Sublease',
+] as const;
+
 /** Values accepted by the backend (anything else is a 400). Labels are display-only. */
 export const DIETARY_OPTIONS = [
   { id: 'ANY', label: 'Any diet' },
@@ -77,3 +86,26 @@ export function moveInDateError(value: string, today = localIsoDate()): string |
   if (value < today) return 'Move-in date cannot be in the past.';
   return null;
 }
+
+/** `StatusBadge` tone for a listing status: live is success, paused or sent back is a warning. */
+export function statusTone(status?: string | null): 'success' | 'warning' | 'info' | 'neutral' {
+  switch ((status ?? '').toLowerCase()) {
+    case 'active':
+      return 'success';
+    case 'paused':
+    case 'rejected':
+      return 'warning';
+    case 'rented':
+      return 'info';
+    default:
+      return 'neutral';
+  }
+}
+
+/** Archiving is final (no transition out of `archived`), so it is always confirmed as destructive. */
+export const ARCHIVE_CONFIRM = {
+  title: 'Archive listing?',
+  body: "It leaves search for good and can't be relisted.",
+  confirmLabel: 'Archive',
+  destructive: true,
+} as const;

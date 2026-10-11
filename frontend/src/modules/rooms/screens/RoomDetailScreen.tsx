@@ -1,12 +1,13 @@
-import { formatMoney } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import type { Href } from 'expo-router';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Image, ScrollView, Share } from 'react-native';
+import { ScrollView, Share } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import {
+  archiveRoomListing,
   getRoomAmenities,
   getRoomDetail,
   inquireRoom,
@@ -19,7 +20,9 @@ import {
 import { useRoomSave } from '@/modules/rooms/hooks/useRoomSave';
 import { type RoomListing, statusIs } from '@/modules/rooms/types';
 import { showError } from '@/modules/rooms/utils/notify';
+import { formatAmount, formatRent } from '@/modules/rooms/utils/roomFormat';
 import {
+  ARCHIVE_CONFIRM,
   amenityLabel,
   bathroomLabel,
   dietaryLabel,
@@ -29,6 +32,7 @@ import {
   leaseTermLabel,
   localIsoDate,
   statusLabel,
+  statusTone,
 } from '@/modules/rooms/utils/roomLabels';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
@@ -40,9 +44,12 @@ import { BackButton } from '@/modules/shared/ui/BackButton';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 import { TextField } from '@/modules/shared/ui/TextField';
+import { useAdaptiveLayout } from '@/platform/adaptive';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 const REPORT_REASONS = [
@@ -54,19 +61,42 @@ const REPORT_REASONS = [
   'Other',
 ];
 
-const GALLERY_HEIGHT = 260;
+const GALLERY_HEIGHT = 280;
 
-type OwnerAction = 'publish' | 'pause' | 'rented';
+type OwnerAction = 'publish' | 'pause' | 'rented' | 'archive';
+
+const OWNER_ACTION_LABEL: Record<OwnerAction, string> = {
+  publish: 'Publish',
+  pause: 'Pause',
+  rented: 'Mark rented',
+  archive: 'Archive',
+};
+
+/** The one status action shown in the bar, and the others offered under "More". */
+export function ownerStatusActions(status: string): {
+  primary: OwnerAction | null;
+  more: OwnerAction[];
+} {
+  if (statusIs(status, 'active')) return { primary: 'pause', more: ['rented', 'archive'] };
+  if (statusIs(status, 'paused')) return { primary: 'publish', more: ['rented', 'archive'] };
+  if (statusIs(status, 'draft')) return { primary: 'publish', more: ['archive'] };
+  if (statusIs(status, 'rented')) return { primary: 'publish', more: ['archive'] };
+  return { primary: null, more: [] };
+}
 
 /** Public listing detail. Owners get edit and status actions; everyone else can save, contact, or report. */
 export function RoomDetailScreen() {
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const queryClient = useQueryClient();
+  const { isDualPane } = useAdaptiveLayout();
   const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const { isSaved, toggle } = useRoomSave();
   const [saving, setSaving] = useState(false);
   const [contacting, setContacting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const confirm = useConfirm();
+  const [pulling, setPulling] = useState(false);
 
   const roomQuery = useQuery({
     queryKey: ['rooms', 'detail', roomId],
@@ -89,12 +119,18 @@ export function RoomDetailScreen() {
   });
 
   const ownerMutation = useMutation({
-    mutationFn: (action: OwnerAction) =>
-      action === 'publish'
-        ? publishRoomListing(roomId)
-        : action === 'pause'
-          ? pauseRoomListing(roomId)
-          : markRoomRented(roomId),
+    mutationFn: (action: OwnerAction) => {
+      switch (action) {
+        case 'publish':
+          return publishRoomListing(roomId);
+        case 'pause':
+          return pauseRoomListing(roomId);
+        case 'rented':
+          return markRoomRented(roomId);
+        case 'archive':
+          return archiveRoomListing(roomId);
+      }
+    },
     onError: (error) => showError('Could not update listing', error),
     onSettled: () =>
       Promise.allSettled([
@@ -104,9 +140,25 @@ export function RoomDetailScreen() {
       ]),
   });
 
+  const runMoreAction = async (action: OwnerAction) => {
+    setMoreOpen(false);
+    if (action === 'archive' && !(await confirm(ARCHIVE_CONFIRM))) return;
+    ownerMutation.mutate(action);
+  };
+
+  const refresh = async () => {
+    setPulling(true);
+    try {
+      await Promise.allSettled([roomQuery.refetch(), imagesQuery.refetch()]);
+    } finally {
+      setPulling(false);
+    }
+  };
+
   if (roomQuery.isLoading) {
     return (
       <Screen>
+        <BackButton fallback="/rooms" />
         <LoadingState label="Loading room…" />
       </Screen>
     );
@@ -138,6 +190,7 @@ export function RoomDetailScreen() {
       : [];
   const saved = isSaved(room);
   const isActive = statusIs(room.status, 'active');
+  const ownerActions = ownerStatusActions(room.status);
 
   const handleSave = async () => {
     setSaving(true);
@@ -152,7 +205,7 @@ export function RoomDetailScreen() {
     try {
       await Share.share({
         title: room.title,
-        message: `${room.title} (${formatMoney(room.price, 'USD')}/mo) on ManaBandhu\nmanabandhu://rooms/${roomId}`,
+        message: `${room.title} (${formatRent(room.price)}) on ManaBandhu\nmanabandhu://rooms/${roomId}`,
         url: `manabandhu://rooms/${roomId}`,
       });
     } catch (error) {
@@ -160,7 +213,11 @@ export function RoomDetailScreen() {
     }
   };
 
-  const handleMessageHost = async () => {
+  const openInquiry = () =>
+    router.push((isAuthenticated ? `/rooms/${roomId}/inquiry` : '/sign-in') as Href);
+
+  /** One-tap "Is it still available?" inquiry that opens the chat with the host. */
+  const handleQuickHello = async () => {
     if (!isAuthenticated) {
       router.push('/sign-in' as Href);
       return;
@@ -181,9 +238,122 @@ export function RoomDetailScreen() {
     }
   };
 
+  const summary = (
+    <YStack gap="$x2">
+      <XStack alignItems="center" flexWrap="wrap" gap="$x2">
+        <Chip label={room.roomType} variant="tag" />
+        {room.isOwner ? (
+          <StatusBadge
+            label={`Your listing · ${statusLabel(room.status)}`}
+            tone={statusTone(room.status)}
+          />
+        ) : null}
+        {room.isVerifiedHost ? (
+          <StatusBadge icon="verified-user" label="Verified host" tone="success" />
+        ) : null}
+      </XStack>
+      <AppText role="heading" variant="h2">
+        {room.title}
+      </AppText>
+      {room.broadLocation ? (
+        <XStack alignItems="center" gap="$x1">
+          <AppIcon name="map-pin" size={16} />
+          <AppText tone="muted">{room.broadLocation}</AppText>
+        </XStack>
+      ) : null}
+    </YStack>
+  );
+
+  const facts = (
+    <>
+      <PricingCard room={room} />
+
+      <Card gap="$x2" variant="outlined">
+        <AppText role="heading" variant="h4">
+          Household
+        </AppText>
+        <Fact label="Kitchen" value={dietaryLabel(room.dietaryPreference)} />
+        <Fact label="Roommates" value={genderLabel(room.genderPreference)} />
+        <Fact label="Bathroom" value={bathroomLabel(room.bathroomType)} />
+        <Fact label="Lease" value={leaseTermLabel(room.leaseTerm)} />
+        {room.universityShuttleAccessible ? (
+          <Fact label="Transit" value="Host says it is near a university or shuttle stop" />
+        ) : null}
+      </Card>
+
+      <Card gap="$x2" variant="outlined">
+        <AppText role="heading" variant="h4">
+          Amenities
+        </AppText>
+        {room.amenities?.length ? (
+          <XStack flexWrap="wrap" gap="$x2">
+            {room.amenities.map((value) => (
+              <Chip
+                icon="check"
+                key={value}
+                label={amenityLabel(value, amenitiesQuery.data)}
+                variant="tag"
+              />
+            ))}
+          </XStack>
+        ) : (
+          <AppText tone="muted">No amenities listed</AppText>
+        )}
+      </Card>
+    </>
+  );
+
+  const about = (
+    <>
+      {room.description ? (
+        <Card gap="$x2" variant="outlined">
+          <AppText role="heading" variant="h4">
+            About this home
+          </AppText>
+          <AppText>{room.description}</AppText>
+        </Card>
+      ) : null}
+
+      <Card variant="tinted">
+        <XStack alignItems="flex-start" gap="$x3">
+          <AppIcon name="shield" size={20} />
+          <YStack flex={1} gap={2}>
+            <AppText variant="label">Approximate area only</AppText>
+            <AppText tone="muted" variant="caption">
+              The listing shows the general area, never the street address. The host shares the
+              exact address in chat.
+            </AppText>
+          </YStack>
+        </XStack>
+      </Card>
+
+      {!room.isOwner ? (
+        <XStack>
+          <AppButton
+            icon="warning"
+            label="Report listing"
+            onPress={() =>
+              isAuthenticated ? setReportOpen(true) : router.push('/sign-in' as Href)
+            }
+            size="sm"
+            variant="ghost"
+          />
+        </XStack>
+      ) : null}
+    </>
+  );
+
+  const gallery = (
+    <Gallery
+      imagesError={imagesQuery.isError}
+      onRetryImages={() => imagesQuery.refetch()}
+      urls={photoUrls}
+    />
+  );
+
   return (
     <YStack backgroundColor="$background" flex={1}>
-      <Screen bottomInset={ACTION_BAR_SPACE}>
+      <Screen bottomInset={ACTION_BAR_SPACE} onRefresh={refresh} refreshing={pulling}>
         <YStack gap="$x4">
           <XStack alignItems="center" justifyContent="space-between">
             <BackButton fallback="/rooms" />
@@ -200,107 +370,58 @@ export function RoomDetailScreen() {
             </XStack>
           </XStack>
 
-          <Gallery
-            imagesError={imagesQuery.isError}
-            onRetryImages={() => imagesQuery.refetch()}
-            urls={photoUrls}
-          />
-
-          <YStack gap="$x2">
-            <XStack flexWrap="wrap" gap="$x2">
-              <Chip label={room.roomType} />
-              {room.isOwner ? (
-                <Chip label={`Your listing · ${statusLabel(room.status)}`} selected />
-              ) : null}
-              {room.isVerifiedHost ? <Chip icon="verified-user" label="Verified host" /> : null}
-            </XStack>
-            <AppText role="heading" variant="h2">
-              {room.title}
-            </AppText>
-            {room.broadLocation ? (
-              <XStack alignItems="center" gap="$x1">
-                <AppIcon name="map-pin" size={16} />
-                <AppText tone="muted">{room.broadLocation}</AppText>
-              </XStack>
-            ) : null}
-          </YStack>
-
-          <PricingCard room={room} />
-
-          <Card gap="$x2" variant="outlined">
-            <AppText role="heading" variant="h4">
-              Household
-            </AppText>
-            <Fact label="Kitchen" value={dietaryLabel(room.dietaryPreference)} />
-            <Fact label="Roommates" value={genderLabel(room.genderPreference)} />
-            <Fact label="Bathroom" value={bathroomLabel(room.bathroomType)} />
-            <Fact label="Lease" value={leaseTermLabel(room.leaseTerm)} />
-            {room.universityShuttleAccessible ? (
-              <Fact label="Transit" value="Host says it is near a university or shuttle stop" />
-            ) : null}
-          </Card>
-
-          <Card gap="$x2" variant="outlined">
-            <AppText role="heading" variant="h4">
-              Amenities
-            </AppText>
-            {room.amenities?.length ? (
-              <XStack flexWrap="wrap" gap="$x2">
-                {room.amenities.map((value) => (
-                  <Chip icon="check" key={value} label={amenityLabel(value, amenitiesQuery.data)} />
-                ))}
-              </XStack>
-            ) : (
-              <AppText tone="muted">No amenities listed</AppText>
-            )}
-          </Card>
-
-          {room.description ? (
-            <Card gap="$x2" variant="outlined">
-              <AppText role="heading" variant="h4">
-                About this home
-              </AppText>
-              <AppText>{room.description}</AppText>
-            </Card>
-          ) : null}
-
-          <Card variant="tinted">
-            <XStack alignItems="flex-start" gap="$x3">
-              <AppIcon name="shield" size={20} />
-              <YStack flex={1} gap={2}>
-                <AppText variant="label">Approximate area only</AppText>
-                <AppText tone="muted" variant="caption">
-                  The map and location show the general area. Exact address is shared by the host in
-                  chat.
-                </AppText>
+          {isDualPane ? (
+            <XStack alignItems="flex-start" gap="$x6">
+              <YStack flex={3} gap="$x4" minWidth={0}>
+                {gallery}
+                {summary}
+                {about}
+              </YStack>
+              <YStack flex={2} gap="$x4" minWidth={0}>
+                {facts}
               </YStack>
             </XStack>
-          </Card>
-
-          {!room.isOwner ? (
-            <XStack>
-              <AppButton
-                icon="warning"
-                label="Report listing"
-                onPress={() =>
-                  isAuthenticated ? setReportOpen(true) : router.push('/sign-in' as Href)
-                }
-                size="sm"
-                variant="ghost"
-              />
-            </XStack>
-          ) : null}
+          ) : (
+            <>
+              {gallery}
+              {summary}
+              {facts}
+              {about}
+            </>
+          )}
         </YStack>
       </Screen>
 
       {room.isOwner ? (
         <ActionBar label="Listing actions">
-          <OwnerActions
-            busy={ownerMutation.isPending}
-            onAction={(action) => ownerMutation.mutate(action)}
-            onEdit={() => router.push(`/rooms/${roomId}/edit` as Href)}
-            status={room.status}
-          />
+          <XStack flex={1} flexWrap="wrap" gap="$x2" justifyContent="flex-end">
+            <AppButton
+              disabled={ownerMutation.isPending}
+              icon="settings"
+              label="Edit"
+              onPress={() => router.push(`/rooms/${roomId}/edit` as Href)}
+              variant="secondary"
+            />
+            {ownerActions.primary ? (
+              <AppButton
+                label={
+                  statusIs(room.status, 'rented')
+                    ? 'Relist'
+                    : OWNER_ACTION_LABEL[ownerActions.primary]
+                }
+                loading={ownerMutation.isPending}
+                onPress={() => ownerActions.primary && ownerMutation.mutate(ownerActions.primary)}
+              />
+            ) : null}
+            {ownerActions.more.length ? (
+              <IconButton
+                disabled={ownerMutation.isPending}
+                icon="more"
+                label="More listing actions"
+                onPress={() => setMoreOpen(true)}
+              />
+            ) : null}
+          </XStack>
         </ActionBar>
       ) : (
         <ActionBar
@@ -308,7 +429,7 @@ export function RoomDetailScreen() {
           leading={
             <>
               <AppText tone="primary" variant="h4">
-                {formatMoney(room.price, 'USD')}/mo
+                {formatRent(room.price)}
               </AppText>
               {!isActive ? (
                 <AppText tone="muted" variant="caption">
@@ -321,20 +442,42 @@ export function RoomDetailScreen() {
           {isActive ? (
             <>
               <AppButton
-                label="Details"
-                onPress={() => router.push(`/rooms/${roomId}/inquiry` as Href)}
+                disabled={contacting}
+                label="Quick hello"
+                loading={contacting}
+                onPress={handleQuickHello}
                 variant="secondary"
               />
-              <AppButton
-                icon="message"
-                label="Message host"
-                loading={contacting}
-                onPress={handleMessageHost}
-              />
+              <AppButton icon="message" label="Contact host" onPress={openInquiry} />
             </>
           ) : null}
         </ActionBar>
       )}
+
+      {room.isOwner ? (
+        <BottomSheet onClose={() => setMoreOpen(false)} title="Listing actions" visible={moreOpen}>
+          <YStack gap="$x2" paddingBottom="$x2">
+            {ownerActions.more.map((action) => (
+              <AppButton
+                fullWidth
+                key={action}
+                label={OWNER_ACTION_LABEL[action]}
+                onPress={() => runMoreAction(action)}
+                variant={action === 'archive' ? 'danger' : 'secondary'}
+              />
+            ))}
+            <AppButton
+              fullWidth
+              label="Manage all my listings"
+              onPress={() => {
+                setMoreOpen(false);
+                router.push('/rooms/my-listings' as Href);
+              }}
+              variant="ghost"
+            />
+          </YStack>
+        </BottomSheet>
+      ) : null}
 
       <ReportSheet onClose={() => setReportOpen(false)} roomId={roomId} visible={reportOpen} />
     </YStack>
@@ -403,8 +546,9 @@ function Gallery({
           {urls.map((url, i) => (
             <Image
               accessibilityLabel={`Room photo ${i + 1} of ${urls.length}`}
+              cachePolicy="memory-disk"
+              contentFit="cover"
               key={url}
-              resizeMode="cover"
               source={{ uri: url }}
               style={{ width, height: GALLERY_HEIGHT }}
             />
@@ -456,14 +600,14 @@ function PricingCard({ room }: { room: RoomListing }) {
   const utilities = room.utilitiesIncluded
     ? 'Included in rent'
     : room.estUtilityMonthly != null
-      ? `About ${formatMoney(room.estUtilityMonthly, 'USD')}/mo extra`
+      ? `About ${formatRent(room.estUtilityMonthly)} extra`
       : 'Not listed';
   return (
     <Card gap="$x2" variant="filled">
-      <Fact label="Rent" value={`${formatMoney(room.price, 'USD')}/mo`} />
+      <Fact label="Rent" value={formatRent(room.price)} />
       <Fact label="Utilities" value={utilities} />
       {room.securityDeposit != null ? (
-        <Fact label="Deposit" value={formatMoney(room.securityDeposit, 'USD')} />
+        <Fact label="Deposit" value={formatAmount(room.securityDeposit)} />
       ) : null}
     </Card>
   );
@@ -479,56 +623,6 @@ function Fact({ label, value }: { label: string; value: string | null }) {
       <AppText flex={1} textAlign="right">
         {value}
       </AppText>
-    </XStack>
-  );
-}
-
-function OwnerActions({
-  status,
-  busy,
-  onAction,
-  onEdit,
-}: {
-  status: string;
-  busy: boolean;
-  onAction: (action: OwnerAction) => void;
-  onEdit: () => void;
-}) {
-  const active = statusIs(status, 'active');
-  const paused = statusIs(status, 'paused');
-  const draft = statusIs(status, 'draft');
-  const rented = statusIs(status, 'rented');
-  return (
-    <XStack flex={1} flexWrap="wrap" gap="$x2" justifyContent="flex-end">
-      <AppButton
-        disabled={busy}
-        icon="settings"
-        label="Edit"
-        onPress={onEdit}
-        variant="secondary"
-      />
-      {active ? (
-        <AppButton
-          loading={busy}
-          label="Pause"
-          onPress={() => onAction('pause')}
-          variant="secondary"
-        />
-      ) : null}
-      {active || paused ? (
-        <AppButton
-          disabled={busy}
-          label="Mark rented"
-          onPress={() => onAction('rented')}
-          variant="secondary"
-        />
-      ) : null}
-      {paused || draft ? (
-        <AppButton loading={busy} label="Publish" onPress={() => onAction('publish')} />
-      ) : null}
-      {rented ? (
-        <AppButton loading={busy} label="Relist" onPress={() => onAction('publish')} />
-      ) : null}
     </XStack>
   );
 }
@@ -583,7 +677,13 @@ function ReportSheet({
           <>
             <XStack aria-label="Reason" flexWrap="wrap" gap="$x2" role="radiogroup">
               {REPORT_REASONS.map((r) => (
-                <Chip key={r} label={r} onPress={() => setReason(r)} selected={reason === r} />
+                <Chip
+                  key={r}
+                  label={r}
+                  onPress={() => setReason(r)}
+                  radio
+                  selected={reason === r}
+                />
               ))}
             </XStack>
             <TextField

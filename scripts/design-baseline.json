@@ -58,7 +58,7 @@
     "localPalette": 1
   },
   "foundation/screens/SavedScreen.tsx": {
-    "colorLiteral": 12,
+    "colorLiteral": 11,
     "localPalette": 1
   },
   "foundation/screens/SearchScreen.tsx": {
@@ -85,10 +85,6 @@
   },
   "referrals/screens/ReferralsHomeScreen.tsx": {
     "colorLiteral": 98
-  },
-  "rooms/screens/RoomsScreen.tsx": {
-    "colorLiteral": 138,
-    "localPalette": 1
   },
   "safety/screens/SafetyCenterScreen.tsx": {
     "colorLiteral": 24,
