@@ -57,12 +57,14 @@ if ! psql -d postgres -qtAc "select 1 from pg_database where datname = '$DB'" | 
 fi
 # Re-runs only print "already exists" notices; hide those but stop on real errors.
 PGOPTIONS="-c client_min_messages=warning" psql -d "$DB" -q -v ON_ERROR_STOP=1 -f "$ROOT/scripts/local-dev/supabase-stub.sql"
-# Fixed test users referenced by authz-smoke.mjs: A (driver/owner), B (rider/member), C (stranger), D (admin).
+# Fixed test users referenced by authz-smoke.mjs: A (driver/owner), B (rider/member), C (stranger), D (admin),
+# E (rider with a verified gender in app_metadata).
 psql -d "$DB" -qc "insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'a@example.test'),
   ('22222222-2222-2222-2222-222222222222', 'b@example.test'),
   ('33333333-3333-3333-3333-333333333333', 'c@example.test'),
-  ('44444444-4444-4444-4444-444444444444', 'admin@example.test')
+  ('44444444-4444-4444-4444-444444444444', 'admin@example.test'),
+  ('55555555-5555-5555-5555-555555555555', 'e@example.test')
   on conflict (id) do nothing;"
 
 if ! curl -sf http://localhost:9999/jwks.json >/dev/null 2>&1; then

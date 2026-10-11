@@ -115,6 +115,7 @@ await status('unknown resource type is a 400', 400, 'A', 'POST', '/api/v1/immigr
 console.log('== events');
 await status('anonymous cannot list saved events', 401, null, 'GET', '/api/v1/events/saved');
 await status('bad event dates are a 400', 400, 'A', 'POST', '/api/v1/events', {
+  categoryId: '00000000-0000-0000-0000-000000000000',
   title: 'Bad date',
   location: 'Irving',
   startAt: 'next tuesday',
@@ -123,7 +124,9 @@ await status('bad event dates are a 400', 400, 'A', 'POST', '/api/v1/events', {
 {
   const startAt = new Date(Date.now() + 3 * 86400000).toISOString();
   const endAt = new Date(Date.now() + 3 * 86400000 + 3600000).toISOString();
+  const eventCategories = (await call(null, 'GET', '/api/v1/events/categories')).body ?? [];
   const event = await status('organizer creates an event', 201, 'A', 'POST', '/api/v1/events', {
+    categoryId: eventCategories[0]?.id,
     title: 'Smoke meetup',
     location: 'Irving',
     startAt,
@@ -736,7 +739,14 @@ console.log('== token validation');
 
 console.log('== jobs, utilities');
 {
-  const categories = (await call(null, 'GET', '/api/v1/jobs/categories')).body ?? [];
+  let categories = (await call(null, 'GET', '/api/v1/jobs/categories')).body ?? [];
+  if (categories.length === 0) {
+    await call('D', 'POST', '/api/v1/jobs/categories', {
+      name: 'Software',
+      slug: `software-${Date.now()}`,
+    });
+    categories = (await call(null, 'GET', '/api/v1/jobs/categories')).body ?? [];
+  }
   const job = await call('A', 'POST', '/api/v1/jobs', {
     categoryId: categories[0]?.id,
     title: 'Smoke engineer',
