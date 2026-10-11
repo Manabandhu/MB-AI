@@ -14,6 +14,7 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { Screen } from '@/modules/shared/ui/Screen';
@@ -62,6 +63,7 @@ export function NotificationDetailScreen() {
   return (
     <Screen>
       <YStack gap="$x5">
+        <BackButton fallback="/notifications" />
         <YStack gap="$x2">
           <XStack gap="$x2">
             <Chip label={visual.label} />

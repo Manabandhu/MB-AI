@@ -21,6 +21,7 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Screen } from '@/modules/shared/ui/Screen';
 
 type InboxData = InfiniteData<NotificationInboxPage, number>;
@@ -103,6 +104,7 @@ export function NotificationsInboxScreen() {
       refreshing={inbox.isRefetching && !inbox.isFetchingNextPage}
     >
       <YStack gap="$x4">
+        <BackButton fallback="/" />
         <XStack alignItems="center" gap="$x3" justifyContent="space-between">
           <YStack flex={1} gap={2}>
             <AppText role="heading" variant="h2">

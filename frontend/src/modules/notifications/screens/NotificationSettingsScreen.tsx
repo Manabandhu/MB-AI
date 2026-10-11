@@ -13,6 +13,7 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import type { AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { Section } from '@/modules/shared/ui/Section';
@@ -120,6 +121,7 @@ export function NotificationSettingsScreen() {
   return (
     <Screen onRefresh={() => settings.refetch()} refreshing={settings.isRefetching}>
       <YStack gap="$x5">
+        <BackButton fallback="/notifications" />
         <YStack gap="$x1">
           <AppText role="heading" variant="h2">
             Notification settings

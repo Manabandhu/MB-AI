@@ -1,8 +1,7 @@
-import { router } from 'expo-router';
-import { XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
-import { IconButton } from '@/modules/shared/ui/IconButton';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { type LegalDocument, privacyPolicy, termsOfService } from './content';
 
@@ -11,14 +10,7 @@ function LegalScreen({ document }: { document: LegalDocument }) {
   return (
     <Screen>
       <YStack gap="$x5" maxWidth={720} width="100%">
-        <XStack>
-          <IconButton
-            icon="chevron-left"
-            label="Back"
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-            variant="plain"
-          />
-        </XStack>
+        <BackButton />
         <YStack gap="$x2">
           <AppText role="heading" variant="h1">
             {document.title}

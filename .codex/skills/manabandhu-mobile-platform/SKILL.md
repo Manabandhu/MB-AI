@@ -169,3 +169,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
   - Its state is `idle | picking | uploading(progress) | done(url) | error(message)`, with cancel. `deleteUpload` removes a replaced file.
   - First consumer: the onboarding avatar, which replaced the stock Unsplash photo and saves `avatar_url` via `authStore.updateProfile`.
   - Rooms, marketplace, community and chat still need wiring.
+- `shared/ui/BackButton` (2026-10-11): a back control for stack screens without a native header, with a fallback route when there is no history (deep links, web refresh). It is used by notifications, account & data, and the legal pages. On react-native-web, `SettingRow` passes `activeThumbColor` so switch thumbs use the surface token.

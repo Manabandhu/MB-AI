@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/authStore';
 import { unregisterThisDevice } from '@/modules/notifications/push';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Card } from '@/modules/shared/ui/Card';
 import { ListRow } from '@/modules/shared/ui/ListRow';
@@ -126,6 +127,7 @@ export function AccountDataScreen() {
   return (
     <Screen>
       <YStack gap="$x5">
+        <BackButton fallback="/settings" />
         <AppText role="heading" variant="h2">
           Account & data
         </AppText>

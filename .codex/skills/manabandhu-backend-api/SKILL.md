@@ -97,3 +97,4 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
   - **Marketplace image authz:** moved from the controller into `ListingImageService` (`Actor`).
   - **V37:** configures the storage buckets with the same MIME and size limits (Supabase only; skipped locally).
   - Smoke suite: 168 checks.
+- Expense notifications show amounts with two decimals ("84.50 USD").

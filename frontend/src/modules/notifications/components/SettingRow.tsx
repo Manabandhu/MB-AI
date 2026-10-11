@@ -54,6 +54,8 @@ export function SettingRow({ icon, title, description, value, disabled, onChange
         importantForAccessibility="no-hide-descendants"
         onValueChange={onChange}
         thumbColor={palette.surface}
+        // react-native-web colours the "on" thumb separately.
+        {...({ activeThumbColor: palette.surface } as object)}
         trackColor={{ false: palette.border, true: palette.primary }}
         value={value}
       />

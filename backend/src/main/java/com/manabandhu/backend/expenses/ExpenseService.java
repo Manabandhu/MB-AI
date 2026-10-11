@@ -66,7 +66,7 @@ public class ExpenseService {
         var members = participants(group, groupId);
         splitRepository.saveAll(equalSplits(expense, members));
         notifications.publishAll(members, actor.id(), Notification.NotificationType.EXPENSE, "New shared expense",
-                "\"" + title + "\" (" + expense.getAmount().toPlainString() + " " + currency + ") was added to "
+                "\"" + title + "\" (" + expense.getAmount().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() + " " + currency + ") was added to "
                         + group.getName() + ".",
                 "/expenses/groups/" + groupId);
         return expense;
