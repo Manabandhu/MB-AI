@@ -18,6 +18,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
 import { getConversation, listMessages, type Message, sendMessage } from '@/modules/chat/api';
+import { latestServerMessageId } from '@/modules/chat/readState';
+import { useMarkConversationRead } from '@/modules/chat/useMarkConversationRead';
 import { useRealtimeChat } from '@/modules/chat/useRealtimeChat';
 import { Banner } from '@/modules/shared/components/Banner';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
@@ -96,6 +98,10 @@ export default function ConversationScreen() {
 
   const { typingNames, sendTypingEvent } = useRealtimeChat(conversationId, handleIncomingMessage);
 
+  // Read receipt for the newest stored message, on open and whenever new messages arrive while focused.
+  const latestMessageId = useMemo(() => latestServerMessageId(localMessages), [localMessages]);
+  useMarkConversationRead(conversationId, latestMessageId);
+
   const mutation = useMutation({
     mutationFn: (body: string) => sendMessage(conversationId, body, 'TEXT'),
     onSuccess: (sentMsg) => {
@@ -153,6 +159,7 @@ export default function ConversationScreen() {
         setLocalMessages((prev) => [...prev, optimisticMsg]);
         await sendMessage(conversationId, imageUri, 'IMAGE');
         queryClient.invalidateQueries({ queryKey: ['chat', 'messages', conversationId] });
+        queryClient.invalidateQueries({ queryKey: ['chat', 'conversations'] });
         setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
       }
     } catch (e) {

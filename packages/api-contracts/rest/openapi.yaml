@@ -618,13 +618,46 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
+      description: 'Active participants and admins (an admin outside the conversation is audited and gets no unreadCount).'
       responses:
         '200':
-          description: Conversation detail
+          description: Conversation detail with the caller's unreadCount
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Conversation'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ChatParticipantsOnly' }
+  /chat/conversations/{id}/read:
+    post:
+      operationId: markConversationRead
+      summary: Mark conversation read
+      description: >-
+        Active participants only (admins who are not members have no read state). Moves the caller's read marker to
+        messageId's send time, or to now when no body or messageId is sent. The marker never moves backwards, so a late
+        or repeated call is harmless. Returns the caller's remaining unread count.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkConversationReadInput'
+      responses:
+        '200':
+          description: Read state after the update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationReadState'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ChatParticipantsOnly' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /chat/conversations/{id}/messages:
     get:
       operationId: listMessages
@@ -3823,10 +3856,33 @@ components:
       required: [id, type, createdAt]
       properties:
         id: { type: string, format: uuid }
-        type: { type: string, enum: [DIRECT, GROUP] }
-        title: { type: string, maxLength: 200 }
+        type: { type: string, enum: [DIRECT, GROUP, ROOM_INQUIRY, RIDE_TEMP] }
+        title: { type: [string, 'null'], maxLength: 200 }
         createdAt: { type: string, format: date-time }
-        lastMessageAt: { type: string, format: date-time }
+        lastMessageAt: { type: [string, 'null'], format: date-time }
+        lastMessage: { type: [string, 'null'], description: Body of the latest message }
+        unreadCount:
+          type: [integer, 'null']
+          minimum: 0
+          description: >-
+            Messages from other people sent after the caller's read marker (or after they joined, before their first
+            read). Null only for an admin viewing a conversation they are not a member of.
+    MarkConversationReadInput:
+      type: object
+      additionalProperties: false
+      properties:
+        messageId:
+          type: [string, 'null']
+          format: uuid
+          description: Mark read up to this message (must belong to the conversation); omit to mark everything read
+    ConversationReadState:
+      type: object
+      additionalProperties: false
+      required: [conversationId, lastReadAt, unreadCount]
+      properties:
+        conversationId: { type: string, format: uuid }
+        lastReadAt: { type: string, format: date-time }
+        unreadCount: { type: integer, minimum: 0 }
     CreateConversationInput:
       type: object
       additionalProperties: false
@@ -4844,6 +4900,11 @@ components:
           schema: { $ref: '#/components/schemas/ApiError' }
     ModeratorRequired:
       description: Admin (moderator) access is required
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    ChatParticipantsOnly:
+      description: The caller is not an active participant of the conversation
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ApiError' }

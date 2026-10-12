@@ -54,6 +54,17 @@ public class ConversationParticipantService {
         audit.record(actor.id().toString(), "chat.admin_access", "CONVERSATION", conversationId.toString());
     }
 
+    /**
+     * Fails with 403 unless the caller is an active participant. Stricter than {@link #requireParticipant}: read state
+     * is personal, so admins who are not members have none to change.
+     */
+    @Transactional(readOnly = true)
+    public void requireActiveParticipant(Actor actor, UUID conversationId) {
+        if (!isParticipant(conversationId, actor.id())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a participant in this conversation");
+        }
+    }
+
     /** Only the conversation owner (or an admin) can invite people. */
     @Transactional
     public ConversationParticipant invite(Actor actor, UUID conversationId, UUID userId) {

@@ -423,6 +423,57 @@ await status(
   `/api/v1/chat/conversations/${conversationId}/messages`,
   { body: 'hi', messageType: 'TEXT' },
 );
+const unreadFor = async (who) =>
+  (await call(who, 'GET', '/api/v1/chat/conversations')).body?.find?.(
+    (c) => c.id === conversationId,
+  )?.unreadCount;
+expect("the driver sees the passenger's message as unread", await unreadFor('A'), 1);
+// B sees only the driver-attributed SYSTEM notice from chat creation; B's own "hi" is not unread.
+expect('own messages are never unread', await unreadFor('B'), 1);
+await status(
+  'anonymous cannot mark a chat read',
+  401,
+  null,
+  'POST',
+  `/api/v1/chat/conversations/${conversationId}/read`,
+);
+await status(
+  'stranger cannot mark a chat read',
+  403,
+  'C',
+  'POST',
+  `/api/v1/chat/conversations/${conversationId}/read`,
+);
+await status(
+  'an admin outside the chat has no read state to mark',
+  403,
+  'D',
+  'POST',
+  `/api/v1/chat/conversations/${conversationId}/read`,
+);
+expect('failed mark-read calls leave the unread count', await unreadFor('A'), 1);
+await status(
+  'mark-read rejects a message from another conversation',
+  404,
+  'A',
+  'POST',
+  `/api/v1/chat/conversations/${conversationId}/read`,
+  { messageId: '00000000-0000-0000-0000-000000000001' },
+);
+const readState = await status(
+  'driver marks the chat read',
+  200,
+  'A',
+  'POST',
+  `/api/v1/chat/conversations/${conversationId}/read`,
+);
+expect('mark-read returns zero unread', readState?.unreadCount, 0);
+expect('the unread count drops to 0 after mark-read', await unreadFor('A'), 0);
+expect(
+  'conversation detail carries the same count',
+  (await call('A', 'GET', `/api/v1/chat/conversations/${conversationId}`)).body?.unreadCount,
+  0,
+);
 await status(
   'non-owner cannot invite to chat',
   403,

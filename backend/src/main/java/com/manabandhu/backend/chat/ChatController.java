@@ -38,8 +38,15 @@ public class ChatController {
 
     @GetMapping("/conversations/{id}")
     Conversation getConversation(Authentication authentication, @PathVariable UUID id) {
-        participantService.requireParticipant(Actor.require(authentication), id);
-        return conversationService.find(id);
+        return conversationService.findFor(Actor.require(authentication), id);
+    }
+
+    /** Marks the conversation read for the caller; the body (and its {@code messageId}) is optional. */
+    @PostMapping("/conversations/{id}/read")
+    ReadState markRead(Authentication authentication, @PathVariable UUID id,
+                       @Valid @RequestBody(required = false) MarkReadInput input) {
+        var messageId = input == null || input.messageId() == null ? null : UUID.fromString(input.messageId());
+        return conversationService.markRead(Actor.require(authentication), id, messageId);
     }
 
     @PostMapping("/conversations")

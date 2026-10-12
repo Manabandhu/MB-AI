@@ -54,7 +54,8 @@ export function useRealtimeChat(
               body: row.body || '',
               messageType: row.message_type || 'TEXT',
               createdAt: row.created_at || new Date().toISOString(),
-              sent: true,
+              // Live rows include everyone's messages; only the viewer's own count as sent by them.
+              sent: Boolean(currentUser?.id) && row.sender_id === currentUser?.id,
             };
             onIncomingMessage(msg);
           }

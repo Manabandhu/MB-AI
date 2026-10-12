@@ -21,6 +21,7 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 - `listMessages(conversationId)` -> `GET /api/v1/chat/conversations/{id}/messages`
 - `sendMessage(conversationId, body)` -> `POST /api/v1/chat/conversations/{id}/messages`
 - `getParticipants(conversationId)` -> `GET /api/v1/chat/conversations/{id}/participants`
+- `markConversationRead(conversationId, messageId?)` -> `POST /api/v1/chat/conversations/{id}/read` (used by `useMarkConversationRead`)
 
 ## Types
 

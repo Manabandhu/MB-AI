@@ -6,7 +6,8 @@ export type Conversation = {
   title?: string;
   lastMessage?: string;
   lastMessageAt?: string;
-  unreadCount?: number;
+  /** Messages from others after the caller's read marker; null for an admin who is not a member. */
+  unreadCount?: number | null;
   participants?: Participant[];
 };
 
@@ -54,6 +55,29 @@ export async function sendMessage(
       body: JSON.stringify({ body, messageType }),
     }),
     'SendMessage',
+  );
+}
+
+export type ConversationReadState = {
+  conversationId: string;
+  lastReadAt: string;
+  unreadCount: number;
+};
+
+/**
+ * Moves the caller's read marker up to `messageId` (or to now without one). The server never moves it backwards.
+ * Throws on any non-2xx so callers only clear unread state after the server accepted it.
+ */
+export async function markConversationRead(
+  conversationId: string,
+  messageId?: string,
+): Promise<ConversationReadState> {
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/read`, {
+      method: 'POST',
+      body: JSON.stringify(messageId ? { messageId } : {}),
+    }),
+    'MarkConversationRead',
   );
 }
 
