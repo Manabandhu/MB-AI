@@ -1,6 +1,5 @@
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { persistentStorage } from '@/lib/persistentStorage';
@@ -14,17 +13,36 @@ export type PushResult =
   | { status: 'denied' }
   | { status: 'unsupported'; reason: string };
 
-/** Show pushes as banners while the app is open too; the inbox badge refreshes on its own. */
-if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-    }),
-  });
+type NotificationsModule = typeof import('expo-notifications');
+
+/**
+ * Expo Go dropped remote push in SDK 53 and warns as soon as `expo-notifications` is imported, so the module is
+ * loaded lazily and only where push can work (development and store builds on iOS/Android).
+ */
+const pushAvailable =
+  Platform.OS !== 'web' && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+
+let notificationsModule: Promise<NotificationsModule> | null = null;
+
+function loadNotifications(): Promise<NotificationsModule> {
+  if (!notificationsModule) {
+    notificationsModule = import('expo-notifications').then((Notifications) => {
+      // Show pushes as banners while the app is open too; the inbox badge refreshes on its own.
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: false,
+          shouldSetBadge: false,
+        }),
+      });
+      return Notifications;
+    });
+  }
+  return notificationsModule;
 }
+
+if (pushAvailable) void loadNotifications();
 
 /**
  * Asks the OS for permission (only when the member turns push on) and registers this device's Expo token with the
@@ -34,12 +52,18 @@ if (Platform.OS !== 'web') {
 export async function requestPermissionAndRegister(): Promise<PushResult> {
   if (Platform.OS === 'web')
     return { status: 'unsupported', reason: 'Push notifications are available in the mobile app.' };
+  if (!pushAvailable)
+    return {
+      status: 'unsupported',
+      reason: 'Push notifications need the ManaBandhu app; Expo Go cannot receive them.',
+    };
   if (!Device.isDevice)
     return { status: 'unsupported', reason: 'Push notifications need a physical device.' };
   const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
   if (!projectId)
     return { status: 'unsupported', reason: 'Push is not configured for this build yet.' };
 
+  const Notifications = await loadNotifications();
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'ManaBandhu',
@@ -72,11 +96,19 @@ export async function unregisterThisDevice(): Promise<void> {
 
 export function useOpenPushTaps(open: (route: string) => void) {
   useEffect(() => {
-    if (Platform.OS === 'web') return;
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const route = routeForPushData(response.notification.request.content.data);
-      if (route) open(route);
+    if (!pushAvailable) return;
+    let active = true;
+    let subscription: { remove: () => void } | undefined;
+    void loadNotifications().then((Notifications) => {
+      if (!active) return;
+      subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        const route = routeForPushData(response.notification.request.content.data);
+        if (route) open(route);
+      });
     });
-    return () => subscription.remove();
+    return () => {
+      active = false;
+      subscription?.remove();
+    };
   }, [open]);
 }

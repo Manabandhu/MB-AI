@@ -17,7 +17,8 @@ class AdminAccessPolicy {
         if (publicAccessEnabled && !isLocalIssuer(jwtIssuer)) {
             // Fail closed rather than crash a deployment that still carries the flag: the override is ignored
             // whenever the token issuer is not the local auth stub, so real users' data never goes public.
-            log.error("ADMIN_PUBLIC_ACCESS_ENABLED is ignored: it is only honoured with a local auth issuer (got {})", jwtIssuer);
+            log.error("ADMIN_PUBLIC_ACCESS_ENABLED is ignored: it is only honoured with a local auth issuer (got {}). "
+                    + "Set ADMIN_PUBLIC_ACCESS_ENABLED=false (or remove it) in backend/.env to silence this.", jwtIssuer);
             publicAccessEnabled = false;
         }
         this.publicAccessEnabled = publicAccessEnabled;

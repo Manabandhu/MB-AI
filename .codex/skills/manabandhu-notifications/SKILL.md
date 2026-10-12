@@ -85,3 +85,4 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 - Safety notices (`safetyAlerts`) are delivered even while "All notifications" is paused, matching the settings screen copy.
 - Inbox, detail and settings have a `BackButton` (fallback route when there is no history), and the expense notification amount uses two decimals.
 - Dispatcher treats Expo's HTTP-200 `errors` response as a failed attempt (backoff), not as sent; stale stored setting values are logged when they fall back to defaults.
+- Expo Go (2026-10-12): `push.ts` imports `expo-notifications` lazily and only in development/store builds on iOS/Android. In Expo Go `requestPermissionAndRegister` returns `unsupported` ("Push notifications need the ManaBandhu app; Expo Go cannot receive them.") and push-tap routing is skipped; the in-app inbox works everywhere. Test push with a development build (`npx expo run:ios`/EAS dev client).
