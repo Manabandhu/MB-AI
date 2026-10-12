@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'chat',
   label: 'Chat',
   summary: 'Your conversations with members',
+  keywords: ['messages', 'inbox', 'dm', 'conversation', 'talk'],
   route: '/chat',
   icon: 'message',
   tone: 'primary',

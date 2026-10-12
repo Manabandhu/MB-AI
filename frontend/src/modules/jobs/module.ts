@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'jobs',
   label: 'Jobs',
   summary: 'Job postings shared by members',
+  keywords: ['work', 'career', 'hiring', 'openings', 'h1b', 'opt', 'remote', 'full-time'],
   route: '/jobs',
   icon: 'briefcase',
   tone: 'warm',

@@ -2,6 +2,12 @@ import type { Strings } from './en';
 
 export const hi: Strings = {
   tabs: { home: 'होम', explore: 'खोजें', community: 'समुदाय', chat: 'चैट', profile: 'प्रोफ़ाइल' },
+  tabSubtitles: {
+    explore: 'ManaBandhu की हर सुविधा, एक ही जगह।',
+    community: 'आस-पास के लोगों के समूह, सवाल और सलाह।',
+    chat: 'होस्ट, ड्राइवर और सदस्यों के साथ संदेश।',
+    profile: 'आपका खाता, गतिविधि और पसंद।',
+  },
   greeting: {
     morning: 'सुप्रभात',
     afternoon: 'नमस्कार',
@@ -27,6 +33,7 @@ export const hi: Strings = {
     inviteMessage: 'ManaBandhu से जुड़ें — कमरे, राइड, नौकरियाँ और दोस्त, सब एक कम्युनिटी ऐप में।',
   },
   shell: {
+    unreadTab: '{{label}}, {{unread}} अपठित',
     notifications: 'सूचनाएँ खोलें',
     openProfile: 'प्रोफ़ाइल खोलें',
     settings: 'सेटिंग्स खोलें',

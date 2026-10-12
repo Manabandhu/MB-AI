@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTheme, YStack } from 'tamagui';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 
 type IconButtonProps = {
   icon: AppIconName;
@@ -47,8 +48,11 @@ export function IconButton({
       }
       justifyContent="center"
       onPress={disabled ? undefined : onPress}
+      {...keyboardPress(onPress, !disabled)}
       opacity={disabled ? 0.4 : 1}
       pressStyle={disabled ? undefined : { opacity: 0.8 }}
+      // Positioned so a `badge` overlay anchors to this button (web stacks are static by default).
+      position="relative"
       width="$touch"
     >
       <AppIcon

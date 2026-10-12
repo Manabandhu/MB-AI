@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'community',
   label: 'Community',
   summary: 'Local groups, questions, and advice',
+  keywords: ['groups', 'posts', 'questions', 'advice', 'forum', 'discussion'],
   route: '/community',
   icon: 'community',
   tone: 'primary',

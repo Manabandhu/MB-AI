@@ -57,7 +57,7 @@ export function ProfileTab() {
       <Head>
         <title>Profile · ManaBandhu</title>
       </Head>
-      <TabHeader title={t('tabs.profile')} />
+      <TabHeader subtitle={t('tabSubtitles.profile')} title={t('tabs.profile')} />
       <Card variant="elevated">
         <XStack alignItems="center" gap="$x4">
           <Avatar

@@ -1,5 +1,6 @@
+import { useScrollToTop } from 'expo-router';
 import { BottomTabBarHeightContext } from 'expo-router/js-tabs';
-import { type ReactNode, useContext } from 'react';
+import { type ReactNode, type RefObject, useContext, useRef } from 'react';
 import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
@@ -36,8 +37,17 @@ type ScreenProps = {
 };
 
 /**
+ * Scrolls a tab's screen back to the top when its already-active tab is pressed again (the tab bars emit
+ * `tabPress`). Rendered only inside the tab navigator: `useScrollToTop` throws without a navigation route.
+ */
+function TabScrollToTop({ scrollRef }: { scrollRef: RefObject<ScrollView | null> }) {
+  useScrollToTop(scrollRef as RefObject<ScrollView>);
+  return null;
+}
+
+/**
  * Standard page frame: theme background, safe areas, centred max content width per window class, and optional
- * pull-to-refresh. Inside the tab navigator the tab bar already covers the home indicator, so only a small gap is
+ * pull-to-refresh. Inside the tab navigator, pressing the active tab again scrolls back to the top. Inside the tab navigator the tab bar already covers the home indicator, so only a small gap is
  * added at the bottom. Every screen should start from this instead of its own ScrollView + container styles.
  */
 export function Screen({
@@ -54,6 +64,7 @@ export function Screen({
   const insets = useSafeAreaInsets();
   const tabBarHeight = useContext(BottomTabBarHeightContext);
   const insideTabs = tabBarHeight !== undefined;
+  const scrollRef = useRef<ScrollView>(null);
   const { maxContentWidth, windowClass } = useAdaptiveLayout();
   const { palette } = useAppearance();
   const gutter = windowClass === 'compact' ? 16 : 24;
@@ -64,12 +75,14 @@ export function Screen({
   const frame = (
     <YStack backgroundColor="$background" flex={1} paddingTop={padTop ? insets.top : 0}>
       {header}
+      {insideTabs ? <TabScrollToTop scrollRef={scrollRef} /> : null}
       <ScrollView
         contentContainerStyle={{
           paddingBottom:
             (insideTabs ? TAB_SCREEN_BOTTOM_GAP : SCREEN_BOTTOM_GAP + insets.bottom) + bottomInset,
         }}
         keyboardShouldPersistTaps="handled"
+        ref={scrollRef}
         refreshControl={
           onRefresh ? (
             <RefreshControl

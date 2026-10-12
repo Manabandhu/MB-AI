@@ -85,3 +85,4 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - Fallback cleanup: deleted `assistantFallbacks.ts` and removed inline fallbacks from `AssistantScreen`, `AssistantHistoryScreen`, and `AssistantCitationsScreen` in favor of live React Query queries, `LoadingState`, `ErrorState`, and `EmptyState`.
 - Public API: `ai-assistant/index.ts` exports `moduleMeta` (launcher entry, route `/assistant`).
 - `ai-assistant/home/AssistantEntry.tsx` (exported from `index.ts`) is the Home entry: an input-like card plus quick prompts that open `/assistant?prompt=…`. `AssistantScreen` reads `prompt` and only pre-fills the input; the member still sends it.
+- Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['ask', 'question', 'help', 'ai', 'chatbot', 'answers']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.

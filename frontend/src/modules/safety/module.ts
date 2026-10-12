@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'safety',
   label: 'Safety',
   summary: 'Trusted contacts, reports, and blocked users',
+  keywords: ['report', 'block', 'trusted contacts', 'emergency', 'sos', 'harassment', 'scam'],
   route: '/safety',
   icon: 'shield',
   tone: 'danger',

@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'utilities',
   label: 'Utilities',
   summary: 'Nearby services, packages, and emergency info',
+  keywords: ['packages', 'package tracking', 'delivery', 'nearby services', 'emergency numbers'],
   route: '/utilities',
   icon: 'zap',
   tone: 'teal',

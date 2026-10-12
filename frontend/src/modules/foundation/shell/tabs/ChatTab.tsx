@@ -3,13 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import Head from 'expo-router/head';
 import { XStack, YStack } from 'tamagui';
+import { useT } from '@/i18n';
 import { listConversations } from '@/modules/chat';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
 import { Card } from '@/modules/shared/ui/Card';
-import { IconButton } from '@/modules/shared/ui/IconButton';
 import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { SkeletonCard } from '@/modules/shared/ui/Skeleton';
@@ -24,6 +25,7 @@ const typeLabel = {
 
 /** Conversation list. Counts and previews come straight from the chat API. */
 export function ChatTab() {
+  const t = useT();
   const query = useQuery({ queryKey: ['chat', 'conversations'], queryFn: listConversations });
   const conversations = query.data ?? [];
   return (
@@ -33,14 +35,15 @@ export function ChatTab() {
       </Head>
       <TabHeader
         actions={
-          <IconButton
+          <AppButton
             icon="plus"
-            label="New conversation"
+            label="New chat"
             onPress={() => router.push('/chat/new')}
-            variant="solid"
+            size="sm"
           />
         }
-        title="Chat"
+        subtitle={t('tabSubtitles.chat')}
+        title={t('tabs.chat')}
       />
       {query.isLoading ? (
         <YStack gap="$x2">

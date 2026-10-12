@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'immigration',
   label: 'Immigration',
   summary: 'Visa guides, checklists, and USCIS updates',
+  keywords: ['visa', 'opt', 'stem opt', 'h1b', 'green card', 'uscis', 'f1', 'checklist'],
   route: '/immigration',
   icon: 'plane',
   tone: 'primary',

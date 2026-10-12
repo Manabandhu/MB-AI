@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'referrals',
   label: 'Referrals',
   summary: 'Ask for or offer employee referrals',
+  keywords: ['referral', 'refer', 'career', 'hiring', 'interview', 'networking'],
   route: '/referrals',
   icon: 'handshake',
   tone: 'teal',

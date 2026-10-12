@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'events',
   label: 'Events',
   summary: 'Cultural, social, and professional events',
+  keywords: ['festival', 'meetup', 'diwali', 'ugadi', 'networking', 'party', 'cultural'],
   route: '/events',
   icon: 'event',
   tone: 'warm',

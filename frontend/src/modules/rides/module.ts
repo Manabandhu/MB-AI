@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'rides',
   label: 'Rides',
   summary: 'Offer or find carpools and airport rides',
+  keywords: ['carpool', 'ride share', 'airport', 'pickup', 'commute', 'drive', 'travel'],
   route: '/rides',
   icon: 'car',
   tone: 'teal',

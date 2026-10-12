@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
 import { styled, YStack } from 'tamagui';
 import { useAppearance } from '@/theme/ThemeProvider';
+import { keyboardPress } from './keyboardPress';
 
 const CardFrame = styled(YStack, {
   name: 'Card',
@@ -53,13 +54,15 @@ type CardProps = ComponentProps<typeof CardFrame> & {
 export function Card({ href, onPress, children, ...props }: CardProps) {
   const { reduceMotion } = useAppearance();
   const interactive = Boolean(href || onPress);
+  const press = interactive ? (onPress ?? (() => router.push(href as Href))) : undefined;
   return (
     <CardFrame
       role={interactive ? (href ? 'link' : 'button') : undefined}
       transition={reduceMotion ? null : 'quick'}
       focusable={interactive}
       interactive={interactive}
-      onPress={interactive ? (onPress ?? (() => router.push(href as Href))) : undefined}
+      onPress={press}
+      {...keyboardPress(press ? () => press(undefined as never) : undefined)}
       pressStyle={interactive && !reduceMotion ? { scale: 0.98 } : undefined}
       {...props}
     >

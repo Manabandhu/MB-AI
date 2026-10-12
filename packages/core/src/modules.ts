@@ -13,6 +13,11 @@ export type ModuleMeta = {
   label: string;
   /** One short line shown under the label in launchers. Describes the feature; never invented user data. */
   summary: string;
+  /**
+   * Extra search terms for launchers (synonyms and everyday words people type, e.g. "roommate" for Rooms). Lowercase,
+   * truthful to what the module does today; never a promise of a feature it does not have.
+   */
+  keywords?: readonly string[];
   route: string;
   /** An `AppIcon` name. */
   icon: string;

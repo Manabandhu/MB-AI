@@ -7,6 +7,12 @@ export const en = {
     chat: 'Chat',
     profile: 'Profile',
   },
+  tabSubtitles: {
+    explore: 'Everything ManaBandhu can help with, in one place.',
+    community: 'Groups, questions, and advice from people nearby.',
+    chat: 'Messages with hosts, drivers, and members.',
+    profile: 'Your account, activity, and preferences.',
+  },
   greeting: {
     morning: 'Good morning',
     afternoon: 'Good afternoon',
@@ -32,6 +38,7 @@ export const en = {
     inviteMessage: 'Join me on ManaBandhu — rooms, rides, jobs, and friends in one community app.',
   },
   shell: {
+    unreadTab: '{{label}}, {{unread}} unread',
     notifications: 'Open notifications',
     openProfile: 'Open profile',
     settings: 'Open settings',

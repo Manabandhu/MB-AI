@@ -6,6 +6,7 @@ import { ActivityIndicator, Platform } from 'react-native';
 import { styled, Theme, useTheme, XStack } from 'tamagui';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 type AppButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -97,6 +98,7 @@ export function AppButton({
       focusable={!isDisabled}
       fullWidth={fullWidth}
       onPress={handlePress}
+      {...keyboardPress(handlePress, !isDisabled)}
       pressStyle={reduceMotion ? { opacity: 0.85 } : { scale: motion.pressScale, opacity: 0.95 }}
       size={size}
       variant={variant}

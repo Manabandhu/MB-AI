@@ -1,6 +1,7 @@
 import { useTheme, XStack } from 'tamagui';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 
 type ChipProps = {
   label: string;
@@ -16,6 +17,8 @@ type ChipProps = {
   /** One-of-many choice inside a `radiogroup`: announced as a radio with `aria-checked` instead of a toggle. */
   radio?: boolean;
   disabled?: boolean;
+  /** Number of items behind this filter, shown as a small pill after the label ("Career 2"). */
+  count?: number;
 };
 
 const focusRing = {
@@ -34,6 +37,7 @@ export function Chip({
   variant = 'filter',
   radio,
   disabled,
+  count,
 }: ChipProps) {
   const theme = useTheme();
 
@@ -78,6 +82,7 @@ export function Chip({
       hoverStyle={interactive ? { borderColor: '$primary' } : undefined}
       minHeight={pressable ? '$touch' : 28}
       onPress={interactive ? onPress : undefined}
+      {...keyboardPress(onPress, interactive)}
       opacity={disabled ? 0.5 : 1}
       paddingHorizontal={pressable ? '$x4' : '$x3'}
       pressStyle={interactive ? { opacity: 0.85 } : undefined}
@@ -90,6 +95,20 @@ export function Chip({
       >
         {label}
       </AppText>
+      {count !== undefined ? (
+        <XStack
+          alignItems="center"
+          backgroundColor={selected ? '$onPrimary' : '$primarySoft'}
+          borderRadius="$pill"
+          justifyContent="center"
+          minWidth={22}
+          paddingHorizontal={6}
+        >
+          <AppText color="$primary" fontSize={12} fontWeight="800">
+            {count}
+          </AppText>
+        </XStack>
+      ) : null}
     </XStack>
   );
 }

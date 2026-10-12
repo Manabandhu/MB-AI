@@ -2,6 +2,12 @@ import type { Strings } from './en';
 
 export const te: Strings = {
   tabs: { home: 'హోమ్', explore: 'అన్వేషించు', community: 'కమ్యూనిటీ', chat: 'చాట్', profile: 'ప్రొఫైల్' },
+  tabSubtitles: {
+    explore: 'ManaBandhu అందించే ప్రతి సేవ, ఒకే చోట.',
+    community: 'దగ్గరలోని వారి నుంచి గ్రూపులు, ప్రశ్నలు, సలహాలు.',
+    chat: 'హోస్ట్‌లు, డ్రైవర్లు, సభ్యులతో సందేశాలు.',
+    profile: 'మీ ఖాతా, కార్యాచరణ, ప్రాధాన్యతలు.',
+  },
   greeting: {
     morning: 'శుభోదయం',
     afternoon: 'శుభ మధ్యాహ్నం',
@@ -27,6 +33,7 @@ export const te: Strings = {
     inviteMessage: 'ManaBandhu లో చేరండి — గదులు, రైడ్‌లు, ఉద్యోగాలు, స్నేహితులు అన్నీ ఒకే కమ్యూనిటీ యాప్‌లో.',
   },
   shell: {
+    unreadTab: '{{label}}, {{unread}} చదవనివి',
     notifications: 'నోటిఫికేషన్‌లు తెరవండి',
     openProfile: 'ప్రొఫైల్ తెరవండి',
     settings: 'సెట్టింగ్‌లు తెరవండి',

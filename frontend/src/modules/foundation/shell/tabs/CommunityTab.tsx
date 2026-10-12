@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import Head from 'expo-router/head';
 import { XStack } from 'tamagui';
+import { useT } from '@/i18n';
 import { listPosts } from '@/modules/community';
 import { useShellContent } from '@/modules/foundation/shell/shellApi';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
@@ -20,6 +21,7 @@ import { TabHeader } from '../TabHeader';
 
 /** Community tab: live group/post counts, shortcuts to groups, and the latest posts. */
 export function CommunityTab() {
+  const t = useT();
   const shell = useShellContent('community');
   const posts = useQuery({ queryKey: ['community', 'posts', 'all'], queryFn: () => listPosts() });
 
@@ -40,8 +42,8 @@ export function CommunityTab() {
             size="sm"
           />
         }
-        subtitle="Groups, questions, and advice from people nearby."
-        title="Community"
+        subtitle={t('tabSubtitles.community')}
+        title={t('tabs.community')}
       />
       <XStack flexWrap="wrap" gap="$x2">
         <Chip

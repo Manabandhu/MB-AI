@@ -6,9 +6,12 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BrandMark } from '@/modules/shared/ui/BrandLogo';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 import { UnreadNotificationDot } from '../UnreadNotificationDot';
+import { TabBadge } from './TabBadge';
 import { primaryTabs } from './tabs';
+import { useTabLabels } from './useChatUnread';
 import { useTabPress } from './useTabPress';
 
 /** Tablet and foldable navigation: a vertical rail on the leading edge (Material navigation-rail pattern). */
@@ -16,6 +19,7 @@ export function NavRail(props: BottomTabBarProps) {
   const { palette } = useAppearance();
   const press = useTabPress(props);
   const t = useT();
+  const labelFor = useTabLabels();
   const active = props.state.routes[props.state.index]?.name;
   return (
     <YStack
@@ -34,9 +38,10 @@ export function NavRail(props: BottomTabBarProps) {
       </YStack>
       {primaryTabs.map((tab) => {
         const selected = tab.name === active;
+        const { label, count, a11yLabel } = labelFor(tab.name);
         return (
           <YStack
-            aria-label={t(`tabs.${tab.name}`)}
+            aria-label={a11yLabel}
             role="tab"
             aria-selected={selected}
             alignItems="center"
@@ -49,7 +54,9 @@ export function NavRail(props: BottomTabBarProps) {
             }}
             gap={4}
             key={tab.name}
+            minHeight="$touch"
             onPress={() => press(tab.name)}
+            {...keyboardPress(() => press(tab.name))}
             paddingVertical="$x2"
             width={80}
           >
@@ -61,18 +68,21 @@ export function NavRail(props: BottomTabBarProps) {
               paddingHorizontal="$x4"
               paddingVertical={6}
             >
-              <AppIcon
-                color={selected ? palette.primary : palette.muted}
-                name={tab.icon}
-                size={22}
-              />
+              <YStack position="relative">
+                <AppIcon
+                  color={selected ? palette.primary : palette.muted}
+                  name={tab.icon}
+                  size={22}
+                />
+                <TabBadge count={count} />
+              </YStack>
             </YStack>
             <AppText
               color={selected ? '$primary' : '$colorMuted'}
               fontSize={12}
               fontWeight={selected ? '800' : '600'}
             >
-              {t(`tabs.${tab.name}`)}
+              {label}
             </AppText>
           </YStack>
         );

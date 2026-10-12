@@ -1,124 +1,250 @@
-import type { ModuleCategory } from '@manabandhu/core';
+import type { ModuleTone } from '@manabandhu/core';
 import type { Href } from 'expo-router';
 import { router } from 'expo-router';
 import Head from 'expo-router/head';
-import { useMemo, useState } from 'react';
-import { ScrollView } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { TextInput } from 'react-native';
 import { XStack, YStack } from 'tamagui';
-import { launcherModules } from '@/modules/foundation/launcher/moduleRegistry';
+import { useT } from '@/i18n';
+import {
+  countByCategory,
+  type ExploreCategory,
+  exploreCategories,
+  filterModules,
+  groupByCategory,
+  recentModules,
+  resultSummary,
+} from '@/modules/foundation/launcher/exploreFilters';
+import { type LauncherModule, launcherModules } from '@/modules/foundation/launcher/moduleRegistry';
 import { useUserActivityStore } from '@/modules/foundation/userActivityStore';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { IconButton } from '@/modules/shared/ui/IconButton';
 import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { Section } from '@/modules/shared/ui/Section';
 import { TextField } from '@/modules/shared/ui/TextField';
 import { useAppearance } from '@/theme/ThemeProvider';
 import { TabHeader } from '../TabHeader';
 
-const categories: { key: ModuleCategory | 'all'; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'living', label: 'Living & getting around' },
-  { key: 'career', label: 'Career' },
-  { key: 'community', label: 'Community' },
-  { key: 'essentials', label: 'Essentials' },
-  { key: 'safety', label: 'Safety' },
-];
+/** Icon well fill and icon colour per module tone (`danger` uses the error pastel, not the warm one). */
+const toneStyle = {
+  primary: { background: '$primaryTint', icon: 'primary' },
+  teal: { background: '$tealTint', icon: 'teal' },
+  warm: { background: '$warmTint', icon: 'warm' },
+  danger: { background: '$errorBg', icon: 'error' },
+} as const satisfies Record<ModuleTone, { background: string; icon: string }>;
 
-const toneColor = { primary: 'primary', teal: 'teal', warm: 'warm', danger: 'error' } as const;
-const toneBg = {
-  primary: '$primaryTint',
-  teal: '$tealTint',
-  warm: '$warmTint',
-  danger: '$warmTint',
-} as const;
+const MODULE_COLUMNS = { compact: 1, medium: 2, expanded: 3, wide: 3 } as const;
+const RECENT_COLUMNS = { compact: 2, medium: 2, expanded: 4, wide: 4 } as const;
+const RECENT_LIMIT = 4;
 
-/** Directory of every module, searchable and filterable. Built from each module's own `moduleMeta`. */
-export function ExploreTab() {
-  const [category, setCategory] = useState<ModuleCategory | 'all'>('all');
-  const [query, setQuery] = useState('');
-  const recordVisit = useUserActivityStore((s) => s.recordModuleVisit);
+function ToneIcon({ module, size }: { module: LauncherModule; size: number }) {
   const { palette } = useAppearance();
+  const tone = toneStyle[module.tone];
+  return (
+    <YStack
+      alignItems="center"
+      backgroundColor={tone.background}
+      borderRadius="$control"
+      height={size}
+      justifyContent="center"
+      width={size}
+    >
+      <AppIcon color={palette[tone.icon]} name={module.icon} size={Math.round(size * 0.46)} />
+    </YStack>
+  );
+}
 
-  const modules = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return launcherModules.filter(
-      (m) =>
-        (category === 'all' || m.category === category) &&
-        (!q || m.label.toLowerCase().includes(q) || m.summary.toLowerCase().includes(q)),
-    );
-  }, [category, query]);
+function ModuleCard({ module, onOpen }: { module: LauncherModule; onOpen: () => void }) {
+  const { palette } = useAppearance();
+  return (
+    <Card aria-label={`${module.label}. ${module.summary}`} onPress={onOpen}>
+      <XStack alignItems="center" gap="$x3">
+        <ToneIcon module={module} size={48} />
+        <YStack flex={1} gap={2}>
+          <AppText variant="bodyStrong">{module.label}</AppText>
+          <AppText numberOfLines={2} tone="muted" variant="caption">
+            {module.summary}
+          </AppText>
+        </YStack>
+        <AppIcon color={palette.muted} name="chevron-right" size={18} />
+      </XStack>
+    </Card>
+  );
+}
+
+function RecentTile({ module, onOpen }: { module: LauncherModule; onOpen: () => void }) {
+  return (
+    <Card aria-label={`${module.label}, recently used`} onPress={onOpen} padding="$x3">
+      <XStack alignItems="center" gap="$x2" minHeight="$touch">
+        <ToneIcon module={module} size={40} />
+        <AppText flex={1} numberOfLines={1} variant="bodyStrong">
+          {module.label}
+        </AppText>
+      </XStack>
+    </Card>
+  );
+}
+
+/**
+ * Directory of every module, built from each module's own `moduleMeta`. With no search or category it shows the
+ * member's recently used modules and then one section per category; searching or picking a category shows a flat,
+ * counted list of matches.
+ */
+export function ExploreTab() {
+  const t = useT();
+  const [category, setCategory] = useState<ExploreCategory>('all');
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<TextInput>(null);
+  const recordVisit = useUserActivityStore((s) => s.recordModuleVisit);
+  const recentVisits = useUserActivityStore((s) => s.recentVisits);
+
+  // Only the first paint animates; later renders (typing, filtering) mount cards in place.
+  const firstPaint = useRef(true);
+  useEffect(() => {
+    firstPaint.current = false;
+  }, []);
+  const animate = firstPaint.current;
+
+  const trimmed = query.trim();
+  const browsing = category === 'all' && !trimmed;
+  const counts = useMemo(() => countByCategory(launcherModules, query), [query]);
+  const results = useMemo(() => filterModules(launcherModules, query, category), [query, category]);
+  const sections = useMemo(() => groupByCategory(launcherModules), []);
+  const recent = useMemo(
+    () => recentModules(launcherModules, recentVisits, RECENT_LIMIT),
+    [recentVisits],
+  );
+
+  const open = (module: LauncherModule) => {
+    recordVisit(module.key);
+    router.push(module.route as Href);
+  };
+  const reset = () => {
+    setQuery('');
+    setCategory('all');
+  };
+
+  let index = 0;
+  const card = (module: LauncherModule) => (
+    <FadeIn animate={animate} index={index++} key={module.key}>
+      <ModuleCard module={module} onOpen={() => open(module)} />
+    </FadeIn>
+  );
 
   return (
     <Screen>
       <Head>
         <title>Explore · ManaBandhu</title>
       </Head>
-      <TabHeader subtitle="Everything ManaBandhu can help with, in one place." title="Explore" />
+      <TabHeader subtitle={t('tabSubtitles.explore')} title={t('tabs.explore')} />
       <YStack gap="$x3">
         <TextField
-          aria-label="Filter modules"
+          aria-label="Search features"
+          autoCapitalize="none"
+          autoCorrect={false}
+          leadingIcon="search"
           onChangeText={setQuery}
           placeholder="Search features…"
+          ref={inputRef}
           returnKeyType="search"
+          trailing={
+            query ? (
+              <IconButton
+                icon="close"
+                label="Clear search"
+                onPress={() => {
+                  setQuery('');
+                  inputRef.current?.focus();
+                }}
+                size={18}
+                variant="plain"
+              />
+            ) : null
+          }
           value={query}
         />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <XStack gap="$x2" paddingVertical="$x1">
-            {categories.map((c) => (
+        <FilterChipRow label="Categories" role="radiogroup">
+          <Chip
+            accessibilityLabel={`All, ${counts.all} ${counts.all === 1 ? 'feature' : 'features'}`}
+            count={counts.all}
+            label="All"
+            onPress={() => setCategory('all')}
+            radio
+            selected={category === 'all'}
+          />
+          {exploreCategories.map((c) => {
+            const count = counts[c.key];
+            return (
               <Chip
+                accessibilityLabel={`${c.label}, ${count} ${count === 1 ? 'feature' : 'features'}`}
+                count={count}
+                disabled={count === 0 && category !== c.key}
                 key={c.key}
                 label={c.label}
                 onPress={() => setCategory(c.key)}
+                radio
                 selected={category === c.key}
               />
-            ))}
-          </XStack>
-        </ScrollView>
+            );
+          })}
+        </FilterChipRow>
       </YStack>
-      {modules.length === 0 ? (
+
+      {browsing ? (
+        <>
+          {recent.length > 0 ? (
+            <Section title="Recently used">
+              <ResponsiveGrid columns={RECENT_COLUMNS} gap={12}>
+                {recent.map((module) => (
+                  <FadeIn animate={animate} index={index++} key={module.key}>
+                    <RecentTile module={module} onOpen={() => open(module)} />
+                  </FadeIn>
+                ))}
+              </ResponsiveGrid>
+            </Section>
+          ) : null}
+          {sections.map((section) => (
+            <Section key={section.category} title={section.label}>
+              <ResponsiveGrid columns={MODULE_COLUMNS} gap={12}>
+                {section.modules.map(card)}
+              </ResponsiveGrid>
+            </Section>
+          ))}
+        </>
+      ) : results.length === 0 ? (
         <EmptyState
-          body="Try another word or clear the filter."
+          actionLabel={trimmed ? 'Search rooms, rides, jobs and events' : undefined}
+          body={
+            trimmed
+              ? `No ManaBandhu feature matches “${trimmed}”. Try another word, or search listings instead.`
+              : 'Nothing in this category yet.'
+          }
           iconName="search"
+          onAction={
+            trimmed
+              ? () => router.push(`/search?q=${encodeURIComponent(trimmed)}` as Href)
+              : undefined
+          }
+          onSecondaryAction={reset}
+          secondaryActionLabel="Clear search"
           title="No matching features"
         />
       ) : (
-        <ResponsiveGrid columns={{ compact: 1, medium: 2, expanded: 3, wide: 4 }} gap={12}>
-          {modules.map((module, index) => (
-            <FadeIn index={index} key={module.key}>
-              <Card
-                aria-label={`${module.label}. ${module.summary}`}
-                onPress={() => {
-                  recordVisit(module.key);
-                  router.push(module.route as Href);
-                }}
-              >
-                <XStack alignItems="center" gap="$x3">
-                  <YStack
-                    alignItems="center"
-                    backgroundColor={toneBg[module.tone]}
-                    borderRadius="$control"
-                    height={48}
-                    justifyContent="center"
-                    width={48}
-                  >
-                    <AppIcon color={palette[toneColor[module.tone]]} name={module.icon} size={22} />
-                  </YStack>
-                  <YStack flex={1} gap={2}>
-                    <AppText variant="bodyStrong">{module.label}</AppText>
-                    <AppText numberOfLines={2} tone="muted" variant="caption">
-                      {module.summary}
-                    </AppText>
-                  </YStack>
-                  <AppIcon color={palette.muted} name="chevron-right" size={18} />
-                </XStack>
-              </Card>
-            </FadeIn>
-          ))}
-        </ResponsiveGrid>
+        <YStack gap="$x3">
+          <AppText aria-live="polite" tone="muted" variant="caption">
+            {resultSummary(results.length, query, category)}
+          </AppText>
+          <ResponsiveGrid columns={MODULE_COLUMNS} gap={12}>
+            {results.map(card)}
+          </ResponsiveGrid>
+        </YStack>
       )}
     </Screen>
   );

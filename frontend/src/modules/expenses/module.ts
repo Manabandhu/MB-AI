@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'expenses',
   label: 'Expenses',
   summary: 'Split shared costs and settle up',
+  keywords: ['split', 'bills', 'rent share', 'settle up', 'balances', 'roommate costs'],
   route: '/expenses',
   icon: 'wallet',
   tone: 'primary',

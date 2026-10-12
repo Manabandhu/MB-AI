@@ -5,6 +5,7 @@ export const moduleMeta = {
   key: 'assistant',
   label: 'Assistant',
   summary: 'Ask questions and get cited answers',
+  keywords: ['ask', 'question', 'help', 'ai', 'chatbot', 'answers'],
   route: '/assistant',
   icon: 'sparks',
   tone: 'warm',

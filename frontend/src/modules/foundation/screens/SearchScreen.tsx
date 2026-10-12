@@ -1,7 +1,7 @@
 import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Pressable,
@@ -67,7 +67,10 @@ export function SearchScreen() {
   const isCompact = width < breakpoint.narrow; // Narrow fold cover screen
   const isDesktop = width >= breakpoint.medium; // Tablet / unfolded fold / desktop
 
-  const [searchQuery, setSearchQuery] = useState('');
+  // `/search?q=…` (e.g. from Explore's empty state) starts with that query filled in.
+  const params = useLocalSearchParams<{ q?: string | string[] }>();
+  const initialQuery = Array.isArray(params.q) ? (params.q[0] ?? '') : (params.q ?? '');
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [activeCategory, setActiveCategory] = useState('all');
 
   // Errors are surfaced below instead of being treated as "no results".

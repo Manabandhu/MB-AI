@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
@@ -10,6 +10,9 @@ export type EmptyStateProps = {
   body: string;
   actionLabel?: string;
   onAction?: () => void;
+  /** A second, quieter next step (rendered as a ghost button after the main action). */
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
   /** Custom illustration; defaults to an icon in a tinted circle. */
   icon?: ReactNode;
   iconName?: AppIconName;
@@ -23,6 +26,8 @@ export function EmptyState({
   body,
   actionLabel,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
   icon,
   iconName = 'sparks',
   compact,
@@ -48,13 +53,25 @@ export function EmptyState({
       <AppText center maxWidth={420} tone="muted">
         {body}
       </AppText>
-      {actionLabel && onAction ? (
-        <AppButton
-          label={actionLabel}
-          onPress={onAction}
-          size={compact ? 'sm' : 'md'}
-          variant="secondary"
-        />
+      {(actionLabel && onAction) || (secondaryActionLabel && onSecondaryAction) ? (
+        <XStack flexWrap="wrap" gap="$x2" justifyContent="center">
+          {actionLabel && onAction ? (
+            <AppButton
+              label={actionLabel}
+              onPress={onAction}
+              size={compact ? 'sm' : 'md'}
+              variant="secondary"
+            />
+          ) : null}
+          {secondaryActionLabel && onSecondaryAction ? (
+            <AppButton
+              label={secondaryActionLabel}
+              onPress={onSecondaryAction}
+              size={compact ? 'sm' : 'md'}
+              variant="ghost"
+            />
+          ) : null}
+        </XStack>
       ) : null}
     </YStack>
   );

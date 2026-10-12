@@ -9,16 +9,26 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
 import { BrandLogo } from '@/modules/shared/ui/BrandLogo';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 import { UnreadNotificationDot } from '../UnreadNotificationDot';
+import { TabBadge } from './TabBadge';
 import { primaryTabs } from './tabs';
+import { useTabLabels } from './useChatUnread';
 import { useTabPress } from './useTabPress';
+
+const focusRing = {
+  outlineWidth: 3,
+  outlineStyle: 'solid',
+  outlineColor: '$outlineColor',
+} as const;
 
 /** Desktop web and landscape-tablet navigation: brand, primary links, search, notifications, and account. */
 export function TopNav(props: BottomTabBarProps) {
   const { palette } = useAppearance();
   const press = useTabPress(props);
   const t = useT();
+  const labelFor = useTabLabels();
   const active = props.state.routes[props.state.index]?.name;
   const user = useAuthStore((s) => s.user);
   const name = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'Member';
@@ -38,15 +48,27 @@ export function TopNav(props: BottomTabBarProps) {
         paddingHorizontal="$x6"
         width="100%"
       >
-        <YStack aria-label="ManaBandhu home" cursor="pointer" onPress={() => press('home')}>
+        <YStack
+          aria-label="ManaBandhu home"
+          role="link"
+          borderRadius="$control"
+          cursor="pointer"
+          focusVisibleStyle={focusRing}
+          focusable
+          justifyContent="center"
+          minHeight="$touch"
+          onPress={() => press('home')}
+          {...keyboardPress(() => press('home'))}
+        >
           <BrandLogo size={36} variant="wordmark" />
         </YStack>
         <XStack role="tablist" flex={1} gap="$x1">
           {primaryTabs.map((tab) => {
             const selected = tab.name === active;
+            const { label, count, a11yLabel } = labelFor(tab.name);
             return (
               <XStack
-                aria-label={t(`tabs.${tab.name}`)}
+                aria-label={a11yLabel}
                 role="tab"
                 aria-selected={selected}
                 alignItems="center"
@@ -54,16 +76,13 @@ export function TopNav(props: BottomTabBarProps) {
                 borderRadius="$pill"
                 cursor="pointer"
                 focusable
-                focusVisibleStyle={{
-                  outlineWidth: 3,
-                  outlineStyle: 'solid',
-                  outlineColor: '$outlineColor',
-                }}
+                focusVisibleStyle={focusRing}
                 gap="$x2"
                 hoverStyle={{ backgroundColor: '$surfaceContainerLow' }}
                 key={tab.name}
                 minHeight="$touch"
                 onPress={() => press(tab.name)}
+                {...keyboardPress(() => press(tab.name))}
                 paddingHorizontal="$x4"
               >
                 <AppIcon
@@ -76,8 +95,9 @@ export function TopNav(props: BottomTabBarProps) {
                   fontWeight={selected ? '800' : '600'}
                   variant="label"
                 >
-                  {t(`tabs.${tab.name}`)}
+                  {label}
                 </AppText>
+                <TabBadge count={count} placement="inline" />
               </XStack>
             );
           })}
@@ -91,10 +111,13 @@ export function TopNav(props: BottomTabBarProps) {
           borderRadius="$pill"
           borderWidth={1}
           cursor="pointer"
+          focusVisibleStyle={focusRing}
+          focusable
           gap="$x2"
-          height={40}
+          height="$touch"
           hoverStyle={{ borderColor: '$primary' }}
           onPress={() => router.push('/search')}
+          {...keyboardPress(() => router.push('/search'))}
           paddingHorizontal="$x4"
           width={220}
         >
@@ -112,8 +135,16 @@ export function TopNav(props: BottomTabBarProps) {
         <YStack
           aria-label={t('shell.openProfile')}
           role="button"
+          alignItems="center"
+          borderRadius="$pill"
           cursor="pointer"
+          focusVisibleStyle={focusRing}
+          focusable
+          justifyContent="center"
+          minHeight="$touch"
+          minWidth="$touch"
           onPress={() => press('profile')}
+          {...keyboardPress(() => press('profile'))}
         >
           <Avatar
             name={name}
