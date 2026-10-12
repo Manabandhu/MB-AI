@@ -1,4 +1,5 @@
 import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/apiClient';
+import { type RawPage, toPage } from '@/lib/springPage';
 
 export type Event = {
   id: string;
@@ -32,10 +33,7 @@ export type EventCategory = {
 
 export async function listEvents(): Promise<Event[]> {
   const response = await apiFetch('/api/v1/events');
-  const data = await parseJsonOrThrow<Event[] | { content?: Event[] }>(response, 'Events');
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.content)) return data.content;
-  return [];
+  return toPage(await parseJsonOrThrow<RawPage<Event>>(response, 'Events')).content;
 }
 
 export async function listEventCategories(): Promise<EventCategory[]> {
@@ -45,10 +43,7 @@ export async function listEventCategories(): Promise<EventCategory[]> {
 export async function searchEvents(query: string): Promise<Event[]> {
   const suffix = query ? `?q=${encodeURIComponent(query)}` : '';
   const response = await apiFetch(`/api/v1/events/search${suffix}`);
-  const data = await parseJsonOrThrow<Event[] | { content?: Event[] }>(response, 'Events search');
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.content)) return data.content;
-  return [];
+  return toPage(await parseJsonOrThrow<RawPage<Event>>(response, 'Events search')).content;
 }
 
 export async function getEvent(id: string): Promise<Event> {

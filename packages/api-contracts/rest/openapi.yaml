@@ -2925,18 +2925,19 @@ paths:
     get:
       operationId: listEvents
       summary: List events
+      description: One page of events; q filters by text. Page size is capped at 500.
       parameters:
         - name: q
           in: query
           schema: { type: string }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 500, default: 20 } }
       responses:
         '200':
-          description: Events
+          description: One page of events
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/Event' }
+              schema: { $ref: '#/components/schemas/EventPage' }
     post:
       operationId: createEvent
       summary: Create event
@@ -2953,6 +2954,23 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Event' }
+  /events/search:
+    get:
+      operationId: searchEvents
+      summary: Search events
+      description: Same as GET /events; q filters by text. Page size is capped at 500.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 500, default: 20 } }
+      responses:
+        '200':
+          description: One page of matching events
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EventPage' }
   /events/saved:
     get:
       operationId: listSavedEvents
@@ -4000,24 +4018,26 @@ components:
         universityShuttleAccessible: { type: [boolean, 'null'] }
         stateCode: { type: [string, 'null'], maxLength: 50 }
         county: { type: [string, 'null'], maxLength: 100 }
-    RoomListingPage:
+    PageMetadata:
       type: object
-      description: >-
-        Spring Data page rendered directly (serialization mode direct). Only content and the page counters are part
-        of the contract; pageable and sort carry Spring's own shape.
-      required: [content, totalElements, totalPages, number, size, numberOfElements, first, last, empty]
+      additionalProperties: false
+      description: Page counters of a Spring Data PagedModel response.
+      required: [size, number, totalElements, totalPages]
       properties:
-        content: { type: array, items: { $ref: '#/components/schemas/RoomListing' } }
+        size: { type: integer, description: Requested page size }
+        number: { type: integer, description: Zero-based page index }
         totalElements: { type: integer, format: int64 }
         totalPages: { type: integer }
-        number: { type: integer, description: Zero-based page index }
-        size: { type: integer }
-        numberOfElements: { type: integer }
-        first: { type: boolean }
-        last: { type: boolean }
-        empty: { type: boolean }
-        pageable: { type: object }
-        sort: { type: object }
+    RoomListingPage:
+      type: object
+      additionalProperties: false
+      description: >-
+        Spring Data PagedModel (spring.data.web.pageable.serialization-mode via-dto). There is no last, first or
+        numberOfElements; clients derive the last page as page.number + 1 >= page.totalPages.
+      required: [content, page]
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/RoomListing' } }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     OwnerRoomListing:
       type: object
       additionalProperties: false
@@ -4352,22 +4372,14 @@ components:
         updatedAt: { type: string, format: date-time }
     RideOfferPage:
       type: object
+      additionalProperties: false
       description: >-
-        Spring Data page rendered directly (serialization mode direct). Only content and the page counters are part
-        of the contract; pageable and sort carry Spring's own shape.
-      required: [content, totalElements, totalPages, number, size, numberOfElements, first, last, empty]
+        Spring Data PagedModel (spring.data.web.pageable.serialization-mode via-dto). There is no last, first or
+        numberOfElements; clients derive the last page as page.number + 1 >= page.totalPages.
+      required: [content, page]
       properties:
         content: { type: array, items: { $ref: '#/components/schemas/RideOfferView' } }
-        totalElements: { type: integer, format: int64 }
-        totalPages: { type: integer }
-        number: { type: integer, description: Zero-based page index }
-        size: { type: integer }
-        numberOfElements: { type: integer }
-        first: { type: boolean }
-        last: { type: boolean }
-        empty: { type: boolean }
-        pageable: { type: object }
-        sort: { type: object }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     CreateRideOfferInput:
       type: object
       additionalProperties: false
@@ -4607,22 +4619,14 @@ components:
         coverImageUrl: { type: [string, 'null'], description: URL of the first photo by sortOrder }
     ListingPage:
       type: object
+      additionalProperties: false
       description: >-
-        Spring Data page rendered directly (serialization mode direct). Only content and the page counters are part
-        of the contract; pageable and sort carry Spring's own shape.
-      required: [content, totalElements, totalPages, number, size, numberOfElements, first, last, empty]
+        Spring Data PagedModel (spring.data.web.pageable.serialization-mode via-dto). There is no last, first or
+        numberOfElements; clients derive the last page as page.number + 1 >= page.totalPages.
+      required: [content, page]
       properties:
         content: { type: array, items: { $ref: '#/components/schemas/ListingView' } }
-        totalElements: { type: integer, format: int64 }
-        totalPages: { type: integer }
-        number: { type: integer, description: Zero-based page index }
-        size: { type: integer }
-        numberOfElements: { type: integer }
-        first: { type: boolean }
-        last: { type: boolean }
-        empty: { type: boolean }
-        pageable: { type: object }
-        sort: { type: object }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     CreateListingInput:
       type: object
       additionalProperties: false
@@ -4758,6 +4762,16 @@ components:
       required: [type]
       properties:
         type: { type: string, maxLength: 20 }
+    EventPage:
+      type: object
+      additionalProperties: false
+      description: >-
+        Spring Data PagedModel (spring.data.web.pageable.serialization-mode via-dto). There is no last, first or
+        numberOfElements; clients derive the last page as page.number + 1 >= page.totalPages.
+      required: [content, page]
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/Event' } }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     Event:
       type: object
       additionalProperties: false

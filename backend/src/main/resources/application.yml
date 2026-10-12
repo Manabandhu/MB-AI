@@ -31,6 +31,9 @@ spring:
       pageable:
         # Bound every paged endpoint so a client cannot request an unbounded page.
         max-page-size: 500
+        # Serialize Page<T> responses as Spring Data's stable PagedModel DTO:
+        # { "content": [...], "page": { "size", "number", "totalElements", "totalPages" } }.
+        serialization-mode: via-dto
   graphql:
     graphiql:
       enabled: ${GRAPHIQL_ENABLED:false}

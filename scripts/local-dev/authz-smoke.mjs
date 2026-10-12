@@ -1711,5 +1711,28 @@ console.log('== marketplace production rules');
   );
 }
 
+console.log('== paged responses use the PagedModel shape');
+for (const path of [
+  '/api/v1/rooms/listings?size=2',
+  '/api/v1/rides/offers?size=2',
+  '/api/v1/marketplace/listings?size=2',
+  '/api/v1/events?size=2',
+  '/api/v1/events/search?size=2',
+  '/api/v1/jobs?size=2',
+]) {
+  const res = await call('A', 'GET', path);
+  const body = res.body ?? {};
+  expect(
+    `${path} returns content plus page metadata`,
+    [
+      res.status,
+      Array.isArray(body.content),
+      Object.keys(body.page ?? {}).sort(),
+      'totalElements' in body || 'last' in body || 'pageable' in body,
+    ],
+    [200, true, ['number', 'size', 'totalElements', 'totalPages'], false],
+  );
+}
+
 console.log(`\nPASS=${pass} FAIL=${fail}${skip ? ` SKIPPED_GROUPS=${skip}` : ''}`);
 process.exit(fail > 0 ? 1 : 0);

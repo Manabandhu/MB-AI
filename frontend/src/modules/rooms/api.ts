@@ -1,4 +1,5 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { type RawPage, toPage } from '@/lib/springPage';
 import type {
   CreateRoomListingInput,
   OwnerRoomListing,
@@ -54,13 +55,11 @@ export async function listRoomListings(
   if (params.lng != null) query.set('lng', String(params.lng));
   if (params.radiusMiles != null) query.set('radiusMiles', String(params.radiusMiles));
   const suffix = query.toString() ? `?${query.toString()}` : '';
-  const data = await parseJsonOrThrow<{ content?: RoomListing[] } | RoomListing[]>(
+  const data = await parseJsonOrThrow<RawPage<RoomListing>>(
     await apiFetch(`/api/v1/rooms/listings${suffix}`),
     'List room listings',
   );
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.content)) return data.content;
-  return [];
+  return toPage(data).content;
 }
 
 export async function getRoomDetail(roomId: string): Promise<RoomListing> {

@@ -1,4 +1,5 @@
 import { apiFetch, parseJson } from '@/lib/apiClient';
+import { type RawPage, toPage } from '@/lib/springPage';
 import type {
   CreateRideOfferInput,
   CreateRideRatingInput,
@@ -186,17 +187,9 @@ export type RideSearchParams = {
 export type RidePage = {
   rides: Ride[];
   page: number;
-  /** Total matching rides on the server, or null when the response did not say. */
-  total: number | null;
+  /** Total matching rides on the server. */
+  total: number;
   hasMore: boolean;
-};
-
-type BackendPage = {
-  content?: BackendRide[];
-  totalElements?: number;
-  last?: boolean;
-  /** Spring Data's DTO page format nests the counts. */
-  page?: { totalElements?: number; number?: number; size?: number; totalPages?: number };
 };
 
 /**
@@ -215,21 +208,19 @@ export async function listRideOffersPage(params: RideSearchParams = {}): Promise
   if (params.isRecurring !== undefined) query.set('isRecurring', String(params.isRecurring));
   query.set('page', String(page));
   query.set('size', String(size));
-  const data = await parseJson<BackendPage | BackendRide[]>(
-    await apiFetch(`/api/v1/rides/offers?${query.toString()}`),
+  const result = toPage(
+    await parseJson<RawPage<BackendRide>>(
+      await apiFetch(`/api/v1/rides/offers?${query.toString()}`),
+    ),
+    page,
+    size,
   );
-  if (Array.isArray(data)) {
-    return { rides: data.map(toRide), page, total: data.length, hasMore: false };
-  }
-  const rows = data.content ?? [];
-  const total = data.totalElements ?? data.page?.totalElements ?? null;
-  const hasMore =
-    typeof data.last === 'boolean'
-      ? !data.last
-      : total != null
-        ? (page + 1) * size < total
-        : rows.length === size;
-  return { rides: rows.map(toRide), page, total, hasMore };
+  return {
+    rides: result.content.map(toRide),
+    page: result.number,
+    total: result.totalElements,
+    hasMore: !result.last,
+  };
 }
 
 /** First page of upcoming active rides (see `listRideOffersPage`). */

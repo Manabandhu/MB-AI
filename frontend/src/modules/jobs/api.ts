@@ -1,15 +1,11 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { type RawPage, toPage } from '@/lib/springPage';
 import type { CreateJobInput, JobPosting } from '@/modules/jobs/types';
 
 export async function listJobPostings(page = 0, size = 20): Promise<JobPosting[]> {
   const response = await apiFetch(`/api/v1/jobs?page=${page}&size=${size}`);
-  const data = await parseJsonOrThrow<JobPosting[] | { content?: JobPosting[] }>(
-    response,
-    'Job postings',
-  );
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.content)) return data.content;
-  return [];
+  const data = await parseJsonOrThrow<RawPage<JobPosting>>(response, 'Job postings');
+  return toPage(data, page, size).content;
 }
 
 export async function getJobPosting(jobId: string): Promise<JobPosting> {

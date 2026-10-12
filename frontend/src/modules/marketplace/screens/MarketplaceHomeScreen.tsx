@@ -83,8 +83,7 @@ function BrowseView({ screenId }: { screenId: Exclude<MarketplaceScreenId, 'save
     queryKey: ['marketplace', 'listings', filters],
     queryFn: ({ pageParam }) => searchMarketplaceListings(filters, pageParam, PAGE_SIZE),
     initialPageParam: 0,
-    getNextPageParam: (last) =>
-      last.last === true || last.number + 1 >= last.totalPages ? undefined : last.number + 1,
+    getNextPageParam: (last) => (last.last ? undefined : last.number + 1),
   });
   const categoriesQuery = useQuery({
     queryKey: ['marketplace', 'categories'],

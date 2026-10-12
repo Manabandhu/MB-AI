@@ -108,3 +108,4 @@ Owns marketplace discovery, categories, search, item listings, selling, saves, s
   - **"Make offer".** It was never implemented and is no longer claimed.
   - **Tests.** `frontend/test/marketplaceRules.test.mjs`.
   - **Shared primitives (2026-10-11).** `ListingBits.ListingStatusBadge` (was `StatusBadge`) maps listing statuses onto the shared `StatusBadge` tones; the home filters use the shared `FilterChipRow` (the local `ChipRow` is gone) and pressable chips are now 44 pt; `ListingDetailsScreen` uses the shared `ActionBar`; `utils/notify.ts` re-exports `shared/ui/notify`, and delete confirmations pass `{ destructive: true }`.
+- Paged responses (2026-10-12): `GET /api/v1/marketplace/listings` returns a `PagedModel` (`{ content, page }`, no `last`). `ListingPage` is `Page<MarketplaceListing>` from `@/lib/springPage`; `searchMarketplaceListings` normalizes with `toPage` and `MarketplaceHomeScreen` pages on `last` (derived as `number + 1 >= totalPages`).

@@ -1,4 +1,5 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { type RawPage, toPage } from '@/lib/springPage';
 import type {
   ContactSellerResult,
   CreateListingInput,
@@ -27,18 +28,11 @@ export async function searchMarketplaceListings(
   page = 0,
   size = PAGE_SIZE,
 ): Promise<ListingPage> {
-  const data = await parseJsonOrThrow<Partial<ListingPage>>(
+  const data = await parseJsonOrThrow<RawPage<MarketplaceListing>>(
     await apiFetch(`/api/v1/marketplace/listings?${listingQuery(filters, page, size)}`),
     'Marketplace listings',
   );
-  const content = data.content ?? [];
-  return {
-    content,
-    totalElements: data.totalElements ?? content.length,
-    totalPages: data.totalPages ?? 1,
-    number: data.number ?? page,
-    last: data.last,
-  };
+  return toPage(data, page, size);
 }
 
 /** First page of active listings (used by global search). */

@@ -1,3 +1,5 @@
+import type { Page } from '@/lib/springPage';
+
 /** Mirrors backend `ListingCategory`. */
 export type ListingCategory = {
   id: string;
@@ -40,14 +42,8 @@ export type MarketplaceListing = {
   coverImageUrl: string | null;
 };
 
-/** Spring `Page<T>` as serialised by the backend (only the fields the app reads). */
-export type ListingPage = {
-  content: MarketplaceListing[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  last?: boolean;
-};
+/** One page of listings, normalized from the backend's `PagedModel` body by `toPage`. */
+export type ListingPage = Page<MarketplaceListing>;
 
 export type ListingFilters = {
   q?: string;
