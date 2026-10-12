@@ -294,5 +294,5 @@ export function durationLabel(minutes?: number | null) {
 /** Short member label from a user id; the app does not have a public profile lookup for ride members yet. */
 export function memberLabel(userId: string, role?: string | null) {
   const who = statusIs(role, 'driver') ? 'Driver' : 'Rider';
-  return `${who} ${userId.slice(0, 4).toUpperCase()}`;
+  return `${who} ${userId.slice(0, 6).toUpperCase()}`;
 }

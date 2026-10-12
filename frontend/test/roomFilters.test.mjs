@@ -210,3 +210,18 @@ test('selectRooms separates the city list from the filtered result', () => {
     ['a'],
   );
 });
+
+test('city radius uses great-circle miles, not degrees', async () => {
+  const { distanceMiles } = await import('../src/modules/shared/utils/geoPolygon.ts');
+  // Dallas to Fort Worth is about 30 miles; 0.2 degrees of longitude near Dallas is about 11.6 miles.
+  const d = distanceMiles(
+    { latitude: 32.7767, longitude: -96.797 },
+    { latitude: 32.7555, longitude: -97.3308 },
+  );
+  assert.ok(d > 28 && d < 33, `got ${d}`);
+  const east = distanceMiles(
+    { latitude: 32.78, longitude: -96.8 },
+    { latitude: 32.78, longitude: -96.6 },
+  );
+  assert.ok(east > 11 && east < 12.5, `got ${east}`);
+});

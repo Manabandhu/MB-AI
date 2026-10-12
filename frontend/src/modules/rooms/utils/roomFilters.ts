@@ -1,5 +1,5 @@
 // Pure room-discovery rules (city matching, filters, sort). No React or app aliases, so `frontend/test` can import it.
-import { type Coordinate, isPointInPolygon } from '../../shared/utils/geoPolygon';
+import { type Coordinate, distanceMiles, isPointInPolygon } from '../../shared/utils/geoPolygon';
 import type { RoomListing } from '../types';
 
 export type RoomSort = 'recommended' | 'price_low' | 'price_high' | 'newest';
@@ -148,8 +148,8 @@ export function isAllCities(city: CityFilter): boolean {
   );
 }
 
-/** ~14 miles: rooms with coordinates farther than this from the chosen city are left out. */
-const CITY_RADIUS_DEGREES = 0.2;
+/** Rooms with coordinates farther than this from the chosen city are left out (great-circle distance). */
+const CITY_RADIUS_MILES = 14;
 
 function cityParts(city: CityFilter) {
   const cityName = (city.cityName || city.name.split(',')[0] || '').toLowerCase().trim();
@@ -159,7 +159,7 @@ function cityParts(city: CityFilter) {
 
 /**
  * Whether a listing belongs to the chosen city: same state (NY and NJ count as one metro), then the city name in the
- * area or title, then coordinates within ~14 miles; listings without coordinates fall back to the city's words.
+ * area or title, then coordinates within 14 miles; listings without coordinates fall back to the city's words.
  */
 export function matchesRoomLocation(
   room: Pick<RoomListing, 'title' | 'broadLocation' | 'stateCode' | 'latitude' | 'longitude'>,
@@ -183,8 +183,8 @@ export function matchesRoomLocation(
   const point = roomCoordinate(room);
   if (point && city.latitude != null && city.longitude != null) {
     return (
-      Math.abs(city.latitude - point.latitude) <= CITY_RADIUS_DEGREES &&
-      Math.abs(city.longitude - point.longitude) <= CITY_RADIUS_DEGREES
+      distanceMiles({ latitude: city.latitude, longitude: city.longitude }, point) <=
+      CITY_RADIUS_MILES
     );
   }
 

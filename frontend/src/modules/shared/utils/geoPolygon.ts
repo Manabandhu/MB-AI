@@ -62,3 +62,16 @@ export function downsamplePoints<T>(points: T[], maxPoints = 40): T[] {
   }
   return result;
 }
+
+const EARTH_RADIUS_MILES = 3958.8;
+
+/** Great-circle (haversine) distance between two coordinates in miles. */
+export function distanceMiles(a: Coordinate, b: Coordinate): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_MILES * Math.asin(Math.min(1, Math.sqrt(h)));
+}
