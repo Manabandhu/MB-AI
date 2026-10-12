@@ -47,8 +47,9 @@ export function useMarkConversationRead(
           );
           queryClient.invalidateQueries({ queryKey: ['chat', 'conversations'] });
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           // Background read receipt: keep the server's unread state; the next message or focus retries.
+          console.warn('[chat] mark-read failed; will retry on the next message or focus', error);
         });
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);

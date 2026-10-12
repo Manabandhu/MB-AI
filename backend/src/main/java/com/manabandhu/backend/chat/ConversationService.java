@@ -85,7 +85,7 @@ public class ConversationService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Message not found"));
         }
         if (participantRepository.advanceLastReadAt(id, actor.id(), readAt) == 0) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a participant in this conversation");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not an active participant in this conversation");
         }
         var lastReadAt = participantRepository.findByConversationIdAndUserId(id, actor.id())
                 .map(ConversationParticipant::getLastReadAt)
