@@ -1,6 +1,6 @@
 import { forwardRef, useId } from 'react';
 import type { TextInput, TextInputProps } from 'react-native';
-import { Input, YStack } from 'tamagui';
+import { Input, TextArea, YStack } from 'tamagui';
 import { AppText } from '@/modules/shared/ui/AppText';
 
 type TextFieldProps = TextInputProps & {
@@ -9,12 +9,16 @@ type TextFieldProps = TextInputProps & {
   error?: string | null;
 };
 
-/** Labelled text input with helper and error text wired for screen readers. */
+/**
+ * Labelled text input with helper and error text wired for screen readers. `multiline` renders Tamagui's `TextArea`:
+ * on web its `Input` ignores `multiline` and would draw a single-line `<input>` that cannot wrap or hold newlines.
+ */
 export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
   { label, helper, error, multiline, ...props },
   ref,
 ) {
   const id = useId();
+  const Field = multiline ? TextArea : Input;
   return (
     <YStack gap="$x1" width="100%">
       {label ? (
@@ -22,7 +26,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
           {label}
         </AppText>
       ) : null}
-      <Input
+      <Field
         ref={ref as never}
         aria-label={label ?? props.placeholder}
         aria-labelledby={label ? `${id}-label` : undefined}

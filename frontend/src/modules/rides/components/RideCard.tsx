@@ -35,14 +35,17 @@ export function seatsText(ride: Pick<Ride, 'seatsAvailable' | 'seatsTotal'>) {
   return `${ride.seatsAvailable} of ${ride.seatsTotal} ${ride.seatsTotal === 1 ? 'seat' : 'seats'} open`;
 }
 
-/** Read-only facts from the ride record, shown as neutral tags. */
-export function rideTags(ride: Ride) {
+/**
+ * Read-only facts from the ride record, shown as neutral tags. Pass `distance: false` where the distance is already
+ * shown (the detail screen's route card prints it next to the duration).
+ */
+export function rideTags(ride: Ride, { distance = true }: { distance?: boolean } = {}) {
   return [
     ride.isRecurring ? (recurrenceLabel(ride.recurrencePattern) ?? 'Recurring') : null,
     isWomenOnly(ride.genderPreference) ? 'Women only' : null,
     tollLabel(ride.tollPreference),
     luggageLabel(ride.luggageCapacity),
-    ride.distanceMiles ? `${Math.round(ride.distanceMiles)} mi` : null,
+    distance && ride.distanceMiles ? `${Math.round(ride.distanceMiles)} mi` : null,
   ].filter((t): t is string => Boolean(t));
 }
 
@@ -58,6 +61,8 @@ type RideCardProps = {
   showStatus?: boolean;
   /** Bookmark state; pass with `onToggleSave` to show the heart. Rides the viewer rides on show "Joined" instead. */
   saved?: boolean;
+  /** The viewer rides on this ride even though the view says otherwise (search views skip the passenger check). */
+  joined?: boolean;
   onToggleSave?: () => void;
   saving?: boolean;
   /** Extra line under the facts, e.g. "You drove". */
@@ -78,6 +83,7 @@ export function RideCard({
   ride,
   showStatus,
   saved,
+  joined: joinedHint,
   onToggleSave,
   saving,
   note,
@@ -89,7 +95,7 @@ export function RideCard({
   const departs = formatDeparture(ride.departureAt);
   const seats = seatsText(ride);
   const open = onPress ?? (() => router.push(`/rides/${ride.id}` as Href));
-  const joined = isJoinedRide(ride);
+  const joined = joinedHint === true || isJoinedRide(ride);
   return (
     <Card
       borderColor={selected ? '$primary' : '$borderColor'}

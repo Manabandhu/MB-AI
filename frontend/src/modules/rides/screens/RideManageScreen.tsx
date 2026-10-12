@@ -559,7 +559,6 @@ function RequestsTab({ ride, query }: { ride: Ride; query: UseQueryResult<RideSe
           const subtitle = [
             `${request.seatsRequested} ${request.seatsRequested === 1 ? 'seat' : 'seats'}`,
             request.createdAt ? `sent ${formatDeparture(request.createdAt)}` : null,
-            request.message ? `“${request.message}”` : null,
           ]
             .filter(Boolean)
             .join(' · ');
@@ -595,6 +594,11 @@ function RequestsTab({ ride, query }: { ride: Ride; query: UseQueryResult<RideSe
                   label={statusLabel(request.status)}
                   tone={statusTone(request.status)}
                 />
+              }
+              detail={
+                request.message ? (
+                  <AppText tone="muted" variant="caption">{`“${request.message}”`}</AppText>
+                ) : null
               }
               key={request.id}
               name={memberLabel(request.riderId, 'rider')}

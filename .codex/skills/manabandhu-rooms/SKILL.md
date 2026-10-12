@@ -149,6 +149,7 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected` 
 - Single column on compact, 2 columns on medium, 3 columns on expanded/wide
 - Color contrast meets WCAG 2.1 AA (at least 4.5:1 ratio)
 - Color is not the only indicator of state
+- Guest `ActionBar` on room detail groups "Quick hello" and "Contact host" in one `XStack`, so on phones both wrap together under the price instead of splitting across rows.
 
 ## Current Implementation Status
 

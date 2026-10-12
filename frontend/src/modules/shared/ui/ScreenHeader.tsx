@@ -47,7 +47,8 @@ export function ScreenHeader({ title, subtitle, back, actions, primaryAction }: 
         </YStack>
       </XStack>
       {actions || primaryAction ? (
-        <XStack alignItems="center" flexWrap="wrap" gap="$x2" marginLeft="auto">
+        // maxWidth keeps the row inside the header so its own wrap applies on phones instead of overflowing.
+        <XStack alignItems="center" flexWrap="wrap" gap="$x2" marginLeft="auto" maxWidth="100%">
           {actions}
           {primaryAction ? (
             <AppButton icon={primaryAction.icon} label={primaryAction.label} onPress={onPrimary} />

@@ -258,7 +258,8 @@ function RideDetailLoaded({
     <ScreenHeader
       actions={
         <>
-          {isJoinedRide(ride) ? (
+          {/* Drivers do not bookmark their own ride; the Manage page is their way back to it. */}
+          {ride.isDriver ? null : isJoinedRide(ride) ? (
             <Chip icon="check" label="Joined" variant="tag" />
           ) : (
             <IconButton
@@ -423,7 +424,7 @@ function RideDetailLoaded({
   );
 
   // ─── Ride facts (the main column) ───────────────────────────────────────────────────────────────────────────
-  const tags = rideTags(ride);
+  const tags = rideTags(ride, { distance: false });
   const duration = durationLabel(ride.estimatedDurationMins);
   const people = participantsQuery.data ?? [];
   const facts = (

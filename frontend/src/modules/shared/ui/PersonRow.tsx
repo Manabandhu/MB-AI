@@ -16,13 +16,23 @@ type PersonRowProps = {
   actions?: ReactNode;
   /** Opens the person's profile or request when the row is pressed. */
   href?: Href;
+  /** Longer text under the row at full width (a request note), so it is not clipped beside the actions. */
+  detail?: ReactNode;
 };
 
 /**
  * One person in a list (riders, inquirers, members): avatar, name with optional badge, subtitle, and actions.
  * Only the avatar and text are pressable, so action presses never also follow `href`.
  */
-export function PersonRow({ name, imageUrl, subtitle, badge, actions, href }: PersonRowProps) {
+export function PersonRow({
+  name,
+  imageUrl,
+  subtitle,
+  badge,
+  actions,
+  href,
+  detail,
+}: PersonRowProps) {
   return (
     <Card padding="$x3">
       <XStack alignItems="center" gap="$x3">
@@ -66,6 +76,7 @@ export function PersonRow({ name, imageUrl, subtitle, badge, actions, href }: Pe
           </XStack>
         ) : null}
       </XStack>
+      {detail}
     </Card>
   );
 }

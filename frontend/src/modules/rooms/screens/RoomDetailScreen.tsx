@@ -440,7 +440,8 @@ export function RoomDetailScreen() {
           }
         >
           {isActive ? (
-            <>
+            // One group, so on a phone both buttons wrap together under the price instead of splitting.
+            <XStack flexGrow={1} gap="$x2" justifyContent="flex-end">
               <AppButton
                 disabled={contacting}
                 label="Quick hello"
@@ -449,7 +450,7 @@ export function RoomDetailScreen() {
                 variant="secondary"
               />
               <AppButton icon="message" label="Contact host" onPress={openInquiry} />
-            </>
+            </XStack>
           ) : null}
         </ActionBar>
       )}

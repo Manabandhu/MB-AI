@@ -23,6 +23,11 @@ export function useSavedRides() {
     () => new Set((query.data ?? []).filter((r) => !isJoinedRide(r)).map((r) => r.id)),
     [query.data],
   );
+  // `/saved` computes membership per ride, unlike search results, so it also tells search cards which rides are joined.
+  const joinedIds = useMemo(
+    () => new Set((query.data ?? []).filter((r) => isJoinedRide(r)).map((r) => r.id)),
+    [query.data],
+  );
 
   const mutation = useMutation({
     mutationFn: async ({ id, save }: { id: string; save: boolean }) => {
@@ -46,6 +51,7 @@ export function useSavedRides() {
     query,
     savedIds,
     isSaved: (rideId: string) => savedIds.has(rideId),
+    isJoined: (rideId: string) => joinedIds.has(rideId),
     toggle,
     pendingId: mutation.isPending ? mutation.variables?.id : undefined,
   };

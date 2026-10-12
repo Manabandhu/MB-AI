@@ -243,6 +243,7 @@ export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId })
             onToggleSave={() => saved.toggle(ride.id)}
             ride={ride}
             saved={saved.isSaved(ride.id)}
+            joined={saved.isJoined(ride.id)}
             saving={saved.pendingId === ride.id}
             selected={selectedId === ride.id}
           />

@@ -514,7 +514,7 @@ export function RideOfferScreen() {
                   ? ` · ${contributionText(Number(amount))}`
                   : ''}
               </AppText>
-              <AppText numberOfLines={1} tone="muted" variant="caption">
+              <AppText numberOfLines={2} tone="muted" variant="caption">
                 {isAuthenticated ? 'Riders can book as soon as it is live' : 'Sign in to publish'}
               </AppText>
             </YStack>
