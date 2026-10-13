@@ -52,7 +52,7 @@ export function Chip({
         minHeight={28}
         paddingHorizontal="$x3"
       >
-        {icon ? <AppIcon color={theme.colorMuted?.val} name={icon} size={14} /> : null}
+        {icon ? <AppIcon color={theme.colorMuted?.get()} name={icon} size={14} /> : null}
         <AppText numberOfLines={1} tone="muted" variant="caption">
           {label}
         </AppText>
@@ -62,7 +62,7 @@ export function Chip({
 
   const pressable = Boolean(onPress);
   const interactive = pressable && !disabled;
-  const foreground = selected ? theme.onPrimary?.val : theme.primary?.val;
+  const foreground = selected ? theme.onPrimary?.get() : theme.colorMuted?.get();
   return (
     <XStack
       aria-label={accessibilityLabel ?? label}
@@ -89,7 +89,7 @@ export function Chip({
     >
       {icon ? <AppIcon color={foreground} name={icon} size={pressable ? 16 : 14} /> : null}
       <AppText
-        color={selected ? '$onPrimary' : '$primary'}
+        color={selected ? '$onPrimary' : '$color'}
         numberOfLines={1}
         variant={pressable ? 'label' : 'caption'}
       >

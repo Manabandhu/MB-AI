@@ -187,3 +187,7 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 - Home uses a neutral personal header with visible search, location, and feature-launcher access; six readable quick-access cards link to the full Explore directory. Search and Saved use shared screens/filters/states; search queries only the selected listing categories after typing. Settings groups appearance, account/data, notifications, maps, and safety.
 - `launcher/QuickJump.tsx` provides one virtualized, catalog-backed task picker to all signed-in screens (Cmd/Ctrl K on web). `commandSearch.ts` excludes dynamic-ID routes, auth, and onboarding; moderation destinations require trusted admin roles and automations require super admin. `WorkspaceDock` makes deep screens one tap from Home, Jump to, and Saved; it hides while the native keyboard is open.
 - New launcher/dock labels and Home search/feature links use the `navigation` translation namespace (English, Telugu, Hindi). The launcher callback is stable so typing does not rerender the underlying screen via context.
+
+- Minimal visual refinement: Home uses a smaller greeting and fully readable quick-access descriptions. Explore cards size naturally around their full descriptions; avoid vertical `flex: 1` within an unconstrained card. Settings uses a direct title. Existing navigation, usage ordering, and theme preferences remain in place.
+
+- Home suggestion expand/collapse labels are localized in English, Telugu, and Hindi.

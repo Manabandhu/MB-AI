@@ -17,8 +17,8 @@ export function SettingsScreen() {
   return (
     <Screen maxWidth="form">
       <ScreenHeader
-        title="Make it yours"
-        subtitle="A few preferences. A space that feels like you."
+        title="Settings"
+        subtitle="Manage your account, appearance, and preferences."
         back={{ fallback: '/profile' }}
       />
       <Section title="Look, feel & language">

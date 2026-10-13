@@ -58,7 +58,12 @@ export function ScreenHeader({ title, subtitle, back, actions, primaryAction }: 
         <XStack alignItems="center" flexWrap="wrap" gap="$x2" marginLeft="auto" maxWidth="100%">
           {actions}
           {primaryAction ? (
-            <AppButton icon={primaryAction.icon} label={primaryAction.label} onPress={onPrimary} />
+            <AppButton
+              size="sm"
+              icon={primaryAction.icon}
+              label={primaryAction.label}
+              onPress={onPrimary}
+            />
           ) : null}
         </XStack>
       ) : null}

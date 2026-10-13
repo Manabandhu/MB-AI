@@ -2,7 +2,7 @@
 
 Branch: `codex/ux-refresh`, based on `claude/loving-wright-3a3bah`.
 
-The app uses a calmer neutral canvas, expressive violet actions, clearer headings, rounded surfaces, and consistent controls. The refresh applies through the shared screen system and live theme factories rather than maintaining a different visual language in each module. It adds no runtime dependencies.
+The app uses a calmer neutral canvas, restrained violet accents, clearer headings, rounded surfaces, and consistent controls. The refresh applies through the shared screen system and live theme factories rather than maintaining a different visual language in each module. It adds no runtime dependencies.
 
 ## What changed
 
@@ -43,8 +43,20 @@ The canonical catalog still contains 123 routes. Redirects share their destinati
 
 Use the existing environment tool activation, then run `pnpm verify`, `pnpm test`, and the Expo web export. Frontend tests include task-search eligibility/matching and AA contrast for text and semantic accents on standard surfaces in both themes. The design baseline was reduced rather than relaxed.
 
-Validation passed: 97 frontend tests, 14 shared-package tests, 235 backend tests, `pnpm verify`, the web export, and 277 local authorization smoke checks. Chromium passed 246 route/theme render checks (123 routes in light and dark), 80 layout checks at 320/390/820/1180/1440px, and launcher keyboard/navigation flows at every size and theme. No runtime errors or document overflow were observed. Targeted browser checks also passed sign-in validation, password reveal, keyboard consent, Jobs filter application, saved-job reloads, unavailable-job errors, and bookmark removal.
+Initial validation passed: 97 frontend tests, 14 shared-package tests, 235 backend tests, `pnpm verify`, the web export, and 277 local authorization smoke checks. Chromium passed 246 route/theme render checks (123 routes in light and dark), 80 layout checks at 320/390/820/1180/1440px, and launcher keyboard/navigation flows at every size and theme. No runtime errors or document overflow were observed. Targeted browser checks also passed sign-in validation, password reveal, keyboard consent, Jobs filter application, saved-job reloads, unavailable-job errors, and bookmark removal.
 
 Browser review uses the exported app against the repository's local Postgres/auth/backend stack. Route checks include redirects and missing-record states; they do not assert that a missing record exists. Responsive review covers phone, tablet, landscape tablet, and desktop. Native device builds, production Supabase authentication, and external maps/push/upload providers need their normal integration validation.
 
 Review artifacts and detailed run results are under `/workspace/.onboarding/ux-artifacts/` in the prepared cloud workspace. These are local review artifacts, not publicly accessible web links.
+
+## Minimal visual refinement
+
+The follow-up follows a minimal, polished direction with restrained color. Supporting descriptions use regular 13pt text; smaller greetings, neutral unselected filters, and calmer cards reduce visual competition. Home assistant suggestions expand on demand so the first screen stays compact. Home/Explore card descriptions remain fully visible and grid cards fill their rows.
+
+Jobs discovery uses the shared screen system instead of its fixed light backgrounds and duplicate custom controls. Tablet and desktop show two columns, job cards offer one clear detail action, and filter/sort controls use the accessible adaptive sheet. Unsupported filter choices and a redundant referral action were removed; bookmarks and URL-applied filters remain supported. City selection uses the shared selector with real location records.
+
+Supporting control colors use live theme variables, and native palettes now expose the same `onPrimary` token. Contrast tests cover both solid actions and muted text on tonal surfaces. This revision does not change backend APIs.
+
+Follow-up validation: 99 frontend tests, 14 shared-package tests, `pnpm verify`, and a production web export passed. Chromium passed 80 responsive screen checks across five widths and both themes, plus keyboard suggestion controls, task navigation, Jobs filters, and saved-job flows. Updated selected-screen previews are in [the screenshot gallery](ui-screenshots/README.md). Native device builds and production provider integrations remain untested.
+
+The follow-up route sweep covered all 123 routes in light and dark (246 combinations); splash redirects were separately verified after navigation settled. There were no remaining render failures, document overflow, or browser runtime errors. Live theme changes and persistence, Jobs failure/retry, and empty/reset states also passed targeted browser checks.

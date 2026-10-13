@@ -77,3 +77,7 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 - Shared search, section, detail, message, banner, and textarea compatibility adapters now use the same live primitives. Field errors/helpers are associated through aria-describedby and aria-invalid; inputs keep a stable border on focus.
 - Card hover motion respects reduced motion. Entrance staggering caps at three steps. Segments, ratings, person links and widget links support keyboard activation. BottomSheet is a named dialog, supports Escape, and centers at tablet/desktop widths. ActionBar reserves 144pt for wrapping controls.
 - Web BottomSheet portals wait for `useClientReady` after hydration, including routes that initially open a filter/category sheet; native sheets render immediately.
+
+- Minimal visual refinement: 12/20/24pt control/card/panel radii, neutral dark tonal surfaces, and explicit `onPrimary` palette tokens. Shared icon/button/field colors read `useTheme().get()` so web CSS variables follow the live scheme. Unselected filters use neutral text; card hover changes its border without lifting. Header primary actions use 44pt small buttons.
+
+- Supporting captions use 13pt/20pt regular text; labels and body emphasis use 600 weight. Grid cards and entrance wrappers grow to equal row heights without forcing their vertical text stacks to zero height.

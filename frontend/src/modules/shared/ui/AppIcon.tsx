@@ -195,7 +195,7 @@ type AppIconProps = {
 
 export function AppIcon({ name, color, size = 20, strokeWidth = 2 }: AppIconProps) {
   const theme = useTheme();
-  const resolved = color ?? theme.color?.val;
+  const resolved = color ?? theme.color?.get();
   if (name === 'google') return <GoogleOriginalIcon size={size} />;
   if (name === 'apple') return <AppleOriginalIcon color={resolved} size={size} />;
   const Icon = iconMap[name];

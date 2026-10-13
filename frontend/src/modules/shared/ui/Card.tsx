@@ -1,4 +1,3 @@
-import { motion } from '@manabandhu/design-system';
 import type { Href } from 'expo-router';
 import { router } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
@@ -31,7 +30,7 @@ const CardFrame = styled(YStack, {
     interactive: {
       true: {
         cursor: 'pointer',
-        hoverStyle: { borderColor: '$borderColorHover', y: motion.hoverLift },
+        hoverStyle: { borderColor: '$borderColorHover' },
         focusVisibleStyle: {
           outlineWidth: 3,
           outlineStyle: 'solid',

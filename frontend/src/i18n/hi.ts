@@ -41,6 +41,8 @@ export const hi: Strings = {
     updated: '{{when}} अपडेट हुआ',
     ask: 'ManaBandhu से कुछ भी पूछें…',
     askTitle: 'ManaBandhu से पूछें',
+    showSuggestions: 'सुझाए गए सवाल दिखाएं',
+    hideSuggestions: 'सुझाए गए सवाल छिपाएं',
     promptRoom: 'पास में कमरा',
     promptVisa: 'OPT / वीज़ा चेकलिस्ट',
     promptRide: 'एयरपोर्ट राइड',

@@ -1,81 +1,77 @@
-# UX review screenshots
+# Minimal UI review
 
-19 captured views from the UX refresh review, using local test data. These cover selected screens; they are not screenshots of every application route.
+20 captured views of the revised UI, using local test data. Phone views are 390px wide; desktop views are 1440px. These cover selected screens, not every application route.
 
-Click an image to open it at full size.
+Click any preview to open the full-size image.
 
-### explore-1440-dark
+## Home
 
-![explore-1440-dark](explore-1440-dark.png)
+### Phone
 
-### explore-1440-light
+| Light | Dark |
+| --- | --- |
+| [![Home, phone, light](home-390-light.png)](home-390-light.png) | [![Home, phone, dark](home-390-dark.png)](home-390-dark.png) |
 
-![explore-1440-light](explore-1440-light.png)
+### Desktop
 
-### explore-390-dark
+| Light | Dark |
+| --- | --- |
+| [![Home, desktop, light](home-1440-light.png)](home-1440-light.png) | [![Home, desktop, dark](home-1440-dark.png)](home-1440-dark.png) |
 
-![explore-390-dark](explore-390-dark.png)
+## Explore
 
-### explore-390-light
+### Phone
 
-![explore-390-light](explore-390-light.png)
+| Light | Dark |
+| --- | --- |
+| [![Explore, phone, light](explore-390-light.png)](explore-390-light.png) | [![Explore, phone, dark](explore-390-dark.png)](explore-390-dark.png) |
 
-### home-1440-dark
+### Desktop
 
-![home-1440-dark](home-1440-dark.png)
+| Light | Dark |
+| --- | --- |
+| [![Explore, desktop, light](explore-1440-light.png)](explore-1440-light.png) | [![Explore, desktop, dark](explore-1440-dark.png)](explore-1440-dark.png) |
 
-### home-1440-light
+## Jobs
 
-![home-1440-light](home-1440-light.png)
+### Phone
 
-### home-390-dark
+| Light | Dark |
+| --- | --- |
+| [![Jobs, phone, light](jobs-390-light.png)](jobs-390-light.png) | [![Jobs, phone, dark](jobs-390-dark.png)](jobs-390-dark.png) |
 
-![home-390-dark](home-390-dark.png)
+### Desktop
 
-### home-390-light
+| Light | Dark |
+| --- | --- |
+| [![Jobs, desktop, light](jobs-1440-light.png)](jobs-1440-light.png) | [![Jobs, desktop, dark](jobs-1440-dark.png)](jobs-1440-dark.png) |
 
-![home-390-light](home-390-light.png)
+## Settings
 
-### jobs-1440-dark
+### Phone
 
-![jobs-1440-dark](jobs-1440-dark.png)
+| Light | Dark |
+| --- | --- |
+| [![Settings, phone, light](settings-390-light.png)](settings-390-light.png) | [![Settings, phone, dark](settings-390-dark.png)](settings-390-dark.png) |
 
-### jobs-1440-light
+### Desktop
 
-![jobs-1440-light](jobs-1440-light.png)
+| Light | Dark |
+| --- | --- |
+| [![Settings, desktop, light](settings-1440-light.png)](settings-1440-light.png) | [![Settings, desktop, dark](settings-1440-dark.png)](settings-1440-dark.png) |
 
-### jobs-390-dark
+## Saved jobs
 
-![jobs-390-dark](jobs-390-dark.png)
+### Phone
 
-### jobs-390-light
+| Light | Dark |
+| --- | --- |
+| [![Saved jobs, phone, light](saved-jobs-390-light.png)](saved-jobs-390-light.png) | [![Saved jobs, phone, dark](saved-jobs-390-dark.png)](saved-jobs-390-dark.png) |
 
-![jobs-390-light](jobs-390-light.png)
+## Quick navigation
 
-### launcher-dark
+### Phone
 
-![launcher-dark](launcher-dark.png)
-
-### launcher-light
-
-![launcher-light](launcher-light.png)
-
-### saved-jobs-390-light
-
-![saved-jobs-390-light](saved-jobs-390-light.png)
-
-### settings-1440-dark
-
-![settings-1440-dark](settings-1440-dark.png)
-
-### settings-1440-light
-
-![settings-1440-light](settings-1440-light.png)
-
-### settings-390-dark
-
-![settings-390-dark](settings-390-dark.png)
-
-### settings-390-light
-
-![settings-390-light](settings-390-light.png)
+| Light | Dark |
+| --- | --- |
+| [![Quick navigation, phone, light](launcher-light.png)](launcher-light.png) | [![Quick navigation, phone, dark](launcher-dark.png)](launcher-dark.png) |

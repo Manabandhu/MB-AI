@@ -3,6 +3,7 @@ export const color = {
   ink: '#191b2c',
   muted: '#626779',
   primary: '#431ebe',
+  onPrimary: '#ffffff',
   primaryContainer: '#5b3fd6',
   primarySoft: '#e5deff',
   surface: '#ffffff',
@@ -47,6 +48,7 @@ export const darkColor = {
   ink: '#f1f5ff',
   muted: '#b0b5c7',
   primary: '#bca6ff',
+  onPrimary: '#160b3d',
   primaryContainer: '#6d48d7',
   primarySoft: '#2e245a',
   surface: '#1b1e2c',
@@ -63,10 +65,10 @@ export const darkColor = {
 
 /** Dark counterparts of every `tone` key, so `darkPalette` mirrors `palette` one to one. */
 export const darkTone = {
-  surfaceContainerLowest: '#131a2d',
-  surfaceContainerLow: '#182036',
-  surfaceContainer: '#1e2740',
-  surfaceContainerHigh: '#252f4b',
+  surfaceContainerLowest: '#141722',
+  surfaceContainerLow: '#202330',
+  surfaceContainer: '#272b3b',
+  surfaceContainerHigh: '#303547',
   primaryTint: 'rgba(167,139,250,0.14)',
   tealTint: 'rgba(52,211,153,0.14)',
   warmTint: 'rgba(255,149,94,0.16)',
@@ -110,7 +112,7 @@ export const space = {
   x12: 48,
   x16: 64,
 } as const;
-export const radius = { control: 16, card: 24, panel: 32, pill: 999 } as const;
+export const radius = { control: 12, card: 20, panel: 24, pill: 999 } as const;
 
 export const shadow = {
   sm: {
@@ -154,7 +156,7 @@ export const typography = {
   body: { fontSize: 16, lineHeight: 25, fontWeight: '400', letterSpacing: 0 } as const,
   bodyStrong: { fontSize: 16, lineHeight: 25, fontWeight: '700', letterSpacing: 0 } as const,
   lead: { fontSize: 18, lineHeight: 28, fontWeight: '400', letterSpacing: 0 } as const,
-  caption: { fontSize: 12, lineHeight: 18, fontWeight: '700', letterSpacing: 0.2 } as const,
+  caption: { fontSize: 13, lineHeight: 20, fontWeight: '400', letterSpacing: 0 } as const,
   overline: { fontSize: 11, lineHeight: 16, fontWeight: '700', letterSpacing: 0.8 } as const,
   mono: { fontSize: 14, lineHeight: 20, fontWeight: '500', letterSpacing: 0.2 } as const,
 } as const;

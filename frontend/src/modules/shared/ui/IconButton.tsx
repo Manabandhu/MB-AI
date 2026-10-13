@@ -44,7 +44,7 @@ export function IconButton({
       hoverStyle={
         disabled
           ? undefined
-          : { backgroundColor: variant === 'solid' ? '$primaryContainer' : '$surfaceContainer' }
+          : { backgroundColor: variant === 'solid' ? '$primary' : '$surfaceContainer' }
       }
       justifyContent="center"
       onPress={disabled ? undefined : onPress}
@@ -56,7 +56,7 @@ export function IconButton({
       width="$touch"
     >
       <AppIcon
-        color={variant === 'solid' ? theme.onPrimary?.val : theme.primary?.val}
+        color={variant === 'solid' ? theme.onPrimary?.get() : theme.primary?.get()}
         name={icon}
         size={size}
       />

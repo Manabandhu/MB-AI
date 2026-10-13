@@ -77,7 +77,7 @@ export function AppButton({
   const { reduceMotion } = useAppearance();
   const theme = useTheme();
   const solid = variant === 'primary' || variant === 'danger';
-  const foreground = solid ? theme.onPrimary?.val : theme.primary?.val;
+  const foreground = solid ? theme.onPrimary?.get() : theme.primary?.get();
   const isDisabled = Boolean(loading || disabled);
 
   const handlePress = () => {

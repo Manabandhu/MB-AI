@@ -20,11 +20,15 @@ export function FadeIn({ children, index = 0, delay = 0, animate = true }: FadeI
   const { reduceMotion } = useAppearance();
   if (reduceMotion) return <>{children}</>;
   // Keep the same wrapper either way so toggling `animate` never remounts the child.
-  if (!animate) return <Animated.View>{children}</Animated.View>;
+  if (!animate) return <Animated.View style={{ flexGrow: 1 }}>{children}</Animated.View>;
   const entering = FadeInDown.delay(delay + Math.min(index, 3) * motion.staggerMs)
     .springify()
     .damping(spring.gentle.damping)
     .stiffness(spring.gentle.stiffness)
     .mass(spring.gentle.mass);
-  return <Animated.View entering={entering}>{children}</Animated.View>;
+  return (
+    <Animated.View entering={entering} style={{ flexGrow: 1 }}>
+      {children}
+    </Animated.View>
+  );
 }

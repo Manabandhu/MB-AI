@@ -97,7 +97,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
             >
               <YStack position="relative">
                 <AppIcon
-                  color={selected ? theme.onPrimary?.val : palette.muted}
+                  color={selected ? theme.onPrimary?.get() : palette.muted}
                   name={tab.icon}
                   size={22}
                   strokeWidth={selected ? 2.4 : 2}

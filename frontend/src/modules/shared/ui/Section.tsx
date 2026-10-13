@@ -33,7 +33,7 @@ export function Section({ title, subtitle, action, children }: SectionProps) {
               <AppText tone="primary" variant="label">
                 {action.label}
               </AppText>
-              <AppIcon color={theme.primary?.val} name="chevron-right" size={16} />
+              <AppIcon color={theme.primary?.get()} name="chevron-right" size={16} />
             </XStack>
           </Link>
         ) : null}

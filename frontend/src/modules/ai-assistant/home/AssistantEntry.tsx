@@ -1,22 +1,21 @@
 import type { Href } from 'expo-router';
 import { router } from 'expo-router';
-import { ScrollView } from 'react-native';
-import { useTheme, XStack, YStack } from 'tamagui';
+import { useState } from 'react';
+import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
-/**
- * Home's primary entry point: looks like an input and opens the assistant. Quick prompts open it pre-filled;
- * nothing is sent until the member taps send.
- */
+/** Clear assistant entry and optional prompts. A prompt pre-fills a draft; it never sends a message. */
 export function AssistantEntry() {
   const t = useT();
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const { palette } = useAppearance();
-  const theme = useTheme();
   const open = (prompt?: string) =>
     router.push(
       (prompt ? `/assistant?prompt=${encodeURIComponent(prompt)}` : '/assistant') as Href,
@@ -27,55 +26,49 @@ export function AssistantEntry() {
     { label: t('home.promptRide'), text: t('home.promptRideText'), icon: 'car' as const },
   ];
   return (
-    <Card gap="$x3" padding="$x3" variant="elevated">
+    <Card gap="$x3" padding="$x4">
       <XStack alignItems="center" gap="$x2">
         <XStack
           flex={1}
           alignItems="center"
           aria-label={t('home.askTitle')}
-          backgroundColor="$surfaceContainerLow"
-          borderRadius="$control"
           cursor="pointer"
           gap="$x3"
-          minHeight={48}
+          minHeight="$touch"
           onPress={() => open()}
-          paddingHorizontal="$x3"
-          pressStyle={{ opacity: 0.85 }}
+          {...keyboardPress(() => open())}
+          focusVisibleStyle={{
+            outlineWidth: 3,
+            outlineStyle: 'solid',
+            outlineColor: '$outlineColor',
+          }}
+          borderRadius="$control"
           role="button"
         >
           <YStack
             alignItems="center"
-            backgroundColor="$primary"
-            borderRadius="$pill"
-            height={30}
+            backgroundColor="$primaryTint"
+            borderRadius="$control"
+            height={44}
             justifyContent="center"
-            width={30}
+            width={44}
           >
-            <AppIcon color={theme.onPrimary?.val} name="sparks" size={16} />
+            <AppIcon color={palette.primary} name="sparks" size={20} />
           </YStack>
-          <AppText flex={1} numberOfLines={1} tone="muted">
-            {t('home.ask')}
+          <AppText flex={1} variant="bodyStrong">
+            {t('home.askTitle')}
           </AppText>
-          <AppIcon color={palette.primary} name="arrow-right" size={18} />
+          <AppIcon color={palette.muted} name="arrow-right" size={18} />
         </XStack>
-        <YStack
-          alignItems="center"
-          aria-label={t('home.searchPlaceholder')}
-          backgroundColor="$surfaceContainerLow"
-          borderRadius="$control"
-          cursor="pointer"
-          height={48}
-          justifyContent="center"
-          onPress={() => router.push('/search')}
-          pressStyle={{ opacity: 0.8 }}
-          role="button"
-          width={48}
-        >
-          <AppIcon color={palette.primary} name="search" size={20} />
-        </YStack>
+        <IconButton
+          icon={suggestionsOpen ? 'close' : 'chevron-down'}
+          label={t(suggestionsOpen ? 'home.hideSuggestions' : 'home.showSuggestions')}
+          variant="plain"
+          onPress={() => setSuggestionsOpen((open) => !open)}
+        />
       </XStack>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <XStack gap="$x2">
+      {suggestionsOpen ? (
+        <XStack flexWrap="wrap" gap="$x2">
           {prompts.map((prompt) => (
             <Chip
               icon={prompt.icon}
@@ -85,7 +78,7 @@ export function AssistantEntry() {
             />
           ))}
         </XStack>
-      </ScrollView>
+      ) : null}
     </Card>
   );
 }

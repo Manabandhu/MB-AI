@@ -20,3 +20,14 @@ for (const [name, theme] of [['light', palette], ['dark', darkPalette]]) {
     }
   });
 }
+
+for (const [name, theme] of [['light', palette], ['dark', darkPalette]]) {
+  test(`${name} solid controls and muted text on tonal surfaces meet AA`, () => {
+    for (const background of ['primary', 'error']) {
+      assert.ok(contrast(theme.onPrimary, theme[background]) >= 4.5, `onPrimary on ${background}`);
+    }
+    for (const background of ['surfaceContainerLow', 'surfaceContainer']) {
+      assert.ok(contrast(theme.muted, theme[background]) >= 4.5, `muted on ${background}`);
+    }
+  });
+}

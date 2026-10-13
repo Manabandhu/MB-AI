@@ -51,7 +51,7 @@ export function HomeHeader() {
             <AppText variant="overline" tone="primary">
               ManaBandhu
             </AppText>
-            <Heading variant="h1">{name ? `${greeting}, ${name}` : greeting}</Heading>
+            <Heading variant="h2">{name ? `${greeting}, ${name}` : greeting}</Heading>
           </YStack>
           {phone ? (
             <>

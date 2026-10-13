@@ -73,7 +73,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
           {field}
           {leading ? (
             <YStack aria-hidden left="$x4" pointerEvents="none" position="absolute">
-              <AppIcon color={theme.colorMuted?.val} name={leading} size={18} />
+              <AppIcon color={theme.colorMuted?.get()} name={leading} size={18} />
             </YStack>
           ) : null}
           {trailingControl ? (

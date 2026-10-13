@@ -46,6 +46,8 @@ export const en = {
     updated: 'Updated {{when}}',
     ask: 'Ask ManaBandhu anything…',
     askTitle: 'Ask ManaBandhu',
+    showSuggestions: 'Show suggested questions',
+    hideSuggestions: 'Hide suggested questions',
     promptRoom: 'Find a room near me',
     promptVisa: 'OPT / visa checklist',
     promptRide: 'Airport ride',

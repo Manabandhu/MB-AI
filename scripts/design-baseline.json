@@ -53,9 +53,6 @@
   "jobs/screens/JobDetailsScreen.tsx": {
     "colorLiteral": 13
   },
-  "jobs/screens/JobsHomeScreen.tsx": {
-    "colorLiteral": 19
-  },
   "referrals/screens/ReferralDetailsScreen.tsx": {
     "colorLiteral": 90
   },

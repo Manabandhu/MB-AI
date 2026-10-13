@@ -41,6 +41,8 @@ export const te: Strings = {
     updated: '{{when}} నవీకరించబడింది',
     ask: 'ManaBandhu ని ఏదైనా అడగండి…',
     askTitle: 'ManaBandhu ని అడగండి',
+    showSuggestions: 'సూచించిన ప్రశ్నలను చూపించండి',
+    hideSuggestions: 'సూచించిన ప్రశ్నలను దాచండి',
     promptRoom: 'దగ్గర్లో గది',
     promptVisa: 'OPT / వీసా చెక్‌లిస్ట్',
     promptRide: 'ఎయిర్‌పోర్ట్ రైడ్',

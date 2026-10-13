@@ -25,12 +25,12 @@ export const AppText = styled(Text, {
       h4: { fontSize: '$h4', lineHeight: '$h4', fontWeight: '700' },
       lead: { fontSize: '$lead', lineHeight: '$lead' },
       body: { fontSize: '$body', lineHeight: '$body' },
-      bodyStrong: { fontSize: '$bodyStrong', lineHeight: '$bodyStrong', fontWeight: '700' },
-      label: { fontSize: 14, lineHeight: 20, fontWeight: '700' },
+      bodyStrong: { fontSize: '$bodyStrong', lineHeight: '$bodyStrong', fontWeight: '600' },
+      label: { fontSize: 14, lineHeight: 20, fontWeight: '600' },
       caption: {
         fontSize: '$caption',
         lineHeight: '$caption',
-        fontWeight: '600',
+        fontWeight: '400',
         letterSpacing: '$caption',
       },
       overline: {

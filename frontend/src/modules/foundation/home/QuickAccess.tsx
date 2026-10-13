@@ -24,10 +24,11 @@ export function QuickAccess() {
     <ResponsiveGrid columns={{ compact: 2, medium: 3, expanded: 3, wide: 3 }} gap={12}>
       {modules.map((module) => (
         <Card
+          flexGrow={1}
           key={module.key}
           aria-label={`${module.label}. ${module.summary}`}
           href={module.route}
-          padding="$x3"
+          padding="$x4"
           onPress={() => {
             recordVisit(module.key);
             router.push(module.route as Href);
@@ -44,10 +45,8 @@ export function QuickAccess() {
             </YStack>
             <AppIcon name="arrow-right" color={palette.muted} size={16} />
           </XStack>
-          <AppText variant="bodyStrong" numberOfLines={2}>
-            {module.label}
-          </AppText>
-          <AppText tone="muted" variant="caption" numberOfLines={2}>
+          <AppText variant="bodyStrong">{module.label}</AppText>
+          <AppText tone="muted" variant="caption">
             {module.summary}
           </AppText>
         </Card>

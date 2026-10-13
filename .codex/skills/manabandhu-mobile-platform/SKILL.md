@@ -188,3 +188,5 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 
 - The app-wide UX refresh keeps the existing routes and native/web runtime dependencies. RootLayout mounts QuickJumpProvider and WorkspaceDock alongside the navigator; compact tabs, tablet rail and desktop top navigation remain adaptive. Styles on 57 legacy screens now follow the user-selected theme through memoized palette factories.
 - `platform/windowDimensions.ts` supplies a consistent initial web viewport for static rendering and hydration, then applies actual dimensions through `useSyncExternalStore`. Native dimensions remain immediate. Use it instead of React Native's dimension hook directly in adaptive screen layouts to avoid desktop hydration errors.
+
+- Minimal UI refinement (2026-10-13): shared control colors resolve through theme variables, cards use restrained hover and radii, Home/Explore retain full readable descriptions, and Jobs uses shared adaptive screens and sheets with responsive two-column cards. No routes or runtime dependencies changed. Verify rendered control contrast, keyboard filters, and light/dark reflow at 320/390/820/1180/1440 widths.

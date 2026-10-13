@@ -64,15 +64,20 @@ function ToneIcon({ module, size }: { module: LauncherModule; size: number }) {
 function ModuleCard({ module, onOpen }: { module: LauncherModule; onOpen: () => void }) {
   const { palette } = useAppearance();
   return (
-    <Card aria-label={`${module.label}. ${module.summary}`} href={module.route} onPress={onOpen}>
+    <Card
+      flexGrow={1}
+      aria-label={`${module.label}. ${module.summary}`}
+      href={module.route}
+      onPress={onOpen}
+    >
       <YStack gap="$x3">
         <XStack alignItems="center" justifyContent="space-between">
           <ToneIcon module={module} size={48} />
           <AppIcon color={palette.muted} name="arrow-right" size={18} />
         </XStack>
-        <YStack flex={1} gap="$x1" minWidth={0}>
+        <YStack gap="$x1" minWidth={0}>
           <AppText variant="bodyStrong">{module.label}</AppText>
-          <AppText numberOfLines={2} tone="muted" variant="caption">
+          <AppText tone="muted" variant="caption">
             {module.summary}
           </AppText>
         </YStack>

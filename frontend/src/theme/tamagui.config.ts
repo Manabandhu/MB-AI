@@ -87,7 +87,7 @@ function baseTheme(p: Palette, dark: boolean) {
     outlineColor: p.primary,
     shadowColor: dark ? '#000000' : '#131b2e',
     // Dark primary is a light violet, so text on it must be dark to keep WCAG AA contrast.
-    onPrimary: dark ? '#160b3d' : '#ffffff',
+    onPrimary: p.onPrimary,
   };
 }
 
