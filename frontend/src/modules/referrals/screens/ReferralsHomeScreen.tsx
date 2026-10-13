@@ -1,4 +1,4 @@
-import { breakpoint, color as colors, palette, radius, space } from '@manabandhu/design-system';
+import { breakpoint, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -10,13 +10,15 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { getMyReferrals, listPublicReferrals } from '@/modules/referrals/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
+import { useWindowDimensions } from '@/platform/windowDimensions';
 
 type TabType = 'offers' | 'requests';
 
@@ -30,6 +32,7 @@ const FILTER_CHIPS = [
 
 /** `/referrals` lists public referrals; `/referrals/mine` lists the signed-in user's own (`GET /api/v1/referrals`). */
 export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mine' }) {
+  const { styles, palette } = useScreenStyles(createScreenStyles);
   const isMine = screenId === 'mine';
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -97,53 +100,32 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
     if (lower.includes('amazon')) return { letter: 'A', color: palette.warning, bg: '#FFFBEB' };
     if (lower.includes('apple')) return { letter: '', color: '#1E1B4B', bg: '#F8FAFC' };
     if (lower.includes('meta')) return { letter: 'M', color: '#0866FF', bg: '#EFF6FF' };
-    return { letter: title.charAt(0).toUpperCase() || 'R', color: colors.primary, bg: '#EEF2FF' };
+    return { letter: title.charAt(0).toUpperCase() || 'R', color: palette.primary, bg: '#EEF2FF' };
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Sticky Top Header Area */}
       <View style={styles.headerArea}>
-        <View style={styles.topRow}>
-          <View style={styles.topRowLeft}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-              onPress={() => router.back()}
-              style={styles.iconCircle}
-            >
-              <AppIcon name="chevron-left" size={20} color={colors.ink} />
-            </Pressable>
-            <View>
-              <View style={styles.eyebrowRow}>
-                <View style={styles.teluguPill}>
-                  <Text style={styles.teluguPillText}>మనోబంధు</Text>
-                </View>
-              </View>
-              <Text style={styles.headerTitle}>
-                {isMine ? 'My Referrals' : 'Referrals & Skill Exchange'}
-              </Text>
-            </View>
-          </View>
-
-          {isMine ? null : (
-            <View style={styles.topRowRight}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="My Referrals"
+        <ScreenHeader
+          title={isMine ? 'My referrals' : 'Referrals'}
+          subtitle="Open a door for someone. Find your next connection."
+          back={{ fallback: '/explore' }}
+          actions={
+            !isMine ? (
+              <IconButton
+                icon="user"
+                label="My referrals"
                 onPress={() => router.push('/referrals/mine')}
-                style={styles.iconCircle}
-              >
-                <AppIcon name="user" size={18} color={colors.ink} />
-              </Pressable>
-            </View>
-          )}
-        </View>
+              />
+            ) : undefined
+          }
+        />
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
-            <AppIcon name="search" size={18} color={colors.muted} />
+            <AppIcon name="search" size={18} color={palette.muted} />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -152,8 +134,8 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
               style={styles.searchInput}
             />
             {searchQuery.length > 0 ? (
-              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: colors.muted }}>✕</Text>
+              <Pressable accessibilityRole="button" onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: palette.muted }}>✕</Text>
               </Pressable>
             ) : null}
           </View>
@@ -163,7 +145,7 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
             onPress={() => setShowFilterModal(true)}
             style={styles.tuneButton}
           >
-            <AppIcon name="wrench" size={18} color={colors.ink} />
+            <AppIcon name="wrench" size={18} color={palette.ink} />
           </Pressable>
         </View>
 
@@ -177,6 +159,7 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
             const isSelected = selectedFilter === chip.id;
             return (
               <Pressable
+                accessibilityRole="button"
                 key={chip.id}
                 onPress={() => setSelectedFilter(chip.id)}
                 style={[styles.filterChip, isSelected && styles.filterChipActive]}
@@ -250,6 +233,7 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
           {/* Segmented Control Tabs */}
           <View style={styles.segmentedControl}>
             <Pressable
+              accessibilityRole="button"
               onPress={() => setActiveTab('offers')}
               style={[styles.segmentBtn, activeTab === 'offers' && styles.segmentBtnActive]}
             >
@@ -284,6 +268,7 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
               onPress={() => setActiveTab('requests')}
               style={[styles.segmentBtn, activeTab === 'requests' && styles.segmentBtnActive]}
             >
@@ -335,7 +320,7 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
           {/* Items Feed */}
           {isLoading ? (
             <View style={styles.emptyContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
+              <ActivityIndicator size="large" color={palette.primary} />
               <Text style={styles.emptyTitle}>Loading referrals...</Text>
             </View>
           ) : isError ? (
@@ -343,7 +328,11 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
               <AppIcon name="warning" size={40} color="#94A3B8" />
               <Text style={styles.emptyTitle}>Unable to load referrals</Text>
               <Text style={styles.emptyDesc}>Check your connection and try again.</Text>
-              <Pressable onPress={() => refetch()} style={styles.clearBtn}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => refetch()}
+                style={styles.clearBtn}
+              >
                 <Text style={styles.clearBtnText}>Retry</Text>
               </Pressable>
             </View>
@@ -356,7 +345,11 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
                   ? 'Referrals you offer or request will appear here.'
                   : 'Be the first to offer or request a referral in the community.'}
               </Text>
-              <Pressable onPress={() => router.push('/referrals/offer')} style={styles.clearBtn}>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => router.push('/referrals/offer')}
+                style={styles.clearBtn}
+              >
                 <Text style={styles.clearBtnText}>Offer a Referral</Text>
               </Pressable>
             </View>
@@ -452,15 +445,20 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
         animationType="fade"
         onRequestClose={() => setShowFilterModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowFilterModal(false)}>
+        <Pressable
+          accessibilityRole="button"
+          style={styles.modalOverlay}
+          onPress={() => setShowFilterModal(false)}
+        >
           <Pressable
+            accessibilityRole="button"
             style={[styles.modalCard, isDesktop && styles.modalCardDesktop]}
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter Referrals</Text>
-              <Pressable onPress={() => setShowFilterModal(false)}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.ink }}>✕</Text>
+              <Pressable accessibilityRole="button" onPress={() => setShowFilterModal(false)}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: palette.ink }}>✕</Text>
               </Pressable>
             </View>
 
@@ -470,6 +468,7 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
                 const isSelected = selectedFilter === chip.id;
                 return (
                   <Pressable
+                    accessibilityRole="button"
                     key={chip.id}
                     onPress={() => {
                       setSelectedFilter(chip.id);
@@ -487,7 +486,11 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
               })}
             </View>
 
-            <Pressable onPress={() => setShowFilterModal(false)} style={styles.modalDoneBtn}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setShowFilterModal(false)}
+              style={styles.modalDoneBtn}
+            >
               <Text style={styles.modalDoneBtnText}>Apply Filter</Text>
             </Pressable>
           </Pressable>
@@ -497,560 +500,586 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  headerArea: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-    paddingTop: space.x2,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingBottom: space.x2,
-  },
-  topRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  eyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-  },
-  teluguPill: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
-    borderWidth: 1,
-    paddingHorizontal: space.x2,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  teluguPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: palette.warning,
-  },
-  freePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  greenDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-  },
-  freePillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#10B981',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    marginTop: 2,
-  },
-  topRowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.x4,
-    gap: space.x2,
-    paddingBottom: space.x2,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    borderRadius: radius.control,
-    paddingHorizontal: space.x3,
-    height: 42,
-    borderWidth: 1,
-    borderColor: palette.border,
-    gap: space.x2,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: '#1E1B4B',
-    fontWeight: '500',
-  },
-  tuneButton: {
-    width: 42,
-    height: 42,
-    borderRadius: radius.control,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterChipsRow: {
-    paddingHorizontal: space.x4,
-    paddingBottom: space.x3,
-    gap: space.x2,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: palette.border,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: radius.pill,
-  },
-  filterChipActive: {
-    backgroundColor: '#1E1B4B',
-    borderColor: '#1E1B4B',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  scrollContainer: {
-    paddingHorizontal: space.x4,
-    paddingTop: space.x3,
-    paddingBottom: 80,
-  },
-  scrollContainerDesktop: {
-    alignItems: 'center',
-  },
-  mainWrapper: {
-    width: '100%',
-    gap: space.x4,
-  },
-  mainWrapperDesktop: {
-    maxWidth: 720,
-  },
-  heroCard: {
-    backgroundColor: '#1E1B4B',
-    borderRadius: radius.card,
-    padding: space.x4,
-    gap: space.x3,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-  },
-  heroVerifiedPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  heroVerifiedText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FDE047',
-  },
-  heroTitle: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    lineHeight: 24,
-  },
-  heroDescription: {
-    fontSize: 12,
-    color: '#CBD5E1',
-    lineHeight: 18,
-  },
-  heroActionsRow: {
-    flexDirection: 'row',
-    gap: space.x2,
-    marginTop: space.x1,
-  },
-  heroPrimaryBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#EA580C',
-    paddingVertical: 10,
-    borderRadius: radius.control,
-  },
-  heroPrimaryBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  heroSecondaryBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    paddingVertical: 10,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  heroSecondaryBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: space.x2,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    paddingVertical: space.x3,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
-    marginTop: 2,
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    backgroundColor: palette.border,
-    borderRadius: radius.control,
-    padding: 3,
-    gap: 4,
-  },
-  segmentBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  segmentBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  segmentBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  segmentBtnTextActive: {
-    color: '#1E1B4B',
-    fontWeight: '700',
-  },
-  countBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 10,
-  },
-  countBadgeActive: {
-    backgroundColor: 'rgba(30,27,75,0.08)',
-  },
-  countBadgeInactive: {
-    backgroundColor: '#CBD5E1',
-  },
-  countBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  countBadgeTextActive: {
-    color: '#1E1B4B',
-  },
-  subHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: space.x1,
-  },
-  subHeaderTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  subHeaderDesc: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  verifiedTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
-  verifiedTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#047857',
-  },
-  cardsList: {
-    gap: space.x3,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: space.x4,
-    gap: space.x3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: space.x3,
-  },
-  companyAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  companyAvatarText: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  cardHeaderInfo: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    lineHeight: 18,
-  },
-  cardMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 3,
-  },
-  cardAuthorText: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  cardAuthorBold: {
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  cardDesc: {
-    fontSize: 12,
-    color: '#475569',
-    lineHeight: 18,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  tagPill: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  tagPillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#4338CA',
-  },
-  cardActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: space.x2,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  postedTime: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  cardActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#1E1B4B',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  cardActionBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: space.x8,
-    gap: space.x2,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  emptyDesc: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    maxWidth: 280,
-  },
-  clearBtn: {
-    marginTop: space.x2,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#1E1B4B',
-  },
-  clearBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  fabButton: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    backgroundColor: '#EA580C',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: radius.pill,
-    shadowColor: '#EA580C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  fabText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: space.x4,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.card,
-    padding: space.x5,
-    gap: space.x3,
-  },
-  modalCardDesktop: {
-    maxWidth: 460,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  modalSubheading: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-  },
-  modalOptions: {
-    gap: space.x2,
-  },
-  modalOptionBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  modalOptionBtnActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#6366F1',
-  },
-  modalOptionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  modalOptionTextActive: {
-    color: '#4338CA',
-    fontWeight: '700',
-  },
-  modalDoneBtn: {
-    backgroundColor: '#1E1B4B',
-    paddingVertical: 12,
-    borderRadius: radius.control,
-    alignItems: 'center',
-    marginTop: space.x2,
-  },
-  modalDoneBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: '#F8FAFC',
+    },
+    headerArea: {
+      backgroundColor: '#FFFFFF',
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+      paddingTop: space.x2,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: space.x4,
+      paddingBottom: space.x2,
+    },
+    topRowLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x3,
+    },
+    iconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.card,
+      backgroundColor: '#F1F5F9',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    eyebrowRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x2,
+    },
+    teluguPill: {
+      backgroundColor: '#FFFBEB',
+      borderColor: '#FDE68A',
+      borderWidth: 1,
+      paddingHorizontal: space.x2,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    teluguPillText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: palette.warning,
+    },
+    freePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    greenDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#10B981',
+    },
+    freePillText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#10B981',
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: '#1E1B4B',
+      marginTop: 2,
+    },
+    topRowRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x2,
+    },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: space.x4,
+      gap: space.x2,
+      paddingBottom: space.x2,
+    },
+    searchBar: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#F1F5F9',
+      borderRadius: radius.control,
+      paddingHorizontal: space.x3,
+      height: 42,
+      borderWidth: 1,
+      borderColor: palette.border,
+      gap: space.x2,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      color: '#1E1B4B',
+      fontWeight: '500',
+    },
+    tuneButton: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 42,
+      height: 42,
+      borderRadius: radius.control,
+      backgroundColor: '#F1F5F9',
+      borderWidth: 1,
+      borderColor: palette.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    filterChipsRow: {
+      paddingHorizontal: space.x4,
+      paddingBottom: space.x3,
+      gap: space.x2,
+    },
+    filterChip: {
+      minHeight: 44,
+      minWidth: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: '#FFFFFF',
+      borderWidth: 1,
+      borderColor: palette.border,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: radius.pill,
+    },
+    filterChipActive: {
+      backgroundColor: '#1E1B4B',
+      borderColor: '#1E1B4B',
+    },
+    filterChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#475569',
+    },
+    filterChipTextActive: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    scrollContainer: {
+      paddingHorizontal: space.x4,
+      paddingTop: space.x3,
+      paddingBottom: 80,
+    },
+    scrollContainerDesktop: {
+      alignItems: 'center',
+    },
+    mainWrapper: {
+      width: '100%',
+      gap: space.x4,
+    },
+    mainWrapperDesktop: {
+      maxWidth: 720,
+    },
+    heroCard: {
+      backgroundColor: '#1E1B4B',
+      borderRadius: radius.card,
+      padding: space.x4,
+      gap: space.x3,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
+    },
+    heroBadgeRow: {
+      flexDirection: 'row',
+    },
+    heroVerifiedPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: radius.pill,
+    },
+    heroVerifiedText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#FDE047',
+    },
+    heroTitle: {
+      fontSize: 19,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      lineHeight: 24,
+    },
+    heroDescription: {
+      fontSize: 12,
+      color: '#CBD5E1',
+      lineHeight: 18,
+    },
+    heroActionsRow: {
+      flexDirection: 'row',
+      gap: space.x2,
+      marginTop: space.x1,
+    },
+    heroPrimaryBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: '#EA580C',
+      paddingVertical: 10,
+      borderRadius: radius.control,
+    },
+    heroPrimaryBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    heroSecondaryBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      paddingVertical: 10,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
+    },
+    heroSecondaryBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    statsRow: {
+      flexDirection: 'row',
+      gap: space.x2,
+    },
+    statBox: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      paddingVertical: space.x3,
+      alignItems: 'center',
+    },
+    statNumber: {
+      fontSize: 17,
+      fontWeight: '800',
+    },
+    statLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#64748B',
+      marginTop: 2,
+    },
+    segmentedControl: {
+      flexDirection: 'row',
+      backgroundColor: palette.border,
+      borderRadius: radius.control,
+      padding: 3,
+      gap: 4,
+    },
+    segmentBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    segmentBtnActive: {
+      backgroundColor: '#FFFFFF',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    segmentBtnText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#64748B',
+    },
+    segmentBtnTextActive: {
+      color: '#1E1B4B',
+      fontWeight: '700',
+    },
+    countBadge: {
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 10,
+    },
+    countBadgeActive: {
+      backgroundColor: 'rgba(30,27,75,0.08)',
+    },
+    countBadgeInactive: {
+      backgroundColor: '#CBD5E1',
+    },
+    countBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#64748B',
+    },
+    countBadgeTextActive: {
+      color: '#1E1B4B',
+    },
+    subHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: space.x1,
+    },
+    subHeaderTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: '#1E1B4B',
+    },
+    subHeaderDesc: {
+      fontSize: 11,
+      color: '#64748B',
+      marginTop: 2,
+    },
+    verifiedTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#ECFDF5',
+      borderWidth: 1,
+      borderColor: '#A7F3D0',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: radius.pill,
+    },
+    verifiedTagText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#047857',
+    },
+    cardsList: {
+      gap: space.x3,
+    },
+    card: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      padding: space.x4,
+      gap: space.x3,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: space.x3,
+    },
+    companyAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.control,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    companyAvatarText: {
+      fontSize: 18,
+      fontWeight: '800',
+    },
+    cardHeaderInfo: {
+      flex: 1,
+    },
+    cardTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#1E1B4B',
+      lineHeight: 18,
+    },
+    cardMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 3,
+    },
+    cardAuthorText: {
+      fontSize: 11,
+      color: '#64748B',
+    },
+    cardAuthorBold: {
+      fontWeight: '700',
+      color: '#1E1B4B',
+    },
+    cardDesc: {
+      fontSize: 12,
+      color: '#475569',
+      lineHeight: 18,
+    },
+    tagsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+    tagPill: {
+      backgroundColor: '#EEF2FF',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    tagPillText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#4338CA',
+    },
+    cardActionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: space.x2,
+      borderTopWidth: 1,
+      borderTopColor: '#F1F5F9',
+    },
+    postedTime: {
+      fontSize: 11,
+      color: '#94A3B8',
+      fontWeight: '500',
+    },
+    cardActionBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#1E1B4B',
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 8,
+    },
+    cardActionBtnText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: space.x8,
+      gap: space.x2,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#1E1B4B',
+    },
+    emptyDesc: {
+      fontSize: 13,
+      color: '#64748B',
+      textAlign: 'center',
+      maxWidth: 280,
+    },
+    clearBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      marginTop: space.x2,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: '#1E1B4B',
+    },
+    clearBtnText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    fabButton: {
+      minHeight: 44,
+      minWidth: 44,
+      position: 'absolute',
+      bottom: 24,
+      right: 20,
+      backgroundColor: '#EA580C',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: radius.pill,
+      shadowColor: '#EA580C',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    fabText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    modalOverlay: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: space.x4,
+    },
+    modalCard: {
+      minHeight: 44,
+      minWidth: 44,
+      width: '100%',
+      maxWidth: 420,
+      backgroundColor: '#FFFFFF',
+      borderRadius: radius.card,
+      padding: space.x5,
+      gap: space.x3,
+    },
+    modalCardDesktop: {
+      maxWidth: 460,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    modalTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#1E1B4B',
+    },
+    modalSubheading: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#64748B',
+      textTransform: 'uppercase',
+    },
+    modalOptions: {
+      gap: space.x2,
+    },
+    modalOptionBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      backgroundColor: '#F8FAFC',
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    modalOptionBtnActive: {
+      backgroundColor: '#EEF2FF',
+      borderColor: '#6366F1',
+    },
+    modalOptionText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#475569',
+    },
+    modalOptionTextActive: {
+      color: '#4338CA',
+      fontWeight: '700',
+    },
+    modalDoneBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: '#1E1B4B',
+      paddingVertical: 12,
+      borderRadius: radius.control,
+      alignItems: 'center',
+      marginTop: space.x2,
+    },
+    modalDoneBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+  });
+};

@@ -1,5 +1,23 @@
 /** English strings for the app shell, Home, and settings. Modules add their own namespaces as they migrate. */
 export const en = {
+  navigation: {
+    jump: 'Jump to',
+    openJump: 'Jump to a feature',
+    title: 'Jump to anything',
+    subtitle: 'Find a feature or a task. No scrolling through menus.',
+    label: 'Where do you want to go?',
+    placeholder: 'Try saved rooms, post a job, or privacy',
+    clear: 'Clear feature search',
+    shortcuts: 'Your everyday shortcuts',
+    count: 'Destinations: {{count}}',
+    emptyTitle: 'Try a different word',
+    emptyBody: 'Search for rooms, rides, jobs, settings, or the task you want to do.',
+    saved: 'Saved',
+    search: 'Search',
+    allFeatures: 'All features',
+    workspace: 'Workspace shortcuts',
+    yourSpace: 'Your space',
+  },
   tabs: {
     home: 'Home',
     explore: 'Explore',

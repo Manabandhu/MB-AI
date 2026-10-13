@@ -1,529 +1,78 @@
-import { breakpoint, palette } from '@manabandhu/design-system';
-import { type Href, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { signOutWithFeedback } from '@/modules/foundation/account/signOut';
+import { AppearanceSettings } from '@/modules/foundation/settings/AppearanceSettings';
 import { useMapPreferencesStore } from '@/modules/shared/stores/mapPreferencesStore';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-
-const C = {
-  primary: palette.primary, // Royal Indigo
-  secondary: palette.teal, // Deep Teal
-  bg: palette.background, // Soft pristine canvas
-  cardBg: '#ffffff',
-  border: palette.border,
-  ink: palette.ink,
-  inkMuted: palette.muted,
-  tealBg: palette.tealBg,
-  saffronBg: palette.warmBg,
-  danger: palette.error,
-};
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { ListRow } from '@/modules/shared/ui/ListRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { Section } from '@/modules/shared/ui/Section';
+import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 
 export function SettingsScreen() {
-  const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= breakpoint.medium;
-
-  const user = useAuthStore((s) => s.user);
-  const { provider: mapProvider, setProvider: setMapProvider } = useMapPreferencesStore();
-
-  const displayName = user?.user_metadata?.full_name ?? 'Community Member';
-  const email = user?.email ?? user?.phone ?? null;
-  const initial = displayName[0]?.toUpperCase() ?? 'M';
-
-  const handleSignOut = () => signOutWithFeedback();
-
+  const user = useAuthStore((state) => state.user);
+  const { provider, setProvider } = useMapPreferencesStore();
   return (
-    <SafeAreaView style={s.safe}>
-      <View style={[s.container, isDesktop && s.containerDesktop]}>
-        {/* Header */}
-        <View style={s.header}>
-          <Pressable onPress={() => router.back()} style={s.backBtn}>
-            <AppIcon name="chevron-left" size={20} color={C.ink} />
-          </Pressable>
-          <Text style={s.headerTitle}>Settings & Preferences</Text>
-        </View>
-
-        <ScrollView
-          style={s.contentScroll}
-          contentContainerStyle={s.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* User Profile Card */}
-          <View style={s.profileCard}>
-            <View style={s.avatar}>
-              <Text style={s.avatarText}>{initial}</Text>
-            </View>
-            <View style={s.profileInfo}>
-              <Text style={s.profileName}>{displayName}</Text>
-              {email ? <Text style={s.profileEmail}>{email}</Text> : null}
-              {user?.email_confirmed_at ? (
-                <View style={s.badgeRow}>
-                  <View style={s.trustBadge}>
-                    <AppIcon name="verified-user" size={12} color={C.secondary} />
-                    <Text style={s.trustBadgeText}>Email verified</Text>
-                  </View>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Section: Notifications */}
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Notifications</Text>
-            <View style={s.cardGroup}>
-              {/* Preferences are stored by the backend; edit them on the notification settings screen. */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Notification settings"
-                onPress={() => router.push('/notifications/settings')}
-                style={s.settingRow}
-              >
-                <View style={s.settingLabelGroup}>
-                  <Text style={s.settingLabel}>Notification Settings</Text>
-                  <Text style={s.settingSub}>Channels, module alerts, and quiet hours</Text>
-                </View>
-                <AppIcon name="chevron-right" size={16} color={C.secondary} />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Section: Map Provider */}
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Map Provider</Text>
-            <View style={s.cardGroup}>
-              <View style={s.settingRow}>
-                <View style={s.settingLabelGroup}>
-                  <Text style={s.settingLabel}>Preferred Map Service</Text>
-                  <Text style={s.settingSub}>
-                    Select whether to use Google Maps or Apple Maps across Web & Mobile
-                  </Text>
-                </View>
-              </View>
-
-              <View style={s.divider} />
-
-              {/* Google Maps Option */}
-              <Pressable
-                onPress={() => setMapProvider('google')}
-                style={[s.mapProviderOption, mapProvider === 'google' && s.mapProviderOptionActive]}
-              >
-                <Text style={s.mapProviderIcon}>🗺️</Text>
-                <View style={s.mapProviderDetails}>
-                  <Text
-                    style={[s.mapProviderName, mapProvider === 'google' && s.mapProviderNameActive]}
-                  >
-                    Google Maps
-                  </Text>
-                  <Text style={s.mapProviderDesc}>
-                    Roadmaps & Satellite via Google Maps JS SDK on Web & Android
-                  </Text>
-                </View>
-                {mapProvider === 'google' && (
-                  <View style={s.checkCircle}>
-                    <Text style={s.checkIcon}>✓</Text>
-                  </View>
-                )}
-              </Pressable>
-
-              <View style={s.divider} />
-
-              {/* Apple Maps Option */}
-              <Pressable
-                onPress={() => setMapProvider('apple')}
-                style={[s.mapProviderOption, mapProvider === 'apple' && s.mapProviderOptionActive]}
-              >
-                <Text style={s.mapProviderIcon}>🍏</Text>
-                <View style={s.mapProviderDetails}>
-                  <Text
-                    style={[s.mapProviderName, mapProvider === 'apple' && s.mapProviderNameActive]}
-                  >
-                    Apple Maps
-                  </Text>
-                  <Text style={s.mapProviderDesc}>
-                    Native iOS vector maps with 3D perspective terrain
-                  </Text>
-                </View>
-                {mapProvider === 'apple' && (
-                  <View style={s.checkCircle}>
-                    <Text style={s.checkIcon}>✓</Text>
-                  </View>
-                )}
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Section: Community Safety & Trust */}
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Safety & Trust</Text>
-            <View style={s.cardGroup}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Emergency SOS and Safety Center"
-                onPress={() => router.push('/safety')}
-                style={s.linkRow}
-              >
-                <View style={s.linkLeft}>
-                  <View style={[s.linkIconWrap, { backgroundColor: '#FEE2E2' }]}>
-                    <AppIcon name="shield" size={16} color="#DC2626" />
-                  </View>
-                  <View>
-                    <Text style={s.linkLabel}>Emergency SOS & Safety Center</Text>
-                    <Text style={s.linkSub}>Trusted contacts & emergency resources</Text>
-                  </View>
-                </View>
-                <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
-              </Pressable>
-
-              <View style={s.divider} />
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Notification settings"
-                onPress={() => router.push('/notifications/settings')}
-                style={s.linkRow}
-              >
-                <View style={s.linkLeft}>
-                  <View style={s.linkIconWrap}>
-                    <AppIcon name="bell" size={16} color={C.secondary} />
-                  </View>
-                  <View>
-                    <Text style={s.linkLabel}>Notification settings</Text>
-                    <Text style={s.linkSub}>Push, categories, and quiet hours</Text>
-                  </View>
-                </View>
-                <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Section: Support & Info */}
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>About & Help</Text>
-            <View style={s.cardGroup}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Account and data: sign-in details, download your data, delete account"
-                onPress={() => router.push('/settings/account' as Href)}
-                style={s.linkRow}
-              >
-                <View style={s.linkLeft}>
-                  <View style={s.linkIconWrap}>
-                    <AppIcon name="user" size={16} color={C.secondary} />
-                  </View>
-                  <View>
-                    <Text style={s.linkLabel}>Account & data</Text>
-                    <Text style={s.linkSub}>
-                      Sign-in details, download your data, delete account
-                    </Text>
-                  </View>
-                </View>
-                <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
-              </Pressable>
-
-              <View style={s.divider} />
-
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel="Terms of Service"
-                onPress={() => router.push('/terms' as Href)}
-                style={s.linkRow}
-              >
-                <View style={s.linkLeft}>
-                  <View style={s.linkIconWrap}>
-                    <AppIcon name="shield" size={16} color={C.secondary} />
-                  </View>
-                  <Text style={s.linkLabel}>Terms of Service</Text>
-                </View>
-                <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
-              </Pressable>
-
-              <View style={s.divider} />
-
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel="Privacy Policy"
-                onPress={() => router.push('/privacy' as Href)}
-                style={s.linkRow}
-              >
-                <View style={s.linkLeft}>
-                  <View style={s.linkIconWrap}>
-                    <AppIcon name="shield" size={16} color={C.secondary} />
-                  </View>
-                  <Text style={s.linkLabel}>Privacy Policy</Text>
-                </View>
-                <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
-              </Pressable>
-
-              <View style={s.divider} />
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Replay welcome introduction"
-                onPress={() => router.push('/splash')}
-                style={s.linkRow}
-              >
-                <View style={s.linkLeft}>
-                  <View style={s.linkIconWrap}>
-                    <AppIcon name="help" size={16} color={C.secondary} />
-                  </View>
-                  <View>
-                    <Text style={s.linkLabel}>Replay Welcome Introduction</Text>
-                    <Text style={s.linkSub}>View the interactive feature carousel</Text>
-                  </View>
-                </View>
-                <AppIcon name="chevron-right" size={16} color={C.inkMuted} />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Sign Out Button */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sign out"
-            onPress={handleSignOut}
-            style={s.signOutBtn}
-          >
-            <AppIcon name="logout" size={16} color={C.danger} />
-            <Text style={s.signOutText}>Sign Out of ManaBandhu</Text>
-          </Pressable>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+    <Screen maxWidth="form">
+      <ScreenHeader
+        title="Make it yours"
+        subtitle="A few preferences. A space that feels like you."
+        back={{ fallback: '/profile' }}
+      />
+      <Section title="Look, feel & language">
+        <AppearanceSettings />
+      </Section>
+      <Section title="Account & privacy">
+        <ListRow
+          title="Account & data"
+          subtitle="Update your details, export data, or delete your account"
+          href="/settings/account"
+          icon="user"
+        />
+        <ListRow
+          title="Notifications"
+          subtitle="Choose what reaches you, and when"
+          href="/notifications/settings"
+          icon="bell"
+        />
+      </Section>
+      <Section title="Maps">
+        <SegmentedControl
+          label="Preferred map service"
+          value={provider}
+          onChange={(value) => setProvider(value as 'google' | 'apple')}
+          options={[
+            { value: 'google', label: 'Google Maps' },
+            { value: 'apple', label: 'Apple Maps' },
+          ]}
+        />
+        <AppText tone="muted" variant="caption">
+          Available maps depend on your device and provider configuration.
+        </AppText>
+      </Section>
+      <Section title="Safety & support">
+        <ListRow
+          title="Safety center"
+          subtitle="Trusted contacts, reporting, and emergency resources"
+          href="/safety"
+          icon="shield"
+          tone="teal"
+        />
+        <ListRow title="Terms of service" href="/terms" icon="book" />
+        <ListRow title="Privacy policy" href="/privacy" icon="lock" />
+      </Section>
+      {user ? (
+        <YStack paddingVertical="$x4">
+          <AppButton
+            label="Sign out"
+            icon="logout"
+            variant="ghost"
+            onPress={() => void signOutWithFeedback()}
+          />
+        </YStack>
+      ) : null}
+    </Screen>
   );
 }
-
-const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  container: {
-    flex: 1,
-    width: '100%',
-  },
-  containerDesktop: {
-    maxWidth: 960,
-    alignSelf: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: C.ink,
-  },
-  contentScroll: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    gap: 20,
-  },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: C.cardBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    shadowColor: '#2B3338',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: C.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFF',
-  },
-  profileInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  profileName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  profileEmail: {
-    fontSize: 13,
-    color: C.inkMuted,
-  },
-  badgeRow: {
-    marginTop: 4,
-  },
-  trustBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: C.tealBg,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    alignSelf: 'flex-start',
-  },
-  trustBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  section: {
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.inkMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  cardGroup: {
-    backgroundColor: C.cardBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    overflow: 'hidden',
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    gap: 12,
-  },
-  settingLabelGroup: {
-    flex: 1,
-    gap: 2,
-  },
-  settingLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: C.ink,
-  },
-  settingSub: {
-    fontSize: 12,
-    color: C.inkMuted,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: C.border,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  linkLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  linkIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: C.tealBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  linkLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: C.ink,
-  },
-  linkSub: {
-    fontSize: 12,
-    color: C.inkMuted,
-    marginTop: 1,
-  },
-  signOutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FEE2E2',
-    borderRadius: 14,
-    paddingVertical: 14,
-    marginTop: 8,
-  },
-  signOutText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.danger,
-  },
-  mapProviderOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 14,
-    backgroundColor: C.cardBg,
-  },
-  mapProviderOptionActive: {
-    backgroundColor: '#F3F0FF',
-  },
-  mapProviderIcon: {
-    fontSize: 24,
-  },
-  mapProviderDetails: {
-    flex: 1,
-    gap: 2,
-  },
-  mapProviderName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  mapProviderNameActive: {
-    color: C.primary,
-  },
-  mapProviderDesc: {
-    fontSize: 12,
-    color: C.inkMuted,
-    lineHeight: 16,
-  },
-  checkCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: C.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkIcon: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-});

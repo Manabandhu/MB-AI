@@ -1,4 +1,4 @@
-import { color, space, typography } from '@manabandhu/design-system';
+import { space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { apiFetch } from '@/lib/api';
@@ -6,6 +6,7 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 type ResourceDetailContent = {
   title: string;
@@ -19,6 +20,7 @@ type ResourceDetailScreenProps = {
 };
 
 export function ResourceDetailScreen({ resourceId }: ResourceDetailScreenProps) {
+  const { styles } = useScreenStyles(createScreenStyles);
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['immigration', 'resource', resourceId],
     queryFn: async (): Promise<ResourceDetailContent> => {
@@ -75,13 +77,15 @@ export function ResourceDetailScreen({ resourceId }: ResourceDetailScreenProps) 
   );
 }
 
-const styles = StyleSheet.create({
-  body: {
-    color: color.ink,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    marginTop: space.x4,
-  },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x6 },
-  loadingText: { color: color.muted, fontSize: typography.body.fontSize, padding: space.x6 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    body: {
+      color: palette.ink,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      marginTop: space.x4,
+    },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x6 },
+    loadingText: { color: palette.muted, fontSize: typography.body.fontSize, padding: space.x6 },
+  });
+};

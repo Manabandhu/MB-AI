@@ -6,10 +6,13 @@ import { useCallback, useEffect, useState } from 'react';
 import '../../global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaListener } from 'react-native-safe-area-context';
+import { YStack } from 'tamagui';
 import { Uniwind } from 'uniwind';
 import '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { persistOptions, queryPersister } from '@/lib/queryPersistence';
+import { QuickJumpProvider } from '@/modules/foundation/launcher/QuickJump';
+import { WorkspaceDock } from '@/modules/foundation/shell/navigation/WorkspaceDock';
 import { useOpenPushTaps } from '@/modules/notifications/push';
 import { ConfirmProvider } from '@/modules/shared/ui/ConfirmSheet';
 import { AppThemeProvider } from '@/theme/ThemeProvider';
@@ -58,7 +61,12 @@ export default function RootLayout() {
         <AppThemeProvider>
           <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
             <ConfirmProvider>
-              <Stack screenOptions={{ headerShown: false }} />
+              <QuickJumpProvider>
+                <YStack flex={1} backgroundColor="$background">
+                  <Stack screenOptions={{ headerShown: false }} />
+                  <WorkspaceDock />
+                </YStack>
+              </QuickJumpProvider>
             </ConfirmProvider>
           </PersistQueryClientProvider>
         </AppThemeProvider>

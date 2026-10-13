@@ -1,4 +1,4 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -9,10 +9,12 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { getNearby } from '@/modules/utilities/api';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function NearbyScreen() {
+  const { styles, palette } = useScreenStyles(createScreenStyles);
   const layout = useAdaptiveLayout();
   const nearby = useQuery({ queryKey: ['utilities', 'nearby'], queryFn: getNearby });
   const data = nearby.data ?? [];
@@ -68,7 +70,7 @@ export function NearbyScreen() {
           ) : null}
           <View style={styles.searchRow}>
             <View style={styles.searchBox}>
-              <AppIcon color={colors.muted} name="search" size={18} />
+              <AppIcon color={palette.muted} name="search" size={18} />
               <Text
                 style={styles.searchPlaceholder}
                 onPress={() => setSearch(search === 'Search nearby...' ? '' : 'Search nearby...')}
@@ -82,7 +84,7 @@ export function NearbyScreen() {
               style={styles.filterButton}
               onPress={() => setPermissionGranted((v) => !v)}
             >
-              <AppIcon color={colors.primary} name="map" size={18} />
+              <AppIcon color={palette.primary} name="map" size={18} />
             </TouchableOpacity>
           </View>
           {filtered.length === 0 ? (
@@ -97,7 +99,7 @@ export function NearbyScreen() {
               {filtered.map((item) => (
                 <View key={item.id} style={styles.card}>
                   <View style={styles.cardHeader}>
-                    <AppIcon color={colors.primary} name="map" size={20} />
+                    <AppIcon color={palette.primary} name="map" size={20} />
                     <Text style={styles.cardTitle}>{item.title}</Text>
                     <Text style={styles.distance}>{item.distance}</Text>
                   </View>
@@ -113,45 +115,49 @@ export function NearbyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  searchRow: { flexDirection: 'row', gap: space.x3 },
-  searchBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    gap: space.x2,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x3,
-  },
-  searchPlaceholder: { color: colors.muted, flex: 1, fontSize: 15 },
-  filterButton: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    justifyContent: 'center',
-    padding: space.x3,
-  },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  cardTitle: { color: colors.ink, flex: 1, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  distance: { color: colors.primary, fontSize: 13, fontWeight: '700' },
-  cardBody: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  cardMeta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { flexGrow: 1, padding: space.x4 },
+    container: { alignSelf: 'center', gap: space.x6, width: '100%' },
+    searchRow: { flexDirection: 'row', gap: space.x3 },
+    searchBox: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      gap: space.x2,
+      paddingHorizontal: space.x3,
+      paddingVertical: space.x3,
+    },
+    searchPlaceholder: { color: palette.muted, flex: 1, fontSize: 15 },
+    filterButton: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'center',
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      justifyContent: 'center',
+      padding: space.x3,
+    },
+    list: { gap: space.x3 },
+    card: {
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      gap: space.x2,
+      padding: space.x4,
+    },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
+    cardTitle: { color: palette.ink, flex: 1, fontSize: 16, fontWeight: '700', lineHeight: 22 },
+    distance: { color: palette.primary, fontSize: 13, fontWeight: '700' },
+    cardBody: { color: palette.muted, fontSize: 14, lineHeight: 21 },
+    cardMeta: { color: palette.muted, fontSize: 12, fontWeight: '600' },
+  });
+};

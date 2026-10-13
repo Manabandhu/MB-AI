@@ -92,3 +92,8 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - RSVP notifications go to the organiser only when the status actually changes to going or interested.
 - Paged responses (2026-10-12): `GET /api/v1/events` and `/events/search` return a `PagedModel` (`{ content, page }`, documented as `EventPage`); `listEvents`/`searchEvents` read it through `toPage` from `@/lib/springPage`.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['festival', 'meetup', 'diwali', 'ugadi', 'networking', 'party', 'cultural']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+
+## UX refresh (2026-10-13)
+
+- Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
+- Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.

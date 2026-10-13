@@ -1,54 +1,71 @@
-import { color, space, typography } from '@manabandhu/design-system';
+import { type Href, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { ScreenShell } from '@/modules/shared/components/ScreenShell';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 import { TextField } from '@/modules/shared/ui/TextField';
 
 export function JobsFiltersScreen() {
-  const [location, setLocation] = useState('');
-  const [type, setType] = useState('');
-
+  const params = useLocalSearchParams<{
+    keyword?: string;
+    location?: string;
+    workModel?: string;
+  }>();
+  const [keyword, setKeyword] = useState(params.keyword ?? '');
+  const [location, setLocation] = useState(params.location ?? '');
+  const [workModel, setWorkModel] = useState(params.workModel === 'remote' ? 'remote' : 'all');
+  const apply = () => {
+    const query = new URLSearchParams({
+      keyword: keyword.trim(),
+      location: location.trim(),
+      workModel,
+    });
+    router.replace(`/jobs/search?${query.toString()}` as Href);
+  };
   return (
-    <ScreenShell>
-      <SectionHeader title="Job filters" subtitle="Refine your job search." />
-      <View style={styles.form}>
-        <View style={styles.field}>
-          <Text style={styles.label}>Location</Text>
-          <TextField placeholder="City or remote" value={location} onChangeText={setLocation} />
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.label}>Job type</Text>
-          <TextField
-            placeholder="Full-time, part-time, contract"
-            value={type}
-            onChangeText={setType}
-          />
-        </View>
-        <View style={styles.actions}>
-          <AppButton label="Apply filters" route="/jobs/search" />
-          <AppButton
-            label="Reset"
-            variant="secondary"
-            onPress={() => {
-              setLocation('');
-              setType('');
-            }}
-          />
-        </View>
-      </View>
-    </ScreenShell>
+    <Screen maxWidth="form" keyboardAvoiding>
+      <ScreenHeader
+        title="Find the right fit"
+        subtitle="A few filters to narrow your next opportunity."
+        back={{ fallback: '/jobs' }}
+      />
+      <Card gap="$x5">
+        <TextField
+          label="Role or company"
+          placeholder="Software engineer, product designer…"
+          leadingIcon="briefcase"
+          value={keyword}
+          onChangeText={setKeyword}
+        />
+        <TextField
+          label="Location"
+          placeholder="City, state, or region"
+          leadingIcon="map-pin"
+          value={location}
+          onChangeText={setLocation}
+        />
+        <SegmentedControl
+          label="Work location"
+          value={workModel}
+          onChange={setWorkModel}
+          options={[
+            { value: 'all', label: 'Any location' },
+            { value: 'remote', label: 'Remote only' },
+          ]}
+        />
+      </Card>
+      <AppButton label="Show matching jobs" iconAfter="arrow-right" onPress={apply} fullWidth />
+      <AppButton
+        label="Clear filters"
+        variant="ghost"
+        onPress={() => {
+          setKeyword('');
+          setLocation('');
+          setWorkModel('all');
+        }}
+      />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  form: { gap: space.x4, marginTop: space.x4 },
-  field: { gap: space.x2 },
-  label: {
-    color: color.ink,
-    fontSize: typography.caption.fontSize,
-    fontWeight: typography.caption.fontWeight,
-  },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x4 },
-});

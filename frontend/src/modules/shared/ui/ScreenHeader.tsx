@@ -27,7 +27,14 @@ export function ScreenHeader({ title, subtitle, back, actions, primaryAction }: 
       (primaryAction.route ? () => router.push(primaryAction.route as Href) : undefined))
     : undefined;
   return (
-    <XStack alignItems="center" columnGap="$x3" flexWrap="wrap" rowGap="$x2" width="100%">
+    <XStack
+      alignItems="center"
+      columnGap="$x3"
+      flexWrap="wrap"
+      rowGap="$x3"
+      paddingVertical="$x2"
+      width="100%"
+    >
       <XStack
         alignItems="center"
         flexBasis={240}
@@ -38,9 +45,9 @@ export function ScreenHeader({ title, subtitle, back, actions, primaryAction }: 
       >
         {back ? <BackButton fallback={back.fallback} /> : null}
         <YStack flex={1} gap={2} minWidth={0}>
-          <Heading variant="h2">{title}</Heading>
+          <Heading variant="h1">{title}</Heading>
           {subtitle ? (
-            <AppText tone="muted" variant="caption">
+            <AppText tone="muted" variant="body">
               {subtitle}
             </AppText>
           ) : null}

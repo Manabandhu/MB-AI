@@ -12,18 +12,18 @@ const CardFrame = styled(YStack, {
   borderRadius: '$card',
   borderWidth: 1,
   borderColor: '$borderColor',
-  padding: '$x4',
+  padding: '$x5',
   gap: '$x2',
   variants: {
     variant: {
       outlined: {},
       elevated: {
-        borderColor: 'transparent',
+        borderColor: '$borderColor',
         shadowColor: '$shadowColor',
-        shadowOpacity: 0.06,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: 3,
+        shadowOpacity: 0.035,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 1,
       },
       filled: { backgroundColor: '$surfaceContainerLow', borderColor: 'transparent' },
       tinted: { backgroundColor: '$primaryTint', borderColor: '$primarySoft' },
@@ -61,6 +61,7 @@ export function Card({ href, onPress, children, ...props }: CardProps) {
       transition={reduceMotion ? null : 'quick'}
       focusable={interactive}
       interactive={interactive}
+      hoverStyle={interactive && reduceMotion ? { borderColor: '$primary' } : undefined}
       onPress={press}
       {...keyboardPress(press ? () => press(undefined as never) : undefined)}
       pressStyle={interactive && !reduceMotion ? { scale: 0.98 } : undefined}

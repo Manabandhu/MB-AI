@@ -1,4 +1,4 @@
-import { color, space } from '@manabandhu/design-system';
+import { space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -14,8 +14,10 @@ import {
   AuthSwitch,
 } from '@/modules/auth/components/AuthKit';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 export function PhoneLoginScreen() {
+  const { styles, color } = useScreenStyles(createScreenStyles);
   const signInWithPhone = useAuthStore((s) => s.signInWithPhone);
   const insets = useSafeAreaInsets();
   const [country, setCountry] = useState<CountryItem>(supportedCountries[0]);
@@ -95,6 +97,7 @@ export function PhoneLoginScreen() {
         onRequestClose={() => setPickerOpen(false)}
       >
         <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Close"
           style={styles.backdrop}
           onPress={() => setPickerOpen(false)}
@@ -135,52 +138,54 @@ export function PhoneLoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  countryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minHeight: 44,
-    paddingRight: space.x2,
-    marginRight: space.x1,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: '#d9d5e4',
-  },
-  flag: { fontSize: 20 },
-  dial: { color: color.ink, fontSize: 17, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(19,27,46,0.4)' },
-  sheet: {
-    maxHeight: '70%',
-    backgroundColor: color.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: space.x4,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 36,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#d9d5e4',
-    marginTop: space.x2,
-  },
-  sheetTitle: {
-    color: color.ink,
-    fontSize: 17,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginVertical: space.x3,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    minHeight: 52,
-    paddingHorizontal: space.x2,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
-  },
-  rowPressed: { backgroundColor: color.background },
-  rowName: { flex: 1, color: color.ink, fontSize: 17 },
-  rowCode: { color: color.muted, fontSize: 17 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    countryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      minHeight: 44,
+      paddingRight: space.x2,
+      marginRight: space.x1,
+      borderRightWidth: StyleSheet.hairlineWidth,
+      borderRightColor: '#d9d5e4',
+    },
+    flag: { fontSize: 20 },
+    dial: { color: palette.ink, fontSize: 17, fontWeight: '600' },
+    backdrop: { minHeight: 44, minWidth: 44, flex: 1, backgroundColor: 'rgba(19,27,46,0.4)' },
+    sheet: {
+      maxHeight: '70%',
+      backgroundColor: palette.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: space.x4,
+    },
+    grabber: {
+      alignSelf: 'center',
+      width: 36,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: '#d9d5e4',
+      marginTop: space.x2,
+    },
+    sheetTitle: {
+      color: palette.ink,
+      fontSize: 17,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginVertical: space.x3,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x3,
+      minHeight: 52,
+      paddingHorizontal: space.x2,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: palette.border,
+    },
+    rowPressed: { backgroundColor: palette.background },
+    rowName: { flex: 1, color: palette.ink, fontSize: 17 },
+    rowCode: { color: palette.muted, fontSize: 17 },
+  });
+};

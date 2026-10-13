@@ -1,18 +1,19 @@
-import { color as colors } from '@manabandhu/design-system';
+import { radius } from '@manabandhu/design-system';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import {
   type AutomationOperation,
   executeAutomation,
   listAutomationOperations,
 } from '@/modules/admin/api';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export default function AdminAutomationsScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   const layout = useAdaptiveLayout();
   const operations = useQuery({
     queryKey: ['admin', 'automations'],
@@ -81,6 +82,7 @@ export default function AdminAutomationsScreen() {
                 <View style={styles.segmented}>
                   {['development', 'staging', 'production'].map((value) => (
                     <Pressable
+                      accessibilityRole="button"
                       key={value}
                       onPress={() => setEnvironment(value)}
                       style={[styles.segment, environment === value && styles.segmentSelected]}
@@ -112,6 +114,7 @@ export default function AdminAutomationsScreen() {
                 />
                 {selected?.requiresConfirmation && (
                   <Pressable
+                    accessibilityRole="button"
                     style={styles.confirmRow}
                     onPress={() => setConfirmed((value) => !value)}
                   >
@@ -167,8 +170,13 @@ function OperationCard({
   selected: boolean;
   onPress: () => void;
 }) {
+  const { styles } = useScreenStyles(createScreenStyles);
   return (
-    <Pressable onPress={onPress} style={[styles.operation, selected && styles.operationSelected]}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.operation, selected && styles.operationSelected]}
+    >
       <View style={styles.operationHeading}>
         <Text style={styles.operationLabel}>{operation.label}</Text>
         <Text style={styles.risk}>{operation.risk}</Text>
@@ -181,76 +189,101 @@ function OperationCard({
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: 24 },
-  container: { alignSelf: 'center', width: '100%', gap: 24 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', gap: 24 },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
-  title: { color: colors.ink, fontSize: 34, fontWeight: '800', marginTop: 8 },
-  body: { color: colors.muted, fontSize: 16, lineHeight: 24, marginTop: 8, maxWidth: 720 },
-  link: { color: colors.primary, fontWeight: '700', padding: 8 },
-  grid: { gap: 20 },
-  gridExpanded: { flexDirection: 'row', alignItems: 'flex-start' },
-  panel: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    flex: 1,
-    gap: 12,
-    padding: 20,
-  },
-  sectionTitle: { color: colors.ink, fontSize: 20, fontWeight: '800', marginBottom: 4 },
-  operation: { borderColor: colors.border, borderRadius: 14, borderWidth: 1, gap: 6, padding: 14 },
-  operationSelected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
-  operationHeading: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  operationLabel: { color: colors.ink, flex: 1, fontSize: 15, fontWeight: '700' },
-  operationDescription: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  risk: { color: colors.teal, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-  configured: { color: colors.success, fontSize: 12, fontWeight: '700' },
-  notConfigured: { color: colors.error, fontSize: 12, fontWeight: '700' },
-  label: { color: colors.ink, fontSize: 13, fontWeight: '700', marginTop: 4 },
-  segmented: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  segment: {
-    borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  segmentSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  segmentText: { color: colors.ink, fontSize: 12 },
-  segmentTextSelected: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  input: {
-    borderColor: colors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 15,
-    minHeight: 46,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  reasonInput: { minHeight: 96, textAlignVertical: 'top' },
-  confirmRow: { alignItems: 'center', flexDirection: 'row', gap: 10, paddingVertical: 6 },
-  checkbox: { borderColor: colors.muted, borderRadius: 4, borderWidth: 2, height: 20, width: 20 },
-  checkboxSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  confirmText: { color: colors.ink, flex: 1, fontSize: 13 },
-  runButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    justifyContent: 'center',
-    minHeight: 50,
-  },
-  runButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  disabled: { opacity: 0.45 },
-  pressed: { opacity: 0.75 },
-  hint: { color: colors.muted, fontSize: 12 },
-  errorPanel: { backgroundColor: '#ffdad6', borderRadius: 16, padding: 18 },
-  errorText: { color: colors.error, fontSize: 13, lineHeight: 20 },
-  successPanel: { backgroundColor: '#d7f8df', borderRadius: 12, gap: 4, padding: 12 },
-  successTitle: { color: colors.success, fontWeight: '800' },
-  resultText: { color: colors.ink, fontSize: 12 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { flexGrow: 1, padding: 24 },
+    container: { alignSelf: 'center', width: '100%', gap: 24 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', gap: 24 },
+    eyebrow: { color: palette.teal, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+    title: { color: palette.ink, fontSize: 34, fontWeight: '800', marginTop: 8 },
+    body: { color: palette.muted, fontSize: 16, lineHeight: 24, marginTop: 8, maxWidth: 720 },
+    link: { color: palette.primary, fontWeight: '700', padding: 8 },
+    grid: { gap: 20 },
+    gridExpanded: { flexDirection: 'row', alignItems: 'flex-start' },
+    panel: {
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      flex: 1,
+      gap: 12,
+      padding: 20,
+    },
+    sectionTitle: { color: palette.ink, fontSize: 20, fontWeight: '800', marginBottom: 4 },
+    operation: {
+      minHeight: 44,
+      minWidth: 44,
+      borderColor: palette.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      gap: 6,
+      padding: 14,
+    },
+    operationSelected: { backgroundColor: palette.primarySoft, borderColor: palette.primary },
+    operationHeading: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+    operationLabel: { color: palette.ink, flex: 1, fontSize: 15, fontWeight: '700' },
+    operationDescription: { color: palette.muted, fontSize: 13, lineHeight: 19 },
+    risk: { color: palette.teal, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+    configured: { color: palette.success, fontSize: 12, fontWeight: '700' },
+    notConfigured: { color: palette.error, fontSize: 12, fontWeight: '700' },
+    label: { color: palette.ink, fontSize: 13, fontWeight: '700', marginTop: 4 },
+    segmented: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    segment: {
+      minHeight: 44,
+      minWidth: 44,
+      borderColor: palette.border,
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    segmentSelected: { backgroundColor: palette.primary, borderColor: palette.primary },
+    segmentText: { color: palette.ink, fontSize: 12 },
+    segmentTextSelected: { color: '#fff', fontSize: 12, fontWeight: '700' },
+    input: {
+      borderColor: palette.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      color: palette.ink,
+      fontSize: 16,
+      minHeight: 46,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    reasonInput: { minHeight: 96, textAlignVertical: 'top' },
+    confirmRow: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 10,
+      paddingVertical: 6,
+    },
+    checkbox: {
+      borderColor: palette.muted,
+      borderRadius: 4,
+      borderWidth: 2,
+      height: 20,
+      width: 20,
+    },
+    checkboxSelected: { backgroundColor: palette.primary, borderColor: palette.primary },
+    confirmText: { color: palette.ink, flex: 1, fontSize: 13 },
+    runButton: {
+      alignItems: 'center',
+      backgroundColor: palette.primary,
+      borderRadius: radius.control,
+      justifyContent: 'center',
+      minHeight: 50,
+    },
+    runButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+    disabled: { opacity: 0.45 },
+    pressed: { opacity: 0.75 },
+    hint: { color: palette.muted, fontSize: 12 },
+    errorPanel: { backgroundColor: '#ffdad6', borderRadius: radius.card, padding: 18 },
+    errorText: { color: palette.error, fontSize: 13, lineHeight: 20 },
+    successPanel: { backgroundColor: '#d7f8df', borderRadius: radius.control, gap: 4, padding: 12 },
+    successTitle: { color: palette.success, fontWeight: '800' },
+    resultText: { color: palette.ink, fontSize: 12 },
+  });
+};

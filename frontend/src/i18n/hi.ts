@@ -1,6 +1,24 @@
 import type { Strings } from './en';
 
 export const hi: Strings = {
+  navigation: {
+    jump: 'सीधे जाएँ',
+    openJump: 'किसी सुविधा पर जाएँ',
+    title: 'जो चाहिए, खोजें',
+    subtitle: 'किसी सुविधा या काम को सीधे खोजें।',
+    label: 'आप कहाँ जाना चाहते हैं?',
+    placeholder: 'सहेजे कमरे, नौकरी पोस्ट करें या गोपनीयता',
+    clear: 'सुविधा खोज साफ करें',
+    shortcuts: 'आपके रोज़ के शॉर्टकट',
+    count: 'गंतव्य: {{count}}',
+    emptyTitle: 'कोई दूसरा शब्द आज़माएँ',
+    emptyBody: 'कमरे, राइड, नौकरी, सेटिंग या अपना काम खोजें।',
+    saved: 'सहेजे गए',
+    search: 'खोजें',
+    allFeatures: 'सभी सुविधाएँ',
+    workspace: 'वर्कस्पेस शॉर्टकट',
+    yourSpace: 'आपकी जगह',
+  },
   tabs: { home: 'होम', explore: 'खोजें', community: 'समुदाय', chat: 'चैट', profile: 'प्रोफ़ाइल' },
   tabSubtitles: {
     explore: 'ManaBandhu की हर सुविधा, एक ही जगह।',

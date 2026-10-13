@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { YStack } from 'tamagui';
 import { useT } from '@/i18n';
+import { useQuickJump } from '@/modules/foundation/launcher/QuickJump';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BrandMark } from '@/modules/shared/ui/BrandLogo';
@@ -19,6 +20,7 @@ export function NavRail(props: BottomTabBarProps) {
   const { palette } = useAppearance();
   const press = useTabPress(props);
   const t = useT();
+  const open = useQuickJump();
   const labelFor = useTabLabels();
   const active = props.state.routes[props.state.index]?.name;
   return (
@@ -88,6 +90,7 @@ export function NavRail(props: BottomTabBarProps) {
         );
       })}
       <YStack flex={1} />
+      <IconButton icon="search" label={t('navigation.openJump')} onPress={open} />
       <IconButton
         badge={<UnreadNotificationDot />}
         icon="bell"

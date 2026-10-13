@@ -1,4 +1,4 @@
-import { color, space } from '@manabandhu/design-system';
+import { space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -6,12 +6,14 @@ import { useRedirectIfAuthenticated } from '@/lib/authStore';
 import { supabase } from '@/lib/supabase';
 import { friendlyAuthError, parseAuthRedirect } from '@/modules/auth/authHelpers';
 import { AuthButton, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 /**
  * Landing page for web OAuth and email-confirmation links. Tokens in the fragment are picked up by the Supabase
  * client; a PKCE `code` is exchanged here. Once a session exists the route guard continues to onboarding or Home.
  */
 export function AuthCallbackScreen() {
+  const { styles, color } = useScreenStyles(createScreenStyles);
   useRedirectIfAuthenticated();
   const [error, setError] = useState<string | null>(null);
 
@@ -58,13 +60,15 @@ export function AuthCallbackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x4,
-    backgroundColor: color.surface,
-  },
-  text: { color: color.muted, fontSize: 17 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: space.x4,
+      backgroundColor: palette.surface,
+    },
+    text: { color: palette.muted, fontSize: 17 },
+  });
+};

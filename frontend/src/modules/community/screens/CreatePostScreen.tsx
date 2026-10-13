@@ -1,4 +1,4 @@
-import { breakpoint, palette } from '@manabandhu/design-system';
+import { breakpoint, radius } from '@manabandhu/design-system';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,29 +12,29 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { createPost } from '@/modules/community/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
+import { useWindowDimensions } from '@/platform/windowDimensions';
 
-const C = {
+const createScreenColors = (palette: ScreenPalette) => ({
   primary: palette.primary,
-  primarySoft: 'rgba(67,30,190,0.08)',
+  primarySoft: palette.primaryTint,
   teal: palette.teal,
-  tealSoft: 'rgba(0,105,107,0.08)',
+  tealSoft: palette.tealTint,
   accent: palette.warm,
   bg: palette.background,
-  cardBg: '#ffffff',
-  border: '#e8e5f2',
-  ink: '#1b1829',
-  inkMuted: '#6b6882',
-  errorBg: '#fee2e2',
+  cardBg: palette.surface,
+  border: palette.border,
+  ink: palette.ink,
+  inkMuted: palette.muted,
+  errorBg: palette.errorBg,
   errorText: palette.error,
-};
+});
 
 const CATEGORIES = [
   'General Discussion',
@@ -56,6 +56,8 @@ const SUGGESTED_TAGS = [
 ];
 
 export function CreatePostScreen() {
+  const { styles: s, palette } = useScreenStyles(createScreenStyles);
+  const C = createScreenColors(palette);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
@@ -235,6 +237,7 @@ export function CreatePostScreen() {
                 <View style={s.imagePreviewWrap}>
                   <Image source={{ uri: imageUri }} style={s.imagePreview} resizeMode="cover" />
                   <Pressable
+                    accessibilityRole="button"
                     style={s.removeImageBtn}
                     onPress={() => setImageUri(null)}
                     accessibilityLabel="Remove attached image"
@@ -263,6 +266,7 @@ export function CreatePostScreen() {
                   const active = selectedTags.includes(tag);
                   return (
                     <Pressable
+                      accessibilityRole="button"
                       key={tag}
                       onPress={() => toggleTag(tag)}
                       style={[s.tagChip, active && s.tagChipActive]}
@@ -308,230 +312,245 @@ export function CreatePostScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 48,
-    maxWidth: 680,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  contentDesktop: {
-    padding: 32,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTextCol: {
-    flex: 1,
-  },
-  headerEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: C.ink,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.errorBg,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-    marginBottom: 16,
-  },
-  errorBannerText: {
-    color: C.errorText,
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
-  },
-  formCard: {
-    backgroundColor: C.cardBg,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 18,
-    gap: 18,
-  },
-  fieldGroup: {
-    gap: 8,
-  },
-  labelWithCount: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: C.inkMuted,
-    letterSpacing: 0.5,
-  },
-  charCount: {
-    fontSize: 11,
-    color: C.inkMuted,
-    fontWeight: '600',
-  },
-  chipsRow: {
-    gap: 8,
-    paddingVertical: 2,
-  },
-  categoryChip: {
-    backgroundColor: C.bg,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  categoryChipActive: {
-    backgroundColor: C.primary,
-    borderColor: C.primary,
-  },
-  categoryChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.inkMuted,
-  },
-  categoryChipTextActive: {
-    color: '#ffffff',
-  },
-  input: {
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: C.ink,
-  },
-  textarea: {
-    minHeight: 120,
-    paddingTop: 12,
-  },
-  tagsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tagChip: {
-    backgroundColor: C.bg,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  tagChipActive: {
-    backgroundColor: C.primarySoft,
-    borderColor: C.primary,
-  },
-  tagChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.inkMuted,
-  },
-  tagChipTextActive: {
-    color: C.primary,
-    fontWeight: '800',
-  },
-  trustBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.primarySoft,
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
-  },
-  trustBoxText: {
-    flex: 1,
-    fontSize: 12,
-    color: C.ink,
-    lineHeight: 17,
-    fontWeight: '500',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 6,
-  },
-  cancelBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtnText: {
-    color: C.inkMuted,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  uploadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: C.primarySoft,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(67,30,190,0.15)',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-  },
-  uploadBtnText: {
-    color: C.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  imagePreviewWrap: {
-    position: 'relative',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  imagePreview: {
-    width: '100%',
-    height: 180,
-    borderRadius: 12,
-  },
-  removeImageBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  const C = createScreenColors(palette);
+  return StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: C.bg,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 48,
+      maxWidth: 680,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    contentDesktop: {
+      padding: 32,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 20,
+      gap: 12,
+    },
+    backBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 40,
+      height: 40,
+      borderRadius: radius.card,
+      backgroundColor: C.cardBg,
+      borderWidth: 1,
+      borderColor: C.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTextCol: {
+      flex: 1,
+    },
+    headerEyebrow: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: C.teal,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+    },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: C.ink,
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: C.errorBg,
+      borderRadius: radius.control,
+      padding: 12,
+      gap: 8,
+      marginBottom: 16,
+    },
+    errorBannerText: {
+      color: C.errorText,
+      fontSize: 13,
+      fontWeight: '600',
+      flex: 1,
+    },
+    formCard: {
+      backgroundColor: C.cardBg,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: C.border,
+      padding: 18,
+      gap: 18,
+    },
+    fieldGroup: {
+      gap: 8,
+    },
+    labelWithCount: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: C.inkMuted,
+      letterSpacing: 0.5,
+    },
+    charCount: {
+      fontSize: 11,
+      color: C.inkMuted,
+      fontWeight: '600',
+    },
+    chipsRow: {
+      gap: 8,
+      paddingVertical: 2,
+    },
+    categoryChip: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: C.bg,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: C.border,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    categoryChipActive: {
+      backgroundColor: C.primary,
+      borderColor: C.primary,
+    },
+    categoryChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: C.inkMuted,
+    },
+    categoryChipTextActive: {
+      color: '#ffffff',
+    },
+    input: {
+      backgroundColor: C.bg,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: C.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: C.ink,
+    },
+    textarea: {
+      minHeight: 120,
+      paddingTop: 12,
+    },
+    tagsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    tagChip: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: C.bg,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: C.border,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    tagChipActive: {
+      backgroundColor: C.primarySoft,
+      borderColor: C.primary,
+    },
+    tagChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: C.inkMuted,
+    },
+    tagChipTextActive: {
+      color: C.primary,
+      fontWeight: '800',
+    },
+    trustBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: C.primarySoft,
+      borderRadius: radius.control,
+      padding: 12,
+      gap: 10,
+    },
+    trustBoxText: {
+      flex: 1,
+      fontSize: 12,
+      color: C.ink,
+      lineHeight: 17,
+      fontWeight: '500',
+    },
+    actionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 6,
+    },
+    cancelBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: C.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cancelBtnText: {
+      color: C.inkMuted,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    uploadBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: C.primarySoft,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(67,30,190,0.15)',
+      borderStyle: 'dashed',
+      justifyContent: 'center',
+    },
+    uploadBtnText: {
+      color: C.primary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    imagePreviewWrap: {
+      position: 'relative',
+      borderRadius: radius.control,
+      overflow: 'hidden',
+    },
+    imagePreview: {
+      width: '100%',
+      height: 180,
+      borderRadius: radius.control,
+    },
+    removeImageBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      width: 28,
+      height: 28,
+      borderRadius: radius.control,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+};

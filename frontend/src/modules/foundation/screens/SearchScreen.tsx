@@ -1,106 +1,97 @@
-import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import type { Href } from 'expo-router';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Event } from '@/modules/events/api';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { useDeferredValue, useMemo, useState } from 'react';
+import { YStack } from 'tamagui';
 import { listEvents } from '@/modules/events/api';
+import { filterModules } from '@/modules/foundation/launcher/exploreFilters';
+import { launcherModules } from '@/modules/foundation/launcher/moduleRegistry';
 import { listJobPostings } from '@/modules/jobs/api';
-import type { JobPosting } from '@/modules/jobs/types';
 import { listMarketplaceListings } from '@/modules/marketplace/api';
-import type { MarketplaceListing } from '@/modules/marketplace/types';
 import { rideSearchHref } from '@/modules/rides';
 import { listRoomListings } from '@/modules/rooms/api';
-import type { RoomListing } from '@/modules/rooms/types';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import type { AppIconName } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { IconButton } from '@/modules/shared/ui/IconButton';
 import { ListRow } from '@/modules/shared/ui/ListRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { Section } from '@/modules/shared/ui/Section';
+import { TextField } from '@/modules/shared/ui/TextField';
 
-const C = {
-  primary: '#E05638', // Warm Saffron
-  secondary: '#0D5C75', // Deep Gulf Teal
-  bg: '#FFFDF9', // Soft warm ivory
-  cardBg: '#FFFFFF',
-  border: '#E8DEC8',
-  ink: '#151D21',
-  inkMuted: '#6B7280',
-  tealBg: '#E0F2FE',
-  saffronBg: '#FEE2E2',
-  goldBg: palette.goldBg,
+const categories = [
+  { id: 'all', label: 'All' },
+  { id: 'rooms', label: 'Rooms' },
+  { id: 'rides', label: 'Rides' },
+  { id: 'jobs', label: 'Jobs' },
+  { id: 'events', label: 'Events' },
+  { id: 'market', label: 'Marketplace' },
+];
+const icons: Record<string, AppIconName> = {
+  Rooms: 'home',
+  Events: 'calendar',
+  Market: 'marketplace',
+  Jobs: 'briefcase',
 };
 
-const CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'rooms', label: 'Rooms 🏠' },
-  { id: 'rides', label: 'Rides 🚗' },
-  { id: 'jobs', label: 'Jobs 💼' },
-  { id: 'events', label: 'Events 🎉' },
-  { id: 'market', label: 'Market 🛍️' },
-];
-
-const POPULAR_SEARCHES = [
-  { label: 'UT Austin shared room', category: 'rooms', route: '/rooms' },
-  {
-    label: 'Austin to Dallas carpool',
-    category: 'rides',
-    route: '/rides/search?from=Austin&to=Dallas',
-  },
-  { label: 'Diwali & Ugadi Mela', category: 'events', route: '/events' },
-  { label: 'Pre-loved mixer grinder', category: 'market', route: '/marketplace' },
-  { label: 'Tech employee referrals', category: 'jobs', route: '/jobs' },
-];
-
+/** Immediate feature search, with listing queries loaded only when they are relevant. */
 export function SearchScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isCompact = width < breakpoint.narrow; // Narrow fold cover screen
-  const isDesktop = width >= breakpoint.medium; // Tablet / unfolded fold / desktop
-
-  // `/search?q=…` (e.g. from Explore's empty state) starts with that query filled in.
   const params = useLocalSearchParams<{ q?: string | string[] }>();
-  const initialQuery = Array.isArray(params.q) ? (params.q[0] ?? '') : (params.q ?? '');
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [searchQuery, setSearchQuery] = useState(
+    Array.isArray(params.q) ? (params.q[0] ?? '') : (params.q ?? ''),
+  );
   const [activeCategory, setActiveCategory] = useState('all');
-
-  // Errors are surfaced below instead of being treated as "no results".
-  const roomsQuery = useQuery<RoomListing[]>({
+  const deferredQuery = useDeferredValue(searchQuery);
+  const hasQuery = Boolean(deferredQuery.trim());
+  const enabled = (category: string) =>
+    hasQuery && (activeCategory === 'all' || activeCategory === category);
+  const roomsQuery = useQuery({
     queryKey: ['rooms', 'search-pool'],
     queryFn: () => listRoomListings(),
+    enabled: enabled('rooms'),
   });
-  const eventsQuery = useQuery<Event[]>({
+  const eventsQuery = useQuery({
     queryKey: ['events', 'search-pool'],
     queryFn: () => listEvents(),
+    enabled: enabled('events'),
   });
-  const marketQuery = useQuery<MarketplaceListing[]>({
+  const marketQuery = useQuery({
     queryKey: ['market', 'search-pool'],
     queryFn: () => listMarketplaceListings(),
+    enabled: enabled('market'),
   });
-  const jobsQuery = useQuery<JobPosting[]>({
+  const jobsQuery = useQuery({
     queryKey: ['jobs', 'search-pool'],
     queryFn: () => listJobPostings(),
+    enabled: enabled('jobs'),
   });
-
-  const rooms = roomsQuery.data;
-  const events = eventsQuery.data;
-  const market = marketQuery.data;
-  const jobs = jobsQuery.data;
-  const searchQueries = [roomsQuery, eventsQuery, marketQuery, jobsQuery];
-  const searchFailed = searchQueries.some((q) => q.isError);
-  const searchLoading = searchQueries.some((q) => q.isLoading);
-
+  const rooms = roomsQuery.data,
+    events = eventsQuery.data,
+    market = marketQuery.data,
+    jobs = jobsQuery.data;
+  const queries = [
+    { category: 'rooms', query: roomsQuery },
+    { category: 'events', query: eventsQuery },
+    { category: 'market', query: marketQuery },
+    { category: 'jobs', query: jobsQuery },
+  ].filter((item) => enabled(item.category));
+  const searchFailed = queries.some((item) => item.query.isError);
+  const searchLoading = queries.some((item) => item.query.isLoading);
+  const features = useMemo(
+    () =>
+      hasQuery && activeCategory === 'all'
+        ? filterModules(launcherModules, deferredQuery, 'all')
+        : [],
+    [hasQuery, activeCategory, deferredQuery],
+  );
   const searchResults = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = deferredQuery.trim().toLowerCase();
     if (!q) return [];
 
     const results: {
@@ -113,7 +104,7 @@ export function SearchScreen() {
     }[] = [];
 
     if (activeCategory === 'all' || activeCategory === 'rooms') {
-      (rooms ?? []).forEach((r: RoomListing) => {
+      (rooms ?? []).forEach((r) => {
         const loc = r.broadLocation ?? '';
         if (r.title.toLowerCase().includes(q) || loc.toLowerCase().includes(q)) {
           results.push({
@@ -129,7 +120,7 @@ export function SearchScreen() {
     }
 
     if (activeCategory === 'all' || activeCategory === 'events') {
-      (events ?? []).forEach((e: Event) => {
+      (events ?? []).forEach((e) => {
         if (e.title.toLowerCase().includes(q) || (e.location ?? '').toLowerCase().includes(q)) {
           results.push({
             id: `event-${e.id}`,
@@ -151,7 +142,7 @@ export function SearchScreen() {
     }
 
     if (activeCategory === 'all' || activeCategory === 'market') {
-      (market ?? []).forEach((m: MarketplaceListing) => {
+      (market ?? []).forEach((m) => {
         if (m.title.toLowerCase().includes(q) || (m.location ?? '').toLowerCase().includes(q)) {
           results.push({
             id: `market-${m.id}`,
@@ -166,7 +157,7 @@ export function SearchScreen() {
     }
 
     if (activeCategory === 'all' || activeCategory === 'jobs') {
-      (jobs ?? []).forEach((j: JobPosting) => {
+      (jobs ?? []).forEach((j) => {
         if (j.title.toLowerCase().includes(q) || (j.company ?? '').toLowerCase().includes(q)) {
           results.push({
             id: `job-${j.id}`,
@@ -181,416 +172,139 @@ export function SearchScreen() {
     }
 
     return results;
-  }, [searchQuery, activeCategory, rooms, events, market, jobs]);
+  }, [deferredQuery, activeCategory, rooms, events, market, jobs]);
 
   return (
-    <SafeAreaView style={s.safe}>
-      <View style={[s.container, isDesktop && s.containerDesktop]}>
-        {/* Search Header Bar */}
-        <View style={s.searchBarRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            onPress={() => router.back()}
-            style={s.backBtn}
-          >
-            <AppIcon name="chevron-left" size={20} color={C.ink} />
-          </Pressable>
-          <View style={s.searchInputWrap}>
-            <AppIcon name="search" size={18} color={C.inkMuted} />
-            <TextInput
-              style={[s.input, isCompact && s.inputCompact]}
-              placeholder="Search rooms, rides, jobs, events..."
-              placeholderTextColor={C.inkMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus={true}
-              returnKeyType="search"
+    <Screen keyboardAvoiding>
+      <ScreenHeader
+        title="Find your next thing"
+        subtitle="Rooms, rides, opportunities, and people. All in one place."
+        back={{ fallback: '/home' }}
+      />
+      <TextField
+        label="Search ManaBandhu"
+        leadingIcon="search"
+        placeholder="What are you looking for?"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="search"
+        trailing={
+          searchQuery ? (
+            <IconButton
+              icon="close"
+              label="Clear search"
+              variant="plain"
+              onPress={() => setSearchQuery('')}
             />
-            {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-                <Text style={s.clearText}>✕</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        {/* Category Pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.categoryBarScroll}
-          contentContainerStyle={s.categoryBar}
-        >
-          {CATEGORIES.map((cat) => {
-            const active = activeCategory === cat.id;
-            return (
-              <Pressable
-                key={cat.id}
-                onPress={() => setActiveCategory(cat.id)}
-                style={[s.catChip, active && s.catChipActive]}
-              >
-                <Text style={[s.catChipText, active && s.catChipTextActive]}>{cat.label}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* Search Results or Suggestions */}
-        <ScrollView
-          style={s.contentScroll}
-          contentContainerStyle={s.contentContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Rides are searched by route on the rides screen, so this is a suggestion, not a result. */}
-          {searchQuery.trim().length > 0 &&
-          (activeCategory === 'all' || activeCategory === 'rides') ? (
-            <View style={s.ridesSuggestion}>
+          ) : undefined
+        }
+      />
+      <FilterChipRow label="Search categories" role="radiogroup">
+        {categories.map((category) => (
+          <Chip
+            key={category.id}
+            label={category.label}
+            radio
+            selected={activeCategory === category.id}
+            onPress={() => setActiveCategory(category.id)}
+          />
+        ))}
+      </FilterChipRow>
+      {!hasQuery ? (
+        <>
+          <Card variant="tinted">
+            <AppText variant="h3">A little direction goes a long way.</AppText>
+            <AppText tone="muted">
+              Search a city, job title, or item. Or start with a feature below.
+            </AppText>
+          </Card>
+          <Section title="Start exploring">
+            {launcherModules.slice(0, 6).map((module) => (
               <ListRow
-                href={rideSearchHref(searchQuery)}
-                icon="car"
-                subtitle="Search upcoming carpools for this route"
-                title={`Rides: ${searchQuery.trim()}`}
-                tone="teal"
+                key={module.key}
+                title={module.label}
+                subtitle={module.summary}
+                icon={module.icon}
+                tone={module.tone}
+                href={module.route}
               />
-            </View>
+            ))}
+          </Section>
+        </>
+      ) : (
+        <YStack gap="$x4">
+          {features.length ? (
+            <Section title="Features">
+              {features.map((module) => (
+                <ListRow
+                  key={module.key}
+                  title={module.label}
+                  subtitle={module.summary}
+                  href={module.route}
+                  icon={module.icon}
+                  tone={module.tone}
+                />
+              ))}
+            </Section>
           ) : null}
-          {searchQuery.trim().length > 0 && searchFailed ? (
+          {activeCategory === 'all' || activeCategory === 'rides' ? (
+            <ListRow
+              title={`Find a ride for “${searchQuery.trim()}”`}
+              subtitle="Choose your pickup, destination, and travel date"
+              icon="car"
+              href={rideSearchHref(searchQuery.trim())}
+            />
+          ) : null}
+          {searchFailed ? (
             <ErrorState
-              title="Search is unavailable"
-              body="Some listings could not be loaded, so results would be incomplete."
-              retryLabel="Retry"
+              compact
+              title="Some results couldn't load"
+              body="Your available results are below. Retry to check the remaining categories."
               onRetry={() => {
-                for (const q of searchQueries) if (q.isError) q.refetch();
+                for (const item of queries) if (item.query.isError) void item.query.refetch();
               }}
             />
-          ) : searchQuery.trim().length > 0 && searchLoading ? (
-            <LoadingState label="Searching..." />
-          ) : searchQuery.trim().length > 0 ? (
-            searchResults.length > 0 ? (
-              <View style={s.resultsList}>
-                <Text style={s.sectionHeader}>
-                  {searchResults.length} {searchResults.length === 1 ? 'Result' : 'Results'} found
-                </Text>
-                {searchResults.map((item) => (
-                  <Pressable
-                    key={item.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={item.title}
-                    onPress={() => router.push(item.route as Href)}
-                    style={s.resultCard}
-                  >
-                    <View style={s.resultBody}>
-                      <View style={s.resultBadgeRow}>
-                        <Text style={s.resultBadge}>{item.badge}</Text>
-                      </View>
-                      <Text style={s.resultTitle} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                      <Text style={s.resultSub} numberOfLines={1}>
-                        {item.subtitle}
-                      </Text>
-                    </View>
-                    <AppIcon name="chevron-right" size={16} color={C.secondary} />
-                  </Pressable>
-                ))}
-              </View>
-            ) : (
-              <View style={s.emptyState}>
-                <Text style={s.emptyEmoji}>🔍</Text>
-                <Text style={s.emptyTitle}>No results for "{searchQuery}"</Text>
-                <Text style={s.emptySub}>
-                  Try searching with broader terms or check another category.
-                </Text>
-              </View>
-            )
-          ) : (
-            <View style={s.suggestionsBox}>
-              <Text style={s.sectionHeader}>Try searching for</Text>
-              <View style={s.popularGrid}>
-                {POPULAR_SEARCHES.map((item) => (
-                  <Pressable
-                    key={item.label}
-                    onPress={() => {
-                      setSearchQuery(item.label);
-                      setActiveCategory(item.category);
-                    }}
-                    style={s.popularChip}
-                  >
-                    <AppIcon name="search" size={13} color={C.secondary} />
-                    <Text style={s.popularChipText}>{item.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <Text style={[s.sectionHeader, { marginTop: 24 }]}>Quick Jump</Text>
-              <View style={s.quickGrid}>
-                {[
-                  {
-                    label: 'Explore Rooms',
-                    icon: 'home',
-                    route: '/rooms',
-                    bg: '#e8e4fb',
-                    color: palette.primary,
-                  },
-                  {
-                    label: 'Carpool Rides',
-                    icon: 'car',
-                    route: '/rides',
-                    bg: '#d9f5f5',
-                    color: palette.teal,
-                  },
-                  {
-                    label: 'Tech Jobs',
-                    icon: 'briefcase',
-                    route: '/jobs',
-                    bg: '#fff0e6',
-                    color: palette.warm,
-                  },
-                  {
-                    label: 'Festivals & Mela',
-                    icon: 'calendar',
-                    route: '/events',
-                    bg: '#fff4e0',
-                    color: '#c97a00',
-                  },
-                  {
-                    label: 'Marketplace',
-                    icon: 'marketplace',
-                    route: '/marketplace',
-                    bg: '#e2f9ef',
-                    color: '#1a8a5c',
-                  },
-                  {
-                    label: 'Safety & SOS',
-                    icon: 'shield',
-                    route: '/safety',
-                    bg: '#ffeaea',
-                    color: palette.error,
-                  },
-                ].map((q) => (
-                  <Pressable
-                    key={q.label}
-                    onPress={() => router.push(q.route as Href)}
-                    style={[s.quickCard, { backgroundColor: q.bg }]}
-                  >
-                    <AppIcon name={q.icon as AppIconName} size={20} color={q.color} />
-                    <Text style={[s.quickCardText, { color: q.color }]}>{q.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          )}
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+          ) : null}
+          {searchLoading ? (
+            <LoadingState variant="skeleton" count={3} label="Finding matching listings" />
+          ) : null}
+          {searchResults.length ? (
+            <Section title="Matching listings">
+              <AppText tone="muted" variant="caption" aria-live="polite">
+                {searchResults.length} matches in the loaded listings
+              </AppText>
+              {searchResults.map((result) => (
+                <ListRow
+                  key={result.id}
+                  title={result.title}
+                  subtitle={result.subtitle}
+                  meta={result.category}
+                  href={result.route}
+                  icon={icons[result.category] ?? 'search'}
+                />
+              ))}
+            </Section>
+          ) : !searchLoading &&
+            !searchFailed &&
+            activeCategory !== 'rides' &&
+            features.length === 0 ? (
+            <EmptyState
+              title="No matches in these listings"
+              body="Try a shorter phrase or another category. You can also browse every feature."
+              iconName="search"
+              actionLabel="Browse features"
+              onAction={() => router.push('/explore' as Href)}
+              secondaryActionLabel="Clear search"
+              onSecondaryAction={() => {
+                setSearchQuery('');
+                setActiveCategory('all');
+              }}
+            />
+          ) : null}
+        </YStack>
+      )}
+    </Screen>
   );
 }
-
-const s = StyleSheet.create({
-  ridesSuggestion: { marginBottom: 12 },
-  safe: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  container: {
-    flex: 1,
-    width: '100%',
-  },
-  containerDesktop: {
-    maxWidth: 960,
-    alignSelf: 'center',
-  },
-  searchBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 10,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchInputWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: C.ink,
-    height: '100%',
-  },
-  inputCompact: {
-    fontSize: 12,
-  },
-  clearText: {
-    fontSize: 14,
-    color: C.inkMuted,
-    fontWeight: '700',
-  },
-  categoryBarScroll: {
-    flexGrow: 0,
-    marginBottom: 8,
-  },
-  categoryBar: {
-    paddingHorizontal: 16,
-    gap: 8,
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  catChip: {
-    backgroundColor: C.cardBg,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  catChipActive: {
-    backgroundColor: C.secondary,
-    borderColor: C.secondary,
-  },
-  catChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.ink,
-  },
-  catChipTextActive: {
-    color: '#FFF',
-  },
-  contentScroll: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-  },
-  sectionHeader: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.inkMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  resultsList: {
-    gap: 10,
-  },
-  resultCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: C.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    shadowColor: '#2B3338',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  resultBody: {
-    flex: 1,
-    gap: 2,
-    marginRight: 10,
-  },
-  resultBadgeRow: {
-    marginBottom: 2,
-  },
-  resultBadge: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  resultTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  resultSub: {
-    fontSize: 13,
-    color: C.inkMuted,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    gap: 8,
-  },
-  emptyEmoji: {
-    fontSize: 40,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: C.inkMuted,
-    textAlign: 'center',
-    maxWidth: 280,
-  },
-  suggestionsBox: {
-    paddingTop: 8,
-  },
-  popularGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  popularChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  popularChipText: {
-    fontSize: 13,
-    color: C.ink,
-    fontWeight: '500',
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  quickCard: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 14,
-    padding: 14,
-  },
-  quickCardText: {
-    fontSize: 13,
-    fontWeight: '700',
-    flex: 1,
-  },
-});

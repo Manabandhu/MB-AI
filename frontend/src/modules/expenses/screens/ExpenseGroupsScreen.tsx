@@ -1,5 +1,5 @@
 import { formatMoney } from '@manabandhu/core';
-import { color, radius, space, typography } from '@manabandhu/design-system';
+import { radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -16,10 +16,12 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 const GROUP_TYPES: ExpenseGroupType[] = ['APARTMENT', 'TRIP', 'CARPOOL', 'EVENT'];
 
 export function ExpenseGroupsScreen() {
+  const { styles, color } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
@@ -132,47 +134,53 @@ export function ExpenseGroupsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  createCard: {
-    gap: space.x3,
-    marginTop: space.x4,
-    padding: space.x4,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.surface,
-  },
-  label: { ...typography.caption, color: color.muted, textTransform: 'uppercase' },
-  input: {
-    ...typography.body,
-    color: color.ink,
-    borderWidth: 1,
-    borderColor: color.border,
-    borderRadius: radius.control,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
-  chip: {
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x1,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: color.border,
-  },
-  chipActive: { backgroundColor: color.primarySoft, borderColor: color.primary },
-  chipText: { ...typography.caption, color: color.muted },
-  chipTextActive: { color: color.primary },
-  error: { ...typography.caption, color: color.error },
-  list: { gap: space.x3, marginTop: space.x4 },
-  groupCard: {
-    padding: space.x4,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.surface,
-    gap: space.x1,
-  },
-  groupName: { ...typography.h4, color: color.ink },
-  groupMeta: { ...typography.caption, color: color.muted },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    createCard: {
+      gap: space.x3,
+      marginTop: space.x4,
+      padding: space.x4,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surface,
+    },
+    label: { ...typography.caption, color: palette.muted, textTransform: 'uppercase' },
+    input: {
+      ...typography.body,
+      color: palette.ink,
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: radius.control,
+      paddingHorizontal: space.x3,
+      paddingVertical: space.x2,
+    },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
+    chip: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: space.x3,
+      paddingVertical: space.x1,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    chipActive: { backgroundColor: palette.primarySoft, borderColor: palette.primary },
+    chipText: { ...typography.caption, color: palette.muted },
+    chipTextActive: { color: palette.primary },
+    error: { ...typography.caption, color: palette.error },
+    list: { gap: space.x3, marginTop: space.x4 },
+    groupCard: {
+      minHeight: 44,
+      minWidth: 44,
+      padding: space.x4,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surface,
+      gap: space.x1,
+    },
+    groupName: { ...typography.h4, color: palette.ink },
+    groupMeta: { ...typography.caption, color: palette.muted },
+  });
+};

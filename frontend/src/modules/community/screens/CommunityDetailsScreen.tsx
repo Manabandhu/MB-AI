@@ -1,4 +1,4 @@
-import { color as colors, contentWidth } from '@manabandhu/design-system';
+import { contentWidth, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -11,9 +11,11 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function CommunityDetailsScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const layout = useAdaptiveLayout();
   const maxWidth = layout.windowClass === 'compact' ? contentWidth.compact : layout.maxContentWidth;
@@ -157,28 +159,32 @@ export function CommunityDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: 16 },
-  container: { gap: 16, width: '100%', alignSelf: 'center' },
-  list: { gap: 12 },
-  item: {
-    backgroundColor: '#fff',
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    gap: 8,
-  },
-  itemTitle: { fontSize: 16, fontWeight: '700', color: colors.ink },
-  itemBody: { fontSize: 14, color: '#4b5563', lineHeight: 20 },
-  itemFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  itemMeta: { fontSize: 12, color: '#6b7280' },
-  likeCount: { fontSize: 12, color: '#6b7280' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { flexGrow: 1, padding: 16 },
+    container: { gap: 16, width: '100%', alignSelf: 'center' },
+    list: { gap: 12 },
+    item: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: '#fff',
+      borderColor: '#e5e7eb',
+      borderRadius: radius.card,
+      borderWidth: 1,
+      padding: 16,
+      gap: 8,
+    },
+    itemTitle: { fontSize: 16, fontWeight: '700', color: palette.ink },
+    itemBody: { fontSize: 14, color: '#4b5563', lineHeight: 20 },
+    itemFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    itemMeta: { fontSize: 12, color: '#6b7280' },
+    likeCount: { fontSize: 12, color: '#6b7280' },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
+  });
+};

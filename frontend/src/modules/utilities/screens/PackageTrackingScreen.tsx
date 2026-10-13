@@ -1,4 +1,4 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,10 +9,12 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SearchBar } from '@/modules/shared/components/SearchBar';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { getPackages } from '@/modules/utilities/api';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function PackageTrackingScreen() {
+  const { styles, palette } = useScreenStyles(createScreenStyles);
   const layout = useAdaptiveLayout();
   const packages = useQuery({ queryKey: ['utilities', 'packages'], queryFn: getPackages });
   const data = packages.data ?? [];
@@ -78,12 +80,12 @@ export function PackageTrackingScreen() {
               {filtered.map((item) => (
                 <View key={item.id} style={styles.card}>
                   <View style={styles.iconRow}>
-                    <AppIcon color={colors.primary} name="package" size={22} />
+                    <AppIcon color={palette.primary} name="package" size={22} />
                     <Text style={styles.cardTitle}>{item.title}</Text>
                   </View>
                   <Text style={styles.cardBody}>{item.body}</Text>
                   <View style={styles.timelineRow}>
-                    <View style={[styles.dot, { backgroundColor: colors.primary }]} />
+                    <View style={[styles.dot, { backgroundColor: palette.primary }]} />
                     <View style={styles.timelineLine} />
                     <View style={styles.timelineTexts}>
                       <Text style={styles.cardMeta}>{item.meta}</Text>
@@ -100,30 +102,32 @@ export function PackageTrackingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  iconRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  cardTitle: { color: colors.ink, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  cardBody: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  timelineRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2, marginTop: space.x1 },
-  dot: { height: 10, width: 10, borderRadius: 5 },
-  timelineLine: {
-    backgroundColor: colors.border,
-    flex: 1,
-    height: 2,
-  },
-  timelineTexts: { gap: space.x1 },
-  cardMeta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-  status: { color: colors.teal, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { flexGrow: 1, padding: space.x4 },
+    container: { alignSelf: 'center', gap: space.x6, width: '100%' },
+    list: { gap: space.x3 },
+    card: {
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      gap: space.x2,
+      padding: space.x4,
+    },
+    iconRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
+    cardTitle: { color: palette.ink, fontSize: 16, fontWeight: '700', lineHeight: 22 },
+    cardBody: { color: palette.muted, fontSize: 14, lineHeight: 21 },
+    timelineRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2, marginTop: space.x1 },
+    dot: { height: 10, width: 10, borderRadius: 5 },
+    timelineLine: {
+      backgroundColor: palette.border,
+      flex: 1,
+      height: 2,
+    },
+    timelineTexts: { gap: space.x1 },
+    cardMeta: { color: palette.muted, fontSize: 12, fontWeight: '600' },
+    status: { color: palette.teal, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  });
+};

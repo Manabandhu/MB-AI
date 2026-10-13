@@ -1,15 +1,17 @@
-import { color, space } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { friendlyAuthError, phoneLastFour } from '@/modules/auth/authHelpers';
 import { AuthButton, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 const CODE_LENGTH = 6;
 const RESEND_SECONDS = 30;
 
 export function OtpVerificationScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   const identifier = useAuthStore((s) => s.otpIdentifier);
   const otpType = useAuthStore((s) => s.otpType);
   const verifyOtp = useAuthStore((s) => s.verifyOtp);
@@ -80,7 +82,12 @@ export function OtpVerificationScreen() {
       ) : notice ? (
         <AuthNotice tone="success">{notice}</AuthNotice>
       ) : null}
-      <Pressable accessible={false} onPress={() => inputRef.current?.focus()} style={styles.boxes}>
+      <Pressable
+        accessibilityRole="button"
+        accessible={false}
+        onPress={() => inputRef.current?.focus()}
+        style={styles.boxes}
+      >
         {Array.from({ length: CODE_LENGTH }, (_, index) => {
           const active = index === Math.min(code.length, CODE_LENGTH - 1);
           return (
@@ -123,29 +130,37 @@ export function OtpVerificationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  boxes: { flexDirection: 'row', justifyContent: 'space-between', gap: space.x2 },
-  box: {
-    flex: 1,
-    maxWidth: 56,
-    aspectRatio: 0.82,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#d9d5e4',
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  boxActive: { borderColor: color.primary, borderWidth: 2 },
-  boxError: { borderColor: color.error },
-  digit: { color: color.ink, fontSize: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  hiddenInput: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    opacity: 0.011,
-    color: 'transparent',
-  },
-  resendRow: { alignItems: 'center', minHeight: 44, justifyContent: 'center' },
-  resendWait: { color: color.muted, fontSize: 15 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    boxes: {
+      minHeight: 44,
+      minWidth: 44,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: space.x2,
+    },
+    box: {
+      flex: 1,
+      maxWidth: 56,
+      aspectRatio: 0.82,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: '#d9d5e4',
+      backgroundColor: '#ffffff',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    boxActive: { borderColor: palette.primary, borderWidth: 2 },
+    boxError: { borderColor: palette.error },
+    digit: { color: palette.ink, fontSize: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
+    hiddenInput: {
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      opacity: 0.011,
+      color: 'transparent',
+    },
+    resendRow: { alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+    resendWait: { color: palette.muted, fontSize: 15 },
+  });
+};

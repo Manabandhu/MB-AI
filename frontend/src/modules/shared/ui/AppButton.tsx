@@ -52,7 +52,7 @@ const Frame = styled(XStack, {
     size: {
       // Every size keeps the 44pt touch target; `sm` only tightens padding and text.
       sm: { minHeight: '$touch', paddingHorizontal: '$x3' },
-      md: { minHeight: '$touch', paddingHorizontal: '$x4' },
+      md: { minHeight: '$control', paddingHorizontal: '$x5' },
       lg: { minHeight: '$control', paddingHorizontal: '$x6' },
     },
     fullWidth: { true: { alignSelf: 'stretch' } },
@@ -109,8 +109,8 @@ export function AppButton({
         <AppIcon color={foreground} name={icon} size={size === 'sm' ? 16 : 18} />
       ) : null}
       <AppText
-        numberOfLines={1}
-        style={{ color: foreground }}
+        numberOfLines={2}
+        style={{ color: foreground, flexShrink: 1, textAlign: 'center', paddingVertical: 8 }}
         variant={size === 'sm' ? 'label' : 'bodyStrong'}
       >
         {label}

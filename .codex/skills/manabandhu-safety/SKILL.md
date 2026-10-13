@@ -90,3 +90,8 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 - P0 fix (2026-10-10): reporters can no longer resolve their own reports. `SafetyReportService.resolve(Actor, id)` and `findAllForAdmin(Actor)` require an admin in the service (REST `/safety/reports/{id}/resolve` and admin `/admin/reports/{id}/resolve` share it); the moderation queue is capped at the newest 500.
 - Shared primitives (2026-10-11): `ReportsScreen` shows report status with the shared `StatusBadge` (the legacy `shared/components/Badge` was deleted).
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['report', 'block', 'trusted contacts', 'emergency', 'sos', 'harassment', 'scam']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+
+## UX refresh (2026-10-13)
+
+- Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
+- Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.

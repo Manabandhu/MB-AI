@@ -1,6 +1,24 @@
 import type { Strings } from './en';
 
 export const te: Strings = {
+  navigation: {
+    jump: 'వెళ్లండి',
+    openJump: 'ఒక ఫీచర్‌కు వెళ్లండి',
+    title: 'మీకు కావలసినది కనుగొనండి',
+    subtitle: 'ఫీచర్ లేదా పనిని నేరుగా కనుగొనండి.',
+    label: 'మీరు ఎక్కడికి వెళ్లాలనుకుంటున్నారు?',
+    placeholder: 'సేవ్ చేసిన గదులు, ఉద్యోగం లేదా గోప్యత',
+    clear: 'ఫీచర్ శోధనను తొలగించండి',
+    shortcuts: 'మీ రోజువారీ షార్ట్‌కట్‌లు',
+    count: 'గమ్యస్థానాలు: {{count}}',
+    emptyTitle: 'మరొక పదాన్ని ప్రయత్నించండి',
+    emptyBody: 'గదులు, రైడ్లు, ఉద్యోగాలు, సెట్టింగ్‌లు లేదా మీ పనిని వెతకండి.',
+    saved: 'సేవ్ చేసినవి',
+    search: 'వెతకండి',
+    allFeatures: 'అన్ని ఫీచర్‌లు',
+    workspace: 'వర్క్‌స్పేస్ షార్ట్‌కట్‌లు',
+    yourSpace: 'మీ స్థలం',
+  },
   tabs: { home: 'హోమ్', explore: 'అన్వేషించు', community: 'కమ్యూనిటీ', chat: 'చాట్', profile: 'ప్రొఫైల్' },
   tabSubtitles: {
     explore: 'ManaBandhu అందించే ప్రతి సేవ, ఒకే చోట.',

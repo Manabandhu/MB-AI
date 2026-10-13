@@ -1,5 +1,5 @@
 import { breakpoint, contentWidth } from '@manabandhu/design-system';
-import { useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from './windowDimensions';
 
 export type WindowClass = 'compact' | 'medium' | 'expanded' | 'wide';
 

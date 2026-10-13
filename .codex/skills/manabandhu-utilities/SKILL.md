@@ -87,3 +87,8 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.
 - P0 fix (2026-10-10): `POST /utilities/packages` parses `status` case-insensitively with `TrackingStatus.parse`; unknown values are 400 instead of 500.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['packages', 'package tracking', 'delivery', 'nearby services', 'emergency numbers']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+
+## UX refresh (2026-10-13)
+
+- Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
+- Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.

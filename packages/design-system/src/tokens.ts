@@ -1,15 +1,15 @@
 export const color = {
-  background: '#faf8ff',
-  ink: '#131b2e',
-  muted: '#625f6e',
+  background: '#f7f8fc',
+  ink: '#191b2c',
+  muted: '#626779',
   primary: '#431ebe',
   primaryContainer: '#5b3fd6',
   primarySoft: '#e5deff',
   surface: '#ffffff',
   teal: '#00696b',
-  warm: '#ff7e33',
-  border: '#e2e8f0',
-  success: '#1b873f',
+  warm: '#b84b15',
+  border: '#e5e7f0',
+  success: '#16733c',
   error: '#ba1a1a',
   warning: '#d97706',
   info: '#2563eb',
@@ -23,9 +23,9 @@ export const color = {
  */
 export const tone = {
   surfaceContainerLowest: '#ffffff',
-  surfaceContainerLow: '#f2f3ff',
-  surfaceContainer: '#eaedff',
-  surfaceContainerHigh: '#e2e7ff',
+  surfaceContainerLow: '#f2f3f9',
+  surfaceContainer: '#eaeaf4',
+  surfaceContainerHigh: '#e2e3ef',
   /** Translucent fills behind primary, teal, and warm icons or chips. */
   primaryTint: 'rgba(67,30,190,0.07)',
   tealTint: 'rgba(0,105,107,0.08)',
@@ -43,16 +43,16 @@ export const tone = {
 export const palette = { ...color, ...tone } as const;
 
 export const darkColor = {
-  background: '#0f1525',
+  background: '#10121b',
   ink: '#f1f5ff',
-  muted: '#9aa3b2',
-  primary: '#a78bfa',
+  muted: '#b0b5c7',
+  primary: '#bca6ff',
   primaryContainer: '#6d48d7',
   primarySoft: '#2e245a',
-  surface: '#1a2138',
+  surface: '#1b1e2c',
   teal: '#34d399',
   warm: '#ff955e',
-  border: '#2a3348',
+  border: '#303447',
   success: '#4ade80',
   error: '#fca5a5',
   warning: '#fbbf24',
@@ -110,33 +110,33 @@ export const space = {
   x12: 48,
   x16: 64,
 } as const;
-export const radius = { control: 12, card: 16, panel: 24, pill: 999 } as const;
+export const radius = { control: 16, card: 24, panel: 32, pill: 999 } as const;
 
 export const shadow = {
   sm: {
     elevation: 2,
-    shadowColor: '#131b2e',
+    shadowColor: '#191b2c',
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
   },
   md: {
     elevation: 4,
-    shadowColor: '#131b2e',
+    shadowColor: '#191b2c',
     shadowOpacity: 0.1,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
   },
   lg: {
     elevation: 8,
-    shadowColor: '#131b2e',
+    shadowColor: '#191b2c',
     shadowOpacity: 0.14,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
   },
   xl: {
     elevation: 12,
-    shadowColor: '#131b2e',
+    shadowColor: '#191b2c',
     shadowOpacity: 0.18,
     shadowRadius: 28,
     shadowOffset: { width: 0, height: 12 },
@@ -146,16 +146,16 @@ export const shadow = {
 export const duration = { instant: 0, fast: 120, normal: 220, slow: 320, slower: 480 } as const;
 
 export const typography = {
-  display: { fontSize: 36, lineHeight: 44, fontWeight: '800', letterSpacing: -0.5 } as const,
-  h1: { fontSize: 28, lineHeight: 34, fontWeight: '800', letterSpacing: -0.3 } as const,
-  h2: { fontSize: 24, lineHeight: 32, fontWeight: '800', letterSpacing: -0.2 } as const,
-  h3: { fontSize: 20, lineHeight: 28, fontWeight: '800', letterSpacing: 0 } as const,
-  h4: { fontSize: 17, lineHeight: 24, fontWeight: '800', letterSpacing: 0 } as const,
+  display: { fontSize: 40, lineHeight: 48, fontWeight: '700', letterSpacing: -0.5 } as const,
+  h1: { fontSize: 30, lineHeight: 38, fontWeight: '700', letterSpacing: -0.3 } as const,
+  h2: { fontSize: 24, lineHeight: 32, fontWeight: '700', letterSpacing: -0.2 } as const,
+  h3: { fontSize: 20, lineHeight: 28, fontWeight: '700', letterSpacing: 0 } as const,
+  h4: { fontSize: 17, lineHeight: 24, fontWeight: '700', letterSpacing: 0 } as const,
   body: { fontSize: 16, lineHeight: 25, fontWeight: '400', letterSpacing: 0 } as const,
   bodyStrong: { fontSize: 16, lineHeight: 25, fontWeight: '700', letterSpacing: 0 } as const,
   lead: { fontSize: 18, lineHeight: 28, fontWeight: '400', letterSpacing: 0 } as const,
   caption: { fontSize: 12, lineHeight: 18, fontWeight: '700', letterSpacing: 0.2 } as const,
-  overline: { fontSize: 11, lineHeight: 16, fontWeight: '800', letterSpacing: 0.8 } as const,
+  overline: { fontSize: 11, lineHeight: 16, fontWeight: '700', letterSpacing: 0.8 } as const,
   mono: { fontSize: 14, lineHeight: 20, fontWeight: '500', letterSpacing: 0.2 } as const,
 } as const;
 

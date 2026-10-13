@@ -71,8 +71,8 @@ export function Chip({
       aria-pressed={pressable && !radio ? Boolean(selected) : undefined}
       aria-disabled={pressable && disabled ? true : undefined}
       alignItems="center"
-      backgroundColor={selected ? '$primary' : '$primaryTint'}
-      borderColor={selected ? '$primary' : '$primarySoft'}
+      backgroundColor={selected ? '$primary' : '$surface'}
+      borderColor={selected ? '$primary' : '$borderColor'}
       borderRadius="$pill"
       borderWidth={1}
       cursor={pressable ? (disabled ? 'not-allowed' : 'pointer') : undefined}

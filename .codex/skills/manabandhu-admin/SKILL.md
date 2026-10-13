@@ -105,3 +105,8 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 - Cleanup: removed the unused `SuperAdminScreen.tsx`; added the `/admin/automations` route (`AdminAutomationsScreen`) linked from the dashboard and backed by `/api/v1/admin/automations`.
 - Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.
 - P0 hardening (2026-10-10): see `manabandhu-super-admin`. Status changes refuse self-suspension, super admins, and admins unless the caller is a super admin; `AdminUsersScreen` alerts the server's reason.
+
+## UX refresh (2026-10-13)
+
+- Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
+- Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.

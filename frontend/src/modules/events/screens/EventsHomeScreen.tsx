@@ -1,5 +1,5 @@
 import { formatDate } from '@manabandhu/core';
-import { color as baseColors, breakpoint, palette, radius } from '@manabandhu/design-system';
+import { breakpoint, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -11,23 +11,25 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { listEventCategories, listEvents } from '@/modules/events/api';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
+import { useWindowDimensions } from '@/platform/windowDimensions';
 
-const colors = {
-  ...baseColors,
-  canvas: '#ffffff',
-  canvasMuted: '#f8f9fe',
+const createScreenColors = (palette: ScreenPalette) => ({
+  ...palette,
+  canvas: palette.surface,
+  canvasMuted: palette.surfaceContainerLow,
   accentBrand: palette.primary,
   warm: palette.warm,
-  inkSecondary: baseColors.muted,
+  inkSecondary: palette.muted,
   borderSubtle: palette.border,
-  danger: '#ef4444',
-};
+  danger: palette.error,
+});
 
 const sp = {
   xs: 4,
@@ -39,9 +41,10 @@ const sp = {
 };
 
 export default function EventsHomeScreen() {
+  const { styles: s, palette } = useScreenStyles(createScreenStyles);
+  const colors = createScreenColors(palette);
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isCompact = width < breakpoint.narrow;
   const _isDesktop = width >= breakpoint.medium;
   const { session } = useAuthStore();
 
@@ -113,48 +116,24 @@ export default function EventsHomeScreen() {
   return (
     <View style={s.container}>
       {/* Top Header */}
-      <View style={[s.topBar, isCompact && s.topBarCompact]}>
-        <View style={[s.topBarLeft, isCompact && s.topBarLeftCompact]}>
-          <View style={[s.brandBadge, isCompact && s.brandBadgeCompact]}>
-            <Text style={[s.brandBadgeEmoji, isCompact && s.brandBadgeEmojiCompact]}>🪔</Text>
-          </View>
-          <View style={s.titleTextWrap}>
-            <View style={s.titleRow}>
-              <Text style={[s.appTitle, isCompact && s.appTitleCompact]}>ManaBandhu</Text>
-              {!isCompact && (
-                <View style={s.categoryPill}>
-                  <Text style={s.categoryPillText}>EVENTS</Text>
-                </View>
-              )}
-            </View>
-            <Text style={s.subtitleText} numberOfLines={1}>
-              {isLoading || isError
-                ? 'Community events'
-                : `${upcomingEvents.length} upcoming ${upcomingEvents.length === 1 ? 'event' : 'events'}`}
-            </Text>
-          </View>
-        </View>
-
-        <View style={[s.topBarRight, isCompact && s.topBarRightCompact]}>
-          <Pressable
-            onPress={() => router.push('/events/saved' as Href)}
-            style={[s.iconButton, isCompact && s.iconButtonCompact]}
-            accessibilityLabel="Saved Events"
-          >
-            <Text style={s.iconButtonEmoji}>🔖</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              if (!session) router.push('/sign-in' as Href);
-              else router.push('/events/create' as Href);
-            }}
-            style={s.hostButton}
-          >
-            <AppIcon name="plus" size={14} color={colors.canvas} />
-            <Text style={s.hostButtonText}>Host</Text>
-          </Pressable>
-        </View>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+        <ScreenHeader
+          title="Events"
+          subtitle="Find your people. Make a plan."
+          back={{ fallback: '/explore' }}
+          actions={
+            <IconButton
+              icon="heart"
+              label="Saved events"
+              onPress={() => router.push('/events/saved')}
+            />
+          }
+          primaryAction={{
+            label: 'Host an event',
+            icon: 'plus',
+            route: session ? '/events/create' : '/sign-in',
+          }}
+        />
       </View>
 
       <ScrollView
@@ -180,7 +159,7 @@ export default function EventsHomeScreen() {
             style={s.searchInput}
           />
           {query.length > 0 && (
-            <Pressable onPress={() => setQuery('')} style={s.clearBtn}>
+            <Pressable accessibilityRole="button" onPress={() => setQuery('')} style={s.clearBtn}>
               <Text style={s.clearBtnText}>✕</Text>
             </Pressable>
           )}
@@ -197,6 +176,7 @@ export default function EventsHomeScreen() {
             const isSelected = selectedCategory === cat.id;
             return (
               <Pressable
+                accessibilityRole="button"
                 key={cat.id}
                 onPress={() => setSelectedCategory(cat.id)}
                 style={[s.chipPill, isSelected && s.chipPillActive]}
@@ -216,7 +196,7 @@ export default function EventsHomeScreen() {
             <Text style={s.emptyEmoji}>⚠️</Text>
             <Text style={s.emptyTitle}>Unable to load events</Text>
             <Text style={s.emptySubtitle}>Check your connection and try again.</Text>
-            <Pressable onPress={() => refetch()} style={s.resetBtn}>
+            <Pressable accessibilityRole="button" onPress={() => refetch()} style={s.resetBtn}>
               <Text style={s.resetBtnText}>Retry</Text>
             </Pressable>
           </View>
@@ -232,6 +212,7 @@ export default function EventsHomeScreen() {
                 : 'Try searching for a different keyword or category.'}
             </Text>
             <Pressable
+              accessibilityRole="button"
               onPress={() => {
                 setQuery('');
                 setSelectedCategory('all');
@@ -266,6 +247,7 @@ export default function EventsHomeScreen() {
 
               <View style={s.featuredFooter}>
                 <Pressable
+                  accessibilityRole="link"
                   onPress={() => router.push(`/events/${featuredEvent.id}` as Href)}
                   style={s.rsvpSpotlightBtn}
                 >
@@ -292,7 +274,10 @@ export default function EventsHomeScreen() {
                           </View>
                         ) : null}
 
-                        <Pressable onPress={() => router.push(`/events/${event.id}` as Href)}>
+                        <Pressable
+                          accessibilityRole="link"
+                          onPress={() => router.push(`/events/${event.id}` as Href)}
+                        >
                           <Text style={s.cardTitle}>{event.title}</Text>
                         </Pressable>
 
@@ -308,6 +293,7 @@ export default function EventsHomeScreen() {
 
                         <View style={s.cardActionsRow}>
                           <Pressable
+                            accessibilityRole="link"
                             onPress={() => router.push(`/events/${event.id}` as Href)}
                             style={s.viewDetailsBtn}
                           >
@@ -334,6 +320,7 @@ export default function EventsHomeScreen() {
             </Text>
           </View>
           <Pressable
+            accessibilityRole="link"
             onPress={() => {
               if (!session) router.push('/sign-in' as Href);
               else router.push('/events/create' as Href);
@@ -348,427 +335,438 @@ export default function EventsHomeScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fe',
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: sp.md,
-    paddingBottom: sp.md,
-    backgroundColor: colors.canvas,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
-    gap: 8,
-  },
-  topBarLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 0,
-  },
-  brandBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.card,
-    backgroundColor: '#ffedd5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandBadgeEmoji: {
-    fontSize: 24,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.sm,
-  },
-  appTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.ink,
-    letterSpacing: -0.5,
-  },
-  categoryPill: {
-    backgroundColor: '#fff7ed',
-    paddingHorizontal: sp.xs,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: '#ffedd5',
-  },
-  categoryPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#ea580c',
-    letterSpacing: 0.5,
-  },
-  subtitleText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.inkSecondary,
-    marginTop: 2,
-  },
-  topBarRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexShrink: 0,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.pill,
-    backgroundColor: colors.canvasMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  iconButtonEmoji: {
-    fontSize: 16,
-  },
-  hostButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.accentBrand,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-    flexShrink: 0,
-  },
-  hostButtonText: {
-    color: colors.canvas,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  topBarCompact: {
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  topBarLeftCompact: {
-    gap: 8,
-  },
-  brandBadgeCompact: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-  },
-  brandBadgeEmojiCompact: {
-    fontSize: 18,
-  },
-  titleTextWrap: {
-    flexShrink: 1,
-  },
-  appTitleCompact: {
-    fontSize: 15,
-  },
-  topBarRightCompact: {
-    gap: 6,
-  },
-  iconButtonCompact: {
-    width: 34,
-    height: 34,
-  },
-  scrollContent: {
-    padding: sp.lg,
-    paddingBottom: 110,
-  },
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.canvas,
-    borderRadius: radius.control,
-    paddingHorizontal: sp.md,
-    height: 46,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    marginBottom: sp.md,
-  },
-  searchIconEmoji: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.ink,
-  },
-  clearBtn: {
-    padding: 4,
-  },
-  clearBtnText: {
-    fontSize: 14,
-    color: colors.inkSecondary,
-    fontWeight: '700',
-  },
-  chipsContainer: {
-    marginBottom: sp.lg,
-  },
-  chipsScroll: {
-    gap: sp.sm,
-  },
-  chipPill: {
-    paddingHorizontal: sp.md,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.canvas,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  chipPillActive: {
-    backgroundColor: colors.accentBrand,
-    borderColor: colors.accentBrand,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.inkSecondary,
-  },
-  chipTextActive: {
-    color: colors.canvas,
-    fontWeight: '700',
-  },
-  featuredCard: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.panel,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: '#fed7aa',
-    shadowColor: '#f97316',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-    marginBottom: sp.xl,
-  },
-  featuredHeaderBg: {
-    backgroundColor: '#fff7ed',
-    padding: sp.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: '#fed7aa',
-  },
-  featuredBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: sp.sm,
-  },
-  featuredTagPill: {
-    backgroundColor: '#ea580c',
-    paddingHorizontal: sp.sm,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  featuredTagText: {
-    color: colors.canvas,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  featuredTitle: {
-    fontSize: 21,
-    fontWeight: '900',
-    color: '#7c2d12',
-    letterSpacing: -0.5,
-    marginBottom: sp.xs,
-  },
-  featuredDate: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#c2410c',
-    marginBottom: 2,
-  },
-  featuredLocation: {
-    fontSize: 12,
-    color: '#9a3412',
-  },
-  featuredFooter: {
-    padding: sp.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.canvas,
-    flexWrap: 'wrap',
-    gap: sp.sm,
-  },
-  rsvpSpotlightBtn: {
-    backgroundColor: '#ea580c',
-    paddingHorizontal: sp.lg,
-    paddingVertical: 10,
-    borderRadius: radius.pill,
-  },
-  rsvpSpotlightBtnText: {
-    color: colors.canvas,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: sp.md,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-    letterSpacing: -0.3,
-  },
-  loadingBox: {
-    padding: sp.xxl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    fontSize: 13,
-    color: colors.inkSecondary,
-  },
-  emptyBox: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.card,
-    padding: sp.xxl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  emptyEmoji: {
-    fontSize: 44,
-    marginBottom: sp.sm,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-    marginBottom: 4,
-  },
-  emptySubtitle: {
-    fontSize: 12,
-    color: colors.inkSecondary,
-    textAlign: 'center',
-    marginBottom: sp.md,
-  },
-  resetBtn: {
-    backgroundColor: colors.accentBrand,
-    paddingHorizontal: sp.lg,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-  },
-  resetBtnText: {
-    color: colors.canvas,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  eventsGrid: {
-    gap: sp.md,
-  },
-  eventCard: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.card,
-    padding: sp.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: sp.xs,
-  },
-  categoryTagPill: {
-    backgroundColor: '#f5f3ff',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
-  categoryTagText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#6d28d9',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-    letterSpacing: -0.3,
-    marginBottom: 6,
-  },
-  cardDate: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#ea580c',
-    marginBottom: 2,
-  },
-  cardLocation: {
-    fontSize: 12,
-    color: colors.inkSecondary,
-    marginBottom: sp.sm,
-  },
-  cardActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.sm,
-  },
-  viewDetailsBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  viewDetailsText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
-  },
-  hostPromptBanner: {
-    marginTop: sp.xl,
-    backgroundColor: '#ede9fe',
-    borderRadius: radius.panel,
-    padding: sp.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.md,
-    borderWidth: 1,
-    borderColor: '#ddd6fe',
-  },
-  hostPromptEmoji: {
-    fontSize: 28,
-  },
-  hostPromptContent: {
-    flex: 1,
-  },
-  hostPromptTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#4c1d95',
-    marginBottom: 2,
-  },
-  hostPromptSubtitle: {
-    fontSize: 11,
-    color: '#6d28d9',
-    lineHeight: 16,
-  },
-  createEventBannerBtn: {
-    backgroundColor: colors.accentBrand,
-    paddingHorizontal: sp.md,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-  },
-  createEventBannerBtnText: {
-    color: colors.canvas,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  const colors = createScreenColors(palette);
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#f8f9fe',
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 12,
+      paddingTop: sp.md,
+      paddingBottom: sp.md,
+      backgroundColor: colors.canvas,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderSubtle,
+      gap: 8,
+    },
+    topBarLeft: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      minWidth: 0,
+    },
+    brandBadge: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.card,
+      backgroundColor: '#ffedd5',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    brandBadgeEmoji: {
+      fontSize: 24,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sp.sm,
+    },
+    appTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: colors.ink,
+      letterSpacing: -0.5,
+    },
+    categoryPill: {
+      backgroundColor: '#fff7ed',
+      paddingHorizontal: sp.xs,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: '#ffedd5',
+    },
+    categoryPillText: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: '#ea580c',
+      letterSpacing: 0.5,
+    },
+    subtitleText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.inkSecondary,
+      marginTop: 2,
+    },
+    topBarRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexShrink: 0,
+    },
+    iconButton: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.pill,
+      backgroundColor: colors.canvasMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+    },
+    iconButtonEmoji: {
+      fontSize: 16,
+    },
+    hostButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.accentBrand,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: radius.pill,
+      flexShrink: 0,
+    },
+    hostButtonText: {
+      color: colors.canvas,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    topBarCompact: {
+      paddingHorizontal: 10,
+      paddingTop: 10,
+      paddingBottom: 10,
+    },
+    topBarLeftCompact: {
+      gap: 8,
+    },
+    brandBadgeCompact: {
+      width: 34,
+      height: 34,
+      borderRadius: 8,
+    },
+    brandBadgeEmojiCompact: {
+      fontSize: 18,
+    },
+    titleTextWrap: {
+      flexShrink: 1,
+    },
+    appTitleCompact: {
+      fontSize: 15,
+    },
+    topBarRightCompact: {
+      gap: 6,
+    },
+    iconButtonCompact: {
+      width: 34,
+      height: 34,
+    },
+    scrollContent: {
+      padding: sp.lg,
+      paddingBottom: 110,
+    },
+    searchBarContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.canvas,
+      borderRadius: radius.control,
+      paddingHorizontal: sp.md,
+      height: 46,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      marginBottom: sp.md,
+    },
+    searchIconEmoji: {
+      fontSize: 16,
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.ink,
+    },
+    clearBtn: { minHeight: 44, minWidth: 44, padding: 4 },
+    clearBtnText: {
+      fontSize: 14,
+      color: colors.inkSecondary,
+      fontWeight: '700',
+    },
+    chipsContainer: {
+      marginBottom: sp.lg,
+    },
+    chipsScroll: {
+      gap: sp.sm,
+    },
+    chipPill: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: sp.md,
+      paddingVertical: 8,
+      borderRadius: radius.pill,
+      backgroundColor: colors.canvas,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+    },
+    chipPillActive: {
+      backgroundColor: colors.accentBrand,
+      borderColor: colors.accentBrand,
+    },
+    chipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.inkSecondary,
+    },
+    chipTextActive: {
+      color: colors.canvas,
+      fontWeight: '700',
+    },
+    featuredCard: {
+      backgroundColor: colors.canvas,
+      borderRadius: radius.panel,
+      overflow: 'hidden',
+      borderWidth: 1.5,
+      borderColor: '#fed7aa',
+      shadowColor: '#f97316',
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      elevation: 4,
+      marginBottom: sp.xl,
+    },
+    featuredHeaderBg: {
+      backgroundColor: '#fff7ed',
+      padding: sp.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: '#fed7aa',
+    },
+    featuredBadgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: sp.sm,
+    },
+    featuredTagPill: {
+      backgroundColor: '#ea580c',
+      paddingHorizontal: sp.sm,
+      paddingVertical: 4,
+      borderRadius: radius.pill,
+    },
+    featuredTagText: {
+      color: colors.canvas,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    featuredTitle: {
+      fontSize: 21,
+      fontWeight: '900',
+      color: '#7c2d12',
+      letterSpacing: -0.5,
+      marginBottom: sp.xs,
+    },
+    featuredDate: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#c2410c',
+      marginBottom: 2,
+    },
+    featuredLocation: {
+      fontSize: 12,
+      color: '#9a3412',
+    },
+    featuredFooter: {
+      padding: sp.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.canvas,
+      flexWrap: 'wrap',
+      gap: sp.sm,
+    },
+    rsvpSpotlightBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: '#ea580c',
+      paddingHorizontal: sp.lg,
+      paddingVertical: 10,
+      borderRadius: radius.pill,
+    },
+    rsvpSpotlightBtnText: {
+      color: colors.canvas,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: sp.md,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: colors.ink,
+      letterSpacing: -0.3,
+    },
+    loadingBox: {
+      padding: sp.xxl,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadingText: {
+      fontSize: 13,
+      color: colors.inkSecondary,
+    },
+    emptyBox: {
+      backgroundColor: colors.canvas,
+      borderRadius: radius.card,
+      padding: sp.xxl,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+    },
+    emptyEmoji: {
+      fontSize: 44,
+      marginBottom: sp.sm,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: colors.ink,
+      marginBottom: 4,
+    },
+    emptySubtitle: {
+      fontSize: 12,
+      color: colors.inkSecondary,
+      textAlign: 'center',
+      marginBottom: sp.md,
+    },
+    resetBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: colors.accentBrand,
+      paddingHorizontal: sp.lg,
+      paddingVertical: 8,
+      borderRadius: radius.pill,
+    },
+    resetBtnText: {
+      color: colors.canvas,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    eventsGrid: {
+      gap: sp.md,
+    },
+    eventCard: {
+      backgroundColor: colors.canvas,
+      borderRadius: radius.card,
+      padding: sp.lg,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      shadowColor: '#000',
+      shadowOpacity: 0.03,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    cardTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: sp.xs,
+    },
+    categoryTagPill: {
+      backgroundColor: '#f5f3ff',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: radius.pill,
+    },
+    categoryTagText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#6d28d9',
+    },
+    cardTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: colors.ink,
+      letterSpacing: -0.3,
+      marginBottom: 6,
+    },
+    cardDate: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#ea580c',
+      marginBottom: 2,
+    },
+    cardLocation: {
+      fontSize: 12,
+      color: colors.inkSecondary,
+      marginBottom: sp.sm,
+    },
+    cardActionsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sp.sm,
+    },
+    viewDetailsBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      height: 40,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    viewDetailsText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.ink,
+    },
+    hostPromptBanner: {
+      marginTop: sp.xl,
+      backgroundColor: '#ede9fe',
+      borderRadius: radius.panel,
+      padding: sp.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sp.md,
+      borderWidth: 1,
+      borderColor: '#ddd6fe',
+    },
+    hostPromptEmoji: {
+      fontSize: 28,
+    },
+    hostPromptContent: {
+      flex: 1,
+    },
+    hostPromptTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: '#4c1d95',
+      marginBottom: 2,
+    },
+    hostPromptSubtitle: {
+      fontSize: 11,
+      color: '#6d28d9',
+      lineHeight: 16,
+    },
+    createEventBannerBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: colors.accentBrand,
+      paddingHorizontal: sp.md,
+      paddingVertical: 8,
+      borderRadius: radius.pill,
+    },
+    createEventBannerBtnText: {
+      color: colors.canvas,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+  });
+};

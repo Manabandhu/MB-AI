@@ -107,3 +107,8 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
   - **Local stub:** it implements `DELETE/PUT /auth/v1/admin/users/{id}` (service role `local-service-role`) and puts `amr` on its tokens.
   - **Setup docs:** dashboard setup (redirect URLs, providers, templates, secrets, store URLs) is in `docs/auth/SUPABASE_SETUP.md`.
 - Review fix (2026-10-11): `AccountService.delete` is not transactional. The expense-group ownership transfer commits first (`TransactionOperations`), then Supabase deletes the user; before this fix the cascade waited on our uncommitted row lock until the HTTP call timed out. The deleted member's own expenses and settlements in shared groups are removed with the account, and the Account & data copy says so.
+
+## UX refresh (2026-10-13)
+
+- Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
+- Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.

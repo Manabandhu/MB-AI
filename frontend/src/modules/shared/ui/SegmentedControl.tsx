@@ -1,6 +1,7 @@
 import { XStack } from 'tamagui';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 type Option<T extends string> = {
@@ -60,6 +61,7 @@ export function SegmentedControl<T extends string>({
             key={option.value}
             minHeight="$touch"
             onPress={() => onChange(option.value)}
+            {...keyboardPress(() => onChange(option.value))}
             paddingHorizontal="$x2"
             shadowColor={selected ? '$shadowColor' : 'transparent'}
             shadowOpacity={selected ? 0.08 : 0}
@@ -74,7 +76,9 @@ export function SegmentedControl<T extends string>({
             ) : null}
             <AppText
               color={selected ? '$primary' : '$colorMuted'}
-              numberOfLines={1}
+              numberOfLines={2}
+              flexShrink={1}
+              textAlign="center"
               variant="label"
             >
               {option.label}

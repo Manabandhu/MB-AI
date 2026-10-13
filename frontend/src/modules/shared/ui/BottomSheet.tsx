@@ -1,4 +1,4 @@
-import { spring } from '@manabandhu/design-system';
+import { breakpoint, spring } from '@manabandhu/design-system';
 import { type ReactNode, useEffect, useState } from 'react';
 import {
   Keyboard,
@@ -8,7 +8,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
@@ -22,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { XStack, YStack } from 'tamagui';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { useClientReady, useWindowDimensions } from '@/platform/windowDimensions';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 /** Gap kept between the sheet's top edge and the status bar / notch. */
@@ -62,7 +62,9 @@ export function BottomSheet({
   scrollable = false,
 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
+  const clientReady = useClientReady();
+  const centered = width >= breakpoint.medium;
   const { reduceMotion, palette } = useAppearance();
   const [mounted, setMounted] = useState(visible);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -70,6 +72,15 @@ export function BottomSheet({
   const translateY = useSharedValue(offscreen);
   const backdrop = useSharedValue(0);
   const maxHeight = height - insets.top - SHEET_TOP_MARGIN;
+
+  useEffect(() => {
+    if (!visible || Platform.OS !== 'web') return;
+    const listener = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, [visible, onClose]);
 
   useEffect(() => {
     const show = Keyboard.addListener(
@@ -113,7 +124,7 @@ export function BottomSheet({
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
   const backdropStyle = useAnimatedStyle(() => ({ opacity: backdrop.value }));
 
-  if (!mounted) return null;
+  if (!mounted || !clientReady) return null;
   return (
     <Modal animationType="none" onRequestClose={onClose} statusBarTranslucent transparent visible>
       <GestureHandlerRootView style={styles.fill}>
@@ -125,13 +136,18 @@ export function BottomSheet({
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           pointerEvents="box-none"
-          style={styles.end}
+          style={[styles.end, centered && { justifyContent: 'center', padding: 16 }]}
         >
           <Animated.View style={[styles.sheetWidth, sheetStyle]}>
             <YStack
+              role="dialog"
+              aria-label={title}
+              aria-modal={true}
               backgroundColor="$surface"
-              borderTopLeftRadius={28}
-              borderTopRightRadius={28}
+              borderTopLeftRadius="$panel"
+              borderTopRightRadius="$panel"
+              borderBottomLeftRadius={centered ? '$panel' : 0}
+              borderBottomRightRadius={centered ? '$panel' : 0}
               height={size === 'tall' ? maxHeight * TALL_SHEET_RATIO : undefined}
               maxHeight={maxHeight}
               paddingBottom={

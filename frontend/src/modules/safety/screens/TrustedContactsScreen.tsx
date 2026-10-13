@@ -1,4 +1,4 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
@@ -8,9 +8,11 @@ import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function TrustedContactsScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const layout = useAdaptiveLayout();
   const contacts = useQuery({
@@ -93,31 +95,33 @@ export function TrustedContactsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    padding: space.x4,
-  },
-  avatar: {
-    alignItems: 'center',
-    backgroundColor: colors.primarySoft,
-    borderRadius: radius.pill,
-    height: 48,
-    justifyContent: 'center',
-    width: 48,
-  },
-  avatarText: { color: colors.primary, fontSize: 16, fontWeight: '800' },
-  details: { flex: 1, gap: space.x1 },
-  name: { color: colors.ink, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  relationship: { color: colors.teal, fontSize: 14, fontWeight: '700' },
-  meta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    container: { alignSelf: 'center', gap: space.x6, width: '100%' },
+    list: { gap: space.x3 },
+    card: {
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x3,
+      padding: space.x4,
+    },
+    avatar: {
+      alignItems: 'center',
+      backgroundColor: palette.primarySoft,
+      borderRadius: radius.pill,
+      height: 48,
+      justifyContent: 'center',
+      width: 48,
+    },
+    avatarText: { color: palette.primary, fontSize: 16, fontWeight: '800' },
+    details: { flex: 1, gap: space.x1 },
+    name: { color: palette.ink, fontSize: 16, fontWeight: '700', lineHeight: 22 },
+    relationship: { color: palette.teal, fontSize: 14, fontWeight: '700' },
+    meta: { color: palette.muted, fontSize: 12, fontWeight: '600' },
+  });
+};

@@ -6,7 +6,7 @@
     "colorLiteral": 13
   },
   "auth/components/AuthKit.tsx": {
-    "colorLiteral": 12
+    "colorLiteral": 4
   },
   "auth/screens/OtpVerificationScreen.tsx": {
     "colorLiteral": 2
@@ -24,61 +24,37 @@
     "colorLiteral": 5
   },
   "community/screens/CreatePostScreen.tsx": {
-    "colorLiteral": 11,
-    "localPalette": 1
+    "colorLiteral": 4
   },
   "community/screens/PostDetailsScreen.tsx": {
-    "colorLiteral": 23,
-    "localPalette": 1
+    "colorLiteral": 13
   },
   "events/screens/CreateEventScreen.tsx": {
-    "colorLiteral": 8,
-    "localPalette": 1
+    "colorLiteral": 1
   },
   "events/screens/EventDetailsScreen.tsx": {
-    "colorLiteral": 17,
-    "localPalette": 1
+    "colorLiteral": 14
   },
   "events/screens/EventsHomeScreen.tsx": {
-    "colorLiteral": 25,
-    "localPalette": 1
+    "colorLiteral": 22
   },
   "expenses/screens/AddExpenseScreen.tsx": {
-    "colorLiteral": 11,
-    "localPalette": 1
+    "colorLiteral": 3
   },
   "expenses/screens/BalancesScreen.tsx": {
     "colorLiteral": 16
   },
   "expenses/screens/ExpensesHomeScreen.tsx": {
-    "colorLiteral": 43
-  },
-  "foundation/screens/OnboardingScreen.tsx": {
-    "colorLiteral": 3,
-    "localPalette": 1
-  },
-  "foundation/screens/SavedScreen.tsx": {
-    "colorLiteral": 11,
-    "localPalette": 1
-  },
-  "foundation/screens/SearchScreen.tsx": {
-    "colorLiteral": 19,
-    "localPalette": 1
-  },
-  "foundation/screens/SettingsScreen.tsx": {
-    "colorLiteral": 8,
-    "localPalette": 1
+    "colorLiteral": 42
   },
   "foundation/screens/WelcomeScreen.tsx": {
     "colorLiteral": 9
   },
   "jobs/screens/JobDetailsScreen.tsx": {
-    "colorLiteral": 16,
-    "localPalette": 1
+    "colorLiteral": 13
   },
   "jobs/screens/JobsHomeScreen.tsx": {
-    "colorLiteral": 22,
-    "localPalette": 1
+    "colorLiteral": 19
   },
   "referrals/screens/ReferralDetailsScreen.tsx": {
     "colorLiteral": 90
@@ -87,8 +63,7 @@
     "colorLiteral": 98
   },
   "safety/screens/SafetyCenterScreen.tsx": {
-    "colorLiteral": 24,
-    "localPalette": 1
+    "colorLiteral": 15
   },
   "shared/components/UniversalMapView.tsx": {
     "colorLiteral": 21
@@ -97,7 +72,6 @@
     "colorLiteral": 29
   },
   "utilities/screens/UtilitiesHomeScreen.tsx": {
-    "colorLiteral": 16,
-    "localPalette": 1
+    "colorLiteral": 8
   }
 }

@@ -1,6 +1,6 @@
-import { color, palette, radius, space } from '@manabandhu/design-system';
+import { breakpoint, color, paletteFor, radius, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
-import { forwardRef, type ReactNode, useState } from 'react';
+import { forwardRef, type ReactNode, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,15 +11,17 @@ import {
   Text,
   TextInput,
   type TextInputProps,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { BrandMark } from '@/modules/shared/ui/BrandLogo';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
+import { useWindowDimensions } from '@/platform/windowDimensions';
+import { useAppearance } from '@/theme/ThemeProvider';
 
 /** Width at which the auth flow switches from a full-bleed phone layout to a centered card. */
-const CARD_BREAKPOINT = 600;
+const CARD_BREAKPOINT = breakpoint.medium;
 
 type AuthScreenProps = {
   title: string;
@@ -44,6 +46,7 @@ export function AuthScreen({
   children,
   footer,
 }: AuthScreenProps) {
+  const { styles, color } = useAuthTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const wide = width >= CARD_BREAKPOINT;
@@ -59,6 +62,7 @@ export function AuthScreen({
             aria-label="Go back"
             hitSlop={8}
             onPress={goBack}
+            {...keyboardPress(goBack)}
             style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           >
             <AppIcon name="chevron-left" size={22} color={color.ink} />
@@ -131,6 +135,7 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
   { label, error, hint, password, leading, style, onFocus, onBlur, ...inputProps },
   ref,
 ) {
+  const { styles, color } = useAuthTheme();
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   return (
@@ -147,7 +152,7 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
         <TextInput
           ref={ref}
           aria-label={label}
-          placeholderTextColor="#8e8a99"
+          placeholderTextColor={color.muted}
           secureTextEntry={password ? !revealed : inputProps.secureTextEntry}
           style={[styles.input, style]}
           onFocus={(event) => {
@@ -166,6 +171,7 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
             aria-label={revealed ? 'Hide password' : 'Show password'}
             hitSlop={10}
             onPress={() => setRevealed((value) => !value)}
+            {...keyboardPress(() => setRevealed((value) => !value))}
             style={styles.reveal}
           >
             <AppIcon name={revealed ? 'eye-closed' : 'eye'} size={20} color={color.muted} />
@@ -200,6 +206,7 @@ export function AuthButton({
   disabled,
   accessibilityHint,
 }: AuthButtonProps) {
+  const { styles, color } = useAuthTheme();
   const inactive = disabled || loading;
   const textStyle = [
     styles.buttonText,
@@ -215,6 +222,7 @@ export function AuthButton({
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
       disabled={inactive}
       onPress={onPress}
+      {...keyboardPress(onPress, !inactive)}
       style={({ pressed }) => [
         variant === 'link' ? styles.linkButton : styles.button,
         variant === 'primary' && styles.primary,
@@ -233,7 +241,19 @@ export function AuthButton({
         <View style={styles.buttonRow}>
           {variant === 'apple' ? <AppIcon name="apple" size={19} color="#ffffff" /> : null}
           {variant === 'google' ? <AppIcon name="google" size={18} /> : null}
-          <Text style={textStyle}>{label}</Text>
+          <Text
+            style={[
+              textStyle,
+              variant === 'primary' && {
+                color:
+                  color.primary === paletteFor('dark').primary
+                    ? color.background
+                    : paletteFor('light').surface,
+              },
+            ]}
+          >
+            {label}
+          </Text>
         </View>
       )}
     </Pressable>
@@ -250,6 +270,7 @@ export function SocialButtons({
   onGoogle: () => void;
   busy?: 'apple' | 'google' | null;
 }) {
+  const { styles } = useAuthTheme();
   return (
     <View style={styles.stack}>
       <AuthButton
@@ -271,6 +292,7 @@ export function SocialButtons({
 }
 
 export function AuthDivider({ label = 'or' }: { label?: string }) {
+  const { styles } = useAuthTheme();
   return (
     <View style={styles.divider} aria-hidden>
       <View style={styles.dividerLine} />
@@ -287,6 +309,7 @@ export function AuthNotice({
   tone?: 'error' | 'success' | 'info';
   children: ReactNode;
 }) {
+  const { styles, color } = useAuthTheme();
   return (
     <View
       role="alert"
@@ -317,10 +340,17 @@ export function AuthSwitch({
   action: string;
   onPress: () => void;
 }) {
+  const { styles } = useAuthTheme();
   return (
     <View style={styles.switchRow}>
       <Text style={styles.switchPrompt}>{prompt}</Text>
-      <Pressable role="link" hitSlop={10} onPress={onPress}>
+      <Pressable
+        role="link"
+        aria-label={action}
+        hitSlop={10}
+        onPress={onPress}
+        {...keyboardPress(onPress)}
+      >
         <Text style={styles.switchAction}>{action}</Text>
       </Pressable>
     </View>
@@ -332,127 +362,139 @@ export const authStyles = StyleSheet.create({
   legal: { color: color.muted, fontSize: 13, lineHeight: 18, textAlign: 'center' },
 });
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.surface },
-  rootWide: { backgroundColor: color.background },
-  scroll: { flexGrow: 1, paddingHorizontal: space.x6 },
-  scrollWide: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.x6 },
-  card: {
-    width: '100%',
-    maxWidth: 460,
-    backgroundColor: color.surface,
-    borderRadius: radius.panel,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-    paddingHorizontal: space.x8,
-    paddingVertical: space.x8,
-    shadowColor: palette.ink,
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-  },
-  cardFooter: { marginTop: space.x6, gap: space.x3 },
-  topBar: {
-    height: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    marginLeft: -10,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backPlaceholder: { width: 44, height: 44 },
-  cardLogo: { marginBottom: space.x4 },
-  title: {
-    marginTop: space.x4,
-    color: color.ink,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '800',
-    letterSpacing: -0.6,
-  },
-  subtitle: { marginTop: space.x2, color: color.muted, fontSize: 17, lineHeight: 24 },
-  content: { marginTop: space.x6, gap: space.x5 },
-  footer: {
-    paddingHorizontal: space.x6,
-    paddingTop: space.x3,
-    gap: space.x3,
-    backgroundColor: color.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
-  field: { gap: space.x2 },
-  label: { color: color.ink, fontSize: 15, fontWeight: '600' },
-  inputBox: {
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#d9d5e4',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: space.x4,
-    gap: space.x2,
-  },
-  inputBoxFocused: { borderColor: color.primary, borderWidth: 2, paddingHorizontal: space.x4 - 1 },
-  inputBoxError: { borderColor: color.error },
-  // The bordered box already shows focus, so drop the browser's own outline on web.
-  input: {
-    flex: 1,
-    minHeight: 50,
-    color: color.ink,
-    fontSize: 17,
-    ...(Platform.OS === 'web' ? { outlineWidth: 0 } : null),
-  },
-  reveal: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  hint: { color: color.muted, fontSize: 13, lineHeight: 18 },
-  fieldError: { color: color.error, fontSize: 13, lineHeight: 18, fontWeight: '600' },
-  button: {
-    minHeight: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: space.x5,
-  },
-  primary: { backgroundColor: color.primary },
-  secondary: { backgroundColor: color.primarySoft },
-  apple: { backgroundColor: '#000000' },
-  google: { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#d9d5e4' },
-  buttonDisabled: { opacity: 0.45 },
-  pressed: { opacity: 0.75 },
-  buttonRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  buttonText: { fontSize: 17, fontWeight: '600' },
-  buttonTextLight: { color: '#ffffff' },
-  buttonTextDark: { color: color.ink },
-  linkButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  linkText: { color: color.primary, fontSize: 16, fontWeight: '600' },
-  stack: { gap: space.x3 },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: space.x3 },
-  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#d9d5e4' },
-  dividerText: { color: color.muted, fontSize: 14 },
-  notice: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: space.x2,
-    borderRadius: 12,
-    padding: space.x3,
-  },
-  noticeError: { backgroundColor: '#fdecec' },
-  noticeSuccess: { backgroundColor: '#e8f5ec' },
-  noticeInfo: { backgroundColor: color.primarySoft },
-  noticeText: { flex: 1, color: color.ink, fontSize: 15, lineHeight: 21 },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: 44,
-  },
-  switchPrompt: { color: color.muted, fontSize: 15 },
-  switchAction: { color: color.primary, fontSize: 15, fontWeight: '700' },
-});
+function createAuthStyles(color: ReturnType<typeof paletteFor>) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: color.surface },
+    rootWide: { backgroundColor: color.background },
+    scroll: { flexGrow: 1, paddingHorizontal: space.x6 },
+    scrollWide: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.x6 },
+    card: {
+      width: '100%',
+      maxWidth: 520,
+      backgroundColor: color.surface,
+      borderRadius: radius.panel,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: color.border,
+      paddingHorizontal: space.x8,
+      paddingVertical: space.x8,
+      shadowColor: color.ink,
+      shadowOpacity: 0.08,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 12 },
+    },
+    cardFooter: { marginTop: space.x6, gap: space.x3 },
+    topBar: {
+      height: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      marginLeft: -10,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backPlaceholder: { width: 44, height: 44 },
+    cardLogo: { marginBottom: space.x4 },
+    title: {
+      marginTop: space.x4,
+      color: color.ink,
+      fontSize: 32,
+      lineHeight: 38,
+      fontWeight: '700',
+      letterSpacing: -0.6,
+    },
+    subtitle: { marginTop: space.x2, color: color.muted, fontSize: 17, lineHeight: 24 },
+    content: { marginTop: space.x6, gap: space.x5 },
+    footer: {
+      paddingHorizontal: space.x6,
+      paddingTop: space.x3,
+      gap: space.x3,
+      backgroundColor: color.surface,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: color.border,
+    },
+    field: { gap: space.x2 },
+    label: { color: color.ink, fontSize: 15, fontWeight: '600' },
+    inputBox: {
+      minHeight: 52,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: color.border,
+      backgroundColor: color.surface,
+      paddingHorizontal: space.x4,
+      gap: space.x2,
+    },
+    inputBoxFocused: {
+      borderColor: color.primary,
+      borderWidth: 2,
+      paddingHorizontal: space.x4 - 1,
+    },
+    inputBoxError: { borderColor: color.error },
+    // The bordered box already shows focus, so drop the browser's own outline on web.
+    input: {
+      flex: 1,
+      minHeight: 50,
+      color: color.ink,
+      fontSize: 17,
+      ...(Platform.OS === 'web' ? { outlineWidth: 0 } : null),
+    },
+    reveal: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+    hint: { color: color.muted, fontSize: 13, lineHeight: 18 },
+    fieldError: { color: color.error, fontSize: 13, lineHeight: 18, fontWeight: '600' },
+    button: {
+      minHeight: 52,
+      borderRadius: radius.control,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: space.x5,
+    },
+    primary: { backgroundColor: color.primary },
+    secondary: { backgroundColor: color.primarySoft },
+    apple: { backgroundColor: '#000000' },
+    google: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
+    buttonDisabled: { opacity: 0.45 },
+    pressed: { opacity: 0.75 },
+    buttonRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
+    buttonText: { fontSize: 17, fontWeight: '600' },
+    buttonTextLight: { color: '#ffffff' },
+    buttonTextDark: { color: color.ink },
+    linkButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+    linkText: { color: color.primary, fontSize: 16, fontWeight: '600' },
+    stack: { gap: space.x3 },
+    divider: { flexDirection: 'row', alignItems: 'center', gap: space.x3 },
+    dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: color.border },
+    dividerText: { color: color.muted, fontSize: 14 },
+    notice: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: space.x2,
+      borderRadius: 12,
+      padding: space.x3,
+    },
+    noticeError: { backgroundColor: color.errorBg },
+    noticeSuccess: { backgroundColor: color.successBg },
+    noticeInfo: { backgroundColor: color.primarySoft },
+    noticeText: { flex: 1, color: color.ink, fontSize: 15, lineHeight: 21 },
+    switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 44,
+    },
+    switchPrompt: { color: color.muted, fontSize: 15 },
+    switchAction: { color: color.primary, fontSize: 15, fontWeight: '700' },
+  });
+}
+
+function useAuthTheme() {
+  const { palette: color } = useAppearance();
+  const styles = useMemo(() => createAuthStyles(color), [color]);
+  return { styles, color };
+}

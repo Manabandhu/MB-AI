@@ -40,7 +40,7 @@ const toneStyle = {
   danger: { background: '$errorBg', icon: 'error' },
 } as const satisfies Record<ModuleTone, { background: string; icon: string }>;
 
-const MODULE_COLUMNS = { compact: 1, medium: 2, expanded: 3, wide: 3 } as const;
+const MODULE_COLUMNS = { compact: 2, medium: 2, expanded: 3, wide: 3 } as const;
 const RECENT_COLUMNS = { compact: 2, medium: 2, expanded: 4, wide: 4 } as const;
 const RECENT_LIMIT = 4;
 
@@ -64,24 +64,31 @@ function ToneIcon({ module, size }: { module: LauncherModule; size: number }) {
 function ModuleCard({ module, onOpen }: { module: LauncherModule; onOpen: () => void }) {
   const { palette } = useAppearance();
   return (
-    <Card aria-label={`${module.label}. ${module.summary}`} onPress={onOpen}>
-      <XStack alignItems="center" gap="$x3">
-        <ToneIcon module={module} size={48} />
-        <YStack flex={1} gap={2}>
+    <Card aria-label={`${module.label}. ${module.summary}`} href={module.route} onPress={onOpen}>
+      <YStack gap="$x3">
+        <XStack alignItems="center" justifyContent="space-between">
+          <ToneIcon module={module} size={48} />
+          <AppIcon color={palette.muted} name="arrow-right" size={18} />
+        </XStack>
+        <YStack flex={1} gap="$x1" minWidth={0}>
           <AppText variant="bodyStrong">{module.label}</AppText>
           <AppText numberOfLines={2} tone="muted" variant="caption">
             {module.summary}
           </AppText>
         </YStack>
-        <AppIcon color={palette.muted} name="chevron-right" size={18} />
-      </XStack>
+      </YStack>
     </Card>
   );
 }
 
 function RecentTile({ module, onOpen }: { module: LauncherModule; onOpen: () => void }) {
   return (
-    <Card aria-label={`${module.label}, recently used`} onPress={onOpen} padding="$x3">
+    <Card
+      aria-label={`${module.label}, recently used`}
+      href={module.route}
+      onPress={onOpen}
+      padding="$x3"
+    >
       <XStack alignItems="center" gap="$x2" minHeight="$touch">
         <ToneIcon module={module} size={40} />
         <AppText flex={1} numberOfLines={1} variant="bodyStrong">

@@ -86,3 +86,8 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - Public API: `ai-assistant/index.ts` exports `moduleMeta` (launcher entry, route `/assistant`).
 - `ai-assistant/home/AssistantEntry.tsx` (exported from `index.ts`) is the Home entry: an input-like card plus quick prompts that open `/assistant?prompt=…`. `AssistantScreen` reads `prompt` and only pre-fills the input; the member still sends it.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['ask', 'question', 'help', 'ai', 'chatbot', 'answers']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+
+## UX refresh (2026-10-13)
+
+- Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
+- Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.

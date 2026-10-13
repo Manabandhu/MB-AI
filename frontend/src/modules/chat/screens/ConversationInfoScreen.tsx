@@ -1,4 +1,4 @@
-import { color } from '@manabandhu/design-system';
+import { radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -10,9 +10,11 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export default function ConversationInfoScreen() {
+  const { styles, color } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const layout = useAdaptiveLayout();
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
@@ -236,104 +238,110 @@ export default function ConversationInfoScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: color.background },
-  page: { flexGrow: 1, padding: 16 },
-  container: { gap: 16, width: '100%', alignSelf: 'center' },
-  topNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  topNavTitle: { fontSize: 16, fontWeight: '700', color: color.ink },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  avatarLarge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(67,30,190,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  avatarLargeText: { fontSize: 24, fontWeight: '700', color: color.primary },
-  convoTitle: { fontSize: 18, fontWeight: '700', color: color.ink, textAlign: 'center' },
-  convoSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 4 },
-  memberList: { gap: 8 },
-  memberItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 12,
-  },
-  memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberAvatarText: { fontSize: 14, fontWeight: '600', color: color.ink },
-  memberInfo: { flex: 1 },
-  memberName: { fontSize: 14, fontWeight: '600', color: color.ink },
-  memberRole: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  mediaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  mediaThumb: {
-    width: 90,
-    height: 90,
-    borderRadius: 10,
-    backgroundColor: '#f3f4f6',
-  },
-  emptyMedia: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
-    gap: 8,
-  },
-  emptyMediaText: { fontSize: 13, color: '#9ca3af' },
-  actionGroup: { gap: 8 },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 12,
-  },
-  actionBtnText: { fontSize: 14, fontWeight: '600', color: color.ink },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { flexGrow: 1, padding: 16 },
+    container: { gap: 16, width: '100%', alignSelf: 'center' },
+    topNav: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 8,
+    },
+    backBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 40,
+      height: 40,
+      borderRadius: radius.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+    },
+    topNavTitle: { fontSize: 16, fontWeight: '700', color: palette.ink },
+    card: {
+      backgroundColor: '#fff',
+      borderRadius: radius.card,
+      padding: 24,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+    },
+    avatarLarge: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: 'rgba(67,30,190,0.1)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 12,
+    },
+    avatarLargeText: { fontSize: 24, fontWeight: '700', color: palette.primary },
+    convoTitle: { fontSize: 18, fontWeight: '700', color: palette.ink, textAlign: 'center' },
+    convoSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 4 },
+    memberList: { gap: 8 },
+    memberItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#fff',
+      padding: 12,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+      gap: 12,
+    },
+    memberAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.card,
+      backgroundColor: '#f3f4f6',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    memberAvatarText: { fontSize: 14, fontWeight: '600', color: palette.ink },
+    memberInfo: { flex: 1 },
+    memberName: { fontSize: 14, fontWeight: '600', color: palette.ink },
+    memberRole: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+    mediaGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    mediaThumb: {
+      width: 90,
+      height: 90,
+      borderRadius: 10,
+      backgroundColor: '#f3f4f6',
+    },
+    emptyMedia: {
+      backgroundColor: '#fff',
+      borderRadius: radius.control,
+      padding: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+      borderStyle: 'dashed',
+      gap: 8,
+    },
+    emptyMediaText: { fontSize: 13, color: '#9ca3af' },
+    actionGroup: { gap: 8 },
+    actionBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#fff',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+      gap: 12,
+    },
+    actionBtnText: { fontSize: 14, fontWeight: '600', color: palette.ink },
+  });
+};

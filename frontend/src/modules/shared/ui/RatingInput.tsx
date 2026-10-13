@@ -1,6 +1,7 @@
 import { XStack, YStack } from 'tamagui';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 const DEFAULT_LABELS = ['Poor', 'Fair', 'Good', 'Very good', 'Excellent'] as const;
@@ -45,6 +46,7 @@ export function RatingInput({
               justifyContent="center"
               key={word}
               onPress={() => onChange(n)}
+              {...keyboardPress(() => onChange(n))}
               pressStyle={{ opacity: 0.7 }}
               role="radio"
               width="$touch"

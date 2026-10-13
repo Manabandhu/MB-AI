@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
+import { useQuickJump } from '@/modules/foundation/launcher/QuickJump';
 import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { useFormFactor } from '@/platform/formFactor';
@@ -17,9 +18,10 @@ type TabHeaderProps = { title: string; subtitle?: string; actions?: ReactNode };
 export function TabHeader({ title, subtitle, actions }: TabHeaderProps) {
   const { navigationStyle } = useFormFactor();
   const t = useT();
+  const open = useQuickJump();
   return (
-    <XStack alignItems="flex-start" gap="$x3">
-      <YStack flex={1} gap="$x1">
+    <XStack alignItems="flex-start" flexWrap="wrap" gap="$x3">
+      <YStack flex={1} minWidth={160} gap="$x1">
         <Heading variant="h1">{title}</Heading>
         {subtitle ? <AppText tone="muted">{subtitle}</AppText> : null}
       </YStack>
@@ -29,12 +31,20 @@ export function TabHeader({ title, subtitle, actions }: TabHeaderProps) {
         </XStack>
       ) : null}
       {navigationStyle === 'bottom' ? (
-        <IconButton
-          badge={<UnreadNotificationDot />}
-          icon="bell"
-          label={t('shell.notifications')}
-          onPress={() => router.push('/notifications')}
-        />
+        <XStack gap="$x2">
+          <IconButton
+            icon="compass"
+            label={t('navigation.openJump')}
+            onPress={open}
+            variant="plain"
+          />
+          <IconButton
+            badge={<UnreadNotificationDot />}
+            icon="bell"
+            label={t('shell.notifications')}
+            onPress={() => router.push('/notifications')}
+          />
+        </XStack>
       ) : null}
     </XStack>
   );

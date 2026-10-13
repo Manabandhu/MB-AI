@@ -13,6 +13,7 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
@@ -30,7 +31,7 @@ function badgesFor(user: User | null): { label: string; icon: AppIconName }[] {
 const activityLinks = [
   { label: 'My room listings', icon: 'bed', route: '/rooms/my-listings' },
   { label: 'My rides', icon: 'car', route: '/rides/mine' },
-  { label: 'Saved items', icon: 'bookmark', route: '/saved' },
+  { label: 'Saved items', icon: 'heart', route: '/saved' },
   { label: 'My referrals', icon: 'handshake', route: '/referrals/mine' },
   { label: 'My events', icon: 'calendar', route: '/events/mine' },
 ] as const satisfies readonly { label: string; icon: AppIconName; route: string }[];
@@ -74,8 +75,14 @@ export function ProfileTab() {
               aria-label={t('nickname.row')}
               cursor="pointer"
               gap="$x1"
-              minHeight={32}
+              minHeight="$touch"
               onPress={() => setNicknameOpen(true)}
+              {...keyboardPress(() => setNicknameOpen(true))}
+              focusVisibleStyle={{
+                outlineWidth: 3,
+                outlineColor: '$outlineColor',
+                outlineStyle: 'solid',
+              }}
               role="button"
             >
               <AppText tone="muted" variant="caption">

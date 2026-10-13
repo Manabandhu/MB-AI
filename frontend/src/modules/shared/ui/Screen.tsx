@@ -77,6 +77,8 @@ export function Screen({
       {header}
       {insideTabs ? <TabScrollToTop scrollRef={scrollRef} /> : null}
       <ScrollView
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingBottom:
             (insideTabs ? TAB_SCREEN_BOTTOM_GAP : SCREEN_BOTTOM_GAP + insets.bottom) + bottomInset,
@@ -101,7 +103,8 @@ export function Screen({
           gap={windowClass === 'compact' ? '$x5' : '$x6'}
           maxWidth={contentWidth + gutter * 2}
           paddingHorizontal={gutter}
-          paddingTop={hero ? 0 : 8}
+          paddingTop={hero ? 0 : 16}
+          minWidth={0}
           width="100%"
         >
           {children}

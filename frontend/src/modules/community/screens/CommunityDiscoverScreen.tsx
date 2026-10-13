@@ -1,4 +1,4 @@
-import { color as colors, contentWidth, radius, space } from '@manabandhu/design-system';
+import { contentWidth, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -10,9 +10,11 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SearchBar } from '@/modules/shared/components/SearchBar';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function CommunityDiscoverScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   const _router = useRouter();
   const layout = useAdaptiveLayout();
   const maxWidth = layout.windowClass === 'compact' ? contentWidth.compact : layout.maxContentWidth;
@@ -84,21 +86,23 @@ export function CommunityDiscoverScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
-  item: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  itemBody: { gap: space.x1 },
-  itemTitle: { color: colors.ink, fontSize: 17, fontWeight: '800', lineHeight: 22 },
-  itemSubtitle: { color: colors.muted, fontSize: 14, lineHeight: 20 },
-  itemMeta: { color: colors.primary, fontSize: 12, fontWeight: '700', marginTop: space.x1 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { backgroundColor: palette.background, flexGrow: 1, padding: space.x4 },
+    container: { alignSelf: 'center', gap: space.x6, width: '100%' },
+    list: { gap: space.x3 },
+    item: {
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      gap: space.x2,
+      padding: space.x4,
+    },
+    itemBody: { gap: space.x1 },
+    itemTitle: { color: palette.ink, fontSize: 17, fontWeight: '800', lineHeight: 22 },
+    itemSubtitle: { color: palette.muted, fontSize: 14, lineHeight: 20 },
+    itemMeta: { color: palette.primary, fontSize: 12, fontWeight: '700', marginTop: space.x1 },
+  });
+};

@@ -1,4 +1,4 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,10 +8,12 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { getEmergencyResources } from '@/modules/utilities/api';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function EmergencyResourcesScreen() {
+  const { styles, palette } = useScreenStyles(createScreenStyles);
   const layout = useAdaptiveLayout();
   const resources = useQuery({
     queryKey: ['utilities', 'emergency'],
@@ -72,7 +74,7 @@ export function EmergencyResourcesScreen() {
               {data.map((item) => (
                 <View key={item.id} style={styles.card}>
                   <View style={styles.iconRow}>
-                    <AppIcon color={colors.error} name="shield" size={20} />
+                    <AppIcon color={palette.error} name="shield" size={20} />
                     <Text style={styles.cardTitle}>{item.title}</Text>
                   </View>
                   <Text style={styles.cardBody}>{item.body}</Text>
@@ -87,21 +89,23 @@ export function EmergencyResourcesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  iconRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  cardTitle: { color: colors.ink, flex: 1, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  cardBody: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  cardMeta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { flexGrow: 1, padding: space.x4 },
+    container: { alignSelf: 'center', gap: space.x6, width: '100%' },
+    list: { gap: space.x3 },
+    card: {
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      gap: space.x2,
+      padding: space.x4,
+    },
+    iconRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
+    cardTitle: { color: palette.ink, flex: 1, fontSize: 16, fontWeight: '700', lineHeight: 22 },
+    cardBody: { color: palette.muted, fontSize: 14, lineHeight: 21 },
+    cardMeta: { color: palette.muted, fontSize: 12, fontWeight: '600' },
+  });
+};

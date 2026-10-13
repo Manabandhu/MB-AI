@@ -1,4 +1,4 @@
-import { breakpoint, palette } from '@manabandhu/design-system';
+import { breakpoint, radius } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -10,29 +10,29 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { createEvent, listEventCategories } from '@/modules/events/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
+import { useWindowDimensions } from '@/platform/windowDimensions';
 
-const C = {
+const createScreenColors = (palette: ScreenPalette) => ({
   primary: palette.primary,
-  primarySoft: 'rgba(67,30,190,0.08)',
+  primarySoft: palette.primaryTint,
   teal: palette.teal,
-  tealSoft: 'rgba(0,105,107,0.08)',
+  tealSoft: palette.tealTint,
   accent: palette.warm,
   bg: palette.background,
-  cardBg: '#ffffff',
-  border: '#e8e5f2',
-  ink: '#1b1829',
-  inkMuted: '#6b6882',
-  errorBg: '#fee2e2',
+  cardBg: palette.surface,
+  border: palette.border,
+  ink: palette.ink,
+  inkMuted: palette.muted,
+  errorBg: palette.errorBg,
   errorText: palette.error,
-};
+});
 
 const DATE_PRESETS = [
   { label: 'Upcoming Saturday', offsetDays: 6 },
@@ -48,6 +48,8 @@ function getDefaultDate(offset = 6): string {
 }
 
 export default function CreateEventScreen() {
+  const { styles: s, palette } = useScreenStyles(createScreenStyles);
+  const C = createScreenColors(palette);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
@@ -213,6 +215,7 @@ export default function CreateEventScreen() {
               <View style={s.presetsRow}>
                 {DATE_PRESETS.map((p) => (
                   <Pressable
+                    accessibilityRole="button"
                     key={p.label}
                     onPress={() => setDateTime(getDefaultDate(p.offsetDays))}
                     style={s.presetChip}
@@ -236,6 +239,7 @@ export default function CreateEventScreen() {
               <Text style={s.fieldLabel}>EVENT FORMAT</Text>
               <View style={s.formatRow}>
                 <Pressable
+                  accessibilityRole="button"
                   onPress={() => setIsVirtual(false)}
                   style={[s.formatOption, !isVirtual && s.formatOptionActive]}
                 >
@@ -245,6 +249,7 @@ export default function CreateEventScreen() {
                   </Text>
                 </Pressable>
                 <Pressable
+                  accessibilityRole="button"
                   onPress={() => setIsVirtual(true)}
                   style={[s.formatOption, isVirtual && s.formatOptionActive]}
                 >
@@ -304,210 +309,223 @@ export default function CreateEventScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 48,
-    maxWidth: 680,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  contentDesktop: {
-    padding: 32,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTextCol: {
-    flex: 1,
-  },
-  headerEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.accent,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: C.ink,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.errorBg,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-    marginBottom: 16,
-  },
-  errorBannerText: {
-    color: C.errorText,
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
-  },
-  formCard: {
-    backgroundColor: C.cardBg,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 18,
-    gap: 18,
-  },
-  fieldGroup: {
-    gap: 8,
-  },
-  labelWithCount: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: C.inkMuted,
-    letterSpacing: 0.5,
-  },
-  charCount: {
-    fontSize: 11,
-    color: C.inkMuted,
-    fontWeight: '600',
-  },
-  chipsRow: {
-    gap: 8,
-    paddingVertical: 2,
-  },
-  categoryChip: {
-    backgroundColor: C.bg,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  categoryChipActive: {
-    backgroundColor: C.primary,
-    borderColor: C.primary,
-  },
-  categoryChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.inkMuted,
-  },
-  categoryChipTextActive: {
-    color: '#ffffff',
-  },
-  presetsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 4,
-  },
-  presetChip: {
-    backgroundColor: C.primarySoft,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  presetChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.primary,
-  },
-  input: {
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: C.ink,
-  },
-  textarea: {
-    minHeight: 120,
-    paddingTop: 12,
-  },
-  formatRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  formatOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingVertical: 12,
-  },
-  formatOptionActive: {
-    backgroundColor: C.primarySoft,
-    borderColor: C.primary,
-  },
-  formatOptionText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.inkMuted,
-  },
-  formatOptionTextActive: {
-    color: C.primary,
-  },
-  trustBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.tealSoft,
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
-  },
-  trustBoxText: {
-    flex: 1,
-    fontSize: 12,
-    color: C.teal,
-    lineHeight: 17,
-    fontWeight: '600',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 6,
-  },
-  cancelBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtnText: {
-    color: C.inkMuted,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  const C = createScreenColors(palette);
+  return StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: C.bg,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 48,
+      maxWidth: 680,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    contentDesktop: {
+      padding: 32,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 20,
+      gap: 12,
+    },
+    backBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 40,
+      height: 40,
+      borderRadius: radius.card,
+      backgroundColor: C.cardBg,
+      borderWidth: 1,
+      borderColor: C.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTextCol: {
+      flex: 1,
+    },
+    headerEyebrow: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: C.accent,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+    },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: C.ink,
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: C.errorBg,
+      borderRadius: radius.control,
+      padding: 12,
+      gap: 8,
+      marginBottom: 16,
+    },
+    errorBannerText: {
+      color: C.errorText,
+      fontSize: 13,
+      fontWeight: '600',
+      flex: 1,
+    },
+    formCard: {
+      backgroundColor: C.cardBg,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: C.border,
+      padding: 18,
+      gap: 18,
+    },
+    fieldGroup: {
+      gap: 8,
+    },
+    labelWithCount: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: C.inkMuted,
+      letterSpacing: 0.5,
+    },
+    charCount: {
+      fontSize: 11,
+      color: C.inkMuted,
+      fontWeight: '600',
+    },
+    chipsRow: {
+      gap: 8,
+      paddingVertical: 2,
+    },
+    categoryChip: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: C.bg,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: C.border,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    categoryChipActive: {
+      backgroundColor: C.primary,
+      borderColor: C.primary,
+    },
+    categoryChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: C.inkMuted,
+    },
+    categoryChipTextActive: {
+      color: '#ffffff',
+    },
+    presetsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 4,
+    },
+    presetChip: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: C.primarySoft,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    presetChipText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: C.primary,
+    },
+    input: {
+      backgroundColor: C.bg,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: C.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: C.ink,
+    },
+    textarea: {
+      minHeight: 120,
+      paddingTop: 12,
+    },
+    formatRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    formatOption: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: C.bg,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: C.border,
+      paddingVertical: 12,
+    },
+    formatOptionActive: {
+      backgroundColor: C.primarySoft,
+      borderColor: C.primary,
+    },
+    formatOptionText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: C.inkMuted,
+    },
+    formatOptionTextActive: {
+      color: C.primary,
+    },
+    trustBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: C.tealSoft,
+      borderRadius: radius.control,
+      padding: 12,
+      gap: 10,
+    },
+    trustBoxText: {
+      flex: 1,
+      fontSize: 12,
+      color: C.teal,
+      lineHeight: 17,
+      fontWeight: '600',
+    },
+    actionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 6,
+    },
+    cancelBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: C.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cancelBtnText: {
+      color: C.inkMuted,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+  });
+};

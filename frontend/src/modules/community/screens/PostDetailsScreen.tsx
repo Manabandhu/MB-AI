@@ -1,4 +1,4 @@
-import { breakpoint, palette } from '@manabandhu/design-system';
+import { breakpoint, radius } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -10,28 +10,31 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
+import { useWindowDimensions } from '@/platform/windowDimensions';
 import { addComment, getPost, reactPost } from '../api';
 
-const C = {
-  primary: '#E05638', // Warm Saffron
-  secondary: '#0D5C75', // Deep Gulf Teal
-  bg: '#FFFDF9', // Soft warm ivory
-  cardBg: '#FFFFFF',
-  border: '#E8DEC8',
-  ink: '#151D21',
-  inkMuted: '#6B7280',
-  tealBg: '#E0F2FE',
-  saffronBg: '#FEE2E2',
+const createScreenColors = (palette: ScreenPalette) => ({
+  primary: palette.primary,
+  secondary: palette.teal,
+  bg: palette.background,
+  cardBg: palette.surface,
+  border: palette.border,
+  ink: palette.ink,
+  inkMuted: palette.muted,
+  tealBg: palette.tealBg,
+  saffronBg: palette.warmBg,
   goldBg: palette.goldBg,
   goldText: palette.goldText,
-  emerald: '#16A34A',
-};
+  emerald: palette.success,
+});
 
 export function PostDetailsScreen() {
+  const { styles: s, palette } = useScreenStyles(createScreenStyles);
+  const C = createScreenColors(palette);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
@@ -108,7 +111,7 @@ export function PostDetailsScreen() {
         <AppIcon name="warning" size={44} color={C.primary} />
         <Text style={s.errorTitle}>Discussion Not Found</Text>
         <Text style={s.errorSub}>This post may have been removed or moved to another circle.</Text>
-        <Pressable style={s.backBtn} onPress={() => router.back()}>
+        <Pressable accessibilityRole="button" style={s.backBtn} onPress={() => router.back()}>
           <Text style={s.backBtnText}>Back to Community Hub</Text>
         </Pressable>
       </View>
@@ -195,6 +198,7 @@ export function PostDetailsScreen() {
           {/* Interactive Reactions Bar */}
           <View style={s.reactionBar}>
             <Pressable
+              accessibilityRole="button"
               style={[s.reactionBtn, userReactions.helpful && s.reactionBtnActive]}
               onPress={() => toggleReaction('helpful')}
             >
@@ -205,6 +209,7 @@ export function PostDetailsScreen() {
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
               style={[s.reactionBtn, userReactions.like && s.reactionBtnActive]}
               onPress={() => toggleReaction('like')}
             >
@@ -215,6 +220,7 @@ export function PostDetailsScreen() {
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
               style={[s.reactionBtn, userReactions.heart && s.reactionBtnActive]}
               onPress={() => toggleReaction('heart')}
             >
@@ -285,352 +291,363 @@ export function PostDetailsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  centerRoot: {
-    flex: 1,
-    backgroundColor: C.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: C.inkMuted,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  errorSub: {
-    fontSize: 13,
-    color: C.inkMuted,
-    textAlign: 'center',
-  },
-  backBtn: {
-    backgroundColor: C.secondary,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  backBtnText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.bg,
-    borderBottomWidth: 1,
-    borderColor: C.border,
-  },
-  navIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: C.tealBg,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  commBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  navRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  heartIcon: {
-    fontSize: 18,
-    color: C.ink,
-  },
-  heartIconSaved: {
-    color: '#EF4444',
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 90,
-  },
-  scrollContentDesktop: {
-    maxWidth: 900,
-    alignSelf: 'center',
-    width: '100%',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-  },
-  authorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 14,
-  },
-  authorAvatarRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: C.goldBg,
-    borderWidth: 2,
-    borderColor: '#D99B26',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  authorInitial: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: C.goldText,
-  },
-  authorMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  authorName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  modTag: {
-    backgroundColor: C.saffronBg,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  modTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: C.primary,
-  },
-  authorSub: {
-    fontSize: 12,
-    color: C.inkMuted,
-  },
-  contentCard: {
-    backgroundColor: C.cardBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 18,
-    gap: 14,
-    marginBottom: 20,
-  },
-  postTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: C.ink,
-    lineHeight: 26,
-  },
-  postBody: {
-    fontSize: 14,
-    color: C.ink,
-    lineHeight: 23,
-  },
-  pinnedNote: {
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 12,
-    padding: 14,
-    gap: 6,
-  },
-  pinnedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  pinnedTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  pinnedBody: {
-    fontSize: 12,
-    color: '#0369A1',
-    lineHeight: 18,
-  },
-  reactionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  reactionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  reactionBtnActive: {
-    backgroundColor: C.tealBg,
-    borderColor: C.secondary,
-  },
-  reactionEmoji: {
-    fontSize: 14,
-  },
-  reactionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.inkMuted,
-  },
-  reactionTextActive: {
-    color: C.secondary,
-  },
-  commentsSection: {
-    gap: 12,
-  },
-  commentsHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  commentsHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  topAnswersText: {
-    fontSize: 12,
-    color: C.secondary,
-    fontWeight: '600',
-  },
-  commentCard: {
-    backgroundColor: C.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    gap: 8,
-  },
-  commentAuthorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: C.tealBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commentAvatarText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  commentAuthorMeta: {
-    flex: 1,
-  },
-  commentAuthorName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  commentTime: {
-    fontSize: 11,
-    color: C.inkMuted,
-  },
-  upvotePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  upvoteIcon: {
-    fontSize: 10,
-    color: C.secondary,
-  },
-  upvoteCount: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  commentBody: {
-    fontSize: 13,
-    color: C.ink,
-    lineHeight: 20,
-  },
-  replyBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: C.cardBg,
-    borderTopWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    elevation: 8,
-  },
-  replyBarDesktop: {
-    maxWidth: 900,
-    alignSelf: 'center',
-    borderRadius: 16,
-    bottom: 16,
-    borderWidth: 1,
-  },
-  replyInput: {
-    flex: 1,
-    height: 44,
-    backgroundColor: C.bg,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 13,
-    color: C.ink,
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: C.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtnDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  const C = createScreenColors(palette);
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: C.bg,
+    },
+    centerRoot: {
+      flex: 1,
+      backgroundColor: C.bg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+      gap: 12,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: C.inkMuted,
+    },
+    errorTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: C.ink,
+    },
+    errorSub: {
+      fontSize: 13,
+      color: C.inkMuted,
+      textAlign: 'center',
+    },
+    backBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: C.secondary,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 8,
+      marginTop: 10,
+    },
+    backBtnText: {
+      color: '#FFF',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: C.bg,
+      borderBottomWidth: 1,
+      borderColor: C.border,
+    },
+    navIconBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 36,
+      height: 36,
+      borderRadius: radius.card,
+      backgroundColor: C.cardBg,
+      borderWidth: 1,
+      borderColor: C.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    commBadgePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: C.tealBg,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+    },
+    commBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: C.secondary,
+    },
+    navRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    heartIcon: {
+      fontSize: 18,
+      color: C.ink,
+    },
+    heartIconSaved: {
+      color: '#EF4444',
+    },
+    scrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 90,
+    },
+    scrollContentDesktop: {
+      maxWidth: 900,
+      alignSelf: 'center',
+      width: '100%',
+      paddingHorizontal: 24,
+      paddingTop: 24,
+    },
+    authorCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 14,
+    },
+    authorAvatarRing: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: C.goldBg,
+      borderWidth: 2,
+      borderColor: '#D99B26',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    authorInitial: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: C.goldText,
+    },
+    authorMeta: {
+      flex: 1,
+      gap: 2,
+    },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    authorName: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: C.ink,
+    },
+    modTag: {
+      backgroundColor: C.saffronBg,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    modTagText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: C.primary,
+    },
+    authorSub: {
+      fontSize: 12,
+      color: C.inkMuted,
+    },
+    contentCard: {
+      backgroundColor: C.cardBg,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: C.border,
+      padding: 18,
+      gap: 14,
+      marginBottom: 20,
+    },
+    postTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: C.ink,
+      lineHeight: 26,
+    },
+    postBody: {
+      fontSize: 14,
+      color: C.ink,
+      lineHeight: 23,
+    },
+    pinnedNote: {
+      backgroundColor: '#F0F9FF',
+      borderWidth: 1,
+      borderColor: '#BAE6FD',
+      borderRadius: radius.control,
+      padding: 14,
+      gap: 6,
+    },
+    pinnedHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    pinnedTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: C.secondary,
+    },
+    pinnedBody: {
+      fontSize: 12,
+      color: '#0369A1',
+      lineHeight: 18,
+    },
+    reactionBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderColor: '#F3F4F6',
+    },
+    reactionBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: '#F9FAFB',
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+    },
+    reactionBtnActive: {
+      backgroundColor: C.tealBg,
+      borderColor: C.secondary,
+    },
+    reactionEmoji: {
+      fontSize: 14,
+    },
+    reactionText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: C.inkMuted,
+    },
+    reactionTextActive: {
+      color: C.secondary,
+    },
+    commentsSection: {
+      gap: 12,
+    },
+    commentsHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    commentsHeaderTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: C.ink,
+    },
+    topAnswersText: {
+      fontSize: 12,
+      color: C.secondary,
+      fontWeight: '600',
+    },
+    commentCard: {
+      backgroundColor: C.cardBg,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: C.border,
+      padding: 14,
+      gap: 8,
+    },
+    commentAuthorRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    commentAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.card,
+      backgroundColor: C.tealBg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    commentAvatarText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: C.secondary,
+    },
+    commentAuthorMeta: {
+      flex: 1,
+    },
+    commentAuthorName: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: C.ink,
+    },
+    commentTime: {
+      fontSize: 11,
+      color: C.inkMuted,
+    },
+    upvotePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#F9FAFB',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    upvoteIcon: {
+      fontSize: 10,
+      color: C.secondary,
+    },
+    upvoteCount: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: C.secondary,
+    },
+    commentBody: {
+      fontSize: 13,
+      color: C.ink,
+      lineHeight: 20,
+    },
+    replyBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: C.cardBg,
+      borderTopWidth: 1,
+      borderColor: C.border,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      elevation: 8,
+    },
+    replyBarDesktop: {
+      maxWidth: 900,
+      alignSelf: 'center',
+      borderRadius: radius.card,
+      bottom: 16,
+      borderWidth: 1,
+    },
+    replyInput: {
+      flex: 1,
+      height: 44,
+      backgroundColor: C.bg,
+      borderWidth: 1,
+      borderColor: C.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      fontSize: 16,
+      color: C.ink,
+    },
+    sendBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 44,
+      height: 44,
+      borderRadius: 10,
+      backgroundColor: C.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sendBtnDisabled: {
+      backgroundColor: '#E5E7EB',
+    },
+  });
+};

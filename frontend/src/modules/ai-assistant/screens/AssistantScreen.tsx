@@ -1,4 +1,4 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -13,9 +13,11 @@ import { MessageBubble } from '@/modules/shared/components/MessageBubble';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export function AssistantScreen() {
+  const { styles, palette } = useScreenStyles(createScreenStyles);
   const layout = useAdaptiveLayout();
   const queryClient = useQueryClient();
   const messages = useQuery({ queryKey: ['assistant', 'messages'], queryFn: getAssistantMessages });
@@ -99,7 +101,7 @@ export function AssistantScreen() {
             value={text}
             onChangeText={setText}
             placeholder="Type a message..."
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={palette.muted}
             accessibilityLabel="Message input"
             style={styles.input}
           />
@@ -110,7 +112,7 @@ export function AssistantScreen() {
             style={[styles.sendButton, !text.trim() && styles.sendButtonDisabled]}
             disabled={!text.trim()}
           >
-            <AppIcon color={colors.surface} name="message" size={18} />
+            <AppIcon color={palette.surface} name="message" size={18} />
           </TouchableOpacity>
         </View>
         <View style={styles.actions}>
@@ -122,32 +124,34 @@ export function AssistantScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  container: { alignSelf: 'center', flex: 1, gap: space.x6, padding: space.x4, width: '100%' },
-  chat: { flexGrow: 1, gap: space.x3 },
-  chatScroll: { flex: 1 },
-  inputRow: { flexDirection: 'row', gap: space.x3 },
-  input: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 16,
-    minHeight: 48,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  sendButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radius.control,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: space.x4,
-  },
-  sendButtonDisabled: { opacity: 0.5 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    container: { alignSelf: 'center', flex: 1, gap: space.x6, padding: space.x4, width: '100%' },
+    chat: { flexGrow: 1, gap: space.x3 },
+    chatScroll: { flex: 1 },
+    inputRow: { flexDirection: 'row', gap: space.x3 },
+    input: {
+      flex: 1,
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      color: palette.ink,
+      fontSize: 16,
+      minHeight: 48,
+      paddingHorizontal: space.x4,
+      paddingVertical: space.x3,
+    },
+    sendButton: {
+      alignItems: 'center',
+      backgroundColor: palette.primary,
+      borderRadius: radius.control,
+      justifyContent: 'center',
+      minHeight: 48,
+      paddingHorizontal: space.x4,
+    },
+    sendButtonDisabled: { opacity: 0.5 },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3 },
+  });
+};

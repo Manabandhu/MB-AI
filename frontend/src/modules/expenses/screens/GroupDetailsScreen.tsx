@@ -1,4 +1,4 @@
-import { color, radius, space, typography } from '@manabandhu/design-system';
+import { radius, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
@@ -9,12 +9,14 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 type GroupDetailsScreenProps = {
   groupId: string;
 };
 
 export function GroupDetailsScreen({ groupId }: GroupDetailsScreenProps) {
+  const { styles } = useScreenStyles(createScreenStyles);
   const currentUserId = useAuthStore((state) => state.user?.id);
   const group = useQuery({
     queryKey: ['expenses', 'group', groupId],
@@ -95,21 +97,23 @@ export function GroupDetailsScreen({ groupId }: GroupDetailsScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  list: { gap: space.x3, marginTop: space.x4 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    padding: space.x4,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.surface,
-  },
-  rowText: { flex: 1, gap: space.x1 },
-  title: { ...typography.bodyStrong, color: color.ink },
-  meta: { ...typography.caption, color: color.muted },
-  amount: { ...typography.h4, color: color.ink },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x6 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    list: { gap: space.x3, marginTop: space.x4 },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x3,
+      padding: space.x4,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surface,
+    },
+    rowText: { flex: 1, gap: space.x1 },
+    title: { ...typography.bodyStrong, color: palette.ink },
+    meta: { ...typography.caption, color: palette.muted },
+    amount: { ...typography.h4, color: palette.ink },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x6 },
+  });
+};

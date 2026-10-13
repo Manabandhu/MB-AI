@@ -1,4 +1,4 @@
-import { color, palette } from '@manabandhu/design-system';
+import { radius } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { type Href, router, useLocalSearchParams } from 'expo-router';
@@ -27,9 +27,11 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { MessageBubble } from '@/modules/shared/components/MessageBubble';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 export default function ConversationScreen() {
+  const { styles, color } = useScreenStyles(createScreenStyles);
   const layout = useAdaptiveLayout();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -385,96 +387,106 @@ export default function ConversationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: color.background },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
-    backgroundColor: '#fff',
-    width: '100%',
-    alignSelf: 'center',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerInfo: { flex: 1, marginHorizontal: 8 },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: color.ink },
-  headerSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  infoBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bannerContainer: { paddingHorizontal: 16, paddingTop: 8 },
-  messageScroll: { flexGrow: 1, padding: 16 },
-  messageList: { gap: 12, width: '100%', alignSelf: 'center' },
-  bubbleWrapper: { maxWidth: '82%' },
-  bubbleMe: { alignSelf: 'flex-end' },
-  bubbleOther: { alignSelf: 'flex-start' },
-  imageBubble: { borderRadius: 16, padding: 6, overflow: 'hidden' },
-  bgMe: { backgroundColor: palette.primary },
-  bgOther: { backgroundColor: '#f3f4f6' },
-  msgImage: { width: 220, height: 160, borderRadius: 12 },
-  bubbleTime: { fontSize: 10, marginTop: 4, textAlign: 'right' },
-  timeMe: { color: 'rgba(255,255,255,0.7)' },
-  timeOther: { color: '#6b7280' },
-  typingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    marginLeft: 8,
-    gap: 6,
-  },
-  typingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.primary },
-  typingText: { fontSize: 12, color: '#6b7280', fontStyle: 'italic' },
-  bottomBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.06)',
-    width: '100%',
-    alignSelf: 'center',
-    gap: 8,
-  },
-  attachBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(67,30,190,0.06)',
-  },
-  inputField: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    backgroundColor: '#f9fafb',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: color.ink,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    headerBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(0,0,0,0.06)',
+      backgroundColor: '#fff',
+      width: '100%',
+      alignSelf: 'center',
+    },
+    backBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 40,
+      height: 40,
+      borderRadius: radius.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerInfo: { flex: 1, marginHorizontal: 8 },
+    headerTitle: { fontSize: 16, fontWeight: '700', color: palette.ink },
+    headerSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+    infoBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 40,
+      height: 40,
+      borderRadius: radius.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    bannerContainer: { paddingHorizontal: 16, paddingTop: 8 },
+    messageScroll: { flexGrow: 1, padding: 16 },
+    messageList: { gap: 12, width: '100%', alignSelf: 'center' },
+    bubbleWrapper: { maxWidth: '82%' },
+    bubbleMe: { alignSelf: 'flex-end' },
+    bubbleOther: { alignSelf: 'flex-start' },
+    imageBubble: { borderRadius: radius.card, padding: 6, overflow: 'hidden' },
+    bgMe: { backgroundColor: palette.primary },
+    bgOther: { backgroundColor: '#f3f4f6' },
+    msgImage: { width: 220, height: 160, borderRadius: radius.control },
+    bubbleTime: { fontSize: 10, marginTop: 4, textAlign: 'right' },
+    timeMe: { color: 'rgba(255,255,255,0.7)' },
+    timeOther: { color: '#6b7280' },
+    typingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+      marginLeft: 8,
+      gap: 6,
+    },
+    typingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: palette.primary },
+    typingText: { fontSize: 12, color: '#6b7280', fontStyle: 'italic' },
+    bottomBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingTop: 8,
+      backgroundColor: '#fff',
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(0,0,0,0.06)',
+      width: '100%',
+      alignSelf: 'center',
+      gap: 8,
+    },
+    attachBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(67,30,190,0.06)',
+    },
+    inputField: {
+      flex: 1,
+      minHeight: 40,
+      maxHeight: 100,
+      backgroundColor: '#f9fafb',
+      borderRadius: radius.card,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: palette.ink,
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+    },
+    sendBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+};

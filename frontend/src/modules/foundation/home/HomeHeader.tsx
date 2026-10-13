@@ -1,29 +1,20 @@
-import { brand } from '@manabandhu/design-system';
-import { router, useFocusEffect } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useCallback, useState } from 'react';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { useLocationStore } from '@/lib/locationStore';
 import { LocationSelectorModal } from '@/modules/foundation/components/LocationSelectorModal';
+import { useQuickJump } from '@/modules/foundation/launcher/QuickJump';
 import { UnreadNotificationDot } from '@/modules/foundation/shell/UnreadNotificationDot';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { AppText } from '@/modules/shared/ui/AppText';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
-import { GradientSurface } from '@/modules/shared/ui/GradientSurface';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useFormFactor } from '@/platform/formFactor';
 import { greetingName } from './greetingName';
-
-/** How far the Ask card on Home slides up over the strip; the strip reserves that space below its content. */
-export const ASK_CARD_OVERLAP = 28;
-/** Space between the strip's content and the overlapping card. */
-const STRIP_BOTTOM_GAP = 12;
-/** Space below the status bar / notch. */
-const STRIP_TOP_GAP = 8;
-/** Horizontal padding on wide layouts ($x6); the strip is wider than the content column by twice this. */
-const WIDE_GUTTER = 24;
 
 function greetingKey(hour: number) {
   if (hour < 5) return 'greeting.evening' as const;
@@ -32,127 +23,95 @@ function greetingKey(hour: number) {
   return 'greeting.evening' as const;
 }
 
-const onBrand = brand.color.onPrimary;
-const onBrandMuted = brand.color.onPrimaryMuted;
-const glass = brand.color.onPrimaryGlass;
-
-function HeaderIcon({
-  icon,
-  label,
-  onPress,
-  badge,
-}: {
-  icon: 'bell';
-  label: string;
-  onPress: () => void;
-  badge?: boolean;
-}) {
-  return (
-    <YStack
-      alignItems="center"
-      aria-label={label}
-      backgroundColor={glass}
-      borderRadius="$pill"
-      cursor="pointer"
-      height={40}
-      justifyContent="center"
-      onPress={onPress}
-      pressStyle={{ opacity: 0.7 }}
-      role="button"
-      width={40}
-    >
-      <AppIcon color={onBrand} name={icon} size={19} />
-      {badge ? <UnreadNotificationDot /> : null}
-    </YStack>
-  );
-}
-
-/**
- * Thin brand strip that runs edge to edge under the status bar / notch: avatar, greeting with the member's name,
- * city, and notifications (search lives in the Ask card). Light status-bar icons while Home is focused.
- */
+/** A calm, personal starting point with visible search and location controls. */
 export function HomeHeader() {
   const t = useT();
   const insets = useSafeAreaInsets();
-  const user = useAuthStore((s) => s.user);
-  const location = useLocationStore((s) => s.currentLocation);
+  const user = useAuthStore((state) => state.user);
+  const location = useLocationStore((state) => state.currentLocation);
   const [locationOpen, setLocationOpen] = useState(false);
-  const [focused, setFocused] = useState(true);
   const { navigationStyle, maxContentWidth } = useFormFactor();
+  const open = useQuickJump();
   const name = greetingName(user?.user_metadata);
   const fullName =
     (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'Member';
-  const phoneChrome = navigationStyle === 'bottom';
-
-  useFocusEffect(
-    useCallback(() => {
-      setFocused(true);
-      return () => setFocused(false);
-    }, []),
-  );
-
   const greeting = t(greetingKey(new Date().getHours()));
+  const phone = navigationStyle === 'bottom';
   return (
-    <GradientSurface corners="bottom" padding={0} radius={24}>
-      {focused ? <StatusBar style="light" /> : null}
+    <YStack backgroundColor="$background" paddingTop={insets.top + 16} paddingBottom="$x5">
       <YStack
         alignSelf="center"
-        gap="$x2"
-        maxWidth={maxContentWidth + 2 * WIDE_GUTTER}
-        paddingBottom={ASK_CARD_OVERLAP + STRIP_BOTTOM_GAP}
-        paddingHorizontal={phoneChrome ? '$x4' : '$x6'}
-        paddingTop={insets.top + STRIP_TOP_GAP}
+        maxWidth={maxContentWidth + 48}
+        paddingHorizontal={phone ? '$x4' : '$x6'}
         width="100%"
+        gap="$x4"
       >
         <XStack alignItems="center" gap="$x3">
-          {phoneChrome ? (
-            <YStack
-              aria-label={t('shell.openProfile')}
-              cursor="pointer"
-              onPress={() => router.push('/profile')}
-              role="button"
-            >
-              <Avatar
-                imageUrl={user?.user_metadata?.avatar_url as string | undefined}
-                name={fullName}
-                size="md"
-              />
-            </YStack>
-          ) : null}
-          <YStack flex={1} gap={2}>
-            <AppText color={onBrand} numberOfLines={1} role="heading" variant="h4">
-              {name ? `${greeting}, ${name} 👋` : `${greeting} 👋`}
+          <YStack flex={1} minWidth={0} gap="$x1">
+            <AppText variant="overline" tone="primary">
+              ManaBandhu
             </AppText>
-            <XStack
-              alignItems="center"
-              alignSelf="flex-start"
-              aria-label={`${location.name}. ${t('home.changeCity')}`}
-              cursor="pointer"
-              gap={4}
-              hitSlop={8}
-              minHeight={28}
-              onPress={() => setLocationOpen(true)}
-              pressStyle={{ opacity: 0.7 }}
-              role="button"
-            >
-              <AppIcon color={onBrandMuted} name="map-pin" size={14} />
-              <AppText color={onBrandMuted} maxWidth={220} numberOfLines={1} variant="label">
-                {location.name}
-              </AppText>
-              <AppIcon color={onBrandMuted} name="chevron-down" size={14} />
-            </XStack>
+            <Heading variant="h1">{name ? `${greeting}, ${name}` : greeting}</Heading>
           </YStack>
-          {phoneChrome ? (
-            <HeaderIcon
-              badge
-              icon="bell"
-              label={t('shell.notifications')}
-              onPress={() => router.push('/notifications')}
-            />
+          {phone ? (
+            <>
+              <IconButton
+                badge={<UnreadNotificationDot />}
+                icon="bell"
+                label={t('shell.notifications')}
+                onPress={() => router.push('/notifications')}
+              />
+              <YStack
+                role="button"
+                aria-label={t('shell.openProfile')}
+                alignItems="center"
+                justifyContent="center"
+                minHeight="$touch"
+                minWidth="$touch"
+                borderRadius="$pill"
+                onPress={() => router.push('/profile')}
+                {...keyboardPress(() => router.push('/profile'))}
+                focusVisibleStyle={{
+                  outlineColor: '$outlineColor',
+                  outlineWidth: 3,
+                  outlineStyle: 'solid',
+                }}
+              >
+                <Avatar
+                  name={fullName}
+                  imageUrl={user?.user_metadata?.avatar_url as string | undefined}
+                  size="md"
+                />
+              </YStack>
+            </>
           ) : null}
+        </XStack>
+        <XStack alignItems="center" flexWrap="wrap" gap="$x2">
+          <AppButton
+            label={location.name}
+            icon="map-pin"
+            iconAfter="chevron-down"
+            variant="ghost"
+            size="sm"
+            onPress={() => setLocationOpen(true)}
+          />
+          <YStack flex={1} />
+          <IconButton
+            icon="compass"
+            label={t('navigation.openJump')}
+            onPress={open}
+            variant="plain"
+          />
+          <AppButton
+            label={t('navigation.search')}
+            icon="search"
+            variant="secondary"
+            size="sm"
+            route="/search"
+          />
         </XStack>
       </YStack>
       <LocationSelectorModal onClose={() => setLocationOpen(false)} visible={locationOpen} />
-    </GradientSurface>
+    </YStack>
   );
 }

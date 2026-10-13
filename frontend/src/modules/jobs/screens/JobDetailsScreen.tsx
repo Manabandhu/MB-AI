@@ -1,5 +1,5 @@
 import { formatSalaryRange } from '@manabandhu/core';
-import { color as baseColors, breakpoint, palette, radius } from '@manabandhu/design-system';
+import { breakpoint, radius } from '@manabandhu/design-system';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,23 +14,24 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { getJobPosting } from '@/modules/jobs/api';
 import { createReferralRequest } from '@/modules/referrals/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
+import { useWindowDimensions } from '@/platform/windowDimensions';
 
-const colors = {
-  ...baseColors,
-  canvas: '#ffffff',
-  canvasMuted: '#f8f9fe',
+const createScreenColors = (palette: ScreenPalette) => ({
+  ...palette,
+  canvas: palette.surface,
+  canvasMuted: palette.surfaceContainerLow,
   accentBrand: palette.primary,
-  inkSecondary: baseColors.muted,
+  inkSecondary: palette.muted,
   borderSubtle: palette.border,
-  danger: '#ef4444',
-};
+  danger: palette.error,
+});
 
 const sp = {
   xs: 4,
@@ -42,6 +43,8 @@ const sp = {
 };
 
 export function JobDetailsScreen() {
+  const { styles: s, palette } = useScreenStyles(createScreenStyles);
+  const colors = createScreenColors(palette);
   const router = useRouter();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
   const { width } = useWindowDimensions();
@@ -101,7 +104,7 @@ export function JobDetailsScreen() {
         <Text style={s.errorSubtitle}>
           This position may have been filled or the link has expired.
         </Text>
-        <Pressable onPress={() => router.back()} style={s.backNavBtn}>
+        <Pressable accessibilityRole="button" onPress={() => router.back()} style={s.backNavBtn}>
           <Text style={s.backNavBtnText}>Back to Jobs</Text>
         </Pressable>
       </View>
@@ -155,14 +158,24 @@ export function JobDetailsScreen() {
     <View style={s.container}>
       {/* Top App Bar */}
       <View style={s.topBar}>
-        <Pressable onPress={() => router.back()} style={s.iconButton} accessibilityLabel="Back">
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={s.iconButton}
+          accessibilityLabel="Back"
+        >
           <AppIcon name="chevron-left" size={20} color={colors.ink} />
         </Pressable>
 
         <Text style={s.topBarTitle}>Job Details</Text>
 
         <View style={s.topBarRight}>
-          <Pressable onPress={handleShare} style={s.iconButton} accessibilityLabel="Share job">
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleShare}
+            style={s.iconButton}
+            accessibilityLabel="Share job"
+          >
             <Text style={s.actionEmoji}>↗️</Text>
           </Pressable>
         </View>
@@ -222,7 +235,11 @@ export function JobDetailsScreen() {
           <Text style={s.descriptionText}>
             Send a referral request to the community, or browse open referral offers from members.
           </Text>
-          <Pressable onPress={() => router.push('/referrals' as Href)} style={s.chatReferrerBtn}>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => router.push('/referrals' as Href)}
+            style={s.chatReferrerBtn}
+          >
             <Text style={s.chatReferrerBtnText}>Browse Referral Offers</Text>
           </Pressable>
         </View>
@@ -239,12 +256,16 @@ export function JobDetailsScreen() {
 
         <View style={s.bottomStickyRight}>
           {job.applicationUrl ? (
-            <Pressable onPress={handleApply} style={s.applySiteBtn}>
+            <Pressable accessibilityRole="button" onPress={handleApply} style={s.applySiteBtn}>
               <Text style={s.applySiteText}>Apply via Site</Text>
             </Pressable>
           ) : null}
 
-          <Pressable onPress={handleRequestReferral} style={s.requestReferralPrimaryBtn}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleRequestReferral}
+            style={s.requestReferralPrimaryBtn}
+          >
             <Text style={s.requestReferralPrimaryText}>Request Referral 🤝</Text>
           </Pressable>
         </View>
@@ -262,7 +283,11 @@ export function JobDetailsScreen() {
             {!isDesktop && <View style={s.dragHandle} />}
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>Request Employee Referral</Text>
-              <Pressable onPress={() => setReferralModalVisible(false)} style={s.closeModalBtn}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setReferralModalVisible(false)}
+                style={s.closeModalBtn}
+              >
                 <Text style={s.closeModalText}>✕</Text>
               </Pressable>
             </View>
@@ -302,10 +327,15 @@ export function JobDetailsScreen() {
             </ScrollView>
 
             <View style={s.modalFooter}>
-              <Pressable onPress={() => setReferralModalVisible(false)} style={s.modalCancelBtn}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setReferralModalVisible(false)}
+                style={s.modalCancelBtn}
+              >
                 <Text style={s.modalCancelText}>Cancel</Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
                 onPress={handleConfirmReferral}
                 disabled={referralMutation.isPending || !resumeUrl.trim()}
                 style={[
@@ -325,402 +355,417 @@ export function JobDetailsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fe',
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: sp.lg,
-    backgroundColor: '#f8f9fe',
-  },
-  loadingText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.inkSecondary,
-  },
-  errorEmoji: {
-    fontSize: 44,
-    marginBottom: sp.sm,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.ink,
-    marginBottom: 4,
-  },
-  errorSubtitle: {
-    fontSize: 13,
-    color: colors.inkSecondary,
-    textAlign: 'center',
-    marginBottom: sp.md,
-  },
-  backNavBtn: {
-    backgroundColor: colors.accentBrand,
-    paddingHorizontal: sp.lg,
-    paddingVertical: 10,
-    borderRadius: radius.pill,
-  },
-  backNavBtnText: {
-    color: colors.canvas,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: sp.lg,
-    paddingTop: sp.md,
-    paddingBottom: sp.md,
-    backgroundColor: colors.canvas,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
-  },
-  topBarTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  topBarRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.xs,
-  },
-  iconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
-    backgroundColor: colors.canvasMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionEmoji: {
-    fontSize: 16,
-  },
-  scrollContent: {
-    padding: sp.lg,
-    paddingBottom: 110,
-  },
-  heroCard: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.card,
-    padding: sp.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: sp.md,
-  },
-  companyTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: sp.md,
-  },
-  companyBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.control,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  companyBadgeText: {
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  companyMeta: {
-    flex: 1,
-    marginLeft: sp.sm,
-  },
-  companyNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  companyName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.ink,
-  },
-  campusLocation: {
-    fontSize: 12,
-    color: colors.inkSecondary,
-    marginTop: 2,
-  },
-  jobTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.ink,
-    letterSpacing: -0.5,
-    marginBottom: sp.md,
-  },
-  compHighlightCard: {
-    backgroundColor: '#f5f3ff',
-    borderRadius: radius.control,
-    padding: sp.md,
-    borderWidth: 1,
-    borderColor: '#ddd6fe',
-    marginBottom: sp.md,
-  },
-  compLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#6d28d9',
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  compValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: palette.primary,
-  },
-  jobMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.xs,
-    marginBottom: sp.md,
-  },
-  jobMetaItem: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.inkSecondary,
-  },
-  jobMetaDivider: {
-    color: colors.border,
-  },
-  chatReferrerBtn: {
-    backgroundColor: '#ede9fe',
-    borderRadius: radius.control,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatReferrerBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.accentBrand,
-  },
-  sectionCard: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.card,
-    padding: sp.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    marginBottom: sp.md,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-    letterSpacing: -0.3,
-    marginBottom: sp.sm,
-  },
-  descriptionText: {
-    fontSize: 13,
-    color: colors.inkSecondary,
-    lineHeight: 20,
-  },
-  bottomStickyBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.canvas,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-    paddingHorizontal: sp.lg,
-    paddingVertical: sp.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  bottomStickyLeft: {
-    flex: 1,
-  },
-  bottomSalaryLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.inkSecondary,
-    textTransform: 'uppercase',
-  },
-  bottomSalaryValue: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: colors.ink,
-  },
-  bottomStickyRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.sm,
-  },
-  applySiteBtn: {
-    height: 42,
-    paddingHorizontal: sp.md,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  applySiteText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
-  },
-  requestReferralPrimaryBtn: {
-    height: 42,
-    paddingHorizontal: sp.lg,
-    borderRadius: radius.control,
-    backgroundColor: colors.accentBrand,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  requestReferralPrimaryText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.canvas,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalBackdropDesktop: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    backgroundColor: colors.canvas,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: sp.lg,
-    maxHeight: '85%',
-  },
-  modalCardDesktop: {
-    width: 520,
-    borderRadius: radius.panel,
-    maxHeight: '80%',
-  },
-  dragHandle: {
-    width: 44,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginBottom: sp.md,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: sp.md,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-    flex: 1,
-  },
-  closeModalBtn: {
-    padding: 4,
-  },
-  closeModalText: {
-    fontSize: 16,
-    color: colors.inkSecondary,
-    fontWeight: '700',
-  },
-  modalBody: {
-    marginBottom: sp.md,
-  },
-  modalNote: {
-    fontSize: 12,
-    color: colors.inkSecondary,
-    lineHeight: 18,
-    marginBottom: sp.md,
-  },
-  formLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
-    marginBottom: 6,
-  },
-  formInput: {
-    backgroundColor: colors.canvasMuted,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    paddingHorizontal: sp.md,
-    height: 44,
-    fontSize: 13,
-    color: colors.ink,
-    marginBottom: sp.md,
-  },
-  formTextArea: {
-    height: 90,
-    paddingTop: 10,
-    textAlignVertical: 'top',
-  },
-  modalTrustReminder: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.xs,
-    backgroundColor: '#fefce8',
-    padding: sp.sm,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: '#fef08a',
-  },
-  reminderEmoji: {
-    fontSize: 16,
-  },
-  reminderText: {
-    flex: 1,
-    fontSize: 11,
-    color: '#854d0e',
-    lineHeight: 15,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.md,
-    paddingTop: sp.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-  },
-  modalCancelBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCancelText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.inkSecondary,
-  },
-  modalSubmitBtn: {
-    flex: 2,
-    height: 44,
-    borderRadius: radius.control,
-    backgroundColor: colors.accentBrand,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalSubmitBtnDisabled: {
-    opacity: 0.5,
-  },
-  modalSubmitText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.canvas,
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  const colors = createScreenColors(palette);
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#f8f9fe',
+    },
+    centerContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: sp.lg,
+      backgroundColor: '#f8f9fe',
+    },
+    loadingText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.inkSecondary,
+    },
+    errorEmoji: {
+      fontSize: 44,
+      marginBottom: sp.sm,
+    },
+    errorTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: colors.ink,
+      marginBottom: 4,
+    },
+    errorSubtitle: {
+      fontSize: 13,
+      color: colors.inkSecondary,
+      textAlign: 'center',
+      marginBottom: sp.md,
+    },
+    backNavBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: colors.accentBrand,
+      paddingHorizontal: sp.lg,
+      paddingVertical: 10,
+      borderRadius: radius.pill,
+    },
+    backNavBtnText: {
+      color: colors.canvas,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: sp.lg,
+      paddingTop: sp.md,
+      paddingBottom: sp.md,
+      backgroundColor: colors.canvas,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderSubtle,
+    },
+    topBarTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: colors.ink,
+    },
+    topBarRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sp.xs,
+    },
+    iconButton: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 38,
+      height: 38,
+      borderRadius: radius.pill,
+      backgroundColor: colors.canvasMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    actionEmoji: {
+      fontSize: 16,
+    },
+    scrollContent: {
+      padding: sp.lg,
+      paddingBottom: 110,
+    },
+    heroCard: {
+      backgroundColor: colors.canvas,
+      borderRadius: radius.card,
+      padding: sp.lg,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      shadowColor: '#000',
+      shadowOpacity: 0.04,
+      shadowRadius: 10,
+      elevation: 2,
+      marginBottom: sp.md,
+    },
+    companyTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: sp.md,
+    },
+    companyBadge: {
+      width: 48,
+      height: 48,
+      borderRadius: radius.control,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    companyBadgeText: {
+      fontSize: 22,
+      fontWeight: '900',
+    },
+    companyMeta: {
+      flex: 1,
+      marginLeft: sp.sm,
+    },
+    companyNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    companyName: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.ink,
+    },
+    campusLocation: {
+      fontSize: 12,
+      color: colors.inkSecondary,
+      marginTop: 2,
+    },
+    jobTitle: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: colors.ink,
+      letterSpacing: -0.5,
+      marginBottom: sp.md,
+    },
+    compHighlightCard: {
+      backgroundColor: '#f5f3ff',
+      borderRadius: radius.control,
+      padding: sp.md,
+      borderWidth: 1,
+      borderColor: '#ddd6fe',
+      marginBottom: sp.md,
+    },
+    compLabel: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: '#6d28d9',
+      letterSpacing: 0.5,
+      marginBottom: 2,
+    },
+    compValue: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: palette.primary,
+    },
+    jobMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sp.xs,
+      marginBottom: sp.md,
+    },
+    jobMetaItem: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.inkSecondary,
+    },
+    jobMetaDivider: {
+      color: colors.border,
+    },
+    chatReferrerBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: '#ede9fe',
+      borderRadius: radius.control,
+      height: 42,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    chatReferrerBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.accentBrand,
+    },
+    sectionCard: {
+      backgroundColor: colors.canvas,
+      borderRadius: radius.card,
+      padding: sp.lg,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      marginBottom: sp.md,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: colors.ink,
+      letterSpacing: -0.3,
+      marginBottom: sp.sm,
+    },
+    descriptionText: {
+      fontSize: 13,
+      color: colors.inkSecondary,
+      lineHeight: 20,
+    },
+    bottomStickyBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: colors.canvas,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderSubtle,
+      paddingHorizontal: sp.lg,
+      paddingVertical: sp.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    bottomStickyLeft: {
+      flex: 1,
+    },
+    bottomSalaryLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.inkSecondary,
+      textTransform: 'uppercase',
+    },
+    bottomSalaryValue: {
+      fontSize: 15,
+      fontWeight: '900',
+      color: colors.ink,
+    },
+    bottomStickyRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sp.sm,
+    },
+    applySiteBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      height: 42,
+      paddingHorizontal: sp.md,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    applySiteText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.ink,
+    },
+    requestReferralPrimaryBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      height: 42,
+      paddingHorizontal: sp.lg,
+      borderRadius: radius.control,
+      backgroundColor: colors.accentBrand,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    requestReferralPrimaryText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.canvas,
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalBackdropDesktop: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalCard: {
+      backgroundColor: colors.canvas,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      padding: sp.lg,
+      maxHeight: '85%',
+    },
+    modalCardDesktop: {
+      width: 520,
+      borderRadius: radius.panel,
+      maxHeight: '80%',
+    },
+    dragHandle: {
+      width: 44,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: colors.border,
+      alignSelf: 'center',
+      marginBottom: sp.md,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: sp.md,
+    },
+    modalTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: colors.ink,
+      flex: 1,
+    },
+    closeModalBtn: { minHeight: 44, minWidth: 44, padding: 4 },
+    closeModalText: {
+      fontSize: 16,
+      color: colors.inkSecondary,
+      fontWeight: '700',
+    },
+    modalBody: {
+      marginBottom: sp.md,
+    },
+    modalNote: {
+      fontSize: 12,
+      color: colors.inkSecondary,
+      lineHeight: 18,
+      marginBottom: sp.md,
+    },
+    formLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.ink,
+      marginBottom: 6,
+    },
+    formInput: {
+      backgroundColor: colors.canvasMuted,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      paddingHorizontal: sp.md,
+      height: 44,
+      fontSize: 16,
+      color: colors.ink,
+      marginBottom: sp.md,
+    },
+    formTextArea: {
+      height: 90,
+      paddingTop: 10,
+      textAlignVertical: 'top',
+    },
+    modalTrustReminder: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sp.xs,
+      backgroundColor: '#fefce8',
+      padding: sp.sm,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: '#fef08a',
+    },
+    reminderEmoji: {
+      fontSize: 16,
+    },
+    reminderText: {
+      flex: 1,
+      fontSize: 11,
+      color: '#854d0e',
+      lineHeight: 15,
+    },
+    modalFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sp.md,
+      paddingTop: sp.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderSubtle,
+    },
+    modalCancelBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      height: 44,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalCancelText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.inkSecondary,
+    },
+    modalSubmitBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 2,
+      height: 44,
+      borderRadius: radius.control,
+      backgroundColor: colors.accentBrand,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalSubmitBtnDisabled: {
+      opacity: 0.5,
+    },
+    modalSubmitText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.canvas,
+    },
+  });
+};

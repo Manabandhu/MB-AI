@@ -1,17 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { color, space, typography } from '@manabandhu/design-system';
+import { space, typography } from '@manabandhu/design-system';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
-
 import { createJobPosting } from '@/modules/jobs/api';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { TextArea } from '@/modules/shared/components/TextArea';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { TextField } from '@/modules/shared/ui/TextField';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 const jobSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -23,6 +23,7 @@ const jobSchema = z.object({
 type JobFormData = z.infer<typeof jobSchema>;
 
 export function PostJobScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   const [submitted, setSubmitted] = useState(false);
   const queryClient = useQueryClient();
   const {
@@ -105,20 +106,22 @@ export function PostJobScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  form: { gap: space.x4, marginTop: space.x4 },
-  field: { gap: space.x2 },
-  label: {
-    color: color.ink,
-    fontSize: typography.caption.fontSize,
-    fontWeight: typography.caption.fontWeight,
-  },
-  error: { color: color.error, fontSize: typography.caption.fontSize },
-  success: { gap: space.x4, padding: space.x6, alignItems: 'center' },
-  successTitle: {
-    color: color.ink,
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
-  },
-  successBody: { color: color.muted, fontSize: typography.body.fontSize, textAlign: 'center' },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    form: { gap: space.x4, marginTop: space.x4 },
+    field: { gap: space.x2 },
+    label: {
+      color: palette.ink,
+      fontSize: typography.caption.fontSize,
+      fontWeight: typography.caption.fontWeight,
+    },
+    error: { color: palette.error, fontSize: typography.caption.fontSize },
+    success: { gap: space.x4, padding: space.x6, alignItems: 'center' },
+    successTitle: {
+      color: palette.ink,
+      fontSize: typography.h3.fontSize,
+      fontWeight: typography.h3.fontWeight,
+    },
+    successBody: { color: palette.muted, fontSize: typography.body.fontSize, textAlign: 'center' },
+  });
+};

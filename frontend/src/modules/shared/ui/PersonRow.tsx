@@ -4,6 +4,7 @@ import { XStack, YStack } from 'tamagui';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
 import { Card } from '@/modules/shared/ui/Card';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 
 type PersonRowProps = {
   name: string;
@@ -52,6 +53,7 @@ export function PersonRow({
           minHeight="$touch"
           minWidth={0}
           onPress={href ? () => router.push(href) : undefined}
+          {...keyboardPress(href ? () => router.push(href) : undefined)}
           pressStyle={href ? { opacity: 0.8 } : undefined}
           role={href ? 'link' : undefined}
         >

@@ -1,4 +1,4 @@
-import { color, palette, radius, space } from '@manabandhu/design-system';
+import { palette, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Alert, StyleSheet, Text, View } from 'react-native';
@@ -16,6 +16,7 @@ import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 const STATUS_LABEL: Record<Settlement['status'], string> = {
   completed: 'Settled',
@@ -33,6 +34,7 @@ const STATUS_TONE: Record<
 };
 
 export function SettlementsScreen() {
+  const { styles, palette, color } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const { data, isLoading, error, refetch } = useQuery({
@@ -157,49 +159,51 @@ export function SettlementsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  strong: { fontWeight: '700' },
-  list: { gap: space.x3, marginTop: space.x4 },
-  actions: { marginTop: space.x6, gap: 12 },
-  pendingActions: { gap: space.x2 },
-  card: {
-    backgroundColor: palette.surface,
-    borderColor: color.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    padding: 16,
-    gap: 12,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  statusText: { fontSize: 11, fontWeight: '700' },
-  dateText: { fontSize: 12, color: palette.muted },
-  contentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: palette.primaryTint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  details: { flex: 1 },
-  participants: { fontSize: 14, color: color.ink },
-  subtext: { fontSize: 12, color: palette.muted, marginTop: 2 },
-  amountText: { fontSize: 16, fontWeight: '800', color: palette.ink },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    strong: { fontWeight: '700' },
+    list: { gap: space.x3, marginTop: space.x4 },
+    actions: { marginTop: space.x6, gap: 12 },
+    pendingActions: { gap: space.x2 },
+    card: {
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      padding: 16,
+      gap: 12,
+    },
+    cardTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    statusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    statusText: { fontSize: 11, fontWeight: '700' },
+    dateText: { fontSize: 12, color: palette.muted },
+    contentRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    iconCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.card,
+      backgroundColor: palette.primaryTint,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    details: { flex: 1 },
+    participants: { fontSize: 14, color: palette.ink },
+    subtext: { fontSize: 12, color: palette.muted, marginTop: 2 },
+    amountText: { fontSize: 16, fontWeight: '800', color: palette.ink },
+  });
+};

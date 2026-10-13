@@ -14,7 +14,7 @@ import { Screen } from '@/modules/shared/ui/Screen';
 import { Section } from '@/modules/shared/ui/Section';
 import { useAppearanceStore } from '@/theme/themePreferenceStore';
 import { greetingName } from './greetingName';
-import { ASK_CARD_OVERLAP, HomeHeader } from './HomeHeader';
+import { HomeHeader } from './HomeHeader';
 import { InviteCard } from './InviteCard';
 import { NicknameNudge } from './NicknameNudge';
 import { NicknameSheet } from './NicknameSheet';
@@ -86,13 +86,13 @@ export function HomeScreen() {
       <Head>
         <title>Home · ManaBandhu</title>
       </Head>
-      {/* The Ask card overlaps the bottom of the brand strip. */}
-      <YStack marginTop={-ASK_CARD_OVERLAP} position="relative" zIndex={2}>
-        <AssistantEntry />
-      </YStack>
+      <AssistantEntry />
       {showNudge ? <NicknameNudge onSet={() => setNicknameOpen(true)} /> : null}
       <FadeIn index={1}>
-        <Section title={t('home.quickAccess')}>
+        <Section
+          title={t('home.quickAccess')}
+          action={{ label: t('navigation.allFeatures'), href: '/explore' }}
+        >
           <QuickAccess />
         </Section>
       </FadeIn>

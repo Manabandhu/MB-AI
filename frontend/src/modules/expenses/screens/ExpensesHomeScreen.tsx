@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { useAuthStore } from '@/lib/authStore';
 import {
   type DebtBalance,
@@ -23,6 +22,8 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 // Every number on this screen is derived from the signed-in user's groups, balances, and settlements as returned by
@@ -78,6 +79,7 @@ function uniqueGroupNames(rows: DebtBalance[]) {
 }
 
 export function ExpensesScreen(_props: ExpensesScreenProps) {
+  const { styles: s, palette, color } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const layout = useAdaptiveLayout();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -166,26 +168,12 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
       <ScrollView contentContainerStyle={s.scrollContent}>
         <View style={[s.container, { maxWidth: layout.maxContentWidth }]}>
           {/* Header */}
-          <View style={s.headerRow}>
-            <View style={s.headerLeft}>
-              <View style={s.badgePill}>
-                <Text style={s.badgePillText}>SHARED EXPENSES & SPLITS</Text>
-              </View>
-              <Text style={s.headerTitle}>Flatmate & Trip Splits</Text>
-              <Text style={s.headerSubtitle}>
-                Transparent cost splitting for flatmates, trips, and carpools.
-              </Text>
-            </View>
-            <Pressable
-              style={s.addBtn}
-              onPress={() => router.push('/expenses/add')}
-              accessibilityRole="button"
-              accessibilityLabel="Add new expense"
-            >
-              <AppIcon name="plus" size={18} color="#fff" />
-              <Text style={s.addBtnText}>Add Bill</Text>
-            </Pressable>
-          </View>
+          <ScreenHeader
+            title="Shared expenses"
+            subtitle="Split fairly. Know where you stand."
+            back={{ fallback: '/explore' }}
+            primaryAction={{ label: 'Add expense', icon: 'plus', route: '/expenses/add' }}
+          />
 
           {groups.length === 0 ? (
             <EmptyState
@@ -283,6 +271,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
               {/* Segmented Filter Tabs */}
               <View style={s.tabBar}>
                 <Pressable
+                  accessibilityRole="button"
                   style={[s.tabItem, activeTab === 'groups' && s.tabItemActive]}
                   onPress={() => setActiveTab('groups')}
                 >
@@ -291,6 +280,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                   </Text>
                 </Pressable>
                 <Pressable
+                  accessibilityRole="button"
                   style={[s.tabItem, activeTab === 'balances' && s.tabItemActive]}
                   onPress={() => setActiveTab('balances')}
                 >
@@ -299,6 +289,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                   </Text>
                 </Pressable>
                 <Pressable
+                  accessibilityRole="button"
                   style={[s.tabItem, activeTab === 'activity' && s.tabItemActive]}
                   onPress={() => setActiveTab('activity')}
                 >
@@ -495,454 +486,468 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
   );
 }
 
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: palette.background },
-  scrollContent: { padding: space.x4, flexGrow: 1 },
-  container: { width: '100%', alignSelf: 'center', gap: space.x4 },
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: palette.background },
+    scrollContent: { padding: space.x4, flexGrow: 1 },
+    container: { width: '100%', alignSelf: 'center', gap: space.x4 },
 
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerLeft: { flex: 1, gap: 4 },
-  badgePill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  badgePillText: {
-    color: palette.primary,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: palette.ink,
-    letterSpacing: -0.4,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: palette.muted,
-    lineHeight: 18,
-  },
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: palette.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-  },
-  addBtnText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    headerLeft: { flex: 1, gap: 4 },
+    badgePill: {
+      alignSelf: 'flex-start',
+      backgroundColor: 'rgba(67, 30, 190, 0.08)',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    badgePillText: {
+      color: palette.primary,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: palette.ink,
+      letterSpacing: -0.4,
+    },
+    headerSubtitle: {
+      fontSize: 13,
+      color: palette.muted,
+      lineHeight: 18,
+    },
+    addBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: palette.primary,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: radius.pill,
+    },
+    addBtnText: {
+      color: '#fff',
+      fontSize: 13,
+      fontWeight: '700',
+    },
 
-  heroCard: {
-    backgroundColor: palette.primary,
-    borderRadius: 20,
-    padding: space.x4,
-    gap: space.x3,
-    shadowColor: palette.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  heroTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heroLabel: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-  },
-  heroStatusTag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
-  heroStatusText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  heroAmountRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  heroSign: {
-    color: '#34d399',
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  heroSignOwe: {
-    color: '#fdba74',
-  },
-  heroAmount: {
-    color: '#ffffff',
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-  heroAmountMulti: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  heroNetLabel: {
-    color: '#34d399',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
+    heroCard: {
+      backgroundColor: palette.primary,
+      borderRadius: radius.card,
+      padding: space.x4,
+      gap: space.x3,
+      shadowColor: palette.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.22,
+      shadowRadius: 16,
+      elevation: 6,
+    },
+    heroTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    heroLabel: {
+      color: 'rgba(255, 255, 255, 0.75)',
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.6,
+    },
+    heroStatusTag: {
+      backgroundColor: 'rgba(255, 255, 255, 0.16)',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: radius.pill,
+    },
+    heroStatusText: {
+      color: '#fff',
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    heroAmountRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'baseline',
+      gap: 4,
+    },
+    heroSign: {
+      color: '#34d399',
+      fontSize: 28,
+      fontWeight: '800',
+    },
+    heroSignOwe: {
+      color: '#fdba74',
+    },
+    heroAmount: {
+      color: '#ffffff',
+      fontSize: 34,
+      fontWeight: '900',
+      letterSpacing: -0.5,
+    },
+    heroAmountMulti: {
+      color: '#ffffff',
+      fontSize: 20,
+      fontWeight: '900',
+    },
+    heroNetLabel: {
+      color: '#34d399',
+      fontSize: 14,
+      fontWeight: '700',
+      marginLeft: 6,
+    },
 
-  breakdownRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  breakdownCardGreen: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 12,
-    gap: 2,
-  },
-  breakdownHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  breakdownTitleGreen: {
-    color: '#15803d',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  breakdownAmountGreen: {
-    color: '#15803d',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  breakdownCardOrange: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 12,
-    gap: 2,
-  },
-  breakdownTitleOrange: {
-    color: palette.goldText,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  breakdownAmountOrange: {
-    color: palette.goldText,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  breakdownSub: {
-    color: palette.muted,
-    fontSize: 10,
-    marginTop: 2,
-  },
+    breakdownRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    breakdownCardGreen: {
+      flex: 1,
+      backgroundColor: '#ffffff',
+      borderRadius: radius.control,
+      padding: 12,
+      gap: 2,
+    },
+    breakdownHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    breakdownTitleGreen: {
+      color: '#15803d',
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    breakdownAmountGreen: {
+      color: '#15803d',
+      fontSize: 18,
+      fontWeight: '900',
+    },
+    breakdownCardOrange: {
+      flex: 1,
+      backgroundColor: '#ffffff',
+      borderRadius: radius.control,
+      padding: 12,
+      gap: 2,
+    },
+    breakdownTitleOrange: {
+      color: palette.goldText,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    breakdownAmountOrange: {
+      color: palette.goldText,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+    breakdownSub: {
+      color: palette.muted,
+      fontSize: 10,
+      marginTop: 2,
+    },
 
-  heroActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingTop: 4,
-  },
-  heroActionPrimary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#ffffff',
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  heroActionPrimaryText: {
-    color: palette.primary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  heroActionSecondary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  heroActionSecondaryText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
+    heroActionsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      paddingTop: 4,
+    },
+    heroActionPrimary: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: '#ffffff',
+      paddingVertical: 10,
+      borderRadius: radius.control,
+    },
+    heroActionPrimaryText: {
+      color: palette.primary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    heroActionSecondary: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: 'rgba(255, 255, 255, 0.22)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.4)',
+      paddingVertical: 10,
+      borderRadius: radius.control,
+    },
+    heroActionSecondaryText: {
+      color: '#ffffff',
+      fontSize: 13,
+      fontWeight: '800',
+    },
 
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#f1f3f9',
-    padding: 4,
-    borderRadius: radius.pill,
-  },
-  tabItem: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: radius.pill,
-  },
-  tabItemActive: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.muted,
-  },
-  tabTextActive: {
-    color: palette.primary,
-    fontWeight: '800',
-  },
+    tabBar: {
+      flexDirection: 'row',
+      backgroundColor: '#f1f3f9',
+      padding: 4,
+      borderRadius: radius.pill,
+    },
+    tabItem: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      paddingVertical: 8,
+      alignItems: 'center',
+      borderRadius: radius.pill,
+    },
+    tabItemActive: {
+      backgroundColor: '#ffffff',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    tabText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: palette.muted,
+    },
+    tabTextActive: {
+      color: palette.primary,
+      fontWeight: '800',
+    },
 
-  groupsList: {
-    gap: 12,
-  },
-  groupCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: palette.surfaceContainer,
-    gap: 12,
-    shadowColor: palette.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  groupIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#e6e8ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  groupInfo: {
-    flex: 1,
-  },
-  groupTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: palette.ink,
-  },
-  groupMeta: {
-    fontSize: 11,
-    color: palette.muted,
-    marginTop: 2,
-  },
-  groupBadgeOwed: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  groupBadgeOwedText: {
-    color: '#15803d',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  groupBadgeSettled: {
-    backgroundColor: '#e0f2fe',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  groupBadgeSettledText: {
-    color: '#0369a1',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  groupBadgeOwe: {
-    backgroundColor: '#ffedd5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  groupBadgeOweText: {
-    color: '#c2410c',
-    fontSize: 11,
-    fontWeight: '800',
-  },
+    groupsList: {
+      gap: 12,
+    },
+    groupCard: {
+      backgroundColor: '#ffffff',
+      borderRadius: radius.card,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: palette.surfaceContainer,
+      gap: 12,
+      shadowColor: palette.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    groupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    groupIconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: '#e6e8ff',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    groupInfo: {
+      flex: 1,
+    },
+    groupTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: palette.ink,
+    },
+    groupMeta: {
+      fontSize: 11,
+      color: palette.muted,
+      marginTop: 2,
+    },
+    groupBadgeOwed: {
+      backgroundColor: '#dcfce7',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: radius.pill,
+    },
+    groupBadgeOwedText: {
+      color: '#15803d',
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    groupBadgeSettled: {
+      backgroundColor: '#e0f2fe',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: radius.pill,
+    },
+    groupBadgeSettledText: {
+      color: '#0369a1',
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    groupBadgeOwe: {
+      backgroundColor: '#ffedd5',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: radius.pill,
+    },
+    groupBadgeOweText: {
+      color: '#c2410c',
+      fontSize: 11,
+      fontWeight: '800',
+    },
 
-  groupDetailsBox: {
-    backgroundColor: palette.background,
-    padding: 10,
-    borderRadius: 10,
-    gap: 4,
-  },
-  groupDetailsText: {
-    fontSize: 12,
-    color: palette.ink,
-    fontWeight: '600',
-  },
-  groupTagsText: {
-    fontSize: 11,
-    color: palette.muted,
-  },
+    groupDetailsBox: {
+      backgroundColor: palette.background,
+      padding: 10,
+      borderRadius: 10,
+      gap: 4,
+    },
+    groupDetailsText: {
+      fontSize: 12,
+      color: palette.ink,
+      fontWeight: '600',
+    },
+    groupTagsText: {
+      fontSize: 11,
+      color: palette.muted,
+    },
 
-  groupFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  groupActionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: palette.surfaceContainer,
-  },
-  groupActionBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.muted,
-  },
-  groupSettleBtn: {
-    backgroundColor: palette.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  groupSettleBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
+    groupFooter: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 8,
+    },
+    groupActionBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: palette.surfaceContainer,
+    },
+    groupActionBtnText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: palette.muted,
+    },
+    groupSettleBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: palette.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    groupSettleBtnText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#ffffff',
+    },
 
-  balanceItemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: palette.surfaceContainer,
-    gap: 12,
-  },
-  balanceAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#e6e8ff',
-    borderWidth: 1.5,
-    borderColor: palette.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  balanceAvatarText: {
-    color: palette.primary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  balanceDetails: {
-    flex: 1,
-  },
-  balanceName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: palette.ink,
-  },
-  balanceReason: {
-    fontSize: 12,
-    color: palette.muted,
-    marginTop: 2,
-  },
-  balanceRightCol: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  balanceOwedGreen: {
-    color: '#15803d',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  balanceOweOrange: {
-    color: '#c2410c',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  balancePayBtn: {
-    backgroundColor: color.warm,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  balancePayText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
+    balanceItemCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#ffffff',
+      padding: 14,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.surfaceContainer,
+      gap: 12,
+    },
+    balanceAvatar: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: '#e6e8ff',
+      borderWidth: 1.5,
+      borderColor: palette.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    balanceAvatarText: {
+      color: palette.primary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    balanceDetails: {
+      flex: 1,
+    },
+    balanceName: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: palette.ink,
+    },
+    balanceReason: {
+      fontSize: 12,
+      color: palette.muted,
+      marginTop: 2,
+    },
+    balanceRightCol: {
+      alignItems: 'flex-end',
+      gap: 4,
+    },
+    balanceOwedGreen: {
+      color: '#15803d',
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    balanceOweOrange: {
+      color: '#c2410c',
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    balancePayBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: palette.warm,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    balancePayText: {
+      color: '#ffffff',
+      fontSize: 11,
+      fontWeight: '700',
+    },
 
-  activityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#ffffff',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: palette.surfaceContainer,
-  },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: palette.primary,
-  },
-  activityBody: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: palette.ink,
-  },
-  activityMeta: {
-    fontSize: 11,
-    color: palette.muted,
-    marginTop: 2,
-  },
+    activityRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: '#ffffff',
+      padding: 14,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: palette.surfaceContainer,
+    },
+    activityDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: palette.primary,
+    },
+    activityBody: {
+      flex: 1,
+    },
+    activityTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: palette.ink,
+    },
+    activityMeta: {
+      fontSize: 11,
+      color: palette.muted,
+      marginTop: 2,
+    },
 
-  footerNav: {
-    paddingTop: space.x2,
-  },
-});
+    footerNav: {
+      paddingTop: space.x2,
+    },
+  });
+};

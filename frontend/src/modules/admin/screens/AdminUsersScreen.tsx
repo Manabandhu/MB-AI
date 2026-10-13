@@ -1,4 +1,4 @@
-import { color } from '@manabandhu/design-system';
+import { radius } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -11,8 +11,10 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { SearchBar } from '@/modules/shared/components/SearchBar';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 export default function AdminUsersScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const [query, setQuery] = useState('');
   const queryClient = useQueryClient();
@@ -102,24 +104,28 @@ export default function AdminUsersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: color.background },
-  page: { flexGrow: 1, padding: 16 },
-  container: { gap: 16, maxWidth: 1200, width: '100%', alignSelf: 'center' },
-  list: { gap: 12 },
-  item: {
-    backgroundColor: color.surface,
-    borderColor: color.border,
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-  },
-  itemBody: { flex: 1, gap: 4 },
-  itemTitle: { color: color.ink, fontSize: 17, fontWeight: '800', lineHeight: 22 },
-  itemSubtitle: { color: color.muted, fontSize: 14, lineHeight: 20 },
-  itemMeta: { color: color.primary, fontSize: 12, fontWeight: '700', marginTop: 4 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { flexGrow: 1, padding: 16 },
+    container: { gap: 16, maxWidth: 1200, width: '100%', alignSelf: 'center' },
+    list: { gap: 12 },
+    item: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 12,
+      padding: 16,
+    },
+    itemBody: { flex: 1, gap: 4 },
+    itemTitle: { color: palette.ink, fontSize: 17, fontWeight: '800', lineHeight: 22 },
+    itemSubtitle: { color: palette.muted, fontSize: 14, lineHeight: 20 },
+    itemMeta: { color: palette.primary, fontSize: 12, fontWeight: '700', marginTop: 4 },
+  });
+};

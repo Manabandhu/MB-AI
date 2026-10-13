@@ -1,5 +1,5 @@
 import { formatDate } from '@manabandhu/core';
-import { color, radius, space, typography } from '@manabandhu/design-system';
+import { radius, space, typography } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -22,6 +22,8 @@ import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 const immigrationRoutes = {
@@ -77,6 +79,7 @@ async function openUrl(url: string) {
 }
 
 export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
+  const { styles: s } = useScreenStyles(createScreenStyles);
   const layout = useAdaptiveLayout();
   const copy = SCREEN_COPY[screenId];
 
@@ -84,11 +87,11 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.scrollContent}>
         <View style={[s.container, { maxWidth: layout.maxContentWidth }]}>
-          <View style={s.header}>
-            <Text style={s.eyebrow}>IMMIGRATION</Text>
-            <Text style={s.title}>{copy.title}</Text>
-            <Text style={s.subtitle}>{copy.subtitle}</Text>
-          </View>
+          <ScreenHeader
+            title={copy.title}
+            subtitle={copy.subtitle}
+            back={{ fallback: screenId === 'home' ? '/explore' : '/immigration' }}
+          />
           <ImmigrationSection screenId={screenId} />
         </View>
       </ScrollView>
@@ -123,6 +126,7 @@ function ImmigrationSection({ screenId }: ImmigrationScreenProps) {
 // ─── Home ─────────────────────────────────────────────────────────────────────
 
 function ImmigrationHome() {
+  const { styles: s } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const guides = useQuery({
@@ -182,6 +186,7 @@ function ImmigrationHome() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipsRow}>
               {['all', ...categories].map((cat) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={cat}
                   style={[s.chip, activeCategory === cat && s.chipActive]}
                   onPress={() => setActiveCategory(cat)}
@@ -224,6 +229,7 @@ function ImmigrationHome() {
 }
 
 function LatestUpdateCard({ item }: { item: ImmigrationNews }) {
+  const { styles: s } = useScreenStyles(createScreenStyles);
   const date = formatDate(item.publishedAt ?? item.createdAt);
   return (
     <View style={s.heroCard}>
@@ -238,7 +244,11 @@ function LatestUpdateCard({ item }: { item: ImmigrationNews }) {
         </Text>
       ) : null}
       {item.url ? (
-        <Pressable onPress={() => openUrl(item.url as string)} style={s.heroLink}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => openUrl(item.url as string)}
+          style={s.heroLink}
+        >
           <Text style={s.heroLinkText}>Read source ↗</Text>
         </Pressable>
       ) : null}
@@ -249,6 +259,7 @@ function LatestUpdateCard({ item }: { item: ImmigrationNews }) {
 // ─── Cards ────────────────────────────────────────────────────────────────────
 
 function GuideCard({ guide }: { guide: ImmigrationGuide }) {
+  const { styles: s } = useScreenStyles(createScreenStyles);
   const meta = [
     guide.category,
     guide.difficultyLevel ? guide.difficultyLevel.toLowerCase() : null,
@@ -265,6 +276,7 @@ function GuideCard({ guide }: { guide: ImmigrationGuide }) {
 }
 
 function NewsCard({ item }: { item: ImmigrationNews }) {
+  const { styles: s } = useScreenStyles(createScreenStyles);
   const meta = [item.source, item.category, formatDate(item.publishedAt ?? item.createdAt)].filter(
     Boolean,
   );
@@ -287,6 +299,7 @@ function NewsCard({ item }: { item: ImmigrationNews }) {
 }
 
 function ResourceCard({ resource }: { resource: ImmigrationResource }) {
+  const { styles: s } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const meta = [
     resource.resourceType ? resource.resourceType.toLowerCase() : null,
@@ -311,6 +324,7 @@ function ResourceCard({ resource }: { resource: ImmigrationResource }) {
 }
 
 function ChecklistCard({ checklist }: { checklist: ImmigrationChecklist }) {
+  const { styles: s } = useScreenStyles(createScreenStyles);
   const count = checklistItemCount(checklist.itemsJson);
   const meta = [
     checklist.category,
@@ -327,6 +341,7 @@ function ChecklistCard({ checklist }: { checklist: ImmigrationChecklist }) {
 }
 
 function FaqCard({ item }: { item: ImmigrationFaqItem }) {
+  const { styles: s } = useScreenStyles(createScreenStyles);
   const [open, setOpen] = useState(false);
   return (
     <Pressable onPress={() => setOpen((v) => !v)} style={s.card} accessibilityRole="button">
@@ -358,6 +373,7 @@ function QueryList<T extends { id: string }>({
   emptyBody: string;
   render: (item: T) => React.ReactNode;
 }) {
+  const { styles: s } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   if (query.isLoading) return <LoadingState label={`Loading ${noun}...`} />;
   if (query.isError) {
@@ -485,51 +501,57 @@ function SavedPlaceholder() {
   );
 }
 
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: color.background },
-  scrollContent: { padding: space.x4, paddingBottom: space.x8 },
-  container: { width: '100%', alignSelf: 'center', gap: space.x4 },
-  header: { gap: space.x1 },
-  eyebrow: { color: color.teal, fontSize: 12, fontWeight: '800', letterSpacing: 1 },
-  title: { color: color.ink, fontSize: typography.h1.fontSize, fontWeight: '800' },
-  subtitle: { color: color.muted, fontSize: typography.body.fontSize },
-  stack: { gap: space.x3 },
-  linkRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
-  sectionTitle: { color: color.ink, fontSize: 18, fontWeight: '800', marginTop: space.x2 },
-  chipsRow: { flexGrow: 0 },
-  chip: {
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: color.border,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-    marginRight: space.x2,
-  },
-  chipActive: { backgroundColor: color.primary, borderColor: color.primary },
-  chipText: { color: color.ink, fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: color.surface },
-  heroCard: {
-    backgroundColor: color.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    padding: space.x4,
-    gap: space.x2,
-  },
-  heroTag: { color: color.teal, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
-  heroTitle: { color: color.ink, fontSize: 18, fontWeight: '800' },
-  heroBody: { color: color.muted, fontSize: 14, lineHeight: 20 },
-  heroLink: { alignSelf: 'flex-start', paddingVertical: space.x1 },
-  heroLinkText: { color: color.primary, fontWeight: '700' },
-  card: {
-    backgroundColor: color.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    padding: space.x4,
-    gap: space.x1,
-  },
-  cardTitle: { color: color.ink, fontSize: 15, fontWeight: '700' },
-  cardBody: { color: color.muted, fontSize: 14, lineHeight: 20 },
-  cardMeta: { color: color.muted, fontSize: 12, marginTop: space.x1 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: palette.background },
+    scrollContent: { padding: space.x4, paddingBottom: space.x8 },
+    container: { width: '100%', alignSelf: 'center', gap: space.x4 },
+    header: { gap: space.x1 },
+    eyebrow: { color: palette.teal, fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+    title: { color: palette.ink, fontSize: typography.h1.fontSize, fontWeight: '800' },
+    subtitle: { color: palette.muted, fontSize: typography.body.fontSize },
+    stack: { gap: space.x3 },
+    linkRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
+    sectionTitle: { color: palette.ink, fontSize: 18, fontWeight: '800', marginTop: space.x2 },
+    chipsRow: { flexGrow: 0 },
+    chip: {
+      minHeight: 44,
+      minWidth: 44,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: palette.border,
+      paddingHorizontal: space.x3,
+      paddingVertical: space.x2,
+      marginRight: space.x2,
+    },
+    chipActive: { backgroundColor: palette.primary, borderColor: palette.primary },
+    chipText: { color: palette.ink, fontSize: 13, fontWeight: '600' },
+    chipTextActive: { color: palette.surface },
+    heroCard: {
+      backgroundColor: palette.surface,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      padding: space.x4,
+      gap: space.x2,
+    },
+    heroTag: { color: palette.teal, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+    heroTitle: { color: palette.ink, fontSize: 18, fontWeight: '800' },
+    heroBody: { color: palette.muted, fontSize: 14, lineHeight: 20 },
+    heroLink: { minHeight: 44, minWidth: 44, alignSelf: 'flex-start', paddingVertical: space.x1 },
+    heroLinkText: { color: palette.primary, fontWeight: '700' },
+    card: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: palette.surface,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      padding: space.x4,
+      gap: space.x1,
+    },
+    cardTitle: { color: palette.ink, fontSize: 15, fontWeight: '700' },
+    cardBody: { color: palette.muted, fontSize: 14, lineHeight: 20 },
+    cardMeta: { color: palette.muted, fontSize: 12, marginTop: space.x1 },
+  });
+};

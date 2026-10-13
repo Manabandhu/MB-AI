@@ -7,7 +7,7 @@ import { useAdaptiveLayout } from '@/platform/adaptive';
  * Bottom space a screen reserves so its last content is not hidden behind a one-row `ActionBar`:
  * `<Screen bottomInset={ACTION_BAR_SPACE}>`. Add more when the bar's content wraps to two rows.
  */
-export const ACTION_BAR_SPACE = 96;
+export const ACTION_BAR_SPACE = 144;
 /** Minimum padding under the bar on devices without a home indicator. */
 const MIN_BOTTOM_PADDING = 12;
 

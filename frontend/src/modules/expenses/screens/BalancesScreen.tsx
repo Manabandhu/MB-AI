@@ -1,4 +1,4 @@
-import { color, palette, radius, space } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -16,10 +16,12 @@ import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 const balanceKey = (b: DebtBalance) => `${b.groupId}-${b.fromUserId}-${b.toUserId}`;
 
 export function BalancesScreen() {
+  const { styles, palette } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -172,77 +174,81 @@ export function BalancesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  summaryRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  summaryCardGreen: {
-    flex: 1,
-    backgroundColor: 'rgba(22,163,74,0.08)',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(22,163,74,0.2)',
-  },
-  summaryLabelGreen: { fontSize: 12, fontWeight: '600', color: '#16a34a' },
-  summaryValueGreen: { fontSize: 20, fontWeight: '800', color: '#16a34a', marginTop: 4 },
-  summaryCardRed: {
-    flex: 1,
-    backgroundColor: 'rgba(220,38,38,0.08)',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(220,38,38,0.2)',
-  },
-  summaryLabelRed: { fontSize: 12, fontWeight: '600', color: '#dc2626' },
-  summaryValueRed: { fontSize: 20, fontWeight: '800', color: '#dc2626', marginTop: 4 },
-  list: { gap: space.x3, marginTop: space.x4 },
-  actions: { marginTop: space.x6 },
-  card: {
-    backgroundColor: '#fff',
-    borderColor: color.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    padding: 16,
-    gap: 12,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  avatarPill: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(67,30,190,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarPillText: { fontSize: 13, fontWeight: '700', color: color.primary },
-  cardMiddle: { flex: 1 },
-  cardTitle: { fontSize: 14, color: color.ink },
-  strong: { fontWeight: '700' },
-  cardSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  amountText: { fontSize: 16, fontWeight: '800' },
-  cardDivider: { height: 1, backgroundColor: 'rgba(0,0,0,0.06)' },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  auditText: { fontSize: 11, color: '#9ca3af' },
-  settleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(67,30,190,0.08)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  settleBtnText: { fontSize: 12, fontWeight: '700', color: color.primary },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    summaryRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 12,
+      marginBottom: 8,
+    },
+    summaryCardGreen: {
+      flex: 1,
+      backgroundColor: 'rgba(22,163,74,0.08)',
+      borderRadius: radius.control,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(22,163,74,0.2)',
+    },
+    summaryLabelGreen: { fontSize: 12, fontWeight: '600', color: '#16a34a' },
+    summaryValueGreen: { fontSize: 20, fontWeight: '800', color: '#16a34a', marginTop: 4 },
+    summaryCardRed: {
+      flex: 1,
+      backgroundColor: 'rgba(220,38,38,0.08)',
+      borderRadius: radius.control,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(220,38,38,0.2)',
+    },
+    summaryLabelRed: { fontSize: 12, fontWeight: '600', color: '#dc2626' },
+    summaryValueRed: { fontSize: 20, fontWeight: '800', color: '#dc2626', marginTop: 4 },
+    list: { gap: space.x3, marginTop: space.x4 },
+    actions: { marginTop: space.x6 },
+    card: {
+      backgroundColor: '#fff',
+      borderColor: palette.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      padding: 16,
+      gap: 12,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    avatarPill: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: 'rgba(67,30,190,0.1)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarPillText: { fontSize: 13, fontWeight: '700', color: palette.primary },
+    cardMiddle: { flex: 1 },
+    cardTitle: { fontSize: 14, color: palette.ink },
+    strong: { fontWeight: '700' },
+    cardSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+    amountText: { fontSize: 16, fontWeight: '800' },
+    cardDivider: { height: 1, backgroundColor: 'rgba(0,0,0,0.06)' },
+    cardFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    auditText: { fontSize: 11, color: '#9ca3af' },
+    settleBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: 'rgba(67,30,190,0.08)',
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    settleBtnText: { fontSize: 12, fontWeight: '700', color: palette.primary },
+  });
+};

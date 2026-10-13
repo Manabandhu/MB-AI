@@ -1,15 +1,16 @@
-import { color as colors, space, typography } from '@manabandhu/design-system';
+import { space, typography } from '@manabandhu/design-system';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { createReferralOffer } from '@/modules/referrals/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { TextField } from '@/modules/shared/ui/TextField';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 export function OfferReferralScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
@@ -107,18 +108,20 @@ export function OfferReferralScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x5, maxWidth: 640, width: '100%' },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
-  title: { ...typography.h1, color: colors.ink },
-  subtitle: { ...typography.body, color: colors.muted, marginBottom: space.x4 },
-  form: { gap: space.x4 },
-  inputGroup: { gap: space.x2 },
-  inputLabel: { color: colors.ink, fontSize: 14, fontWeight: '700' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
-  errorText: { color: colors.error, fontSize: 13, fontWeight: '700' },
-  successTitle: { ...typography.h2, color: colors.success, textAlign: 'center' },
-  successBody: { ...typography.body, color: colors.muted, textAlign: 'center' },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { backgroundColor: palette.background, flexGrow: 1, padding: space.x4 },
+    container: { alignSelf: 'center', gap: space.x5, maxWidth: 640, width: '100%' },
+    eyebrow: { color: palette.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
+    title: { ...typography.h1, color: palette.ink },
+    subtitle: { ...typography.body, color: palette.muted, marginBottom: space.x4 },
+    form: { gap: space.x4 },
+    inputGroup: { gap: space.x2 },
+    inputLabel: { color: palette.ink, fontSize: 14, fontWeight: '700' },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, paddingTop: space.x2 },
+    errorText: { color: palette.error, fontSize: 13, fontWeight: '700' },
+    successTitle: { ...typography.h2, color: palette.success, textAlign: 'center' },
+    successBody: { ...typography.body, color: palette.muted, textAlign: 'center' },
+  });
+};

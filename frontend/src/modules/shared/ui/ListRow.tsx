@@ -24,7 +24,7 @@ const toneTokens = {
   primary: { bg: '$primaryTint', key: 'primary' },
   teal: { bg: '$tealTint', key: 'teal' },
   warm: { bg: '$warmTint', key: 'warm' },
-  danger: { bg: '$warmTint', key: 'error' },
+  danger: { bg: '$errorBg', key: 'error' },
 } as const;
 
 /** The standard tappable row for listings across modules: tinted icon, two lines of text, trailing meta. */
@@ -52,19 +52,19 @@ export function ListRow({
         >
           <AppIcon color={palette[t.key]} name={icon} size={20} />
         </YStack>
-        <YStack flex={1} gap={2}>
-          <AppText numberOfLines={1} variant="bodyStrong">
+        <YStack flex={1} minWidth={0} gap={4}>
+          <AppText numberOfLines={2} variant="bodyStrong">
             {title}
           </AppText>
           {subtitle ? (
-            <AppText numberOfLines={1} tone="muted" variant="caption">
+            <AppText numberOfLines={2} tone="muted" variant="caption">
               {subtitle}
             </AppText>
           ) : null}
           {footer}
         </YStack>
         {meta ? (
-          <AppText color={palette[t.key]} numberOfLines={1} variant="label">
+          <AppText color={palette[t.key]} maxWidth="30%" numberOfLines={2} variant="label">
             {meta}
           </AppText>
         ) : null}

@@ -36,12 +36,19 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       ref={ref as never}
       aria-label={label ?? props.placeholder}
       aria-labelledby={label ? `${id}-label` : undefined}
-      backgroundColor="$surfaceContainerLow"
+      aria-describedby={error || helper ? `${id}-description` : undefined}
+      aria-invalid={Boolean(error)}
+      backgroundColor="$surface"
       borderColor={error ? '$error' : '$borderColor'}
       borderRadius="$control"
       borderWidth={1}
       color="$color"
-      focusStyle={{ borderColor: '$primary', borderWidth: 2 }}
+      focusStyle={{
+        borderColor: '$primary',
+        outlineColor: '$outlineColor',
+        outlineWidth: 2,
+        outlineStyle: 'solid',
+      }}
       fontSize={16}
       minHeight={multiline ? 112 : '$control'}
       multiline={multiline}
@@ -79,11 +86,11 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
         field
       )}
       {error ? (
-        <AppText aria-live="polite" tone="danger" variant="caption">
+        <AppText id={`${id}-description`} aria-live="polite" tone="danger" variant="caption">
           {error}
         </AppText>
       ) : helper ? (
-        <AppText tone="muted" variant="caption">
+        <AppText id={`${id}-description`} tone="muted" variant="caption">
           {helper}
         </AppText>
       ) : null}

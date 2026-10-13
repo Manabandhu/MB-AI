@@ -1,4 +1,4 @@
-import { breakpoint, palette } from '@manabandhu/design-system';
+import { breakpoint, radius } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
@@ -11,11 +11,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import {
   getBlockedUsers,
   getReports,
@@ -25,25 +23,30 @@ import {
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
+import { useWindowDimensions } from '@/platform/windowDimensions';
 
-const C = {
+const createScreenColors = (palette: ScreenPalette) => ({
   primary: palette.primary,
   secondary: palette.teal,
   accent: palette.warm,
   bg: palette.background,
-  cardBg: '#FFFFFF',
-  border: '#E8E5F2',
-  ink: '#1B1829',
-  inkMuted: '#6B6882',
-  emerald: '#16A34A',
-  emeraldBg: '#DCFCE7',
-  crimson: '#DC2626',
-  crimsonBg: '#FEE2E2',
-  tealBg: '#E0F5F5',
+  cardBg: palette.surface,
+  border: palette.border,
+  ink: palette.ink,
+  inkMuted: palette.muted,
+  emerald: palette.success,
+  emeraldBg: palette.successBg,
+  crimson: palette.error,
+  crimsonBg: palette.errorBg,
+  tealBg: palette.tealBg,
   saffronBg: palette.warmBg,
-};
+});
 
 export function SafetyCenterScreen() {
+  const { styles: s, palette } = useScreenStyles(createScreenStyles);
+  const C = createScreenColors(palette);
   const router = useRouter();
   const { width } = useWindowDimensions();
   const _isCompact = width < breakpoint.narrow;
@@ -134,20 +137,11 @@ export function SafetyCenterScreen() {
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}>
         {/* Top Header */}
-        <View style={s.headerRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            onPress={() => router.back()}
-            style={s.backBtn}
-          >
-            <AppIcon name="chevron-left" size={20} color={C.ink} />
-          </Pressable>
-          <View style={s.headerTitleCol}>
-            <Text style={s.headerEyebrow}>Community Trust & Care</Text>
-            <Text style={s.headerTitle}>Safety Center</Text>
-          </View>
-        </View>
+        <ScreenHeader
+          title="Safety center"
+          subtitle="Get help. Set boundaries. Look out for each other."
+          back={{ fallback: '/explore' }}
+        />
 
         {/* Emergency Assistance Banner */}
         <View style={s.sosBanner}>
@@ -285,238 +279,247 @@ export function SafetyCenterScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-    maxWidth: 680,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  contentDesktop: {
-    padding: 28,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitleCol: {
-    flex: 1,
-  },
-  headerEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: C.ink,
-  },
-  sosBanner: {
-    backgroundColor: '#991B1B',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 20,
-  },
-  sosHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 14,
-  },
-  sosIconOuter: {
-    position: 'relative',
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sosHalo: {
-    position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
-  sosIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sosTextWrap: {
-    flex: 1,
-  },
-  sosTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  sosSubtitle: {
-    fontSize: 13,
-    color: '#FEE2E2',
-    lineHeight: 18,
-  },
-  sosActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  call911Btn: {
-    flex: 1,
-    backgroundColor: '#DC2626',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EF4444',
-  },
-  call911Text: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 14,
-  },
-  helplineBtn: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  helplineText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: C.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    alignItems: 'center',
-  },
-  metricValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: C.secondary,
-  },
-  metricLabel: {
-    fontSize: 12,
-    color: C.inkMuted,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: C.ink,
-    marginBottom: 12,
-  },
-  toolsList: {
-    gap: 10,
-  },
-  toolCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    gap: 14,
-  },
-  toolIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  toolInfo: {
-    flex: 1,
-  },
-  toolTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: C.ink,
-    marginBottom: 2,
-  },
-  toolSubtitle: {
-    fontSize: 12,
-    color: C.inkMuted,
-    lineHeight: 16,
-  },
-  trustCard: {
-    backgroundColor: C.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 18,
-    gap: 14,
-  },
-  trustItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  trustDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.primary,
-    marginTop: 6,
-  },
-  trustContent: {
-    flex: 1,
-  },
-  trustHeading: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.ink,
-    marginBottom: 2,
-  },
-  trustDesc: {
-    fontSize: 12,
-    color: C.inkMuted,
-    lineHeight: 17,
-  },
-  trustDivider: {
-    height: 1,
-    backgroundColor: C.border,
-    opacity: 0.6,
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  const C = createScreenColors(palette);
+  return StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: C.bg,
+    },
+    centerContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 40,
+      maxWidth: 680,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    contentDesktop: {
+      padding: 28,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 20,
+      gap: 12,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.card,
+      backgroundColor: C.cardBg,
+      borderWidth: 1,
+      borderColor: C.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitleCol: {
+      flex: 1,
+    },
+    headerEyebrow: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: C.secondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+    },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: C.ink,
+    },
+    sosBanner: {
+      backgroundColor: '#991B1B',
+      borderRadius: radius.card,
+      padding: 18,
+      marginBottom: 20,
+    },
+    sosHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      marginBottom: 14,
+    },
+    sosIconOuter: {
+      position: 'relative',
+      width: 44,
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sosHalo: {
+      position: 'absolute',
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(255,255,255,0.4)',
+    },
+    sosIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.card,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sosTextWrap: {
+      flex: 1,
+    },
+    sosTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      marginBottom: 2,
+    },
+    sosSubtitle: {
+      fontSize: 13,
+      color: '#FEE2E2',
+      lineHeight: 18,
+    },
+    sosActionsRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    call911Btn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      backgroundColor: '#DC2626',
+      paddingVertical: 10,
+      borderRadius: 8,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#EF4444',
+    },
+    call911Text: {
+      color: '#FFFFFF',
+      fontWeight: '800',
+      fontSize: 14,
+    },
+    helplineBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      paddingVertical: 10,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    helplineText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    metricsRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 24,
+    },
+    metricCard: {
+      flex: 1,
+      backgroundColor: C.cardBg,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: C.border,
+      padding: 14,
+      alignItems: 'center',
+    },
+    metricValue: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: C.secondary,
+    },
+    metricLabel: {
+      fontSize: 12,
+      color: C.inkMuted,
+      fontWeight: '600',
+      marginTop: 2,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: C.ink,
+      marginBottom: 12,
+    },
+    toolsList: {
+      gap: 10,
+    },
+    toolCard: {
+      minHeight: 44,
+      minWidth: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: C.cardBg,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: C.border,
+      padding: 14,
+      gap: 14,
+    },
+    toolIconBox: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.control,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    toolInfo: {
+      flex: 1,
+    },
+    toolTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: C.ink,
+      marginBottom: 2,
+    },
+    toolSubtitle: {
+      fontSize: 12,
+      color: C.inkMuted,
+      lineHeight: 16,
+    },
+    trustCard: {
+      backgroundColor: C.cardBg,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: C.border,
+      padding: 18,
+      gap: 14,
+    },
+    trustItem: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+    },
+    trustDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: C.primary,
+      marginTop: 6,
+    },
+    trustContent: {
+      flex: 1,
+    },
+    trustHeading: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: C.ink,
+      marginBottom: 2,
+    },
+    trustDesc: {
+      fontSize: 12,
+      color: C.inkMuted,
+      lineHeight: 17,
+    },
+    trustDivider: {
+      height: 1,
+      backgroundColor: C.border,
+      opacity: 0.6,
+    },
+  });
+};

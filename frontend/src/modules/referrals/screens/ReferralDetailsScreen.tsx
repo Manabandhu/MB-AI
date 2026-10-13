@@ -1,17 +1,8 @@
-import { breakpoint, color as colors, palette, radius, space } from '@manabandhu/design-system';
+import { breakpoint, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
 import {
@@ -23,8 +14,11 @@ import {
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
+import { useWindowDimensions } from '@/platform/windowDimensions';
 
 export function ReferralDetailsScreen() {
+  const { styles, palette } = useScreenStyles(createScreenStyles);
   const { referralId } = useLocalSearchParams<{ referralId: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -105,7 +99,7 @@ export function ReferralDetailsScreen() {
     if (lower.includes('amazon')) return { letter: 'A', color: palette.warning, bg: '#FFFBEB' };
     if (lower.includes('apple')) return { letter: '', color: '#1E1B4B', bg: '#F8FAFC' };
     if (lower.includes('meta')) return { letter: 'M', color: '#0866FF', bg: '#EFF6FF' };
-    return { letter: title.charAt(0).toUpperCase() || 'R', color: colors.primary, bg: '#EEF2FF' };
+    return { letter: title.charAt(0).toUpperCase() || 'R', color: palette.primary, bg: '#EEF2FF' };
   }
 
   const company = getCompanyInitials(data.title);
@@ -131,7 +125,7 @@ export function ReferralDetailsScreen() {
             onPress={() => router.back()}
             style={styles.backBtn}
           >
-            <AppIcon name="chevron-left" size={20} color={colors.ink} />
+            <AppIcon name="chevron-left" size={20} color={palette.ink} />
           </Pressable>
           <View>
             <View style={styles.headerTitleRow}>
@@ -151,7 +145,7 @@ export function ReferralDetailsScreen() {
             onPress={() => setBookmarked(!bookmarked)}
             style={styles.iconBtn}
           >
-            <AppIcon name="star" size={18} color={bookmarked ? '#EA580C' : colors.muted} />
+            <AppIcon name="star" size={18} color={bookmarked ? '#EA580C' : palette.muted} />
           </Pressable>
         </View>
       </View>
@@ -415,8 +409,13 @@ export function ReferralDetailsScreen() {
         animationType="fade"
         onRequestClose={() => setShowRequestModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowRequestModal(false)}>
+        <Pressable
+          accessibilityRole="button"
+          style={styles.modalOverlay}
+          onPress={() => setShowRequestModal(false)}
+        >
           <Pressable
+            accessibilityRole="button"
             style={[styles.modalCard, isDesktop && styles.modalCardDesktop]}
             onPress={(e) => e.stopPropagation()}
           >
@@ -425,8 +424,8 @@ export function ReferralDetailsScreen() {
                 <Text style={styles.modalTitle}>Request Referral</Text>
                 <Text style={styles.modalSubtitle}>Direct introduction to referrer</Text>
               </View>
-              <Pressable onPress={() => setShowRequestModal(false)}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.ink }}>✕</Text>
+              <Pressable accessibilityRole="button" onPress={() => setShowRequestModal(false)}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: palette.ink }}>✕</Text>
               </Pressable>
             </View>
 
@@ -481,535 +480,551 @@ export function ReferralDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  headerBar: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  teluguPill: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  teluguPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#4338CA',
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollContainer: {
-    paddingHorizontal: space.x4,
-    paddingTop: space.x3,
-    paddingBottom: 110,
-  },
-  scrollContainerDesktop: {
-    alignItems: 'center',
-  },
-  mainWrapper: {
-    width: '100%',
-    gap: space.x4,
-  },
-  mainWrapperDesktop: {
-    maxWidth: 680,
-  },
-  bentoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: space.x4,
-    gap: space.x3,
-  },
-  roleHeaderRow: {
-    flexDirection: 'row',
-    gap: space.x3,
-  },
-  companyLogo: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-    position: 'relative',
-  },
-  companyLogoText: {
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  roleInfo: {
-    flex: 1,
-  },
-  roleBadgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  verifiedReferrerPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  verifiedReferrerText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#4338CA',
-  },
-  statusPill: {
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  statusPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#15803D',
-  },
-  roleTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    lineHeight: 22,
-  },
-  roleLocation: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
-    marginTop: 2,
-  },
-  metaPillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    paddingTop: space.x2,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  metaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: palette.border,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  metaPillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#334155',
-  },
-  referrerProfileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-  },
-  avatarRing: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    padding: 2,
-    backgroundColor: '#EA580C',
-    position: 'relative',
-  },
-  avatarInner: {
-    flex: 1,
-    borderRadius: 24,
-    backgroundColor: '#1E1B4B',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  referrerInfo: {
-    flex: 1,
-  },
-  referrerNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  referrerName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  referrerRole: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#475569',
-    marginTop: 1,
-  },
-  referrerChapter: {
-    fontSize: 11,
-    color: '#EA580C',
-    fontWeight: '600',
-    marginTop: 1,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    gap: space.x2,
-  },
-  metricCell: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: palette.border,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  metricNumber: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  metricLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
-    marginTop: 2,
-  },
-  quoteBox: {
-    backgroundColor: '#F8FAFC',
-    borderLeftWidth: 3,
-    borderLeftColor: '#4338CA',
-    borderRadius: 8,
-    padding: space.x3,
-  },
-  quoteText: {
-    fontSize: 12,
-    color: '#334155',
-    lineHeight: 18,
-    fontStyle: 'italic',
-  },
-  termsBox: {
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 8,
-    padding: space.x3,
-  },
-  termsLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: palette.goldText,
-  },
-  termsValue: {
-    fontSize: 12,
-    color: '#78350F',
-    marginTop: 2,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  criteriaList: {
-    gap: space.x3,
-  },
-  criteriaItem: {
-    flexDirection: 'row',
-    gap: space.x3,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: space.x3,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  criteriaBullet: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  criteriaContent: {
-    flex: 1,
-  },
-  criteriaHeading: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  criteriaText: {
-    fontSize: 12,
-    color: '#475569',
-    marginTop: 2,
-    lineHeight: 17,
-  },
-  checklist: {
-    gap: space.x3,
-  },
-  checklistItem: {
-    flexDirection: 'row',
-    gap: space.x3,
-  },
-  numberCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#1E1B4B',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  numberText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 11,
-  },
-  checklistContent: {
-    flex: 1,
-  },
-  checklistTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  checklistDesc: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 1,
-    lineHeight: 17,
-  },
-  pledgeCard: {
-    backgroundColor: '#FFF7ED',
-    borderWidth: 1,
-    borderColor: '#FED7AA',
-    borderRadius: radius.card,
-    padding: space.x4,
-    alignItems: 'center',
-    gap: 6,
-  },
-  pledgeTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#C2410C',
-  },
-  pledgeText: {
-    fontSize: 12,
-    color: '#9A3412',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: palette.border,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  bottomBarContent: {
-    flexDirection: 'row',
-    gap: space.x2,
-    width: '100%',
-  },
-  bottomBarContentDesktop: {
-    maxWidth: 680,
-    alignSelf: 'center',
-  },
-  secondaryActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 12,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  secondaryActionBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  primaryActionBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#EA580C',
-    paddingVertical: 12,
-    borderRadius: radius.control,
-    shadowColor: '#EA580C',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  primaryActionBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: space.x4,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 440,
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.card,
-    padding: space.x5,
-    gap: space.x4,
-  },
-  modalCardDesktop: {
-    maxWidth: 480,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  modalSubtitle: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  modalBody: {
-    gap: space.x3,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  modalInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: radius.control,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: '#1E1B4B',
-  },
-  modalTextArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  submitBtn: {
-    backgroundColor: '#EA580C',
-    paddingVertical: 12,
-    borderRadius: radius.control,
-    alignItems: 'center',
-    marginTop: space.x1,
-  },
-  submitBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  successBox: {
-    alignItems: 'center',
-    paddingVertical: space.x4,
-    gap: space.x2,
-  },
-  successHeading: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#10B981',
-  },
-  successSubtext: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: '#F8FAFC',
+    },
+    headerBar: {
+      backgroundColor: '#FFFFFF',
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: space.x4,
+      paddingVertical: space.x3,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x3,
+    },
+    backBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 36,
+      height: 36,
+      borderRadius: radius.card,
+      backgroundColor: '#F1F5F9',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x2,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#1E1B4B',
+    },
+    teluguPill: {
+      backgroundColor: '#EEF2FF',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    teluguPillText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#4338CA',
+    },
+    headerSubtitle: {
+      fontSize: 11,
+      color: '#64748B',
+      marginTop: 1,
+    },
+    headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x2,
+    },
+    iconBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      width: 36,
+      height: 36,
+      borderRadius: radius.card,
+      backgroundColor: '#F1F5F9',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    scrollContainer: {
+      paddingHorizontal: space.x4,
+      paddingTop: space.x3,
+      paddingBottom: 110,
+    },
+    scrollContainerDesktop: {
+      alignItems: 'center',
+    },
+    mainWrapper: {
+      width: '100%',
+      gap: space.x4,
+    },
+    mainWrapperDesktop: {
+      maxWidth: 680,
+    },
+    bentoCard: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      padding: space.x4,
+      gap: space.x3,
+    },
+    roleHeaderRow: {
+      flexDirection: 'row',
+      gap: space.x3,
+    },
+    companyLogo: {
+      width: 52,
+      height: 52,
+      borderRadius: radius.control,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: palette.border,
+      position: 'relative',
+    },
+    companyLogoText: {
+      fontSize: 22,
+      fontWeight: '800',
+    },
+    roleInfo: {
+      flex: 1,
+    },
+    roleBadgesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 4,
+    },
+    verifiedReferrerPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#EEF2FF',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    verifiedReferrerText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#4338CA',
+    },
+    statusPill: {
+      backgroundColor: '#F0FDF4',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    statusPillText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#15803D',
+    },
+    roleTitle: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: '#1E1B4B',
+      lineHeight: 22,
+    },
+    roleLocation: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#64748B',
+      marginTop: 2,
+    },
+    metaPillsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      paddingTop: space.x2,
+      borderTopWidth: 1,
+      borderTopColor: '#F1F5F9',
+    },
+    metaPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: '#F8FAFC',
+      borderWidth: 1,
+      borderColor: palette.border,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    metaPillText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#334155',
+    },
+    referrerProfileRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x3,
+    },
+    avatarRing: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      padding: 2,
+      backgroundColor: '#EA580C',
+      position: 'relative',
+    },
+    avatarInner: {
+      flex: 1,
+      borderRadius: radius.panel,
+      backgroundColor: '#1E1B4B',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitials: {
+      color: '#FFFFFF',
+      fontWeight: '800',
+      fontSize: 16,
+    },
+    referrerInfo: {
+      flex: 1,
+    },
+    referrerNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    referrerName: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#1E1B4B',
+    },
+    referrerRole: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#475569',
+      marginTop: 1,
+    },
+    referrerChapter: {
+      fontSize: 11,
+      color: '#EA580C',
+      fontWeight: '600',
+      marginTop: 1,
+    },
+    metricsGrid: {
+      flexDirection: 'row',
+      gap: space.x2,
+    },
+    metricCell: {
+      flex: 1,
+      backgroundColor: '#F8FAFC',
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: palette.border,
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    metricNumber: {
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    metricLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: '#64748B',
+      marginTop: 2,
+    },
+    quoteBox: {
+      backgroundColor: '#F8FAFC',
+      borderLeftWidth: 3,
+      borderLeftColor: '#4338CA',
+      borderRadius: 8,
+      padding: space.x3,
+    },
+    quoteText: {
+      fontSize: 12,
+      color: '#334155',
+      lineHeight: 18,
+      fontStyle: 'italic',
+    },
+    termsBox: {
+      backgroundColor: '#FFFBEB',
+      borderWidth: 1,
+      borderColor: '#FDE68A',
+      borderRadius: 8,
+      padding: space.x3,
+    },
+    termsLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: palette.goldText,
+    },
+    termsValue: {
+      fontSize: 12,
+      color: '#78350F',
+      marginTop: 2,
+    },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    sectionIconCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: '#EEF2FF',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: '#1E1B4B',
+    },
+    criteriaList: {
+      gap: space.x3,
+    },
+    criteriaItem: {
+      flexDirection: 'row',
+      gap: space.x3,
+      backgroundColor: '#F8FAFC',
+      borderRadius: radius.control,
+      padding: space.x3,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    criteriaBullet: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: '#FFFFFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    criteriaContent: {
+      flex: 1,
+    },
+    criteriaHeading: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#1E1B4B',
+    },
+    criteriaText: {
+      fontSize: 12,
+      color: '#475569',
+      marginTop: 2,
+      lineHeight: 17,
+    },
+    checklist: {
+      gap: space.x3,
+    },
+    checklistItem: {
+      flexDirection: 'row',
+      gap: space.x3,
+    },
+    numberCircle: {
+      width: 24,
+      height: 24,
+      borderRadius: radius.control,
+      backgroundColor: '#1E1B4B',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    numberText: {
+      color: '#FFFFFF',
+      fontWeight: '800',
+      fontSize: 11,
+    },
+    checklistContent: {
+      flex: 1,
+    },
+    checklistTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#1E1B4B',
+    },
+    checklistDesc: {
+      fontSize: 12,
+      color: '#64748B',
+      marginTop: 1,
+      lineHeight: 17,
+    },
+    pledgeCard: {
+      backgroundColor: '#FFF7ED',
+      borderWidth: 1,
+      borderColor: '#FED7AA',
+      borderRadius: radius.card,
+      padding: space.x4,
+      alignItems: 'center',
+      gap: 6,
+    },
+    pledgeTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: '#C2410C',
+    },
+    pledgeText: {
+      fontSize: 12,
+      color: '#9A3412',
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    bottomBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: '#FFFFFF',
+      borderTopWidth: 1,
+      borderTopColor: palette.border,
+      paddingHorizontal: space.x4,
+      paddingVertical: space.x3,
+    },
+    bottomBarContent: {
+      flexDirection: 'row',
+      gap: space.x2,
+      width: '100%',
+    },
+    bottomBarContentDesktop: {
+      maxWidth: 680,
+      alignSelf: 'center',
+    },
+    secondaryActionBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: '#F1F5F9',
+      paddingVertical: 12,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    secondaryActionBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#1E1B4B',
+    },
+    primaryActionBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: '#EA580C',
+      paddingVertical: 12,
+      borderRadius: radius.control,
+      shadowColor: '#EA580C',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    primaryActionBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    modalOverlay: {
+      minHeight: 44,
+      minWidth: 44,
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: space.x4,
+    },
+    modalCard: {
+      minHeight: 44,
+      minWidth: 44,
+      width: '100%',
+      maxWidth: 440,
+      backgroundColor: '#FFFFFF',
+      borderRadius: radius.card,
+      padding: space.x5,
+      gap: space.x4,
+    },
+    modalCardDesktop: {
+      maxWidth: 480,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: '#1E1B4B',
+    },
+    modalSubtitle: {
+      fontSize: 12,
+      color: '#64748B',
+      marginTop: 1,
+    },
+    modalBody: {
+      gap: space.x3,
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#334155',
+    },
+    modalInput: {
+      backgroundColor: '#F8FAFC',
+      borderWidth: 1,
+      borderColor: '#CBD5E1',
+      borderRadius: radius.control,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: '#1E1B4B',
+    },
+    modalTextArea: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+    submitBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: '#EA580C',
+      paddingVertical: 12,
+      borderRadius: radius.control,
+      alignItems: 'center',
+      marginTop: space.x1,
+    },
+    submitBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    successBox: {
+      alignItems: 'center',
+      paddingVertical: space.x4,
+      gap: space.x2,
+    },
+    successHeading: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#10B981',
+    },
+    successSubtext: {
+      fontSize: 12,
+      color: '#64748B',
+      textAlign: 'center',
+    },
+  });
+};

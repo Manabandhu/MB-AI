@@ -1,4 +1,4 @@
-import { color as baseColors, palette, space } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { type Href, router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -26,23 +26,24 @@ import { requestPermissionAndRegister } from '@/modules/notifications/push';
 import { deleteUpload, useImageUpload } from '@/modules/shared/hooks/useImageUpload';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
-const colors = {
-  ...baseColors,
+const createScreenColors = (palette: ScreenPalette) => ({
+  ...palette,
   primary: palette.primary,
-  primarySoft: palette.primarySoft,
+  primarySoft: palette.primaryTint,
   primaryContainer: palette.primaryContainer,
-  surface: '#ffffff',
+  surface: palette.surface,
   background: palette.background,
   ink: palette.ink,
   muted: palette.muted,
   teal: palette.teal,
   warm: palette.warm,
   border: palette.border,
-  surfaceContainerLow: '#f4f2fb',
-  surfaceContainerHigh: '#e8e4f5',
-  skeleton: palette.primarySoft,
-};
+  surfaceContainerLow: palette.surfaceContainerLow,
+  surfaceContainerHigh: palette.surfaceContainerHigh,
+  skeleton: palette.skeleton,
+});
 
 export type OnboardingStepKey =
   | 'about'
@@ -176,6 +177,8 @@ function onboardingToSettings(choices: Record<string, boolean>): Record<string, 
 }
 
 export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
+  const { styles, palette } = useScreenStyles(createScreenStyles);
+  const colors = createScreenColors(palette);
   const insets = useSafeAreaInsets();
   const normalizedKey = normalizeStepKey(kind);
   const meta = STEP_METAS[normalizedKey] || STEP_METAS.goals;
@@ -492,6 +495,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
             <View style={styles.stepContainer}>
               {/* GPS Banner */}
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setMetroLocation('Dallas–Fort Worth / Coppell / Irving, TX')}
                 style={styles.gpsBanner}
               >
@@ -531,6 +535,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                       metroLocation === opt.label || metroLocation === opt.optionKey;
                     return (
                       <Pressable
+                        accessibilityRole="button"
                         key={opt.optionKey}
                         onPress={() => setMetroLocation(opt.label)}
                         style={[styles.metroCard, isSelected && styles.metroCardSelected]}
@@ -584,6 +589,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                   const isPrimary = primaryLanguage === opt.optionKey;
                   return (
                     <Pressable
+                      accessibilityRole="button"
                       key={opt.optionKey}
                       onPress={() => setPrimaryLanguage(opt.optionKey)}
                       style={[styles.langChip, isPrimary && styles.langChipPrimary]}
@@ -610,6 +616,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                     const isSelected = secondaryLanguages.includes(opt.optionKey);
                     return (
                       <Pressable
+                        accessibilityRole="button"
                         key={opt.optionKey}
                         onPress={() => {
                           setSecondaryLanguages((prev) =>
@@ -641,6 +648,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                   const isSelected = interestTags.includes(opt.optionKey);
                   return (
                     <Pressable
+                      accessibilityRole="button"
                       key={opt.optionKey}
                       onPress={() => {
                         setInterestTags((prev) =>
@@ -779,6 +787,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                   const isChecked = !!pledgesAccepted[opt.optionKey];
                   return (
                     <Pressable
+                      accessibilityRole="button"
                       key={opt.optionKey}
                       onPress={() => {
                         setPledgesAccepted((prev) => ({
@@ -804,6 +813,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
 
               {/* Master Accept Button */}
               <Pressable
+                accessibilityRole="button"
                 onPress={() => {
                   const allTrue: Record<string, boolean> = {};
                   stepConfig?.options.forEach((opt) => {
@@ -905,628 +915,651 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    backgroundColor: colors.background,
-    flex: 1,
-  },
-  adaptiveWrapper: {
-    alignSelf: 'center',
-    backgroundColor: colors.surface,
-    flex: 1,
-    maxWidth: 640,
-    width: '100%',
-  },
-  centerContainer: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-    padding: space.x6,
-  },
-  loadingText: {
-    color: colors.ink,
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: space.x4,
-  },
-  errorTitle: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: '800',
-    marginTop: space.x4,
-  },
-  errorSub: {
-    color: colors.muted,
-    fontSize: 14,
-    marginTop: space.x2,
-    textAlign: 'center',
-  },
-  header: {
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    paddingHorizontal: space.x4,
-    paddingTop: space.x2,
-  },
-  headerTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 48,
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    alignItems: 'center',
-    borderRadius: 20,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  stepBadge: {
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 12,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x1,
-  },
-  stepBadgeText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  skipButton: {
-    paddingHorizontal: space.x2,
-    paddingVertical: space.x1,
-  },
-  skipText: {
-    color: colors.muted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  progressTrack: {
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: 999,
-    height: 5,
-    marginVertical: space.x2,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  progressFill: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    height: '100%',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 100,
-    paddingHorizontal: space.x4,
-    paddingTop: space.x5,
-  },
-  headlineGroup: {
-    marginBottom: space.x5,
-  },
-  categoryPill: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primarySoft,
-    borderRadius: 8,
-    flexDirection: 'row',
-    gap: space.x1,
-    marginBottom: space.x2,
-    paddingHorizontal: space.x2,
-    paddingVertical: 3,
-  },
-  categoryPillText: {
-    color: colors.primary,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  titleText: {
-    color: colors.ink,
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    lineHeight: 32,
-  },
-  subtitleText: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: space.x2,
-  },
-  stepContainer: {
-    gap: space.x4,
-  },
-  instructionBanner: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: space.x1,
-  },
-  instructionText: {
-    color: colors.muted,
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  countBadgeText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  cardGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.x3,
-  },
-  goalCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    padding: space.x4,
-    position: 'relative',
-    width: '48%',
-  },
-  goalCardSelected: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primary,
-  },
-  iconBox: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 12,
-    height: 44,
-    justifyContent: 'center',
-    marginBottom: space.x3,
-    width: 44,
-  },
-  iconBoxSelected: {
-    backgroundColor: colors.primary,
-  },
-  cardTitle: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 18,
-    marginBottom: space.x1,
-  },
-  cardTitleSelected: {
-    color: colors.primary,
-  },
-  cardDescription: {
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  checkmarkBadge: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    height: 20,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 8,
-    top: 8,
-    width: 20,
-  },
-  reassuranceCard: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 12,
-    flexDirection: 'row',
-    gap: space.x3,
-    marginTop: space.x3,
-    padding: space.x3,
-  },
-  reassuranceText: {
-    color: colors.muted,
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  gpsBanner: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    borderColor: colors.border,
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x3,
-    padding: space.x4,
-  },
-  gpsIconCircle: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  gpsBannerTitle: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  gpsBannerSub: {
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  searchBar: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x2,
-    height: 48,
-    paddingHorizontal: space.x3,
-  },
-  searchInput: {
-    color: colors.ink,
-    flex: 1,
-    fontSize: 14,
-    height: '100%',
-  },
-  sectionHeader: {
-    color: colors.ink,
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: space.x2,
-  },
-  helperText: {
-    color: colors.muted,
-    fontSize: 13,
-    marginTop: 2,
-  },
-  metroGrid: {
-    gap: space.x2,
-  },
-  metroCard: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    padding: space.x3,
-  },
-  metroCardSelected: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primary,
-  },
-  metroCardTitle: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  metroCardTitleSelected: {
-    color: colors.primary,
-  },
-  metroCardSub: {
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  metroCheck: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    height: 24,
-    justifyContent: 'center',
-    width: 24,
-  },
-  inputGroup: {
-    gap: space.x2,
-    marginTop: space.x2,
-  },
-  inputLabel: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  textInput: {
-    backgroundColor: colors.surfaceContainerLow,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 14,
-    minHeight: 48,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x2,
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.x2,
-  },
-  langChip: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x2,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  langChipPrimary: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  langChipSelected: {
-    backgroundColor: colors.teal,
-    borderColor: colors.teal,
-  },
-  langChipText: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  langChipTextPrimary: {
-    color: colors.surface,
-  },
-  langChipTextSelected: {
-    color: colors.surface,
-  },
-  interestChip: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x2,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x2,
-  },
-  interestChipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  interestChipText: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  interestChipTextSelected: {
-    color: colors.surface,
-  },
-  photoContainer: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginVertical: space.x4,
-    position: 'relative',
-  },
-  avatarImage: {
-    borderRadius: 60,
-    height: 120,
-    width: 120,
-  },
-  avatarPlaceholder: {
-    alignItems: 'center',
-    backgroundColor: colors.primarySoft,
-    borderRadius: 60,
-    height: 120,
-    justifyContent: 'center',
-    width: 120,
-  },
-  avatarInitials: {
-    color: colors.primary,
-    fontSize: 36,
-    fontWeight: '800',
-  },
-  cameraBadge: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderColor: colors.surface,
-    borderRadius: 18,
-    borderWidth: 2,
-    bottom: 0,
-    height: 36,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 0,
-    width: 36,
-  },
-  photoError: {
-    color: colors.error,
-    fontSize: 13,
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  photoHint: {
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-  notificationList: {
-    gap: space.x3,
-  },
-  notificationRow: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    padding: space.x3,
-  },
-  notificationIconBox: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    height: 40,
-    justifyContent: 'center',
-    marginRight: space.x3,
-    width: 40,
-  },
-  notificationTitle: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  notificationDesc: {
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
-  },
-  pledgeHero: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 16,
-    padding: space.x4,
-    textAlign: 'center',
-  },
-  shieldBigBox: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 32,
-    height: 64,
-    justifyContent: 'center',
-    marginBottom: space.x2,
-    width: 64,
-  },
-  pledgeHeroTitle: {
-    color: colors.ink,
-    fontSize: 17,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  pledgeHeroSub: {
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: space.x1,
-    textAlign: 'center',
-  },
-  pledgeList: {
-    gap: space.x3,
-    marginTop: space.x2,
-  },
-  pledgeCard: {
-    alignItems: 'flex-start',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x3,
-    padding: space.x3,
-  },
-  pledgeCardChecked: {
-    backgroundColor: colors.surfaceContainerLow,
-    borderColor: colors.teal,
-  },
-  checkboxBox: {
-    alignItems: 'center',
-    borderColor: colors.muted,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    height: 22,
-    justifyContent: 'center',
-    marginTop: 2,
-    width: 22,
-  },
-  checkboxBoxChecked: {
-    backgroundColor: colors.teal,
-    borderColor: colors.teal,
-  },
-  pledgeLabel: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  pledgeDesc: {
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
-  },
-  masterPledgeBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.primarySoft,
-    borderRadius: 12,
-    flexDirection: 'row',
-    gap: space.x2,
-    justifyContent: 'center',
-    marginTop: space.x2,
-    paddingVertical: space.x3,
-  },
-  masterPledgeBtnText: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  celebrationHero: {
-    alignItems: 'center',
-    paddingVertical: space.x4,
-  },
-  sparkleCircle: {
-    alignItems: 'center',
-    backgroundColor: colors.primarySoft,
-    borderRadius: 44,
-    height: 88,
-    justifyContent: 'center',
-    marginBottom: space.x4,
-    width: 88,
-  },
-  celebrateTitle: {
-    color: colors.ink,
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  celebrateSub: {
-    color: colors.muted,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: space.x2,
-    textAlign: 'center',
-  },
-  summaryCard: {
-    backgroundColor: colors.surfaceContainerLow,
-    borderColor: colors.border,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: space.x3,
-    marginTop: space.x2,
-    padding: space.x4,
-  },
-  summaryCardTitle: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: space.x1,
-  },
-  summaryRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  summaryLabel: {
-    color: colors.muted,
-    fontSize: 13,
-  },
-  summaryValue: {
-    color: colors.ink,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  saveError: { color: palette.error, fontSize: 14, lineHeight: 20, marginBottom: space.x2 },
-  bottomBar: {
-    backgroundColor: colors.surface,
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    bottom: 0,
-    left: 0,
-    padding: space.x4,
-    position: 'absolute',
-    right: 0,
-  },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  const colors = createScreenColors(palette);
+  return StyleSheet.create({
+    safe: {
+      backgroundColor: colors.background,
+      flex: 1,
+    },
+    adaptiveWrapper: {
+      alignSelf: 'center',
+      backgroundColor: colors.surface,
+      flex: 1,
+      maxWidth: 640,
+      width: '100%',
+    },
+    centerContainer: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
+      padding: space.x6,
+    },
+    loadingText: {
+      color: colors.ink,
+      fontSize: 16,
+      fontWeight: '600',
+      marginTop: space.x4,
+    },
+    errorTitle: {
+      color: colors.ink,
+      fontSize: 20,
+      fontWeight: '800',
+      marginTop: space.x4,
+    },
+    errorSub: {
+      color: colors.muted,
+      fontSize: 14,
+      marginTop: space.x2,
+      textAlign: 'center',
+    },
+    header: {
+      backgroundColor: colors.surface,
+      borderBottomColor: colors.border,
+      borderBottomWidth: 1,
+      paddingHorizontal: space.x4,
+      paddingTop: space.x2,
+    },
+    headerTop: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      height: 48,
+      justifyContent: 'space-between',
+    },
+    backButton: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'center',
+      borderRadius: radius.card,
+      height: 40,
+      justifyContent: 'center',
+      width: 40,
+    },
+    stepBadge: {
+      backgroundColor: colors.surfaceContainerLow,
+      borderRadius: radius.control,
+      paddingHorizontal: space.x3,
+      paddingVertical: space.x1,
+    },
+    stepBadgeText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    skipButton: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: space.x2,
+      paddingVertical: space.x1,
+    },
+    skipText: {
+      color: colors.muted,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    progressTrack: {
+      backgroundColor: colors.surfaceContainerHigh,
+      borderRadius: 999,
+      height: 5,
+      marginVertical: space.x2,
+      overflow: 'hidden',
+      width: '100%',
+    },
+    progressFill: {
+      backgroundColor: colors.primary,
+      borderRadius: 999,
+      height: '100%',
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: 100,
+      paddingHorizontal: space.x4,
+      paddingTop: space.x5,
+    },
+    headlineGroup: {
+      marginBottom: space.x5,
+    },
+    categoryPill: {
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      backgroundColor: colors.primarySoft,
+      borderRadius: 8,
+      flexDirection: 'row',
+      gap: space.x1,
+      marginBottom: space.x2,
+      paddingHorizontal: space.x2,
+      paddingVertical: 3,
+    },
+    categoryPillText: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    titleText: {
+      color: colors.ink,
+      fontSize: 24,
+      fontWeight: '800',
+      letterSpacing: -0.3,
+      lineHeight: 32,
+    },
+    subtitleText: {
+      color: colors.muted,
+      fontSize: 15,
+      lineHeight: 22,
+      marginTop: space.x2,
+    },
+    stepContainer: {
+      gap: space.x4,
+    },
+    instructionBanner: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: space.x1,
+    },
+    instructionText: {
+      color: colors.muted,
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '500',
+    },
+    countBadgeText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    cardGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.x3,
+    },
+    goalCard: {
+      minHeight: 44,
+      minWidth: 44,
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: radius.card,
+      borderWidth: 1.5,
+      padding: space.x4,
+      position: 'relative',
+      width: '48%',
+    },
+    goalCardSelected: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+    },
+    iconBox: {
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainerLow,
+      borderRadius: radius.control,
+      height: 44,
+      justifyContent: 'center',
+      marginBottom: space.x3,
+      width: 44,
+    },
+    iconBoxSelected: {
+      backgroundColor: colors.primary,
+    },
+    cardTitle: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '700',
+      lineHeight: 18,
+      marginBottom: space.x1,
+    },
+    cardTitleSelected: {
+      color: colors.primary,
+    },
+    cardDescription: {
+      color: colors.muted,
+      fontSize: 12,
+      lineHeight: 16,
+    },
+    checkmarkBadge: {
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+      borderRadius: 10,
+      height: 20,
+      justifyContent: 'center',
+      position: 'absolute',
+      right: 8,
+      top: 8,
+      width: 20,
+    },
+    reassuranceCard: {
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainerLow,
+      borderRadius: radius.control,
+      flexDirection: 'row',
+      gap: space.x3,
+      marginTop: space.x3,
+      padding: space.x3,
+    },
+    reassuranceText: {
+      color: colors.muted,
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    gpsBanner: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainerLow,
+      borderColor: colors.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: space.x3,
+      padding: space.x4,
+    },
+    gpsIconCircle: {
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: radius.card,
+      height: 40,
+      justifyContent: 'center',
+      width: 40,
+    },
+    gpsBannerTitle: {
+      color: colors.ink,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    gpsBannerSub: {
+      color: colors.muted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    searchBar: {
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainerLow,
+      borderColor: colors.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: space.x2,
+      height: 48,
+      paddingHorizontal: space.x3,
+    },
+    searchInput: {
+      color: colors.ink,
+      flex: 1,
+      fontSize: 16,
+      height: '100%',
+    },
+    sectionHeader: {
+      color: colors.ink,
+      fontSize: 16,
+      fontWeight: '700',
+      marginTop: space.x2,
+    },
+    helperText: {
+      color: colors.muted,
+      fontSize: 13,
+      marginTop: 2,
+    },
+    metroGrid: {
+      gap: space.x2,
+    },
+    metroCard: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      flexDirection: 'row',
+      padding: space.x3,
+    },
+    metroCardSelected: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+    },
+    metroCardTitle: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    metroCardTitleSelected: {
+      color: colors.primary,
+    },
+    metroCardSub: {
+      color: colors.muted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    metroCheck: {
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+      borderRadius: radius.control,
+      height: 24,
+      justifyContent: 'center',
+      width: 24,
+    },
+    inputGroup: {
+      gap: space.x2,
+      marginTop: space.x2,
+    },
+    inputLabel: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    textInput: {
+      backgroundColor: colors.surfaceContainerLow,
+      borderColor: colors.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      color: colors.ink,
+      fontSize: 16,
+      minHeight: 48,
+      paddingHorizontal: space.x4,
+      paddingVertical: space.x2,
+    },
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.x2,
+    },
+    langChip: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainerLow,
+      borderColor: colors.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: space.x2,
+      paddingHorizontal: space.x4,
+      paddingVertical: space.x3,
+    },
+    langChipPrimary: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    langChipSelected: {
+      backgroundColor: colors.teal,
+      borderColor: colors.teal,
+    },
+    langChipText: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    langChipTextPrimary: {
+      color: colors.surface,
+    },
+    langChipTextSelected: {
+      color: colors.surface,
+    },
+    interestChip: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainerLow,
+      borderColor: colors.border,
+      borderRadius: 999,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: space.x2,
+      paddingHorizontal: space.x4,
+      paddingVertical: space.x2,
+    },
+    interestChipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    interestChipText: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    interestChipTextSelected: {
+      color: colors.surface,
+    },
+    photoContainer: {
+      alignItems: 'center',
+      alignSelf: 'center',
+      marginVertical: space.x4,
+      position: 'relative',
+    },
+    avatarImage: {
+      borderRadius: 60,
+      height: 120,
+      width: 120,
+    },
+    avatarPlaceholder: {
+      alignItems: 'center',
+      backgroundColor: colors.primarySoft,
+      borderRadius: 60,
+      height: 120,
+      justifyContent: 'center',
+      width: 120,
+    },
+    avatarInitials: {
+      color: colors.primary,
+      fontSize: 36,
+      fontWeight: '800',
+    },
+    cameraBadge: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+      borderColor: colors.surface,
+      borderRadius: radius.card,
+      borderWidth: 2,
+      bottom: 0,
+      height: 36,
+      justifyContent: 'center',
+      position: 'absolute',
+      right: 0,
+      width: 36,
+    },
+    photoError: {
+      color: colors.error,
+      fontSize: 13,
+      marginTop: 6,
+      textAlign: 'center',
+    },
+    photoHint: {
+      color: colors.muted,
+      fontSize: 13,
+      lineHeight: 18,
+      textAlign: 'center',
+    },
+    notificationList: {
+      gap: space.x3,
+    },
+    notificationRow: {
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainerLow,
+      borderColor: colors.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      flexDirection: 'row',
+      padding: space.x3,
+    },
+    notificationIconBox: {
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: radius.control,
+      height: 40,
+      justifyContent: 'center',
+      marginRight: space.x3,
+      width: 40,
+    },
+    notificationTitle: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    notificationDesc: {
+      color: colors.muted,
+      fontSize: 12,
+      lineHeight: 16,
+      marginTop: 2,
+    },
+    pledgeHero: {
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainerLow,
+      borderRadius: radius.card,
+      padding: space.x4,
+      textAlign: 'center',
+    },
+    shieldBigBox: {
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: radius.panel,
+      height: 64,
+      justifyContent: 'center',
+      marginBottom: space.x2,
+      width: 64,
+    },
+    pledgeHeroTitle: {
+      color: colors.ink,
+      fontSize: 17,
+      fontWeight: '800',
+      textAlign: 'center',
+    },
+    pledgeHeroSub: {
+      color: colors.muted,
+      fontSize: 13,
+      lineHeight: 18,
+      marginTop: space.x1,
+      textAlign: 'center',
+    },
+    pledgeList: {
+      gap: space.x3,
+      marginTop: space.x2,
+    },
+    pledgeCard: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'flex-start',
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: space.x3,
+      padding: space.x3,
+    },
+    pledgeCardChecked: {
+      backgroundColor: colors.surfaceContainerLow,
+      borderColor: colors.teal,
+    },
+    checkboxBox: {
+      alignItems: 'center',
+      borderColor: colors.muted,
+      borderRadius: 6,
+      borderWidth: 1.5,
+      height: 22,
+      justifyContent: 'center',
+      marginTop: 2,
+      width: 22,
+    },
+    checkboxBoxChecked: {
+      backgroundColor: colors.teal,
+      borderColor: colors.teal,
+    },
+    pledgeLabel: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    pledgeDesc: {
+      color: colors.muted,
+      fontSize: 12,
+      lineHeight: 16,
+      marginTop: 2,
+    },
+    masterPledgeBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: 'center',
+      backgroundColor: colors.primarySoft,
+      borderRadius: radius.control,
+      flexDirection: 'row',
+      gap: space.x2,
+      justifyContent: 'center',
+      marginTop: space.x2,
+      paddingVertical: space.x3,
+    },
+    masterPledgeBtnText: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    celebrationHero: {
+      alignItems: 'center',
+      paddingVertical: space.x4,
+    },
+    sparkleCircle: {
+      alignItems: 'center',
+      backgroundColor: colors.primarySoft,
+      borderRadius: 44,
+      height: 88,
+      justifyContent: 'center',
+      marginBottom: space.x4,
+      width: 88,
+    },
+    celebrateTitle: {
+      color: colors.ink,
+      fontSize: 22,
+      fontWeight: '800',
+      textAlign: 'center',
+    },
+    celebrateSub: {
+      color: colors.muted,
+      fontSize: 14,
+      lineHeight: 20,
+      marginTop: space.x2,
+      textAlign: 'center',
+    },
+    summaryCard: {
+      backgroundColor: colors.surfaceContainerLow,
+      borderColor: colors.border,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      gap: space.x3,
+      marginTop: space.x2,
+      padding: space.x4,
+    },
+    summaryCardTitle: {
+      color: colors.ink,
+      fontSize: 15,
+      fontWeight: '800',
+      marginBottom: space.x1,
+    },
+    summaryRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    summaryLabel: {
+      color: colors.muted,
+      fontSize: 13,
+    },
+    summaryValue: {
+      color: colors.ink,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    saveError: { color: palette.error, fontSize: 14, lineHeight: 20, marginBottom: space.x2 },
+    bottomBar: {
+      backgroundColor: colors.surface,
+      borderTopColor: colors.border,
+      borderTopWidth: 1,
+      bottom: 0,
+      left: 0,
+      padding: space.x4,
+      position: 'absolute',
+      right: 0,
+    },
+  });
+};

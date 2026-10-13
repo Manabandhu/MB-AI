@@ -1,7 +1,7 @@
 import { useRequireAuth } from '@/lib/authStore';
-import { JobsScreen } from '@/modules/jobs/screens/JobsHomeScreen';
+import { SavedJobsScreen } from '@/modules/jobs/screens/SavedJobsScreen';
 
 export default function SavedJobsRoute() {
   useRequireAuth('/sign-in');
-  return <JobsScreen screenId="saved" />;
+  return <SavedJobsScreen />;
 }

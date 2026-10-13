@@ -1,7 +1,7 @@
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform } from 'react-native';
-import { XStack, YStack } from 'tamagui';
+import { useTheme, XStack, YStack } from 'tamagui';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
@@ -41,6 +41,7 @@ function useAndroidKeyboardOpen() {
 /** Phone navigation: five tabs pinned to the bottom edge, above the home indicator. */
 export function BottomTabBar(props: BottomTabBarProps) {
   const { palette, reduceMotion } = useAppearance();
+  const theme = useTheme();
   const press = useTabPress(props);
   const labelFor = useTabLabels();
   const keyboardOpen = useAndroidKeyboardOpen();
@@ -54,7 +55,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
       borderTopWidth={1}
       // Closer to the native iOS tab bar: the home-indicator inset already provides breathing room.
       paddingBottom={Math.max(props.insets.bottom - INDICATOR_OVERLAP, MIN_BAR_PADDING)}
-      paddingHorizontal="$x2"
+      paddingHorizontal="$x3"
       paddingTop={INDICATOR_OVERLAP}
     >
       {primaryTabs.map((tab) => {
@@ -86,7 +87,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
           >
             <YStack
               alignItems="center"
-              backgroundColor={selected ? '$primaryTint' : 'transparent'}
+              backgroundColor={selected ? '$primary' : 'transparent'}
               borderRadius="$pill"
               justifyContent="center"
               paddingHorizontal="$x4"
@@ -96,7 +97,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
             >
               <YStack position="relative">
                 <AppIcon
-                  color={selected ? palette.primary : palette.muted}
+                  color={selected ? theme.onPrimary?.val : palette.muted}
                   name={tab.icon}
                   size={22}
                   strokeWidth={selected ? 2.4 : 2}

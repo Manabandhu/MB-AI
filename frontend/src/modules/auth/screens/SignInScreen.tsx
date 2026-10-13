@@ -1,4 +1,3 @@
-import { color } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, type TextInput, View } from 'react-native';
@@ -13,8 +12,10 @@ import {
   AuthSwitch,
   SocialButtons,
 } from '@/modules/auth/components/AuthKit';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 export function SignInScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   const signIn = useAuthStore((s) => s.signIn);
   const signInWithOAuth = useAuthStore((s) => s.signInWithOAuth);
   const passwordRef = useRef<TextInput>(null);
@@ -137,7 +138,9 @@ export function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  forgot: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
-  forgotText: { color: color.primary, fontSize: 15, fontWeight: '600' },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    forgot: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
+    forgotText: { color: palette.primary, fontSize: 15, fontWeight: '600' },
+  });
+};

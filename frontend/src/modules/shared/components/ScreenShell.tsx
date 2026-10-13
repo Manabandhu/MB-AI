@@ -1,6 +1,7 @@
-import { color as colors, space } from '@manabandhu/design-system';
-import { StyleSheet, useColorScheme, View } from 'react-native';
+import { space } from '@manabandhu/design-system';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppearance } from '@/theme/ThemeProvider';
 
 export type ScreenShellProps = {
   children: React.ReactNode;
@@ -19,8 +20,7 @@ export function ScreenShell({
   bottomBar,
   contentContainerStyle,
 }: ScreenShellProps) {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' ? colors : colors;
+  const { palette: theme } = useAppearance();
   const insets = useSafeAreaInsets();
 
   const backgroundColor = theme.background;

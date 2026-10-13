@@ -1,4 +1,4 @@
-import { color, palette, space } from '@manabandhu/design-system';
+import { color, radius, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
@@ -8,7 +8,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +16,8 @@ import { AuthButton } from '@/modules/auth/components/AuthKit';
 import type { AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { BrandMark } from '@/modules/shared/ui/BrandLogo';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
+import { useWindowDimensions } from '@/platform/windowDimensions';
 
 type Slide = {
   key: string;
@@ -71,6 +72,7 @@ const SLIDES: Slide[] = [
 const TWO_COLUMN = 820;
 
 export function WelcomeScreen() {
+  const { styles } = useScreenStyles(createScreenStyles);
   useRedirectIfAuthenticated();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -193,6 +195,7 @@ export function WelcomeScreen() {
 }
 
 function Brand() {
+  const { styles } = useScreenStyles(createScreenStyles);
   return (
     <View style={styles.brand} role="heading">
       <BrandMark size={32} />
@@ -202,6 +205,7 @@ function Brand() {
 }
 
 function SlideArt({ slide, size }: { slide: Slide; size: number }) {
+  const { styles } = useScreenStyles(createScreenStyles);
   const ring = size * 0.36;
   return (
     <View
@@ -227,86 +231,93 @@ function SlideArt({ slide, size }: { slide: Slide; size: number }) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.surface },
-  rootWide: { backgroundColor: color.background, justifyContent: 'center' },
-  header: { paddingHorizontal: space.x6, height: 44, justifyContent: 'center' },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  brandName: { color: color.ink, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
-  pager: { flex: 1, justifyContent: 'center' },
-  // Size the list to its slides so the art, copy, and dots stay grouped in the middle of tall phones.
-  list: { flexGrow: 0 },
-  page: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.x6 },
-  art: { borderRadius: 32, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  artHalo: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.45)' },
-  artIcon: {
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: palette.ink,
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-  },
-  chip: {
-    position: 'absolute',
-    backgroundColor: '#ffffff',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    shadowColor: palette.ink,
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  chipTopLeft: { top: '9%', left: '6%' },
-  chipRight: { top: '21%', right: '6%' },
-  chipBottomLeft: { bottom: '9%', left: '18%' },
-  chipText: { fontSize: 13, fontWeight: '700' },
-  slideTitle: {
-    marginTop: space.x6,
-    color: color.ink,
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    textAlign: 'center',
-  },
-  slideBody: {
-    marginTop: space.x2,
-    maxWidth: 360,
-    color: color.muted,
-    fontSize: 17,
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  dots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: space.x2,
-    paddingVertical: space.x4,
-  },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#d9d5e4' },
-  dotActive: { width: 24, backgroundColor: color.primary },
-  footer: { paddingHorizontal: space.x6, paddingTop: space.x2 },
-  actions: { gap: space.x3, width: '100%' },
-  wideInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: 1120,
-    paddingHorizontal: space.x10,
-    gap: space.x10,
-  },
-  wideIntro: { flex: 1, maxWidth: 460, gap: space.x5 },
-  widePager: { flex: 1, minHeight: 560 },
-  headline: {
-    color: color.ink,
-    fontSize: 44,
-    lineHeight: 50,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
-  lead: { color: color.muted, fontSize: 19, lineHeight: 28 },
-});
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: palette.surface },
+    rootWide: { backgroundColor: palette.background, justifyContent: 'center' },
+    header: { paddingHorizontal: space.x6, height: 44, justifyContent: 'center' },
+    brand: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
+    brandName: { color: palette.ink, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
+    pager: { flex: 1, justifyContent: 'center' },
+    // Size the list to its slides so the art, copy, and dots stay grouped in the middle of tall phones.
+    list: { flexGrow: 0 },
+    page: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.x6 },
+    art: {
+      borderRadius: radius.panel,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    artHalo: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.45)' },
+    artIcon: {
+      backgroundColor: '#ffffff',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: palette.ink,
+      shadowOpacity: 0.1,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    chip: {
+      position: 'absolute',
+      backgroundColor: '#ffffff',
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      shadowColor: palette.ink,
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    chipTopLeft: { top: '9%', left: '6%' },
+    chipRight: { top: '21%', right: '6%' },
+    chipBottomLeft: { bottom: '9%', left: '18%' },
+    chipText: { fontSize: 13, fontWeight: '700' },
+    slideTitle: {
+      marginTop: space.x6,
+      color: palette.ink,
+      fontSize: 28,
+      lineHeight: 34,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+      textAlign: 'center',
+    },
+    slideBody: {
+      marginTop: space.x2,
+      maxWidth: 360,
+      color: palette.muted,
+      fontSize: 17,
+      lineHeight: 24,
+      textAlign: 'center',
+    },
+    dots: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: space.x2,
+      paddingVertical: space.x4,
+    },
+    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#d9d5e4' },
+    dotActive: { width: 24, backgroundColor: palette.primary },
+    footer: { paddingHorizontal: space.x6, paddingTop: space.x2 },
+    actions: { gap: space.x3, width: '100%' },
+    wideInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: 1120,
+      paddingHorizontal: space.x10,
+      gap: space.x10,
+    },
+    wideIntro: { flex: 1, maxWidth: 460, gap: space.x5 },
+    widePager: { flex: 1, minHeight: 560 },
+    headline: {
+      color: palette.ink,
+      fontSize: 44,
+      lineHeight: 50,
+      fontWeight: '800',
+      letterSpacing: -1,
+    },
+    lead: { color: palette.muted, fontSize: 19, lineHeight: 28 },
+  });
+};

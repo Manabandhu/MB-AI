@@ -1,10 +1,9 @@
-import { color, palette, radius, space, typography } from '@manabandhu/design-system';
+import { radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import {
   listAdminCommunityPosts,
   listAdminEvents,
@@ -18,6 +17,7 @@ import {
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 
 // Every count and queue item here comes from the admin APIs. There is no sample queue: an empty queue says so,
 // and a failed request shows an error with retry.
@@ -42,6 +42,7 @@ const isOpen = (status: string | null | undefined) => {
 };
 
 export default function AdminDashboardScreen() {
+  const { styles, palette, color } = useScreenStyles(createScreenStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -222,6 +223,7 @@ export default function AdminDashboardScreen() {
             <View style={styles.adminRoutesGrid}>
               {adminRoutes.map((item) => (
                 <Pressable
+                  accessibilityRole="link"
                   key={item.route}
                   style={styles.moduleBtn}
                   onPress={() => router.push(item.route as Href)}
@@ -238,124 +240,138 @@ export default function AdminDashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: color.background },
-  page: { flexGrow: 1, padding: space.x4 },
-  container: { gap: space.x4, maxWidth: 1200, width: '100%', alignSelf: 'center' },
+const createScreenStyles = (palette: ScreenPalette) => {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: palette.background },
+    page: { flexGrow: 1, padding: space.x4 },
+    container: { gap: space.x4, maxWidth: 1200, width: '100%', alignSelf: 'center' },
 
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    backgroundColor: color.surface,
-    padding: space.x4,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-  },
-  headerLeft: { flex: 1, gap: 4 },
-  adminBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: color.primarySoft,
-    paddingHorizontal: space.x2,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  adminBadgeText: { ...typography.caption, color: color.primary, fontWeight: '800', fontSize: 10 },
-  pageTitle: { ...typography.h2, color: color.ink, fontWeight: '800' },
-  pageSubtitle: { ...typography.body, color: color.muted, fontSize: 13 },
-  auditIconBtn: {
-    padding: space.x2,
-    borderRadius: radius.pill,
-    backgroundColor: color.background,
-    borderWidth: 1,
-    borderColor: color.border,
-  },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      backgroundColor: palette.surface,
+      padding: space.x4,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    headerLeft: { flex: 1, gap: 4 },
+    adminBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: palette.primarySoft,
+      paddingHorizontal: space.x2,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    adminBadgeText: {
+      ...typography.caption,
+      color: palette.primary,
+      fontWeight: '800',
+      fontSize: 10,
+    },
+    pageTitle: { ...typography.h2, color: palette.ink, fontWeight: '800' },
+    pageSubtitle: { ...typography.body, color: palette.muted, fontSize: 13 },
+    auditIconBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      padding: space.x2,
+      borderRadius: radius.pill,
+      backgroundColor: palette.background,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
 
-  kpiRow: { flexDirection: 'row', gap: space.x2, flexWrap: 'wrap' },
-  kpiCard: {
-    flex: 1,
-    minWidth: 140,
-    padding: space.x3,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    gap: 2,
-  },
-  kpiValue: { fontSize: 24, fontWeight: '800' },
-  kpiLabel: { ...typography.caption, color: color.ink, fontWeight: '700' },
-  kpiSub: { ...typography.caption, color: color.muted, fontSize: 10 },
+    kpiRow: { flexDirection: 'row', gap: space.x2, flexWrap: 'wrap' },
+    kpiCard: {
+      flex: 1,
+      minWidth: 140,
+      padding: space.x3,
+      borderRadius: radius.control,
+      borderWidth: 1,
+      gap: 2,
+    },
+    kpiValue: { fontSize: 24, fontWeight: '800' },
+    kpiLabel: { ...typography.caption, color: palette.ink, fontWeight: '700' },
+    kpiSub: { ...typography.caption, color: palette.muted, fontSize: 10 },
 
-  sectionCard: {
-    backgroundColor: color.surface,
-    padding: space.x4,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    gap: space.x3,
-  },
-  sectionTitle: { ...typography.h3, color: color.ink, fontWeight: '800' },
+    sectionCard: {
+      backgroundColor: palette.surface,
+      padding: space.x4,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      gap: space.x3,
+    },
+    sectionTitle: { ...typography.h3, color: palette.ink, fontWeight: '800' },
 
-  tabsRow: { flexDirection: 'row', gap: space.x2 },
-  tabPill: {
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-    borderRadius: radius.pill,
-    backgroundColor: color.background,
-    borderWidth: 1,
-    borderColor: color.border,
-  },
-  tabPillActive: { backgroundColor: color.primary, borderColor: color.primary },
-  tabText: { ...typography.caption, color: color.ink, fontWeight: '600' },
-  tabTextActive: { color: '#ffffff', fontWeight: '800' },
+    tabsRow: { flexDirection: 'row', gap: space.x2 },
+    tabPill: {
+      paddingHorizontal: space.x3,
+      paddingVertical: space.x2,
+      borderRadius: radius.pill,
+      backgroundColor: palette.background,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    tabPillActive: { backgroundColor: palette.primary, borderColor: palette.primary },
+    tabText: { ...typography.caption, color: palette.ink, fontWeight: '600' },
+    tabTextActive: { color: '#ffffff', fontWeight: '800' },
 
-  modItem: {
-    borderWidth: 1,
-    borderColor: color.border,
-    borderRadius: radius.control,
-    padding: space.x3,
-    backgroundColor: color.surface,
-    gap: space.x2,
-  },
-  alertTag: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: space.x2,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  alertTagText: { ...typography.caption, fontWeight: '700', fontSize: 11 },
-  modTitle: { ...typography.bodyStrong, color: color.ink, fontSize: 14 },
-  modMeta: { ...typography.caption, color: color.muted, fontSize: 12 },
-  modActions: { flexDirection: 'row', gap: space.x2, flexWrap: 'wrap', marginTop: 4 },
-  actionBtn: {
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-    borderRadius: radius.control,
-    alignItems: 'center',
-  },
-  actionBtnText: { ...typography.caption, color: '#ffffff', fontWeight: '800' },
-  outlineActionBtn: {
-    borderWidth: 1,
-    borderColor: color.border,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-    borderRadius: radius.control,
-    alignItems: 'center',
-  },
-  outlineActionText: { ...typography.caption, color: color.ink, fontWeight: '600' },
+    modItem: {
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: radius.control,
+      padding: space.x3,
+      backgroundColor: palette.surface,
+      gap: space.x2,
+    },
+    alertTag: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: space.x2,
+      paddingVertical: 3,
+      borderRadius: 4,
+    },
+    alertTagText: { ...typography.caption, fontWeight: '700', fontSize: 11 },
+    modTitle: { ...typography.bodyStrong, color: palette.ink, fontSize: 14 },
+    modMeta: { ...typography.caption, color: palette.muted, fontSize: 12 },
+    modActions: { flexDirection: 'row', gap: space.x2, flexWrap: 'wrap', marginTop: 4 },
+    actionBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: space.x3,
+      paddingVertical: space.x2,
+      borderRadius: radius.control,
+      alignItems: 'center',
+    },
+    actionBtnText: { ...typography.caption, color: '#ffffff', fontWeight: '800' },
+    outlineActionBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      borderWidth: 1,
+      borderColor: palette.border,
+      paddingHorizontal: space.x3,
+      paddingVertical: space.x2,
+      borderRadius: radius.control,
+      alignItems: 'center',
+    },
+    outlineActionText: { ...typography.caption, color: palette.ink, fontWeight: '600' },
 
-  adminRoutesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
-  moduleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minWidth: 180,
-    flex: 1,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-    borderRadius: radius.control,
-    backgroundColor: color.background,
-    borderWidth: 1,
-    borderColor: color.border,
-  },
-  moduleBtnText: { ...typography.bodyStrong, color: color.ink, fontSize: 13 },
-});
+    adminRoutesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
+    moduleBtn: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      minWidth: 180,
+      flex: 1,
+      paddingHorizontal: space.x3,
+      paddingVertical: space.x2,
+      borderRadius: radius.control,
+      backgroundColor: palette.background,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    moduleBtnText: { ...typography.bodyStrong, color: palette.ink, fontSize: 13 },
+  });
+};

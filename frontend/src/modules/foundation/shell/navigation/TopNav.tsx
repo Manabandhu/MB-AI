@@ -4,6 +4,7 @@ import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
+import { useQuickJump } from '@/modules/foundation/launcher/QuickJump';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
@@ -28,6 +29,7 @@ export function TopNav(props: BottomTabBarProps) {
   const { palette } = useAppearance();
   const press = useTabPress(props);
   const t = useT();
+  const open = useQuickJump();
   const labelFor = useTabLabels();
   const active = props.state.routes[props.state.index]?.name;
   const user = useAuthStore((s) => s.user);
@@ -42,7 +44,7 @@ export function TopNav(props: BottomTabBarProps) {
       <XStack
         alignItems="center"
         alignSelf="center"
-        gap="$x6"
+        gap="$x3"
         height={68}
         maxWidth={contentWidth.wide}
         paddingHorizontal="$x6"
@@ -103,7 +105,7 @@ export function TopNav(props: BottomTabBarProps) {
           })}
         </XStack>
         <XStack
-          aria-label="Search ManaBandhu"
+          aria-label="Jump to a feature. Control or Command K"
           role="button"
           alignItems="center"
           backgroundColor="$surfaceContainerLow"
@@ -116,14 +118,16 @@ export function TopNav(props: BottomTabBarProps) {
           gap="$x2"
           height="$touch"
           hoverStyle={{ borderColor: '$primary' }}
-          onPress={() => router.push('/search')}
-          {...keyboardPress(() => router.push('/search'))}
+          onPress={open}
+          {...keyboardPress(open)}
           paddingHorizontal="$x4"
-          width={220}
+          flexShrink={1}
+          minWidth={44}
+          maxWidth={180}
         >
           <AppIcon color={palette.muted} name="search" size={16} />
           <AppText numberOfLines={1} tone="muted" variant="caption">
-            {t('shell.search')}
+            {t('navigation.jump')}…
           </AppText>
         </XStack>
         <IconButton

@@ -2,6 +2,7 @@ import { type Href, router } from 'expo-router';
 import { XStack, YStack } from 'tamagui';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 type Props = { checked: boolean; onChange: (next: boolean) => void; error?: string | null };
@@ -26,6 +27,13 @@ export function ConsentCheckbox({ checked, onChange, error }: Props) {
           justifyContent="center"
           marginTop={2}
           onPress={() => onChange(!checked)}
+          {...keyboardPress(() => onChange(!checked))}
+          focusVisibleStyle={{
+            outlineWidth: 3,
+            outlineColor: '$outlineColor',
+            outlineStyle: 'solid',
+          }}
+          focusable
           role="checkbox"
           width={24}
         >
@@ -36,6 +44,7 @@ export function ConsentCheckbox({ checked, onChange, error }: Props) {
           <AppText
             color="$primary"
             onPress={() => router.push('/terms' as Href)}
+            {...keyboardPress(() => router.push('/terms' as Href))}
             role="link"
             textDecorationLine="underline"
             variant="caption"
@@ -46,6 +55,7 @@ export function ConsentCheckbox({ checked, onChange, error }: Props) {
           <AppText
             color="$primary"
             onPress={() => router.push('/privacy' as Href)}
+            {...keyboardPress(() => router.push('/privacy' as Href))}
             role="link"
             textDecorationLine="underline"
             variant="caption"
