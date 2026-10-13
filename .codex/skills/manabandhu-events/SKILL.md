@@ -97,3 +97,7 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 
 - Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
 - Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.
+
+## Premium visual browsing (2026-10-13)
+
+Discovery is rebuilt on shared screens, fields, category filters, states, and a responsive event-card grid, plus an editorial intro that disappears while filtering. Dates/titles/categories come from the API; ticket scenes are decorative. Soonest matching events are marked Next up. Saved/host/detail links and RSVP through detail are retained. Create/detail colors now follow the live semantic palette.

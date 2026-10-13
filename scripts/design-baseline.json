@@ -8,59 +8,26 @@
   "auth/components/AuthKit.tsx": {
     "colorLiteral": 4
   },
-  "auth/screens/OtpVerificationScreen.tsx": {
-    "colorLiteral": 2
-  },
   "auth/screens/PhoneLoginScreen.tsx": {
-    "colorLiteral": 3
-  },
-  "chat/screens/ConversationInfoScreen.tsx": {
-    "colorLiteral": 22
-  },
-  "chat/screens/ConversationScreen.tsx": {
-    "colorLiteral": 15
-  },
-  "community/screens/CommunityDetailsScreen.tsx": {
-    "colorLiteral": 5
-  },
-  "community/screens/CreatePostScreen.tsx": {
-    "colorLiteral": 4
-  },
-  "community/screens/PostDetailsScreen.tsx": {
-    "colorLiteral": 13
-  },
-  "events/screens/CreateEventScreen.tsx": {
     "colorLiteral": 1
   },
-  "events/screens/EventDetailsScreen.tsx": {
-    "colorLiteral": 14
+  "chat/screens/ConversationInfoScreen.tsx": {
+    "colorLiteral": 1
   },
-  "events/screens/EventsHomeScreen.tsx": {
-    "colorLiteral": 22
-  },
-  "expenses/screens/AddExpenseScreen.tsx": {
-    "colorLiteral": 3
-  },
-  "expenses/screens/BalancesScreen.tsx": {
-    "colorLiteral": 16
+  "community/screens/CreatePostScreen.tsx": {
+    "colorLiteral": 2
   },
   "expenses/screens/ExpensesHomeScreen.tsx": {
-    "colorLiteral": 42
+    "colorLiteral": 3
   },
   "foundation/screens/WelcomeScreen.tsx": {
-    "colorLiteral": 9
+    "colorLiteral": 1
   },
   "jobs/screens/JobDetailsScreen.tsx": {
-    "colorLiteral": 13
-  },
-  "referrals/screens/ReferralDetailsScreen.tsx": {
-    "colorLiteral": 90
-  },
-  "referrals/screens/ReferralsHomeScreen.tsx": {
-    "colorLiteral": 98
+    "colorLiteral": 1
   },
   "safety/screens/SafetyCenterScreen.tsx": {
-    "colorLiteral": 15
+    "colorLiteral": 3
   },
   "shared/components/UniversalMapView.tsx": {
     "colorLiteral": 21
@@ -69,6 +36,6 @@
     "colorLiteral": 29
   },
   "utilities/screens/UtilitiesHomeScreen.tsx": {
-    "colorLiteral": 8
+    "colorLiteral": 3
   }
 }

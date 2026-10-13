@@ -38,6 +38,11 @@ export const en = {
     welcomeBack: 'Welcome back',
   },
   home: {
+    heroEyebrow: 'YOUR CITY. YOUR CIRCLE.',
+    heroTitle: 'Life, a little\nbetter.',
+    heroBody: 'A place to live. A ride to share. People who get you.',
+    heroAction: 'Explore your possibilities',
+
     quickAccess: 'Quick access',
     communityPulse: 'Community pulse',
     searchPlaceholder: 'Search rooms, rides, jobs, people…',

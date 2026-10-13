@@ -281,9 +281,9 @@ export function PostDetailsScreen() {
           disabled={!commentText.trim() || commentMutation.isPending}
         >
           {commentMutation.isPending ? (
-            <ActivityIndicator size="small" color="#FFF" />
+            <ActivityIndicator size="small" color={palette.onPrimary} />
           ) : (
-            <AppIcon name="check" size={18} color="#FFF" />
+            <AppIcon name="check" size={18} color={palette.onPrimary} />
           )}
         </Pressable>
       </View>
@@ -330,7 +330,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       marginTop: 10,
     },
     backBtnText: {
-      color: '#FFF',
+      color: palette.onPrimary,
       fontSize: 14,
       fontWeight: '600',
     },
@@ -380,7 +380,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       color: C.ink,
     },
     heartIconSaved: {
-      color: '#EF4444',
+      color: palette.error,
     },
     scrollContent: {
       paddingHorizontal: 16,
@@ -406,7 +406,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       borderRadius: 22,
       backgroundColor: C.goldBg,
       borderWidth: 2,
-      borderColor: '#D99B26',
+      borderColor: palette.border,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -465,9 +465,9 @@ const createScreenStyles = (palette: ScreenPalette) => {
       lineHeight: 23,
     },
     pinnedNote: {
-      backgroundColor: '#F0F9FF',
+      backgroundColor: palette.surface,
       borderWidth: 1,
-      borderColor: '#BAE6FD',
+      borderColor: palette.border,
       borderRadius: radius.control,
       padding: 14,
       gap: 6,
@@ -484,7 +484,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     },
     pinnedBody: {
       fontSize: 12,
-      color: '#0369A1',
+      color: palette.primary,
       lineHeight: 18,
     },
     reactionBar: {
@@ -493,7 +493,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       gap: 8,
       paddingTop: 10,
       borderTopWidth: 1,
-      borderColor: '#F3F4F6',
+      borderColor: palette.border,
     },
     reactionBtn: {
       minHeight: 44,
@@ -501,12 +501,12 @@ const createScreenStyles = (palette: ScreenPalette) => {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-      backgroundColor: '#F9FAFB',
+      backgroundColor: palette.surface,
       borderRadius: 999,
       paddingHorizontal: 12,
       paddingVertical: 7,
       borderWidth: 1,
-      borderColor: '#E5E7EB',
+      borderColor: palette.border,
     },
     reactionBtnActive: {
       backgroundColor: C.tealBg,
@@ -584,7 +584,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      backgroundColor: '#F9FAFB',
+      backgroundColor: palette.surface,
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 6,
@@ -647,7 +647,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       justifyContent: 'center',
     },
     sendBtnDisabled: {
-      backgroundColor: '#E5E7EB',
+      backgroundColor: palette.surfaceContainerLow,
     },
   });
 };

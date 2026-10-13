@@ -98,3 +98,7 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - `/jobs/saved` now uses `SavedJobsScreen`: it resolves saved IDs through the existing detail API, 12 at a time, instead of filtering only the newest jobs page. Missing/unavailable records have retry and remove-bookmark actions.
 
 - Discovery now uses shared Screen, TextField, Chip, Card, states, and a two-column tablet/desktop grid. Each job has one View opportunity action plus a named save control. Filters use the shared adaptive BottomSheet; only supported remote/salary/sort options are exposed. The nonfunctional direct-referral filter and redundant referral navigation are removed. Location opens the shared selector rather than assigning invented coordinates. Search params and device-local bookmarks remain supported.
+
+## Premium visual browsing (2026-10-13)
+
+Discovery uses a compact editorial intro when not searching; saved IDs, URL filters, and detail actions remain in place. Legacy job-detail surfaces and company badges now follow semantic colors, including dark-mode action foregrounds.

@@ -95,3 +95,7 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 
 - Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
 - Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.
+
+## Premium visual browsing (2026-10-13)
+
+SOS panels retain fixed dark-red editorial treatment with readable light text; secondary tools use live semantic surfaces and accents. Emergency calling, reporting, blocking, trusted contacts, and authorization behavior are unchanged.

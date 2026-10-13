@@ -33,6 +33,11 @@ export const hi: Strings = {
     welcomeBack: 'वापसी पर स्वागत है',
   },
   home: {
+    heroEyebrow: 'आपका शहर. आपके लोग.',
+    heroTitle: 'ज़िंदगी, थोड़ी\nबेहतर.',
+    heroBody: 'रहने की जगह. साथ सफ़र. अपने जैसे लोग.',
+    heroAction: 'नई संभावनाएं खोजें',
+
     quickAccess: 'त्वरित पहुँच',
     communityPulse: 'समुदाय की झलक',
     searchPlaceholder: 'कमरे, राइड, नौकरियाँ, लोग खोजें…',

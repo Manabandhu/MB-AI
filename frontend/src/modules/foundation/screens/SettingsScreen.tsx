@@ -5,6 +5,7 @@ import { AppearanceSettings } from '@/modules/foundation/settings/AppearanceSett
 import { useMapPreferencesStore } from '@/modules/shared/stores/mapPreferencesStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
@@ -22,7 +23,9 @@ export function SettingsScreen() {
         back={{ fallback: '/profile' }}
       />
       <Section title="Look, feel & language">
-        <AppearanceSettings />
+        <Card padding="$x5">
+          <AppearanceSettings />
+        </Card>
       </Section>
       <Section title="Account & privacy">
         <ListRow

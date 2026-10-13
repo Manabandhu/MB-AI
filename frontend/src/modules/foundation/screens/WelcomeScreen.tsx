@@ -1,4 +1,4 @@
-import { color, radius, space } from '@manabandhu/design-system';
+import { color, palette, radius, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
@@ -14,8 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRedirectIfAuthenticated } from '@/lib/authStore';
 import { AuthButton } from '@/modules/auth/components/AuthKit';
 import type { AppIconName } from '@/modules/shared/ui/AppIcon';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { BrandMark } from '@/modules/shared/ui/BrandLogo';
+import { DiscoveryArtwork, discoveryKind } from '@/modules/shared/ui/DiscoveryArtwork';
 import { type ScreenPalette, useScreenStyles } from '@/modules/shared/ui/useScreenStyles';
 import { useWindowDimensions } from '@/platform/windowDimensions';
 
@@ -35,7 +35,7 @@ const SLIDES: Slide[] = [
     icon: 'home',
     title: 'Find a room or roommate',
     body: 'Browse rooms and shared apartments listed by members, and message hosts directly.',
-    tint: '#ece6ff',
+    tint: palette.artViolet,
     accent: color.primary,
     chips: ['Shared rooms', 'Lease takeovers', 'Chat with hosts'],
   },
@@ -44,7 +44,7 @@ const SLIDES: Slide[] = [
     icon: 'car',
     title: 'Share the ride',
     body: 'Carpool to work, the airport, or a weekend trip, and split fuel and tolls fairly.',
-    tint: '#dff3f2',
+    tint: palette.artMint,
     accent: color.teal,
     chips: ['Daily commutes', 'Airport runs', 'Split costs'],
   },
@@ -53,8 +53,8 @@ const SLIDES: Slide[] = [
     icon: 'briefcase',
     title: 'Grow your career',
     body: 'Ask for employee referrals and discover jobs shared by people in your community.',
-    tint: '#fff0e6',
-    accent: '#c2560f',
+    tint: palette.artPeach,
+    accent: color.warm,
     chips: ['Referrals', 'Job posts', 'Visa-friendly'],
   },
   {
@@ -62,7 +62,7 @@ const SLIDES: Slide[] = [
     icon: 'community',
     title: 'Belong, wherever you are',
     body: 'Join city groups and festivals, and get help with visas, utilities, and everyday life.',
-    tint: '#ece6ff',
+    tint: palette.artViolet,
     accent: color.primary,
     chips: ['City groups', 'Events', 'Visa help'],
   },
@@ -206,27 +206,15 @@ function Brand() {
 
 function SlideArt({ slide, size }: { slide: Slide; size: number }) {
   const { styles } = useScreenStyles(createScreenStyles);
-  const ring = size * 0.36;
   return (
     <View
       style={[styles.art, { width: size, height: size, backgroundColor: slide.tint }]}
       aria-hidden
     >
-      <View
-        style={[styles.artHalo, { width: ring * 1.7, height: ring * 1.7, borderRadius: ring }]}
+      <DiscoveryArtwork
+        kind={discoveryKind(slide.key === 'careers' ? 'jobs' : slide.key)}
+        height={size * 0.85}
       />
-      <View style={[styles.artIcon, { width: ring, height: ring, borderRadius: ring / 2 }]}>
-        <AppIcon name={slide.icon} size={ring * 0.46} color={slide.accent} strokeWidth={1.8} />
-      </View>
-      <View style={[styles.chip, styles.chipTopLeft]}>
-        <Text style={[styles.chipText, { color: slide.accent }]}>{slide.chips[0]}</Text>
-      </View>
-      <View style={[styles.chip, styles.chipRight]}>
-        <Text style={[styles.chipText, { color: slide.accent }]}>{slide.chips[1]}</Text>
-      </View>
-      <View style={[styles.chip, styles.chipBottomLeft]}>
-        <Text style={[styles.chipText, { color: slide.accent }]}>{slide.chips[2]}</Text>
-      </View>
     </View>
   );
 }
@@ -250,7 +238,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     },
     artHalo: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.45)' },
     artIcon: {
-      backgroundColor: '#ffffff',
+      backgroundColor: palette.surface,
       alignItems: 'center',
       justifyContent: 'center',
       shadowColor: palette.ink,
@@ -260,7 +248,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     },
     chip: {
       position: 'absolute',
-      backgroundColor: '#ffffff',
+      backgroundColor: palette.surface,
       borderRadius: 999,
       paddingHorizontal: 12,
       paddingVertical: 7,
@@ -296,7 +284,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       gap: space.x2,
       paddingVertical: space.x4,
     },
-    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#d9d5e4' },
+    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: palette.surfaceContainerLow },
     dotActive: { width: 24, backgroundColor: palette.primary },
     footer: { paddingHorizontal: space.x6, paddingTop: space.x2 },
     actions: { gap: space.x3, width: '100%' },

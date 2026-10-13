@@ -9,7 +9,7 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
-type AppButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type AppButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'editorial';
 type AppButtonSize = 'sm' | 'md' | 'lg';
 
 type AppButtonProps = {
@@ -37,6 +37,7 @@ const Frame = styled(XStack, {
   variants: {
     variant: {
       primary: { backgroundColor: '$primary', borderColor: '$primary' },
+      editorial: { backgroundColor: '$editorialInk', borderColor: '$editorialInk' },
       danger: { backgroundColor: '$error', borderColor: '$error' },
       secondary: {
         backgroundColor: '$primaryTint',
@@ -77,7 +78,14 @@ export function AppButton({
   const { reduceMotion } = useAppearance();
   const theme = useTheme();
   const solid = variant === 'primary' || variant === 'danger';
-  const foreground = solid ? theme.onPrimary?.get() : theme.primary?.get();
+  const foreground =
+    variant === 'editorial'
+      ? theme.editorialSurface?.get()
+      : solid
+        ? theme.onPrimary?.get()
+        : variant === 'ghost'
+          ? theme.color?.get()
+          : theme.primary?.get();
   const isDisabled = Boolean(loading || disabled);
 
   const handlePress = () => {

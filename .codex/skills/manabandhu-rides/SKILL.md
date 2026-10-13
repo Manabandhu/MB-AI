@@ -174,3 +174,7 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 - Paged responses (2026-10-12): `GET /api/v1/rides/offers` returns a `PagedModel` (`{ content, page }`, no `last`). `listRideOffersPage` normalizes it with `toPage`; `RidePage.total` is always a number and `hasMore` is `!page.last`.
 - Member labels (2026-10-12): `memberLabel` uses the first 6 characters of the user id (was 4) so two riders rarely share a label until profiles exist.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['carpool', 'ride share', 'airport', 'pickup', 'commute', 'drive', 'travel']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+
+## Premium visual browsing (2026-10-13)
+
+An unfiltered home list has a compact editorial intro with local decorative ride art. Search/map/filters retain the existing route planning, results, pagination, confirmations, and membership behavior.

@@ -168,23 +168,23 @@ const createScreenStyles = (palette: ScreenPalette) => {
     item: {
       minHeight: 44,
       minWidth: 44,
-      backgroundColor: '#fff',
-      borderColor: '#e5e7eb',
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
       borderRadius: radius.card,
       borderWidth: 1,
       padding: 16,
       gap: 8,
     },
     itemTitle: { fontSize: 16, fontWeight: '700', color: palette.ink },
-    itemBody: { fontSize: 14, color: '#4b5563', lineHeight: 20 },
+    itemBody: { fontSize: 14, color: palette.muted, lineHeight: 20 },
     itemFooter: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginTop: 4,
     },
-    itemMeta: { fontSize: 12, color: '#6b7280' },
-    likeCount: { fontSize: 12, color: '#6b7280' },
+    itemMeta: { fontSize: 12, color: palette.muted },
+    likeCount: { fontSize: 12, color: palette.muted },
     actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
   });
 };

@@ -185,8 +185,8 @@ export function JobDetailsScreen() {
         {/* Hero Job Header Card */}
         <View style={s.heroCard}>
           <View style={s.companyTopRow}>
-            <View style={[s.companyBadge, { backgroundColor: '#e8f0fe' }]}>
-              <Text style={[s.companyBadgeText, { color: '#1a73e8' }]}>{companyInitial}</Text>
+            <View style={[s.companyBadge, { backgroundColor: palette.primaryTint }]}>
+              <Text style={[s.companyBadgeText, { color: palette.primary }]}>{companyInitial}</Text>
             </View>
             <View style={s.companyMeta}>
               <View style={s.companyNameRow}>
@@ -360,14 +360,14 @@ const createScreenStyles = (palette: ScreenPalette) => {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#f8f9fe',
+      backgroundColor: palette.surface,
     },
     centerContainer: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
       padding: sp.lg,
-      backgroundColor: '#f8f9fe',
+      backgroundColor: palette.surface,
     },
     loadingText: {
       fontSize: 14,
@@ -447,7 +447,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       padding: sp.lg,
       borderWidth: 1,
       borderColor: colors.borderSubtle,
-      shadowColor: '#000',
+      shadowColor: palette.editorialSurface,
       shadowOpacity: 0.04,
       shadowRadius: 10,
       elevation: 2,
@@ -497,17 +497,17 @@ const createScreenStyles = (palette: ScreenPalette) => {
       marginBottom: sp.md,
     },
     compHighlightCard: {
-      backgroundColor: '#f5f3ff',
+      backgroundColor: palette.surface,
       borderRadius: radius.control,
       padding: sp.md,
       borderWidth: 1,
-      borderColor: '#ddd6fe',
+      borderColor: palette.border,
       marginBottom: sp.md,
     },
     compLabel: {
       fontSize: 10,
       fontWeight: '800',
-      color: '#6d28d9',
+      color: palette.primary,
       letterSpacing: 0.5,
       marginBottom: 2,
     },
@@ -533,7 +533,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     chatReferrerBtn: {
       minHeight: 44,
       minWidth: 44,
-      backgroundColor: '#ede9fe',
+      backgroundColor: palette.surfaceContainerLow,
       borderRadius: radius.control,
       height: 42,
       alignItems: 'center',
@@ -710,11 +710,11 @@ const createScreenStyles = (palette: ScreenPalette) => {
       flexDirection: 'row',
       alignItems: 'center',
       gap: sp.xs,
-      backgroundColor: '#fefce8',
+      backgroundColor: palette.surfaceContainerLow,
       padding: sp.sm,
       borderRadius: radius.control,
       borderWidth: 1,
-      borderColor: '#fef08a',
+      borderColor: palette.border,
     },
     reminderEmoji: {
       fontSize: 16,
@@ -722,7 +722,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     reminderText: {
       flex: 1,
       fontSize: 11,
-      color: '#854d0e',
+      color: palette.warm,
       lineHeight: 15,
     },
     modalFooter: {

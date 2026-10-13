@@ -148,7 +148,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       paddingRight: space.x2,
       marginRight: space.x1,
       borderRightWidth: StyleSheet.hairlineWidth,
-      borderRightColor: '#d9d5e4',
+      borderRightColor: palette.border,
     },
     flag: { fontSize: 20 },
     dial: { color: palette.ink, fontSize: 17, fontWeight: '600' },
@@ -165,7 +165,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       width: 36,
       height: 5,
       borderRadius: 3,
-      backgroundColor: '#d9d5e4',
+      backgroundColor: palette.surfaceContainerLow,
       marginTop: space.x2,
     },
     sheetTitle: {

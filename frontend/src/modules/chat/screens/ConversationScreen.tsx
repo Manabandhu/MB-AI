@@ -364,7 +364,7 @@ export default function ConversationScreen() {
               sendTypingEvent();
             }}
             placeholder="Type a message..."
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={color.muted}
             style={styles.inputField}
             value={message}
           />
@@ -376,10 +376,10 @@ export default function ConversationScreen() {
             onPress={handleSend}
             style={[
               styles.sendBtn,
-              { backgroundColor: message.trim() ? color.primary : '#d1d5db' },
+              { backgroundColor: message.trim() ? color.primary : color.surfaceContainerHigh },
             ]}
           >
-            <AppIcon color="#fff" name="chevron-right" size={18} />
+            <AppIcon color={color.onPrimary} name="chevron-right" size={18} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -396,8 +396,8 @@ const createScreenStyles = (palette: ScreenPalette) => {
       paddingHorizontal: 16,
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: 'rgba(0,0,0,0.06)',
-      backgroundColor: '#fff',
+      borderBottomColor: palette.border,
+      backgroundColor: palette.surface,
       width: '100%',
       alignSelf: 'center',
     },
@@ -412,7 +412,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     },
     headerInfo: { flex: 1, marginHorizontal: 8 },
     headerTitle: { fontSize: 16, fontWeight: '700', color: palette.ink },
-    headerSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+    headerSubtitle: { fontSize: 12, color: palette.muted, marginTop: 2 },
     infoBtn: {
       minHeight: 44,
       minWidth: 44,
@@ -430,11 +430,11 @@ const createScreenStyles = (palette: ScreenPalette) => {
     bubbleOther: { alignSelf: 'flex-start' },
     imageBubble: { borderRadius: radius.card, padding: 6, overflow: 'hidden' },
     bgMe: { backgroundColor: palette.primary },
-    bgOther: { backgroundColor: '#f3f4f6' },
+    bgOther: { backgroundColor: palette.surface },
     msgImage: { width: 220, height: 160, borderRadius: radius.control },
     bubbleTime: { fontSize: 10, marginTop: 4, textAlign: 'right' },
-    timeMe: { color: 'rgba(255,255,255,0.7)' },
-    timeOther: { color: '#6b7280' },
+    timeMe: { color: palette.onPrimary },
+    timeOther: { color: palette.muted },
     typingRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -443,15 +443,15 @@ const createScreenStyles = (palette: ScreenPalette) => {
       gap: 6,
     },
     typingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: palette.primary },
-    typingText: { fontSize: 12, color: '#6b7280', fontStyle: 'italic' },
+    typingText: { fontSize: 12, color: palette.muted, fontStyle: 'italic' },
     bottomBar: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 12,
       paddingTop: 8,
-      backgroundColor: '#fff',
+      backgroundColor: palette.surface,
       borderTopWidth: 1,
-      borderTopColor: 'rgba(0,0,0,0.06)',
+      borderTopColor: palette.border,
       width: '100%',
       alignSelf: 'center',
       gap: 8,
@@ -464,20 +464,20 @@ const createScreenStyles = (palette: ScreenPalette) => {
       borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(67,30,190,0.06)',
+      backgroundColor: palette.primaryTint,
     },
     inputField: {
       flex: 1,
       minHeight: 40,
       maxHeight: 100,
-      backgroundColor: '#f9fafb',
+      backgroundColor: palette.surface,
       borderRadius: radius.card,
       paddingHorizontal: 16,
       paddingVertical: 10,
       fontSize: 16,
       color: palette.ink,
       borderWidth: 1,
-      borderColor: '#e5e7eb',
+      borderColor: palette.border,
     },
     sendBtn: {
       minHeight: 44,

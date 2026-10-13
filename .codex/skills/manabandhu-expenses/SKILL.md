@@ -100,3 +100,7 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 
 - Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
 - Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.
+
+## Premium visual browsing (2026-10-13)
+
+The existing balance hero uses fixed charcoal editorial tokens with readable owed/owing accents; group palettes are memoized from the live theme. Expense, balance, and settlement fields/surfaces use semantic colors. Currency arithmetic, record ownership, confirmation, and payment lifecycle remain unchanged.

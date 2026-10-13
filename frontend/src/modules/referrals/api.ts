@@ -1,3 +1,4 @@
+import { ApiError } from '@manabandhu/core';
 import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/apiClient';
 
 export type Referral = {
@@ -81,8 +82,9 @@ export async function getReferralOffer(referralId: string): Promise<ReferralOffe
     return await parseJson(
       await apiFetch(`/api/v1/referrals/${encodeURIComponent(referralId)}/offer`),
     );
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
   }
 }
 
@@ -93,8 +95,9 @@ export async function getReferralRequest(
     return await parseJson(
       await apiFetch(`/api/v1/referrals/${encodeURIComponent(referralId)}/request`),
     );
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
   }
 }
 

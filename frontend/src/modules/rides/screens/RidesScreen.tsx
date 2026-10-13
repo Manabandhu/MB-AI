@@ -25,6 +25,7 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { EditorialBanner } from '@/modules/shared/ui/EditorialBanner';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
@@ -310,6 +311,15 @@ export function RidesScreen({ screenId = 'home' }: { screenId?: RidesScreenId })
           subtitle="Carpools from people in your community"
           title="Rides"
         />
+
+        {screenId === 'home' && view === 'list' && !origin && !destination ? (
+          <EditorialBanner
+            density="compact"
+            eyebrow="GO FURTHER, TOGETHER"
+            title="A better way to get there."
+            kind="rides"
+          />
+        ) : null}
 
         <Card gap="$x2" variant="outlined">
           <XStack alignItems="flex-end" gap="$x2">

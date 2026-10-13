@@ -242,7 +242,9 @@ export function CreatePostScreen() {
                     onPress={() => setImageUri(null)}
                     accessibilityLabel="Remove attached image"
                   >
-                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>✕</Text>
+                    <Text style={{ color: palette.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                      ✕
+                    </Text>
                   </Pressable>
                 </View>
               ) : (
@@ -428,7 +430,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       color: C.inkMuted,
     },
     categoryChipTextActive: {
-      color: '#ffffff',
+      color: palette.onPrimary,
     },
     input: {
       backgroundColor: C.bg,

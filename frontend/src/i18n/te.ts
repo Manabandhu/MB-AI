@@ -33,6 +33,11 @@ export const te: Strings = {
     welcomeBack: 'మళ్ళీ స్వాగతం',
   },
   home: {
+    heroEyebrow: 'మీ నగరం. మీ వాళ్లు.',
+    heroTitle: 'జీవితం, ఇంకాస్త\nమెరుగ్గా.',
+    heroBody: 'ఉండటానికి ఇల్లు. కలిసి ప్రయాణం. మీలా ఆలోచించే వాళ్లు.',
+    heroAction: 'కొత్త అవకాశాలను చూడండి',
+
     quickAccess: 'త్వరిత యాక్సెస్',
     communityPulse: 'కమ్యూనిటీ సమాచారం',
     searchPlaceholder: 'గదులు, రైడ్‌లు, ఉద్యోగాలు, వ్యక్తులను వెతకండి…',

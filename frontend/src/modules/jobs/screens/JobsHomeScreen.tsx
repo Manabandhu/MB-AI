@@ -18,6 +18,7 @@ import { Avatar } from '@/modules/shared/ui/Avatar';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { EditorialBanner } from '@/modules/shared/ui/EditorialBanner';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
@@ -196,6 +197,15 @@ export function JobsHomeScreen({ screenId }: { screenId?: string }) {
             route: session ? '/jobs/post' : '/sign-in',
           }}
         />
+        {screenId !== 'search' && !filters.keyword && !filters.location ? (
+          <EditorialBanner
+            density="compact"
+            eyebrow="YOUR NEXT CHAPTER"
+            title="Work that moves you forward."
+            kind="jobs"
+          />
+        ) : null}
+
         <YStack gap="$x3">
           <TextField
             aria-label="Search jobs or companies"
@@ -242,7 +252,7 @@ export function JobsHomeScreen({ screenId }: { screenId?: string }) {
           ) : null}
           {!isLoading && !isError ? (
             <AppText tone="muted" variant="caption">
-              {rawJobs.length} loaded openings · {postedLastDay} posted today
+              {rawJobs.length} loaded openings · {postedLastDay} in the last 24h
               {referralOfferCount !== undefined
                 ? ` · ${referralOfferCount} community referral offers`
                 : ''}

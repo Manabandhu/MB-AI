@@ -191,3 +191,7 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 - Minimal visual refinement: Home uses a smaller greeting and fully readable quick-access descriptions. Explore cards size naturally around their full descriptions; avoid vertical `flex: 1` within an unconstrained card. Settings uses a direct title. Existing navigation, usage ordering, and theme preferences remain in place.
 
 - Home suggestion expand/collapse labels are localized in English, Telugu, and Hindi.
+
+## Premium visual browsing (2026-10-13)
+
+Premium visual browsing replaces Home text tiles with six illustrated shortcuts, prominent search, and a localized charcoal feature panel. Explore and empty Search use the same illustrated module cards. Profile uses a charcoal account panel with real provider details; Settings groups appearance controls in a surface. Welcome uses the category scenes. Existing usage ranking, query ownership, location, launcher, tab routes, safe areas, and theme preferences remain intact. Navigation selection uses neutral tonal surfaces.

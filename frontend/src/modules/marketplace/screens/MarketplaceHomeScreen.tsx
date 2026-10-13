@@ -13,6 +13,7 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { EditorialBanner } from '@/modules/shared/ui/EditorialBanner';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
@@ -140,6 +141,15 @@ function BrowseView({ screenId }: { screenId: Exclude<MarketplaceScreenId, 'save
             </AppText>
           </YStack>
         </XStack>
+
+        {screenId === 'home' && !searchText && !category ? (
+          <EditorialBanner
+            density="compact"
+            eyebrow="GOOD FINDS. SECOND LIVES."
+            title="Find something worth keeping."
+            kind="marketplace"
+          />
+        ) : null}
 
         <MarketplaceNav />
 

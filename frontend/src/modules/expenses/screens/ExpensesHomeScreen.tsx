@@ -1,8 +1,8 @@
 import { formatDate, formatMoney } from '@manabandhu/core';
-import { color, palette, radius, space } from '@manabandhu/design-system';
+import { radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/lib/authStore';
@@ -38,14 +38,16 @@ type TabType = 'groups' | 'balances' | 'activity';
 
 const RECENT_ACTIVITY_LIMIT = 10;
 
-const GROUP_STYLE: Record<
-  ExpenseGroupType,
-  { icon: AppIconName; bg: string; fg: string; label: string }
-> = {
-  APARTMENT: { icon: 'home', bg: '#e6e8ff', fg: palette.primary, label: 'Apartment' },
-  TRIP: { icon: 'map', bg: palette.tealBg, fg: palette.teal, label: 'Trip' },
-  CARPOOL: { icon: 'car', bg: palette.tealBg, fg: palette.teal, label: 'Carpool' },
-  EVENT: { icon: 'community', bg: '#fff7ed', fg: color.warm, label: 'Event' },
+const createGroupStyles = (
+  palette: ScreenPalette,
+): Record<ExpenseGroupType, { icon: AppIconName; bg: string; fg: string; label: string }> => {
+  const color = palette;
+  return {
+    APARTMENT: { icon: 'home', bg: palette.primaryTint, fg: palette.primary, label: 'Apartment' },
+    TRIP: { icon: 'map', bg: palette.tealBg, fg: palette.teal, label: 'Trip' },
+    CARPOOL: { icon: 'car', bg: palette.tealBg, fg: palette.teal, label: 'Carpool' },
+    EVENT: { icon: 'community', bg: palette.warmBg, fg: color.warm, label: 'Event' },
+  };
 };
 
 const SETTLEMENT_STATUS: Record<Settlement['status'], string> = {
@@ -80,6 +82,7 @@ function uniqueGroupNames(rows: DebtBalance[]) {
 
 export function ExpensesScreen(_props: ExpensesScreenProps) {
   const { styles: s, palette, color } = useScreenStyles(createScreenStyles);
+  const GROUP_STYLE = useMemo(() => createGroupStyles(palette), [palette]);
   const router = useRouter();
   const layout = useAdaptiveLayout();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -219,7 +222,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                 <View style={s.breakdownRow}>
                   <View style={s.breakdownCardGreen}>
                     <View style={s.breakdownHeader}>
-                      <AppIcon name="check" size={14} color="#15803d" />
+                      <AppIcon name="check" size={14} color={palette.success} />
                       <Text style={s.breakdownTitleGreen}>You are owed</Text>
                     </View>
                     <Text style={s.breakdownAmountGreen}>
@@ -261,7 +264,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                       onPress={() => router.push('/expenses/balances')}
                       accessibilityRole="button"
                     >
-                      <AppIcon name="wallet" size={16} color="#fff" />
+                      <AppIcon name="wallet" size={16} color={palette.editorialInk} />
                       <Text style={s.heroActionSecondaryText}>Settle up</Text>
                     </Pressable>
                   )}
@@ -396,7 +399,10 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                           <View
                             style={[
                               s.balanceAvatar,
-                              !owedToMe && { backgroundColor: '#fff7ed', borderColor: color.warm },
+                              !owedToMe && {
+                                backgroundColor: palette.warmBg,
+                                borderColor: color.warm,
+                              },
                             ]}
                           >
                             <Text style={[s.balanceAvatarText, !owedToMe && { color: color.warm }]}>
@@ -449,7 +455,9 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
                         <View
                           style={[
                             s.activityDot,
-                            settlement.status === 'completed' && { backgroundColor: '#10b981' },
+                            settlement.status === 'completed' && {
+                              backgroundColor: palette.success,
+                            },
                           ]}
                         />
                         <View style={s.activityBody}>
@@ -532,13 +540,13 @@ const createScreenStyles = (palette: ScreenPalette) => {
       borderRadius: radius.pill,
     },
     addBtnText: {
-      color: '#fff',
+      color: palette.onPrimary,
       fontSize: 13,
       fontWeight: '700',
     },
 
     heroCard: {
-      backgroundColor: palette.primary,
+      backgroundColor: palette.editorialSurface,
       borderRadius: radius.card,
       padding: space.x4,
       gap: space.x3,
@@ -554,19 +562,19 @@ const createScreenStyles = (palette: ScreenPalette) => {
       alignItems: 'center',
     },
     heroLabel: {
-      color: 'rgba(255, 255, 255, 0.75)',
+      color: palette.editorialMuted,
       fontSize: 11,
       fontWeight: '800',
       letterSpacing: 0.6,
     },
     heroStatusTag: {
-      backgroundColor: 'rgba(255, 255, 255, 0.16)',
+      backgroundColor: palette.editorialBorder,
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: radius.pill,
     },
     heroStatusText: {
-      color: '#fff',
+      color: palette.editorialInk,
       fontSize: 10,
       fontWeight: '700',
     },
@@ -577,26 +585,26 @@ const createScreenStyles = (palette: ScreenPalette) => {
       gap: 4,
     },
     heroSign: {
-      color: '#34d399',
+      color: palette.editorialSuccess,
       fontSize: 28,
       fontWeight: '800',
     },
     heroSignOwe: {
-      color: '#fdba74',
+      color: palette.editorialWarm,
     },
     heroAmount: {
-      color: '#ffffff',
+      color: palette.editorialInk,
       fontSize: 34,
       fontWeight: '900',
       letterSpacing: -0.5,
     },
     heroAmountMulti: {
-      color: '#ffffff',
+      color: palette.editorialInk,
       fontSize: 20,
       fontWeight: '900',
     },
     heroNetLabel: {
-      color: '#34d399',
+      color: palette.editorialSuccess,
       fontSize: 14,
       fontWeight: '700',
       marginLeft: 6,
@@ -608,7 +616,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     },
     breakdownCardGreen: {
       flex: 1,
-      backgroundColor: '#ffffff',
+      backgroundColor: palette.surface,
       borderRadius: radius.control,
       padding: 12,
       gap: 2,
@@ -619,18 +627,18 @@ const createScreenStyles = (palette: ScreenPalette) => {
       gap: 4,
     },
     breakdownTitleGreen: {
-      color: '#15803d',
+      color: palette.success,
       fontSize: 11,
       fontWeight: '700',
     },
     breakdownAmountGreen: {
-      color: '#15803d',
+      color: palette.success,
       fontSize: 18,
       fontWeight: '900',
     },
     breakdownCardOrange: {
       flex: 1,
-      backgroundColor: '#ffffff',
+      backgroundColor: palette.surface,
       borderRadius: radius.control,
       padding: 12,
       gap: 2,
@@ -664,7 +672,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      backgroundColor: '#ffffff',
+      backgroundColor: palette.editorialBorder,
       paddingVertical: 10,
       borderRadius: radius.control,
     },
@@ -688,14 +696,14 @@ const createScreenStyles = (palette: ScreenPalette) => {
       borderRadius: radius.control,
     },
     heroActionSecondaryText: {
-      color: '#ffffff',
+      color: palette.editorialInk,
       fontSize: 13,
       fontWeight: '800',
     },
 
     tabBar: {
       flexDirection: 'row',
-      backgroundColor: '#f1f3f9',
+      backgroundColor: palette.surface,
       padding: 4,
       borderRadius: radius.pill,
     },
@@ -708,8 +716,8 @@ const createScreenStyles = (palette: ScreenPalette) => {
       borderRadius: radius.pill,
     },
     tabItemActive: {
-      backgroundColor: '#ffffff',
-      shadowColor: '#000',
+      backgroundColor: palette.surface,
+      shadowColor: palette.editorialSurface,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.08,
       shadowRadius: 4,
@@ -729,7 +737,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       gap: 12,
     },
     groupCard: {
-      backgroundColor: '#ffffff',
+      backgroundColor: palette.surface,
       borderRadius: radius.card,
       padding: 16,
       borderWidth: 1,
@@ -750,7 +758,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: '#e6e8ff',
+      backgroundColor: palette.surfaceContainerLow,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -768,35 +776,35 @@ const createScreenStyles = (palette: ScreenPalette) => {
       marginTop: 2,
     },
     groupBadgeOwed: {
-      backgroundColor: '#dcfce7',
+      backgroundColor: palette.successBg,
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: radius.pill,
     },
     groupBadgeOwedText: {
-      color: '#15803d',
+      color: palette.success,
       fontSize: 12,
       fontWeight: '800',
     },
     groupBadgeSettled: {
-      backgroundColor: '#e0f2fe',
+      backgroundColor: palette.surfaceContainerLow,
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: radius.pill,
     },
     groupBadgeSettledText: {
-      color: '#0369a1',
+      color: palette.primary,
       fontSize: 11,
       fontWeight: '700',
     },
     groupBadgeOwe: {
-      backgroundColor: '#ffedd5',
+      backgroundColor: palette.warmBg,
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: radius.pill,
     },
     groupBadgeOweText: {
-      color: '#c2410c',
+      color: palette.warm,
       fontSize: 11,
       fontWeight: '800',
     },
@@ -847,13 +855,13 @@ const createScreenStyles = (palette: ScreenPalette) => {
     groupSettleBtnText: {
       fontSize: 12,
       fontWeight: '700',
-      color: '#ffffff',
+      color: palette.onPrimary,
     },
 
     balanceItemCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#ffffff',
+      backgroundColor: palette.surface,
       padding: 14,
       borderRadius: radius.card,
       borderWidth: 1,
@@ -864,7 +872,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       width: 42,
       height: 42,
       borderRadius: 21,
-      backgroundColor: '#e6e8ff',
+      backgroundColor: palette.surfaceContainerLow,
       borderWidth: 1.5,
       borderColor: palette.primary,
       alignItems: 'center',
@@ -893,12 +901,12 @@ const createScreenStyles = (palette: ScreenPalette) => {
       gap: 4,
     },
     balanceOwedGreen: {
-      color: '#15803d',
+      color: palette.success,
       fontSize: 15,
       fontWeight: '800',
     },
     balanceOweOrange: {
-      color: '#c2410c',
+      color: palette.warm,
       fontSize: 14,
       fontWeight: '800',
     },
@@ -911,7 +919,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       borderRadius: 6,
     },
     balancePayText: {
-      color: '#ffffff',
+      color: palette.onPrimary,
       fontSize: 11,
       fontWeight: '700',
     },
@@ -920,7 +928,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      backgroundColor: '#ffffff',
+      backgroundColor: palette.surface,
       padding: 14,
       borderRadius: radius.control,
       borderWidth: 1,

@@ -40,7 +40,15 @@ export function ListRow({
   const { palette } = useAppearance();
   const t = toneTokens[tone];
   return (
-    <Card aria-label={[title, subtitle, meta].filter(Boolean).join(', ')} href={href} padding="$x3">
+    <Card
+      aria-label={[title, subtitle, meta].filter(Boolean).join(', ')}
+      href={href}
+      padding="$x3"
+      borderWidth={0}
+      borderBottomWidth={1}
+      borderRadius={0}
+      backgroundColor="transparent"
+    >
       <XStack alignItems="center" gap="$x3">
         <YStack
           alignItems="center"
@@ -49,6 +57,7 @@ export function ListRow({
           height={44}
           justifyContent="center"
           width={44}
+          flexShrink={0}
         >
           <AppIcon color={palette[t.key]} name={icon} size={20} />
         </YStack>

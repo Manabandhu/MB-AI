@@ -92,3 +92,7 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 
 - Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
 - Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.
+
+## Premium visual browsing (2026-10-13)
+
+Legacy directory buttons and surfaces now follow semantic colors for the premium browsing theme. Package/nearby/emergency provider actions and location behavior are unchanged.

@@ -1,7 +1,7 @@
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform } from 'react-native';
-import { useTheme, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
@@ -41,7 +41,6 @@ function useAndroidKeyboardOpen() {
 /** Phone navigation: five tabs pinned to the bottom edge, above the home indicator. */
 export function BottomTabBar(props: BottomTabBarProps) {
   const { palette, reduceMotion } = useAppearance();
-  const theme = useTheme();
   const press = useTabPress(props);
   const labelFor = useTabLabels();
   const keyboardOpen = useAndroidKeyboardOpen();
@@ -87,7 +86,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
           >
             <YStack
               alignItems="center"
-              backgroundColor={selected ? '$primary' : 'transparent'}
+              backgroundColor={selected ? '$surfaceContainerLow' : 'transparent'}
               borderRadius="$pill"
               justifyContent="center"
               paddingHorizontal="$x4"
@@ -97,7 +96,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
             >
               <YStack position="relative">
                 <AppIcon
-                  color={selected ? theme.onPrimary?.get() : palette.muted}
+                  color={selected ? palette.ink : palette.muted}
                   name={tab.icon}
                   size={22}
                   strokeWidth={selected ? 2.4 : 2}
@@ -106,7 +105,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
               </YStack>
             </YStack>
             <AppText
-              color={selected ? '$primary' : '$colorMuted'}
+              color={selected ? '$color' : '$colorMuted'}
               fontSize={LABEL_SIZE}
               fontWeight={selected ? '800' : '600'}
               numberOfLines={1}

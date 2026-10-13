@@ -1,4 +1,4 @@
-import { breakpoint, color, paletteFor, radius, space } from '@manabandhu/design-system';
+import { breakpoint, color, type paletteFor, radius, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { forwardRef, type ReactNode, useMemo, useState } from 'react';
 import {
@@ -235,7 +235,13 @@ export function AuthButton({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' || variant === 'apple' ? '#ffffff' : color.primary}
+          color={
+            variant === 'primary'
+              ? color.onPrimary
+              : variant === 'apple'
+                ? '#ffffff'
+                : color.primary
+          }
         />
       ) : (
         <View style={styles.buttonRow}>
@@ -245,10 +251,7 @@ export function AuthButton({
             style={[
               textStyle,
               variant === 'primary' && {
-                color:
-                  color.primary === paletteFor('dark').primary
-                    ? color.background
-                    : paletteFor('light').surface,
+                color: color.onPrimary,
               },
             ]}
           >

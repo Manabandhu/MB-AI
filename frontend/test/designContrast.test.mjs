@@ -31,3 +31,14 @@ for (const [name, theme] of [['light', palette], ['dark', darkPalette]]) {
     }
   });
 }
+
+for (const [name, theme] of [['light', palette], ['dark', darkPalette]]) {
+  test(`${name} editorial text and inverse actions meet AA`, () => {
+    for (const background of ['editorialSurface', 'editorialBorder']) {
+      for (const foreground of ['editorialInk', 'editorialMuted', 'editorialAccent']) {
+        assert.ok(contrast(theme[foreground], theme[background]) >= 4.5, `${foreground} on ${background}`);
+      }
+    }
+    assert.ok(contrast(theme.editorialSurface, theme.editorialInk) >= 4.5);
+  });
+}

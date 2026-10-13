@@ -104,3 +104,7 @@ Owns referral discovery, requests, offers, details, status tracking, user-owned 
 
 - Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
 - Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.
+
+## Premium visual browsing (2026-10-13)
+
+Discovery is rebuilt with shared screens, fields, category chips, counted Offers/Requests segments, states, and an editorial intro. Details show real referral/offer/request fields and contactInfo only when supplied by the server. The transient bookmark and simulated introduction-success modal were removed; Create a request and Offer help use the existing real form routes. Extra-detail helpers treat only 404 as absent and propagate retryable/authorization failures, so an additional-details error is honest and retryable. Visibility/ownership contracts are unchanged.

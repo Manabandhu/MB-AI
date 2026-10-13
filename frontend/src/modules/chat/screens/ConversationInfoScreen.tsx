@@ -181,7 +181,7 @@ export default function ConversationInfoScreen() {
           <SectionHeader subtitle={`${mediaItems.length} photos shared`} title="Shared Media" />
           {mediaItems.length === 0 ? (
             <View style={styles.emptyMedia}>
-              <AppIcon color="#9ca3af" name="plus" size={32} />
+              <AppIcon color={color.muted} name="plus" size={32} />
               <Text style={styles.emptyMediaText}>No photos shared yet in this chat</Text>
             </View>
           ) : (
@@ -206,7 +206,7 @@ export default function ConversationInfoScreen() {
               onPress={handleToggleMute}
               style={styles.actionBtn}
             >
-              <AppIcon color={isMuted ? color.primary : '#374151'} name="bell" size={20} />
+              <AppIcon color={isMuted ? color.primary : color.ink} name="bell" size={20} />
               <Text style={styles.actionBtnText}>
                 {isMuted ? 'Unmute Notifications' : 'Mute Notifications'}
               </Text>
@@ -218,8 +218,8 @@ export default function ConversationInfoScreen() {
               onPress={handleLeaveGroup}
               style={styles.actionBtn}
             >
-              <AppIcon color="#dc2626" name="chevron-right" size={20} />
-              <Text style={[styles.actionBtnText, { color: '#dc2626' }]}>Leave Conversation</Text>
+              <AppIcon color={color.error} name="chevron-right" size={20} />
+              <Text style={[styles.actionBtnText, { color: color.error }]}>Leave Conversation</Text>
             </Pressable>
 
             <Pressable
@@ -228,8 +228,8 @@ export default function ConversationInfoScreen() {
               onPress={handleReportUser}
               style={styles.actionBtn}
             >
-              <AppIcon color="#dc2626" name="warning" size={20} />
-              <Text style={[styles.actionBtnText, { color: '#dc2626' }]}>Report User</Text>
+              <AppIcon color={color.error} name="warning" size={20} />
+              <Text style={[styles.actionBtnText, { color: color.error }]}>Report User</Text>
             </Pressable>
           </View>
         </View>
@@ -257,18 +257,18 @@ const createScreenStyles = (palette: ScreenPalette) => {
       borderRadius: radius.card,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#fff',
+      backgroundColor: palette.surface,
       borderWidth: 1,
-      borderColor: '#e5e7eb',
+      borderColor: palette.border,
     },
     topNavTitle: { fontSize: 16, fontWeight: '700', color: palette.ink },
     card: {
-      backgroundColor: '#fff',
+      backgroundColor: palette.surface,
       borderRadius: radius.card,
       padding: 24,
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: '#e5e7eb',
+      borderColor: palette.border,
     },
     avatarLarge: {
       width: 72,
@@ -281,30 +281,30 @@ const createScreenStyles = (palette: ScreenPalette) => {
     },
     avatarLargeText: { fontSize: 24, fontWeight: '700', color: palette.primary },
     convoTitle: { fontSize: 18, fontWeight: '700', color: palette.ink, textAlign: 'center' },
-    convoSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 4 },
+    convoSubtitle: { fontSize: 13, color: palette.muted, marginTop: 4 },
     memberList: { gap: 8 },
     memberItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#fff',
+      backgroundColor: palette.surface,
       padding: 12,
       borderRadius: radius.control,
       borderWidth: 1,
-      borderColor: '#e5e7eb',
+      borderColor: palette.border,
       gap: 12,
     },
     memberAvatar: {
       width: 40,
       height: 40,
       borderRadius: radius.card,
-      backgroundColor: '#f3f4f6',
+      backgroundColor: palette.surface,
       alignItems: 'center',
       justifyContent: 'center',
     },
     memberAvatarText: { fontSize: 14, fontWeight: '600', color: palette.ink },
     memberInfo: { flex: 1 },
     memberName: { fontSize: 14, fontWeight: '600', color: palette.ink },
-    memberRole: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+    memberRole: { fontSize: 12, color: palette.muted, marginTop: 2 },
     mediaGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -314,32 +314,32 @@ const createScreenStyles = (palette: ScreenPalette) => {
       width: 90,
       height: 90,
       borderRadius: 10,
-      backgroundColor: '#f3f4f6',
+      backgroundColor: palette.surface,
     },
     emptyMedia: {
-      backgroundColor: '#fff',
+      backgroundColor: palette.surface,
       borderRadius: radius.control,
       padding: 24,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
-      borderColor: '#e5e7eb',
+      borderColor: palette.border,
       borderStyle: 'dashed',
       gap: 8,
     },
-    emptyMediaText: { fontSize: 13, color: '#9ca3af' },
+    emptyMediaText: { fontSize: 13, color: palette.muted },
     actionGroup: { gap: 8 },
     actionBtn: {
       minHeight: 44,
       minWidth: 44,
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#fff',
+      backgroundColor: palette.surface,
       paddingHorizontal: 16,
       paddingVertical: 14,
       borderRadius: radius.control,
       borderWidth: 1,
-      borderColor: '#e5e7eb',
+      borderColor: palette.border,
       gap: 12,
     },
     actionBtnText: { fontSize: 14, fontWeight: '600', color: palette.ink },

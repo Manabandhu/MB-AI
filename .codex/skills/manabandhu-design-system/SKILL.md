@@ -81,3 +81,7 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 - Minimal visual refinement: 12/20/24pt control/card/panel radii, neutral dark tonal surfaces, and explicit `onPrimary` palette tokens. Shared icon/button/field colors read `useTheme().get()` so web CSS variables follow the live scheme. Unselected filters use neutral text; card hover changes its border without lifting. Header primary actions use 44pt small buttons.
 
 - Supporting captions use 13pt/20pt regular text; labels and body emphasis use 600 weight. Grid cards and entrance wrappers grow to equal row heights without forcing their vertical text stacks to zero height.
+
+## Premium visual browsing (2026-10-13)
+
+The premium browsing system adds shared `DiscoveryArtwork` (small local SVG scenes), `DiscoveryCard`, and `EditorialBanner` with compact/feature densities. Cream light canvases and charcoal dark canvases use 14/22/28pt control/card/panel radii and tighter editorial heading tracking. Fixed editorial and artwork tokens mirror in both palettes. `AppButton` adds `editorial` for an inverse action on charcoal panels; captions and primary actions are contrast-tested. Directory art is decorative, not a photo of a real listing. Shared list rows use restrained dividers.

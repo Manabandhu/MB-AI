@@ -20,7 +20,7 @@ export function Section({ title, subtitle, action, children }: SectionProps) {
     <YStack gap="$x3" width="100%">
       <XStack alignItems="flex-end" gap="$x3" justifyContent="space-between">
         <YStack flex={1} gap="$x1">
-          <Heading variant="h4">{title}</Heading>
+          <Heading variant="h3">{title}</Heading>
           {subtitle ? (
             <AppText tone="muted" variant="caption">
               {subtitle}

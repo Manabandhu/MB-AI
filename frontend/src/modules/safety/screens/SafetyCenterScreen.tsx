@@ -110,8 +110,8 @@ export function SafetyCenterScreen() {
       title: 'Trusted Contacts',
       subtitle: 'Designate family or friends for ride status and safe check-ins',
       route: '/safety/trusted-contacts',
-      bg: '#E0F2FE',
-      iconColor: '#0369A1',
+      bg: palette.infoBg,
+      iconColor: palette.info,
     },
     {
       id: 'reports',
@@ -128,8 +128,8 @@ export function SafetyCenterScreen() {
       title: 'Blocked Users',
       subtitle: 'Review and manage members you have restricted from contacting you',
       route: '/safety/blocked-users',
-      bg: '#F3F4F6',
-      iconColor: '#4B5563',
+      bg: palette.surfaceContainerLow,
+      iconColor: palette.muted,
     },
   ];
 
@@ -160,7 +160,7 @@ export function SafetyCenterScreen() {
                 ]}
               />
               <View style={s.sosIconWrap}>
-                <AppIcon name="warning" size={20} color="#FFFFFF" />
+                <AppIcon name="warning" size={20} color={palette.editorialInk} />
               </View>
             </View>
             <View style={s.sosTextWrap}>
@@ -334,7 +334,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       color: C.ink,
     },
     sosBanner: {
-      backgroundColor: '#991B1B',
+      backgroundColor: palette.editorialDanger,
       borderRadius: radius.card,
       padding: 18,
       marginBottom: 20,
@@ -373,12 +373,12 @@ const createScreenStyles = (palette: ScreenPalette) => {
     sosTitle: {
       fontSize: 16,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: palette.editorialInk,
       marginBottom: 2,
     },
     sosSubtitle: {
       fontSize: 13,
-      color: '#FEE2E2',
+      color: palette.editorialInk,
       lineHeight: 18,
     },
     sosActionsRow: {
@@ -389,15 +389,15 @@ const createScreenStyles = (palette: ScreenPalette) => {
       minHeight: 44,
       minWidth: 44,
       flex: 1,
-      backgroundColor: '#DC2626',
+      backgroundColor: palette.editorialDanger,
       paddingVertical: 10,
       borderRadius: 8,
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: '#EF4444',
+      borderColor: palette.border,
     },
     call911Text: {
-      color: '#FFFFFF',
+      color: palette.editorialInk,
       fontWeight: '800',
       fontSize: 14,
     },
@@ -411,7 +411,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       alignItems: 'center',
     },
     helplineText: {
-      color: '#FFFFFF',
+      color: palette.editorialInk,
       fontWeight: '700',
       fontSize: 14,
     },

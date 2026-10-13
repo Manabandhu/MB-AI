@@ -74,7 +74,7 @@ export function TopNav(props: BottomTabBarProps) {
                 role="tab"
                 aria-selected={selected}
                 alignItems="center"
-                backgroundColor={selected ? '$primaryTint' : 'transparent'}
+                backgroundColor={selected ? '$surfaceContainerLow' : 'transparent'}
                 borderRadius="$pill"
                 cursor="pointer"
                 focusable
@@ -87,13 +87,9 @@ export function TopNav(props: BottomTabBarProps) {
                 {...keyboardPress(() => press(tab.name))}
                 paddingHorizontal="$x4"
               >
-                <AppIcon
-                  color={selected ? palette.primary : palette.muted}
-                  name={tab.icon}
-                  size={18}
-                />
+                <AppIcon color={selected ? palette.ink : palette.muted} name={tab.icon} size={18} />
                 <AppText
-                  color={selected ? '$primary' : '$color'}
+                  color={selected ? '$color' : '$colorMuted'}
                   fontWeight={selected ? '800' : '600'}
                   variant="label"
                 >

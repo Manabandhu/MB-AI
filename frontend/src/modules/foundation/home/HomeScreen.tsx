@@ -7,6 +7,7 @@ import { useAuthStore } from '@/lib/authStore';
 import { AssistantEntry } from '@/modules/ai-assistant';
 import { useShellContent } from '@/modules/foundation/shell/shellApi';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { EditorialBanner } from '@/modules/shared/ui/EditorialBanner';
 import { CountUp } from '@/modules/shared/ui/motion/CountUp';
 import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
@@ -86,7 +87,13 @@ export function HomeScreen() {
       <Head>
         <title>Home · ManaBandhu</title>
       </Head>
-      <AssistantEntry />
+      <EditorialBanner
+        eyebrow={t('home.heroEyebrow')}
+        title={t('home.heroTitle')}
+        body={t('home.heroBody')}
+        kind="connection"
+        action={{ label: t('home.heroAction'), route: '/explore' }}
+      />
       {showNudge ? <NicknameNudge onSet={() => setNicknameOpen(true)} /> : null}
       <FadeIn index={1}>
         <Section
@@ -96,6 +103,7 @@ export function HomeScreen() {
           <QuickAccess />
         </Section>
       </FadeIn>
+      <AssistantEntry />
       <FadeIn index={2}>
         <CommunityPulse />
       </FadeIn>

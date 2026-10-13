@@ -1,32 +1,56 @@
 export const color = {
-  background: '#f7f8fc',
-  ink: '#191b2c',
-  muted: '#626779',
-  primary: '#431ebe',
+  background: '#f5f3ef',
+  ink: '#1c1b20',
+  muted: '#68635f',
+  primary: '#4d35c8',
   onPrimary: '#ffffff',
   primaryContainer: '#5b3fd6',
-  primarySoft: '#e5deff',
+  primarySoft: '#e8e2fa',
   surface: '#ffffff',
   teal: '#00696b',
   warm: '#b84b15',
-  border: '#e5e7f0',
+  border: '#e5e1da',
   success: '#16733c',
   error: '#ba1a1a',
   warning: '#d97706',
   info: '#2563eb',
   overlay: 'rgba(19,27,46,0.48)',
-  skeleton: '#e5deff',
+  skeleton: '#e8e2fa',
 } as const;
 
 /**
  * Tonal surfaces and soft accent tints layered on `color` (light theme). Screens use `palette`, which merges both,
  * instead of re-declaring these hex values locally.
  */
+export const editorial = {
+  editorialSurface: '#17171b',
+  editorialInk: '#fcfaf5',
+  editorialMuted: '#c2becb',
+  editorialAccent: '#d3c4ff',
+  editorialSuccess: '#9addbc',
+  editorialWarm: '#f3bf9f',
+  editorialDanger: '#7c2133',
+  editorialBorder: '#3e3b49',
+  artViolet: '#e8e0ff',
+  artMint: '#dceee6',
+  artPeach: '#f8e5d8',
+  artBlue: '#e0e8f5',
+  artInk: '#282330',
+  artPaper: '#fffdf8',
+  artPurple: '#9d83df',
+  artPurpleShade: '#6a4db0',
+  artGreen: '#75a58e',
+  artGreenShade: '#416d5b',
+  artCopper: '#da9b75',
+  artCopperShade: '#a96142',
+  artShadow: 'rgba(32,25,45,0.12)',
+} as const;
+
 export const tone = {
   surfaceContainerLowest: '#ffffff',
-  surfaceContainerLow: '#f2f3f9',
-  surfaceContainer: '#eaeaf4',
-  surfaceContainerHigh: '#e2e3ef',
+  surfaceContainerLow: '#eeece7',
+  surfaceContainer: '#e5e2dc',
+  surfaceContainerHigh: '#dcd8d1',
   /** Translucent fills behind primary, teal, and warm icons or chips. */
   primaryTint: 'rgba(67,30,190,0.07)',
   tealTint: 'rgba(0,105,107,0.08)',
@@ -41,20 +65,20 @@ export const tone = {
   goldText: '#b45309',
 } as const;
 
-export const palette = { ...color, ...tone } as const;
+export const palette = { ...color, ...tone, ...editorial } as const;
 
 export const darkColor = {
-  background: '#10121b',
-  ink: '#f1f5ff',
-  muted: '#b0b5c7',
+  background: '#101013',
+  ink: '#f7f5f0',
+  muted: '#b9b5bf',
   primary: '#bca6ff',
   onPrimary: '#160b3d',
   primaryContainer: '#6d48d7',
   primarySoft: '#2e245a',
-  surface: '#1b1e2c',
+  surface: '#1c1c21',
   teal: '#34d399',
   warm: '#ff955e',
-  border: '#303447',
+  border: '#35353c',
   success: '#4ade80',
   error: '#fca5a5',
   warning: '#fbbf24',
@@ -65,10 +89,10 @@ export const darkColor = {
 
 /** Dark counterparts of every `tone` key, so `darkPalette` mirrors `palette` one to one. */
 export const darkTone = {
-  surfaceContainerLowest: '#141722',
-  surfaceContainerLow: '#202330',
-  surfaceContainer: '#272b3b',
-  surfaceContainerHigh: '#303547',
+  surfaceContainerLowest: '#161619',
+  surfaceContainerLow: '#232329',
+  surfaceContainer: '#2b2b32',
+  surfaceContainerHigh: '#33333b',
   primaryTint: 'rgba(167,139,250,0.14)',
   tealTint: 'rgba(52,211,153,0.14)',
   warmTint: 'rgba(255,149,94,0.16)',
@@ -81,7 +105,7 @@ export const darkTone = {
   goldText: '#fcd34d',
 } as const;
 
-export const darkPalette = { ...darkColor, ...darkTone } as const;
+export const darkPalette = { ...darkColor, ...darkTone, ...editorial } as const;
 
 export type PaletteKey = keyof typeof palette;
 export type ColorScheme = 'light' | 'dark';
@@ -112,33 +136,33 @@ export const space = {
   x12: 48,
   x16: 64,
 } as const;
-export const radius = { control: 12, card: 20, panel: 24, pill: 999 } as const;
+export const radius = { control: 14, card: 22, panel: 28, pill: 999 } as const;
 
 export const shadow = {
   sm: {
     elevation: 2,
-    shadowColor: '#191b2c',
+    shadowColor: '#1c1b20',
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
   },
   md: {
     elevation: 4,
-    shadowColor: '#191b2c',
+    shadowColor: '#1c1b20',
     shadowOpacity: 0.1,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
   },
   lg: {
     elevation: 8,
-    shadowColor: '#191b2c',
+    shadowColor: '#1c1b20',
     shadowOpacity: 0.14,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
   },
   xl: {
     elevation: 12,
-    shadowColor: '#191b2c',
+    shadowColor: '#1c1b20',
     shadowOpacity: 0.18,
     shadowRadius: 28,
     shadowOffset: { width: 0, height: 12 },
@@ -148,8 +172,8 @@ export const shadow = {
 export const duration = { instant: 0, fast: 120, normal: 220, slow: 320, slower: 480 } as const;
 
 export const typography = {
-  display: { fontSize: 40, lineHeight: 48, fontWeight: '700', letterSpacing: -0.5 } as const,
-  h1: { fontSize: 30, lineHeight: 38, fontWeight: '700', letterSpacing: -0.3 } as const,
+  display: { fontSize: 42, lineHeight: 46, fontWeight: '700', letterSpacing: -1.6 } as const,
+  h1: { fontSize: 34, lineHeight: 40, fontWeight: '700', letterSpacing: -1 } as const,
   h2: { fontSize: 24, lineHeight: 32, fontWeight: '700', letterSpacing: -0.2 } as const,
   h3: { fontSize: 20, lineHeight: 28, fontWeight: '700', letterSpacing: 0 } as const,
   h4: { fontSize: 17, lineHeight: 24, fontWeight: '700', letterSpacing: 0 } as const,
@@ -170,7 +194,7 @@ export const accessibility = {
   minTouchTarget: 44,
   minContrastRatio: 4.5,
   focusRingWidth: 3,
-  focusRingColor: '#431ebe',
+  focusRingColor: '#4d35c8',
   reducedMotion: false,
   /** Text scales with the OS setting up to this factor; layouts are verified at this size. */
   maxFontScale: 1.6,

@@ -3,6 +3,7 @@ import { useTheme, XStack, YStack } from 'tamagui';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 import type { MarketplaceListing } from '../types';
 import { formatListingPrice } from '../utils/format';
@@ -53,11 +54,16 @@ export function SaveToggle({
       height="$touch"
       justifyContent="center"
       onPress={onPress}
+      {...keyboardPress(onPress)}
       pressStyle={{ opacity: 0.8 }}
       role="switch"
       width="$touch"
     >
-      <AppIcon color={saved ? theme.onPrimary?.val : theme.primary?.val} name="heart" size={20} />
+      <AppIcon
+        color={saved ? theme.onPrimary?.get() : theme.primary?.get()}
+        name="heart"
+        size={20}
+      />
     </YStack>
   );
 }
@@ -73,7 +79,7 @@ export function PhotoPlaceholder({ height, label }: { height: number; label?: st
       justifyContent="center"
       width="100%"
     >
-      <AppIcon color={theme.colorMuted?.val} name="package" size={32} />
+      <AppIcon color={theme.colorMuted?.get()} name="package" size={32} />
       {label ? (
         <AppText tone="muted" variant="caption">
           {label}
@@ -83,7 +89,7 @@ export function PhotoPlaceholder({ height, label }: { height: number; label?: st
   );
 }
 
-const CARD_IMAGE_HEIGHT = 150;
+const CARD_IMAGE_HEIGHT = 180;
 
 /** Grid card: cover photo (or a neutral placeholder), price with cents, condition, and status. */
 export function ListingCard({
@@ -119,9 +125,7 @@ export function ListingCard({
           <PhotoPlaceholder height={CARD_IMAGE_HEIGHT} label="No photo" />
         )}
         <YStack gap="$x1" padding="$x3">
-          <AppText tone="primary" variant="bodyStrong">
-            {price}
-          </AppText>
+          <AppText variant="h3">{price}</AppText>
           <AppText numberOfLines={2} variant="label">
             {listing.title}
           </AppText>

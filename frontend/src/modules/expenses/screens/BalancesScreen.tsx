@@ -135,7 +135,12 @@ export function BalancesScreen() {
                       {isOwedToMe ? 'Will be transferred to you' : 'Direct payment via Zelle / UPI'}
                     </Text>
                   </View>
-                  <Text style={[styles.amountText, { color: isOwedToMe ? '#16a34a' : '#dc2626' }]}>
+                  <Text
+                    style={[
+                      styles.amountText,
+                      { color: isOwedToMe ? palette.success : palette.error },
+                    ]}
+                  >
                     ${b.amount.toFixed(2)}
                   </Text>
                 </View>
@@ -184,28 +189,28 @@ const createScreenStyles = (palette: ScreenPalette) => {
     },
     summaryCardGreen: {
       flex: 1,
-      backgroundColor: 'rgba(22,163,74,0.08)',
+      backgroundColor: palette.successBg,
       borderRadius: radius.control,
       padding: 14,
       borderWidth: 1,
-      borderColor: 'rgba(22,163,74,0.2)',
+      borderColor: palette.successBg,
     },
-    summaryLabelGreen: { fontSize: 12, fontWeight: '600', color: '#16a34a' },
-    summaryValueGreen: { fontSize: 20, fontWeight: '800', color: '#16a34a', marginTop: 4 },
+    summaryLabelGreen: { fontSize: 12, fontWeight: '600', color: palette.success },
+    summaryValueGreen: { fontSize: 20, fontWeight: '800', color: palette.success, marginTop: 4 },
     summaryCardRed: {
       flex: 1,
-      backgroundColor: 'rgba(220,38,38,0.08)',
+      backgroundColor: palette.errorBg,
       borderRadius: radius.control,
       padding: 14,
       borderWidth: 1,
-      borderColor: 'rgba(220,38,38,0.2)',
+      borderColor: palette.errorBg,
     },
-    summaryLabelRed: { fontSize: 12, fontWeight: '600', color: '#dc2626' },
-    summaryValueRed: { fontSize: 20, fontWeight: '800', color: '#dc2626', marginTop: 4 },
+    summaryLabelRed: { fontSize: 12, fontWeight: '600', color: palette.error },
+    summaryValueRed: { fontSize: 20, fontWeight: '800', color: palette.error, marginTop: 4 },
     list: { gap: space.x3, marginTop: space.x4 },
     actions: { marginTop: space.x6 },
     card: {
-      backgroundColor: '#fff',
+      backgroundColor: palette.surface,
       borderColor: palette.border,
       borderRadius: radius.card,
       borderWidth: 1,
@@ -221,7 +226,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       width: 38,
       height: 38,
       borderRadius: 19,
-      backgroundColor: 'rgba(67,30,190,0.1)',
+      backgroundColor: palette.primaryTint,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -229,22 +234,22 @@ const createScreenStyles = (palette: ScreenPalette) => {
     cardMiddle: { flex: 1 },
     cardTitle: { fontSize: 14, color: palette.ink },
     strong: { fontWeight: '700' },
-    cardSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+    cardSub: { fontSize: 12, color: palette.muted, marginTop: 2 },
     amountText: { fontSize: 16, fontWeight: '800' },
-    cardDivider: { height: 1, backgroundColor: 'rgba(0,0,0,0.06)' },
+    cardDivider: { height: 1, backgroundColor: palette.border },
     cardFooter: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
     },
-    auditText: { fontSize: 11, color: '#9ca3af' },
+    auditText: { fontSize: 11, color: palette.muted },
     settleBtn: {
       minHeight: 44,
       minWidth: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: 'rgba(67,30,190,0.08)',
+      backgroundColor: palette.primaryTint,
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 10,

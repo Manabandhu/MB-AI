@@ -22,6 +22,8 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { discoveryKind } from '@/modules/shared/ui/DiscoveryArtwork';
+import { DiscoveryCard } from '@/modules/shared/ui/DiscoveryCard';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';
@@ -62,27 +64,14 @@ function ToneIcon({ module, size }: { module: LauncherModule; size: number }) {
 }
 
 function ModuleCard({ module, onOpen }: { module: LauncherModule; onOpen: () => void }) {
-  const { palette } = useAppearance();
   return (
-    <Card
-      flexGrow={1}
-      aria-label={`${module.label}. ${module.summary}`}
+    <DiscoveryCard
+      title={module.label}
+      description={module.summary}
       href={module.route}
+      kind={discoveryKind(module.key)}
       onPress={onOpen}
-    >
-      <YStack gap="$x3">
-        <XStack alignItems="center" justifyContent="space-between">
-          <ToneIcon module={module} size={48} />
-          <AppIcon color={palette.muted} name="arrow-right" size={18} />
-        </XStack>
-        <YStack gap="$x1" minWidth={0}>
-          <AppText variant="bodyStrong">{module.label}</AppText>
-          <AppText tone="muted" variant="caption">
-            {module.summary}
-          </AppText>
-        </YStack>
-      </YStack>
-    </Card>
+    />
   );
 }
 

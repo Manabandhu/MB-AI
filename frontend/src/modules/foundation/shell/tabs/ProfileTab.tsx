@@ -13,11 +13,13 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { GradientSurface } from '@/modules/shared/ui/GradientSurface';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { Section } from '@/modules/shared/ui/Section';
+import { useAppearance } from '@/theme/ThemeProvider';
 import { TabHeader } from '../TabHeader';
 
 /** Trust badges only for facts the auth provider records (confirmed email or phone). */
@@ -45,6 +47,7 @@ const accountLinks = [
 
 export function ProfileTab() {
   const t = useT();
+  const { palette } = useAppearance();
   const user = useAuthStore((s) => s.user);
   const name = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'Member';
   const contact = user?.email ?? user?.phone ?? null;
@@ -59,16 +62,29 @@ export function ProfileTab() {
         <title>Profile · ManaBandhu</title>
       </Head>
       <TabHeader subtitle={t('tabSubtitles.profile')} title={t('tabs.profile')} />
-      <Card variant="elevated">
+      <GradientSurface
+        colors={[palette.editorialSurface, palette.editorialBorder]}
+        padding={24}
+        radius={28}
+      >
+        <AppText color="$editorialAccent" variant="overline" letterSpacing={2} marginBottom="$x5">
+          MANABANDHU
+        </AppText>
         <XStack alignItems="center" gap="$x4">
           <Avatar
             imageUrl={user?.user_metadata?.avatar_url as string | undefined}
             name={name}
             size="xl"
           />
-          <YStack flex={1} gap="$x1">
-            <AppText variant="h3">{name}</AppText>
-            {contact ? <AppText tone="muted">{contact}</AppText> : null}
+          <YStack flex={1} minWidth={0} gap="$x1">
+            <AppText color="$editorialInk" variant="h2">
+              {name}
+            </AppText>
+            {contact ? (
+              <AppText color="$editorialMuted" variant="caption">
+                {contact}
+              </AppText>
+            ) : null}
             <XStack
               alignItems="center"
               alignSelf="flex-start"
@@ -85,10 +101,10 @@ export function ProfileTab() {
               }}
               role="button"
             >
-              <AppText tone="muted" variant="caption">
+              <AppText color="$editorialMuted" variant="caption">
                 {t('nickname.row')}:
               </AppText>
-              <AppText tone="primary" variant="label">
+              <AppText color="$editorialAccent" variant="label">
                 {nickname ?? t('nickname.notSet')}
               </AppText>
             </XStack>
@@ -101,7 +117,7 @@ export function ProfileTab() {
             ) : null}
           </YStack>
         </XStack>
-      </Card>
+      </GradientSurface>
       <ResponsiveGrid columns={{ compact: 1, medium: 2, expanded: 2, wide: 3 }}>
         <Section title={t('profile.activity')}>
           <YStack gap="$x2">

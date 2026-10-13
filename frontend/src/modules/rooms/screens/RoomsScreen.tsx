@@ -32,6 +32,7 @@ import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { EditorialBanner } from '@/modules/shared/ui/EditorialBanner';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
@@ -137,6 +138,15 @@ export function RoomsScreen({ screenId }: { screenId: RoomsScreenId }) {
         subtitle="Rooms and shared homes from the community"
         title="Rooms"
       />
+
+      {screenId === 'home' && view === 'list' && !isFiltered ? (
+        <EditorialBanner
+          density="compact"
+          eyebrow="SPACE TO BELONG"
+          title="Find your kind of place."
+          kind="rooms"
+        />
+      ) : null}
 
       <XStack alignItems="flex-end" gap="$x2">
         <YStack flex={1}>

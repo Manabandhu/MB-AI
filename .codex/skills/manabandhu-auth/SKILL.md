@@ -112,3 +112,7 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 
 - Screen-local native layouts now use `useScreenStyles(createScreenStyles)` from `shared/ui/useScreenStyles.ts`. Factories receive the live semantic palette and memoize by theme; do not restore static light palettes. Shared radii and typography follow the refreshed design-system tokens.
 - Interactive native screen controls expose button/link roles, use at least 44pt targets, and keep text inputs at least 16pt. Existing API calls, ownership rules, confirmations, and honest loading/error/empty states are preserved.
+
+## Premium visual browsing (2026-10-13)
+
+OTP and phone-entry surfaces now follow live border/surface tokens. AuthKit loading and primary text use onPrimary, preserving contrast under an explicit dark preference; official Apple branding stays white on black. Credential validation, consent, provider callbacks, and session behavior are unchanged.

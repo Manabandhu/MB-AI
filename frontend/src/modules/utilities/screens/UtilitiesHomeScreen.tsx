@@ -310,7 +310,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       marginBottom: 10,
     },
     featuredBadgeText: {
-      color: '#ffffff',
+      color: palette.onPrimary,
       fontSize: 10,
       fontWeight: '800',
       letterSpacing: 0.5,
@@ -318,7 +318,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     featuredTitle: {
       fontSize: 18,
       fontWeight: '800',
-      color: '#ffffff',
+      color: palette.onPrimary,
       marginBottom: 6,
     },
     featuredDesc: {
@@ -338,7 +338,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       gap: 6,
     },
     featuredBtnText: {
-      color: '#ffffff',
+      color: palette.onPrimary,
       fontWeight: '700',
       fontSize: 13,
     },
@@ -367,7 +367,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       color: C.inkMuted,
     },
     categoryPillTextActive: {
-      color: '#ffffff',
+      color: palette.onPrimary,
       fontWeight: '700',
     },
     servicesList: {
@@ -572,7 +572,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       gap: 8,
     },
     contactBtnText: {
-      color: '#ffffff',
+      color: palette.onPrimary,
       fontSize: 14,
       fontWeight: '700',
     },

@@ -14,11 +14,13 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import type { AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
-import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { discoveryKind } from '@/modules/shared/ui/DiscoveryArtwork';
+import { DiscoveryCard } from '@/modules/shared/ui/DiscoveryCard';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { ListRow } from '@/modules/shared/ui/ListRow';
+import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { Section } from '@/modules/shared/ui/Section';
@@ -213,26 +215,19 @@ export function SearchScreen() {
         ))}
       </FilterChipRow>
       {!hasQuery ? (
-        <>
-          <Card variant="tinted">
-            <AppText variant="h3">A little direction goes a long way.</AppText>
-            <AppText tone="muted">
-              Search a city, job title, or item. Or start with a feature below.
-            </AppText>
-          </Card>
-          <Section title="Start exploring">
+        <Section title="Discover by category">
+          <ResponsiveGrid columns={{ compact: 2, medium: 3, expanded: 3, wide: 3 }} gap={12}>
             {launcherModules.slice(0, 6).map((module) => (
-              <ListRow
+              <DiscoveryCard
                 key={module.key}
                 title={module.label}
-                subtitle={module.summary}
-                icon={module.icon}
-                tone={module.tone}
+                description={module.summary}
                 href={module.route}
+                kind={discoveryKind(module.key)}
               />
             ))}
-          </Section>
-        </>
+          </ResponsiveGrid>
+        </Section>
       ) : (
         <YStack gap="$x4">
           {features.length ? (

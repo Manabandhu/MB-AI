@@ -295,7 +295,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#f8f9fe',
+      backgroundColor: palette.surface,
     },
     centerContainer: {
       flex: 1,
@@ -379,15 +379,15 @@ const createScreenStyles = (palette: ScreenPalette) => {
       borderRadius: radius.panel,
       overflow: 'hidden',
       borderWidth: 1.5,
-      borderColor: '#fed7aa',
-      shadowColor: '#f97316',
+      borderColor: palette.border,
+      shadowColor: palette.editorialSurface,
       shadowOpacity: 0.08,
       shadowRadius: 16,
       elevation: 4,
       marginBottom: sp.md,
     },
     heroHeaderBg: {
-      backgroundColor: '#fff7ed',
+      backgroundColor: palette.surface,
       padding: sp.lg,
     },
     badgeRow: {
@@ -397,7 +397,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       marginBottom: sp.sm,
     },
     categoryPill: {
-      backgroundColor: '#ea580c',
+      backgroundColor: palette.warm,
       paddingHorizontal: sp.sm,
       paddingVertical: 4,
       borderRadius: radius.pill,
@@ -411,7 +411,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     heroTitle: {
       fontSize: 22,
       fontWeight: '900',
-      color: '#7c2d12',
+      color: palette.warm,
       letterSpacing: -0.5,
       marginBottom: sp.md,
     },
@@ -425,7 +425,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       width: 40,
       height: 40,
       borderRadius: radius.pill,
-      backgroundColor: '#ffedd5',
+      backgroundColor: palette.warmBg,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -443,11 +443,11 @@ const createScreenStyles = (palette: ScreenPalette) => {
     orgName: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#7c2d12',
+      color: palette.warm,
     },
     orgSubtitle: {
       fontSize: 11,
-      color: '#9a3412',
+      color: palette.warm,
     },
     sectionCard: {
       backgroundColor: colors.canvas,
@@ -466,7 +466,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       width: 44,
       height: 44,
       borderRadius: radius.control,
-      backgroundColor: '#fff7ed',
+      backgroundColor: palette.surface,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -483,7 +483,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     },
     timeSubtitle: {
       fontSize: 12,
-      color: '#ea580c',
+      color: palette.warm,
       fontWeight: '600',
       marginTop: 2,
     },
@@ -497,7 +497,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       width: 44,
       height: 44,
       borderRadius: radius.control,
-      backgroundColor: '#ede9fe',
+      backgroundColor: palette.surfaceContainerLow,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -539,7 +539,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       flex: 1.5,
       height: 40,
       borderRadius: radius.control,
-      backgroundColor: '#ede9fe',
+      backgroundColor: palette.surfaceContainerLow,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -586,7 +586,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     admissionValue: {
       fontSize: 15,
       fontWeight: '900',
-      color: '#059669',
+      color: palette.success,
     },
     rsvpPrimaryBtn: {
       minHeight: 44,

@@ -192,3 +192,7 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected` 
 - Paged responses (2026-10-12): `GET /api/v1/rooms/listings` returns a `PagedModel` (`{ content, page }`); `listRoomListings` reads it through `toPage` from `@/lib/springPage`.
 - City matching (2026-10-12): rooms with coordinates match a city within 14 great-circle miles (`distanceMiles` in `shared/utils/geoPolygon.ts`), replacing a 0.2° box that shrank east–west with latitude.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['housing', 'roommate', 'sublease', 'sublet', 'rent', 'apartment', 'lease', 'accommodation']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+
+## Premium visual browsing (2026-10-13)
+
+An unfiltered home list has a compact editorial intro with local decorative housing art. Search, map, filters, virtualized listing grids, saving, privacy, inquiry, and owner actions retain their behavior.

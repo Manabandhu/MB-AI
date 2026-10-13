@@ -425,7 +425,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       color: C.inkMuted,
     },
     categoryChipTextActive: {
-      color: '#ffffff',
+      color: palette.onPrimary,
     },
     presetsRow: {
       flexDirection: 'row',

@@ -111,7 +111,7 @@ export function AddExpenseScreen() {
       <SafeAreaView style={s.safe}>
         <View style={s.successContainer}>
           <View style={s.successBadge}>
-            <AppIcon color="#ffffff" name="check" size={32} />
+            <AppIcon color={palette.onPrimary} name="check" size={32} />
           </View>
           <Text style={s.successTitle}>Expense Recorded!</Text>
           <Text style={s.successBody}>
@@ -361,7 +361,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
     errorBanner: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#fee2e2',
+      backgroundColor: palette.surfaceContainerLow,
       borderRadius: radius.control,
       padding: 12,
       gap: 8,
@@ -458,7 +458,7 @@ const createScreenStyles = (palette: ScreenPalette) => {
       color: C.inkMuted,
     },
     categoryChipTextActive: {
-      color: '#ffffff',
+      color: palette.onPrimary,
     },
     splitRow: {
       flexDirection: 'row',
