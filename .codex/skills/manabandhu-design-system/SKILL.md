@@ -85,3 +85,9 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 ## Premium visual browsing (2026-10-13)
 
 The premium browsing system adds shared `DiscoveryArtwork` (small local SVG scenes), `DiscoveryCard`, and `EditorialBanner` with compact/feature densities. Cream light canvases and charcoal dark canvases use 14/22/28pt control/card/panel radii and tighter editorial heading tracking. Fixed editorial and artwork tokens mirror in both palettes. `AppButton` adds `editorial` for an inverse action on charcoal panels; captions and primary actions are contrast-tested. Directory art is decorative, not a photo of a real listing. Shared list rows use restrained dividers.
+
+## Quiet task-first UI (2026-10-14)
+
+DiscoveryCard now uses neutral semantic icons and labeled surfaces instead of illustrated category panels. EditorialBanner uses a theme-aware text introduction and divider without gradients or decorative art. Home prioritizes search and a two-column shortcut grid on phones; the live module feed mounts only after the user selects Show what’s around you. Metrics, promotional hero, assistant promotion, and invitation are omitted from Home; destinations remain available through Explore and search. Verify keyboard destination navigation, feed toggle, responsive reflow, themes, and exports.
+
+Secondary buttons use neutral surfaces and ink; primary actions retain the accent. AppButton accepts optional expanded state for disclosure semantics. Profile uses a regular surface instead of a fixed dark account panel.

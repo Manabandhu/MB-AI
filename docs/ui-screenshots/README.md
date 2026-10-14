@@ -1,6 +1,6 @@
-# Premium UI gallery
+# Simple UI gallery
 
-85 screenshots of the premium visual browsing redesign, captured with local test data. Phone views are 390px wide; desktop views are 1440px. These show the main screens and selected interaction states; all 123 routes were separately reviewed in both themes. Empty states reflect the local database.
+84 fresh screenshots of the simpler, task-first design. Phone views are 390px wide; desktop views are 1440px. These cover main screens and selected states using local test data. Empty states reflect that database.
 
 Click a preview to open the full-size image.
 
@@ -293,10 +293,6 @@ Click a preview to open the full-size image.
 ### Launcher Light
 
 [![Launcher Light](launcher-light.png)](launcher-light.png)
-
-### Referral Details 390 Dark
-
-[![Referral Details 390 Dark](referral-details-390-dark.png)](referral-details-390-dark.png)
 
 ### Saved Jobs 390 Dark
 

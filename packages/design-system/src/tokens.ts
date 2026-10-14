@@ -1,7 +1,7 @@
 export const color = {
-  background: '#f5f3ef',
+  background: '#f7f7f8',
   ink: '#1c1b20',
-  muted: '#68635f',
+  muted: '#5c5c66',
   primary: '#4d35c8',
   onPrimary: '#ffffff',
   primaryContainer: '#5b3fd6',
@@ -9,7 +9,7 @@ export const color = {
   surface: '#ffffff',
   teal: '#00696b',
   warm: '#b84b15',
-  border: '#e5e1da',
+  border: '#e5e5e9',
   success: '#16733c',
   error: '#ba1a1a',
   warning: '#d97706',
@@ -136,7 +136,7 @@ export const space = {
   x12: 48,
   x16: 64,
 } as const;
-export const radius = { control: 14, card: 22, panel: 28, pill: 999 } as const;
+export const radius = { control: 12, card: 16, panel: 20, pill: 999 } as const;
 
 export const shadow = {
   sm: {

@@ -1,24 +1,24 @@
 import { XStack, YStack } from 'tamagui';
 import { useAppearance } from '@/theme/ThemeProvider';
-import { AppIcon } from './AppIcon';
+import { AppIcon, type AppIconName } from './AppIcon';
 import { AppText } from './AppText';
 import { Card } from './Card';
-import { DiscoveryArtwork, type DiscoveryKind } from './DiscoveryArtwork';
+import type { DiscoveryKind } from './DiscoveryArtwork';
 
-const artSurface = {
-  rooms: '$artViolet',
-  rides: '$artMint',
-  jobs: '$artPeach',
-  community: '$artBlue',
-  events: '$artPeach',
-  marketplace: '$artPeach',
-  referrals: '$artViolet',
-  expenses: '$artMint',
-  essentials: '$artBlue',
-  connection: '$artViolet',
-} as const;
+const destinationIcons: Record<DiscoveryKind, AppIconName> = {
+  rooms: 'bed',
+  rides: 'car',
+  jobs: 'briefcase',
+  community: 'community',
+  events: 'calendar',
+  marketplace: 'marketplace',
+  referrals: 'handshake',
+  expenses: 'receipt',
+  essentials: 'compass',
+  connection: 'community',
+};
 
-/** A visual destination, with real module text and one whole-card navigation target. */
+/** One quiet navigation target, with a readable label and optional supporting text. */
 export function DiscoveryCard({
   title,
   description,
@@ -40,33 +40,24 @@ export function DiscoveryCard({
       aria-label={`${title}. ${description}`}
       href={href}
       onPress={onPress}
-      padding={0}
-      gap={0}
+      padding={compact ? '$x4' : '$x5'}
+      gap="$x4"
       flexGrow={1}
-      borderWidth={compact ? 0 : 1}
-      backgroundColor={compact ? 'transparent' : '$surface'}
-      overflow="hidden"
+      backgroundColor="$surface"
+      minHeight={compact ? 108 : 152}
     >
-      <YStack backgroundColor={artSurface[kind]} borderRadius={compact ? '$card' : 0}>
-        <DiscoveryArtwork kind={kind} height={compact ? 88 : 124} />
-      </YStack>
-      {compact ? (
-        <AppText textAlign="center" variant="label" paddingTop="$x2" paddingBottom="$x1">
-          {title}
-        </AppText>
-      ) : (
-        <YStack gap="$x2" padding="$x4">
-          <XStack alignItems="center" gap="$x2">
-            <AppText variant="h4" flex={1}>
-              {title}
-            </AppText>
-            <AppIcon color={palette.muted} name="arrow-right" size={18} />
-          </XStack>
+      <XStack alignItems="center" justifyContent="space-between">
+        <AppIcon name={destinationIcons[kind]} size={24} color={palette.ink} />
+        {!compact ? <AppIcon name="arrow-right" size={18} color={palette.muted} /> : null}
+      </XStack>
+      <YStack gap="$x2">
+        <AppText variant={compact ? 'label' : 'h4'}>{title}</AppText>
+        {!compact ? (
           <AppText tone="muted" variant="caption">
             {description}
           </AppText>
-        </YStack>
-      )}
+        ) : null}
+      </YStack>
     </Card>
   );
 }

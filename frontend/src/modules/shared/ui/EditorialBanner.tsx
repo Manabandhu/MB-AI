@@ -1,17 +1,13 @@
-import { XStack, YStack } from 'tamagui';
-import { useAdaptiveLayout } from '@/platform/adaptive';
-import { useAppearance } from '@/theme/ThemeProvider';
+import { YStack } from 'tamagui';
 import { AppButton } from './AppButton';
 import { AppText, Heading } from './AppText';
-import { DiscoveryArtwork, type DiscoveryKind } from './DiscoveryArtwork';
-import { GradientSurface } from './GradientSurface';
+import type { DiscoveryKind } from './DiscoveryArtwork';
 
-/** High-contrast editorial feature, sized by window class rather than device model. */
+/** A quiet section introduction; decoration never competes with the screen's task. */
 export function EditorialBanner({
   eyebrow,
   title,
   body,
-  kind,
   action,
   density = 'feature',
 }: {
@@ -22,56 +18,35 @@ export function EditorialBanner({
   density?: 'feature' | 'compact';
   action?: { label: string; route: string };
 }) {
-  const { windowClass, fontScale } = useAdaptiveLayout();
-  const { palette } = useAppearance();
-  const compact = windowClass === 'compact';
-  const small = density === 'compact';
+  const compact = density === 'compact';
   return (
-    <GradientSurface
-      colors={[palette.editorialSurface, palette.editorialSurface, palette.editorialBorder]}
-      padding={small ? 20 : compact ? 24 : 32}
-      radius={28}
+    <YStack
+      gap="$x3"
+      paddingVertical={compact ? '$x2' : '$x5'}
+      borderBottomWidth={1}
+      borderColor="$borderColor"
     >
-      <YStack gap={small ? '$x3' : '$x5'}>
-        <AppText color="$editorialAccent" variant="overline" letterSpacing={2}>
-          {eyebrow}
+      <AppText tone="muted" variant="overline">
+        {eyebrow}
+      </AppText>
+      <Heading variant={compact ? 'h3' : 'h1'}>{title}</Heading>
+      {body ? (
+        <AppText tone="muted" variant="body" maxWidth={560}>
+          {body}
         </AppText>
-        <XStack alignItems="center" gap="$x2">
-          <YStack flex={1} minWidth={0} gap="$x3">
-            <Heading
-              color="$editorialInk"
-              variant="display"
-              fontSize={small ? 26 : compact || fontScale > 1.2 ? 32 : 46}
-              lineHeight={small ? 30 : compact || fontScale > 1.2 ? 36 : 50}
-              letterSpacing={-1.2}
-            >
-              {title}
-            </Heading>
-            {body ? (
-              <AppText color="$editorialMuted" variant="caption" maxWidth={360}>
-                {body}
-              </AppText>
-            ) : null}
-          </YStack>
-          {fontScale <= 1.2 ? (
-            <YStack width={small ? 84 : compact ? 96 : 220} flexShrink={0} aria-hidden>
-              <DiscoveryArtwork kind={kind} height={small ? 80 : compact ? 116 : 180} />
-            </YStack>
-          ) : null}
-        </XStack>
-        {action ? (
-          <YStack alignSelf="flex-start" maxWidth="100%">
-            <AppButton
-              label={action.label}
-              iconAfter="arrow-right"
-              route={action.route}
-              variant="editorial"
-              size="sm"
-              fullWidth
-            />
-          </YStack>
-        ) : null}
-      </YStack>
-    </GradientSurface>
+      ) : null}
+      {action ? (
+        <YStack alignSelf="flex-start" maxWidth="100%">
+          <AppButton
+            label={action.label}
+            iconAfter="arrow-right"
+            route={action.route}
+            variant="secondary"
+            size="sm"
+            fullWidth
+          />
+        </YStack>
+      ) : null}
+    </YStack>
   );
 }

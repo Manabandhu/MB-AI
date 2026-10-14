@@ -23,6 +23,7 @@ type AppButtonProps = {
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
+  expanded?: boolean;
 };
 
 const Frame = styled(XStack, {
@@ -40,8 +41,8 @@ const Frame = styled(XStack, {
       editorial: { backgroundColor: '$editorialInk', borderColor: '$editorialInk' },
       danger: { backgroundColor: '$error', borderColor: '$error' },
       secondary: {
-        backgroundColor: '$primaryTint',
-        borderColor: '$primarySoft',
+        backgroundColor: '$surface',
+        borderColor: '$borderColor',
         hoverStyle: { backgroundColor: '$surfaceContainer' },
       },
       ghost: {
@@ -74,6 +75,7 @@ export function AppButton({
   loading,
   disabled,
   fullWidth,
+  expanded,
 }: AppButtonProps) {
   const { reduceMotion } = useAppearance();
   const theme = useTheme();
@@ -83,9 +85,7 @@ export function AppButton({
       ? theme.editorialSurface?.get()
       : solid
         ? theme.onPrimary?.get()
-        : variant === 'ghost'
-          ? theme.color?.get()
-          : theme.primary?.get();
+        : theme.color?.get();
   const isDisabled = Boolean(loading || disabled);
 
   const handlePress = () => {
@@ -98,6 +98,7 @@ export function AppButton({
   return (
     <Frame
       aria-label={label}
+      aria-expanded={expanded}
       role="button"
       aria-busy={Boolean(loading)}
       aria-disabled={isDisabled}

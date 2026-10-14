@@ -195,3 +195,7 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 ## Premium visual browsing (2026-10-13)
 
 Premium visual browsing replaces Home text tiles with six illustrated shortcuts, prominent search, and a localized charcoal feature panel. Explore and empty Search use the same illustrated module cards. Profile uses a charcoal account panel with real provider details; Settings groups appearance controls in a surface. Welcome uses the category scenes. Existing usage ranking, query ownership, location, launcher, tab routes, safe areas, and theme preferences remain intact. Navigation selection uses neutral tonal surfaces.
+
+## Quiet task-first UI (2026-10-14)
+
+DiscoveryCard now uses neutral semantic icons and labeled surfaces instead of illustrated category panels. EditorialBanner uses a theme-aware text introduction and divider without gradients or decorative art. Home prioritizes search and a two-column shortcut grid on phones; the live module feed mounts only after the user selects Show what’s around you. Metrics, promotional hero, assistant promotion, and invitation are omitted from Home; destinations remain available through Explore and search. Verify keyboard destination navigation, feed toggle, responsive reflow, themes, and exports.

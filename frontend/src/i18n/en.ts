@@ -43,6 +43,8 @@ export const en = {
     heroBody: 'A place to live. A ride to share. People who get you.',
     heroAction: 'Explore your possibilities',
 
+    showFeed: 'Show what’s around you',
+    hideFeed: 'Hide local feed',
     quickAccess: 'Quick access',
     communityPulse: 'Community pulse',
     searchPlaceholder: 'Search rooms, rides, jobs, people…',

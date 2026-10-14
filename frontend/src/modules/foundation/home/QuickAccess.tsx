@@ -4,12 +4,12 @@ import { discoveryKind } from '@/modules/shared/ui/DiscoveryArtwork';
 import { DiscoveryCard } from '@/modules/shared/ui/DiscoveryCard';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 
-/** Six illustrated shortcuts, ordered by actual device-local usage. */
+/** Six simple shortcuts, ordered by actual device-local usage. */
 export function QuickAccess() {
   const modules = useRankedModules(6);
   const recordVisit = useUserActivityStore((state) => state.recordModuleVisit);
   return (
-    <ResponsiveGrid columns={{ compact: 3, medium: 6, expanded: 6, wide: 6 }} gap={12}>
+    <ResponsiveGrid columns={{ compact: 2, medium: 3, expanded: 3, wide: 3 }} gap={12}>
       {modules.map((module) => (
         <DiscoveryCard
           key={module.key}

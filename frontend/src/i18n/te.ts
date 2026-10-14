@@ -38,6 +38,8 @@ export const te: Strings = {
     heroBody: 'ఉండటానికి ఇల్లు. కలిసి ప్రయాణం. మీలా ఆలోచించే వాళ్లు.',
     heroAction: 'కొత్త అవకాశాలను చూడండి',
 
+    showFeed: 'మీ చుట్టూ ఉన్నవి చూడండి',
+    hideFeed: 'స్థానిక ఫీడ్ దాచు',
     quickAccess: 'త్వరిత యాక్సెస్',
     communityPulse: 'కమ్యూనిటీ సమాచారం',
     searchPlaceholder: 'గదులు, రైడ్‌లు, ఉద్యోగాలు, వ్యక్తులను వెతకండి…',

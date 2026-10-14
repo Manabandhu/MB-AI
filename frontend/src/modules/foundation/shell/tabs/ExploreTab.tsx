@@ -1,4 +1,3 @@
-import type { ModuleTone } from '@manabandhu/core';
 import type { Href } from 'expo-router';
 import { router } from 'expo-router';
 import Head from 'expo-router/head';
@@ -34,31 +33,22 @@ import { TextField } from '@/modules/shared/ui/TextField';
 import { useAppearance } from '@/theme/ThemeProvider';
 import { TabHeader } from '../TabHeader';
 
-/** Icon well fill and icon colour per module tone (`danger` uses the error pastel, not the warm one). */
-const toneStyle = {
-  primary: { background: '$primaryTint', icon: 'primary' },
-  teal: { background: '$tealTint', icon: 'teal' },
-  warm: { background: '$warmTint', icon: 'warm' },
-  danger: { background: '$errorBg', icon: 'error' },
-} as const satisfies Record<ModuleTone, { background: string; icon: string }>;
-
 const MODULE_COLUMNS = { compact: 2, medium: 2, expanded: 3, wide: 3 } as const;
 const RECENT_COLUMNS = { compact: 2, medium: 2, expanded: 4, wide: 4 } as const;
 const RECENT_LIMIT = 4;
 
 function ToneIcon({ module, size }: { module: LauncherModule; size: number }) {
   const { palette } = useAppearance();
-  const tone = toneStyle[module.tone];
   return (
     <YStack
       alignItems="center"
-      backgroundColor={tone.background}
+      backgroundColor="$surfaceContainerLow"
       borderRadius="$control"
       height={size}
       justifyContent="center"
       width={size}
     >
-      <AppIcon color={palette[tone.icon]} name={module.icon} size={Math.round(size * 0.46)} />
+      <AppIcon color={palette.ink} name={module.icon} size={Math.round(size * 0.46)} />
     </YStack>
   );
 }

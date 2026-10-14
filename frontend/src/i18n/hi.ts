@@ -38,6 +38,8 @@ export const hi: Strings = {
     heroBody: 'रहने की जगह. साथ सफ़र. अपने जैसे लोग.',
     heroAction: 'नई संभावनाएं खोजें',
 
+    showFeed: 'आसपास क्या है देखें',
+    hideFeed: 'स्थानीय फ़ीड छिपाएँ',
     quickAccess: 'त्वरित पहुँच',
     communityPulse: 'समुदाय की झलक',
     searchPlaceholder: 'कमरे, राइड, नौकरियाँ, लोग खोजें…',

@@ -194,3 +194,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 ## Premium visual browsing (2026-10-13)
 
 Premium browsing uses local react-native-svg artwork and the existing Tamagui/Expo runtime; no dependencies or routes were added. Editorial panels hide decorative art at larger native font scales. Window classes govern layouts. Legacy detail/form surfaces follow semantic palette colors, including onPrimary for solid actions and fixed editorial foregrounds for dark panels. Verify five responsive widths in both themes, actual detail records, keyboard discovery/filter/save flows, and auth form validation.
+
+## Quiet task-first UI (2026-10-14)
+
+DiscoveryCard now uses neutral semantic icons and labeled surfaces instead of illustrated category panels. EditorialBanner uses a theme-aware text introduction and divider without gradients or decorative art. Home prioritizes search and a two-column shortcut grid on phones; the live module feed mounts only after the user selects Show what’s around you. Metrics, promotional hero, assistant promotion, and invitation are omitted from Home; destinations remain available through Explore and search. Verify keyboard destination navigation, feed toggle, responsive reflow, themes, and exports.
