@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.admin.AdminAuditService;
 import com.manabandhu.backend.auth.Actor;
 import com.manabandhu.backend.chat.Conversation;
 import com.manabandhu.backend.chat.ConversationParticipantService;
@@ -39,8 +40,9 @@ class RoomsProductionRulesTest {
 
     private final RoomListingRepository listingRepository = mock(RoomListingRepository.class);
     private final RoomAmenityRepository amenityRepository = mock(RoomAmenityRepository.class);
+    private final AdminAuditService audit = mock(AdminAuditService.class);
     private final RoomListingService listingService = new RoomListingService(listingRepository, amenityRepository,
-            mock(RoomPreferenceRepository.class));
+            mock(RoomPreferenceRepository.class), audit);
 
     private RoomListing listing(String status) {
         var listing = new RoomListing(ownerId, "Room", null, BigDecimal.valueOf(800),
@@ -157,7 +159,33 @@ class RoomsProductionRulesTest {
     // --- reports ----------------------------------------------------------------------------------------------
 
     private final RoomReportRepository reportRepository = mock(RoomReportRepository.class);
-    private final RoomReportService reportService = new RoomReportService(reportRepository, listingService);
+    private final RoomReportService reportService = new RoomReportService(reportRepository, listingService, audit);
+
+    @Test
+    void moderationIsAdminOnlyAndAudited() {
+        listing("active");
+        when(listingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        assertThatThrownBy(() -> listingService.moderate(owner, listingId, "rejected"))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
+        verify(audit, never()).record(any(), any(), any(), any());
+
+        listingService.moderate(admin, listingId, "rejected");
+        verify(audit).record(admin.id().toString(), "room.moderate", "ROOM_LISTING", listingId.toString());
+    }
+
+    @Test
+    void reportReviewIsAdminOnlyAndAudited() {
+        var reportId = UUID.randomUUID();
+        when(reportRepository.findById(reportId))
+                .thenReturn(Optional.of(new RoomReport(listingId, guestId, "spam", null)));
+        when(reportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        assertThatThrownBy(() -> reportService.review(guest, reportId, "resolved", "ok"))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
+        verify(audit, never()).record(any(), any(), any(), any());
+
+        reportService.review(admin, reportId, "resolved", "ok");
+        verify(audit).record(admin.id().toString(), "room_report.review", "ROOM_REPORT", reportId.toString());
+    }
 
     @Test
     void reviewQueueIsForModeratorsOnly() {

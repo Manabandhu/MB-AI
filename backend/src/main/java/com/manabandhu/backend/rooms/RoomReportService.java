@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.admin.AdminAuditService;
 import com.manabandhu.backend.auth.Actor;
 
 @Service
@@ -21,10 +22,12 @@ public class RoomReportService {
 
     private final RoomReportRepository repository;
     private final RoomListingService listingService;
+    private final AdminAuditService audit;
 
-    RoomReportService(RoomReportRepository repository, RoomListingService listingService) {
+    RoomReportService(RoomReportRepository repository, RoomListingService listingService, AdminAuditService audit) {
         this.repository = repository;
         this.listingService = listingService;
+        this.audit = audit;
     }
 
     @Transactional(readOnly = true)
@@ -52,6 +55,7 @@ public class RoomReportService {
         return repository.save(new RoomReport(listingId, actor.id(), input.reason().trim(), input.description()));
     }
 
+    /** Admin review; every decision is written to {@code admin_audit_log}. */
     @Transactional
     public RoomReport review(Actor actor, UUID id, String status, String resolution) {
         requireModerator(actor);
@@ -61,7 +65,9 @@ public class RoomReportService {
         report.setReviewerId(actor.id());
         report.setResolution(resolution);
         report.setReviewedAt(Instant.now());
-        return repository.save(report);
+        var saved = repository.save(report);
+        audit.record(actor.id().toString(), "room_report.review", "ROOM_REPORT", id.toString());
+        return saved;
     }
 
     private static void requireModerator(Actor actor) {

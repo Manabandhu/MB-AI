@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
@@ -65,5 +66,16 @@ public class EventsGraphqlController {
     @QueryMapping
     List<EventAttendance> eventAttendance(Authentication authentication, @Argument UUID eventId) {
         return service.attendanceFor(Actor.require(authentication), eventId);
+    }
+
+    /** Organizer ids stay private, as in REST; clients use {@code mine}. */
+    @SchemaMapping(typeName = "Event", field = "organizerId")
+    UUID organizerId(Event event) {
+        return null;
+    }
+
+    @SchemaMapping(typeName = "Event", field = "mine")
+    boolean mine(Event event, Authentication authentication) {
+        return Actor.from(authentication).map(actor -> actor.is(event.getOrganizerId())).orElse(false);
     }
 }

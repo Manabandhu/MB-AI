@@ -131,9 +131,10 @@ public class CommunityPostService {
         return commentRepository.findTop200ByPostIdOrderByCreatedAtDesc(postId);
     }
 
+    /** The 200 newest reactions on a post (GraphQL only; REST serves counts). */
     @Transactional(readOnly = true)
     public List<PostReaction> findReactionsByPost(UUID postId) {
-        return reactionRepository.findByPostIdOrderByCreatedAtDesc(postId);
+        return reactionRepository.findTop200ByPostIdOrderByCreatedAtDesc(postId);
     }
 
     // ─── Writes ───────────────────────────────────────────────────────────────

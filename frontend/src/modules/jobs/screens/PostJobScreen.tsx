@@ -55,7 +55,8 @@ export function PostJobScreen() {
     queryFn: listJobCategories,
   });
   const jobQuery = useQuery({
-    queryKey: ['jobs', 'detail', jobId],
+    // `mine` depends on who is asking, so the viewer is part of the key.
+    queryKey: ['jobs', 'detail', jobId, userId ?? null],
     queryFn: () => getJobPosting(String(jobId)),
     enabled: editing,
   });
@@ -115,7 +116,7 @@ export function PostJobScreen() {
       </Screen>
     );
   }
-  if (editing && jobQuery.data && userId && jobQuery.data.ownerId !== userId) {
+  if (editing && jobQuery.data && jobQuery.data.mine !== true) {
     return (
       <Screen maxWidth="form">
         {header}

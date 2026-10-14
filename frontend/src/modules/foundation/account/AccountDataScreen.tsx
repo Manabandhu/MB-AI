@@ -25,6 +25,7 @@ type Pending =
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE = /^\+[1-9]\d{7,14}$/;
+const PHONE_CODE = /^\d{4,10}$/;
 
 async function saveExport(data: unknown) {
   const json = JSON.stringify(data, null, 2);
@@ -129,11 +130,12 @@ export function AccountDataScreen() {
   };
 
   const confirmPhone = async () => {
-    if (!phoneToConfirm) return;
+    const code = phoneCode.trim();
+    if (!phoneToConfirm || !PHONE_CODE.test(code)) return;
     setBusy('phone-code');
     setError(null);
     try {
-      await confirmPhoneChange(phoneToConfirm, phoneCode.trim());
+      await confirmPhoneChange(phoneToConfirm, code);
       setNotice(`Your phone number is now ${phoneToConfirm}.`);
       setPhoneToConfirm(null);
       setPhoneCode('');
@@ -219,7 +221,7 @@ export function AccountDataScreen() {
                     value={phoneCode}
                   />
                   <AppButton
-                    disabled={!/^\d{4,10}$/.test(phoneCode.trim())}
+                    disabled={!PHONE_CODE.test(phoneCode.trim())}
                     label="Confirm new number"
                     loading={busy === 'phone-code'}
                     onPress={confirmPhone}

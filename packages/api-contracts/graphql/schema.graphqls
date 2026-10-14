@@ -1,6 +1,7 @@
 type CommunityPost {
   id: ID!
-  ownerId: ID!
+  "Not exposed; always null."
+  ownerId: ID
   title: String!
   body: String!
   createdAt: String!
@@ -18,7 +19,8 @@ type Community {
 type PostComment {
   id: ID!
   postId: ID!
-  authorId: ID!
+  "Not exposed; always null."
+  authorId: ID
   body: String!
   createdAt: String!
 }
@@ -26,7 +28,8 @@ type PostComment {
 type PostReaction {
   id: ID!
   postId: ID!
-  userId: ID!
+  "Not exposed; always null."
+  userId: ID
   type: String!
   createdAt: String!
 }
@@ -111,7 +114,10 @@ type RideRating {
 
 type Event {
   id: ID!
-  organizerId: ID!
+  "Not exposed; always null. Use mine."
+  organizerId: ID
+  "True when the signed-in caller organizes this event."
+  mine: Boolean!
   title: String!
   description: String
   location: String!
@@ -211,6 +217,7 @@ type Query {
   communityPosts: [CommunityPost!]!
   communities: [Community!]!
   postComments(postId: ID!): [PostComment!]!
+  "Newest 200 reactions."
   postReactions(postId: ID!): [PostReaction!]!
   roomListings: [RoomListing!]!
   roomListing(id: ID!): RoomListing!

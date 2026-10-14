@@ -157,46 +157,29 @@ public class RidesController {
         // Only the driver and passengers with a live booking or accepted request may join the ride chat.
         offerService.requireRideMember(actor, offer);
 
-        var bookings = bookingService.findByRideId(offerId);
-
-        if (offer.getConversationId() != null) {
-            if (!chatParticipantService.isParticipant(offer.getConversationId(), actorId)) {
-                chatParticipantService.add(offer.getConversationId(), actorId, ConversationParticipant.ParticipantRole.MEMBER);
-            }
-            return ResponseEntity.ok(new RideChatResponse(
-                    offer.getConversationId(),
-                    offerId,
-                    offer.getChatExpiresAt(),
-                    "🔒 Ephemeral Chat: This conversation will automatically self-delete 2 hours after ride completion."
-            ));
-        }
-
-        var title = "Ride: " + offer.getOriginArea() + " → " + offer.getDestinationArea();
-        var conversation = conversationService.create(offer.getDriverId(), Conversation.ConversationType.RIDE_TEMP, title);
-
-        if (!actorId.equals(offer.getDriverId())) {
-            chatParticipantService.add(conversation.getId(), actorId, ConversationParticipant.ParticipantRole.MEMBER);
-        }
-
-        for (var booking : bookings) {
-            if ("CONFIRMED".equalsIgnoreCase(booking.getStatus()) || "ACCEPTED".equalsIgnoreCase(booking.getStatus())) {
-                if (!booking.getUserId().equals(offer.getDriverId()) && !booking.getUserId().equals(actorId)) {
+        var conversationId = offerService.attachConversation(offerId, locked -> {
+            var title = "Ride: " + locked.getOriginArea() + " → " + locked.getDestinationArea();
+            var conversation = conversationService.create(locked.getDriverId(), Conversation.ConversationType.RIDE_TEMP, title);
+            // Bookings are pending/confirmed/cancelled; riders with an accepted request join on their own first call.
+            for (var booking : bookingService.findByRideId(offerId)) {
+                if ("confirmed".equalsIgnoreCase(booking.getStatus()) && !booking.getUserId().equals(locked.getDriverId())) {
                     chatParticipantService.add(conversation.getId(), booking.getUserId(), ConversationParticipant.ParticipantRole.MEMBER);
                 }
             }
+            String initialNotice = String.format(
+                    "🚗 Ride Coordination Chat created for %s → %s.\n\n" +
+                    "🔒 Ephemeral Notice: This chat is temporary and will permanently self-delete 2 hours after the ride is marked completed.",
+                    locked.getOriginArea(), locked.getDestinationArea()
+            );
+            messageService.send(conversation.getId(), locked.getDriverId(), initialNotice, Message.MessageType.SYSTEM);
+            return conversation.getId();
+        });
+
+        if (!chatParticipantService.isParticipant(conversationId, actorId)) {
+            chatParticipantService.add(conversationId, actorId, ConversationParticipant.ParticipantRole.MEMBER);
         }
-
-        String initialNotice = String.format(
-                "🚗 Ride Coordination Chat created for %s → %s.\n\n" +
-                "🔒 Ephemeral Notice: This chat is temporary and will permanently self-delete 2 hours after the ride is marked completed.",
-                offer.getOriginArea(), offer.getDestinationArea()
-        );
-        messageService.send(conversation.getId(), offer.getDriverId(), initialNotice, Message.MessageType.SYSTEM);
-
-        offerService.attachConversation(offerId, conversation.getId(), offer.getChatExpiresAt());
-
         return ResponseEntity.ok(new RideChatResponse(
-                conversation.getId(),
+                conversationId,
                 offerId,
                 offer.getChatExpiresAt(),
                 "🔒 Ephemeral Chat: This conversation will automatically self-delete 2 hours after ride completion."

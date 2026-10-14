@@ -100,4 +100,14 @@ class JobPostingServiceTest {
         assertThatThrownBy(() -> service.delete(owner, missing))
                 .satisfies(e -> assertThat(status(e)).isEqualTo(404));
     }
+
+    @Test
+    void mineIsTrueOnlyForTheOwnerAndTheOwnerIdIsNeverSerialized() {
+        assertThat(posting.viewedBy(null).getMine()).isFalse();
+        assertThat(posting.viewedBy(stranger).getMine()).isFalse();
+        assertThat(posting.viewedBy(owner).getMine()).isTrue();
+
+        var json = tools.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(posting);
+        assertThat(json).doesNotContain("ownerId").doesNotContain(ownerId.toString()).contains("\"mine\":true");
+    }
 }

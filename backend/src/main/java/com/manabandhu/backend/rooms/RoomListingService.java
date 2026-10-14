@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.admin.AdminAuditService;
 import com.manabandhu.backend.auth.Actor;
 
 @Service
@@ -25,20 +26,27 @@ public class RoomListingService {
     private final RoomAmenityRepository amenityRepository;
     private final RoomPreferenceRepository preferenceRepository;
     private final RoomAmenityCatalogRepository amenityCatalogRepository;
+    private final AdminAuditService audit;
 
     @org.springframework.beans.factory.annotation.Autowired
     public RoomListingService(RoomListingRepository repository, RoomAmenityRepository amenityRepository,
                               RoomPreferenceRepository preferenceRepository,
-                              RoomAmenityCatalogRepository amenityCatalogRepository) {
+                              RoomAmenityCatalogRepository amenityCatalogRepository, AdminAuditService audit) {
         this.repository = repository;
         this.amenityRepository = amenityRepository;
         this.preferenceRepository = preferenceRepository;
         this.amenityCatalogRepository = amenityCatalogRepository;
+        this.audit = audit;
+    }
+
+    RoomListingService(RoomListingRepository repository, RoomAmenityRepository amenityRepository,
+                       RoomPreferenceRepository preferenceRepository, AdminAuditService audit) {
+        this(repository, amenityRepository, preferenceRepository, null, audit);
     }
 
     RoomListingService(RoomListingRepository repository, RoomAmenityRepository amenityRepository,
                        RoomPreferenceRepository preferenceRepository) {
-        this(repository, amenityRepository, preferenceRepository, null);
+        this(repository, amenityRepository, preferenceRepository, null, null);
     }
 
     @Transactional(readOnly = true)
@@ -175,6 +183,7 @@ public class RoomListingService {
         return repository.save(listing);
     }
 
+    /** Admin status change; every change is written to {@code admin_audit_log}. */
     @Transactional
     public RoomListing moderate(Actor actor, UUID id, String targetStatus) {
         if (!actor.admin()) {
@@ -185,7 +194,9 @@ public class RoomListingService {
         validateTransition(listing.getStatus(), targetStatus, true);
         listing.setStatus(targetStatus);
         listing.setUpdatedAt(java.time.Instant.now());
-        return repository.save(listing);
+        var saved = repository.save(listing);
+        audit.record(actor.id().toString(), "room.moderate", "ROOM_LISTING", id.toString());
+        return saved;
     }
 
     @Transactional

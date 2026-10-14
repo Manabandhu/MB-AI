@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 interface PostReactionRepository extends JpaRepository<PostReaction, UUID> {
-    List<PostReaction> findByPostIdOrderByCreatedAtDesc(UUID postId);
+    List<PostReaction> findTop200ByPostIdOrderByCreatedAtDesc(UUID postId);
 
     List<PostReaction> findByUserIdOrderByCreatedAtDesc(UUID userId);
 

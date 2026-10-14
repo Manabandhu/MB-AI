@@ -3,7 +3,8 @@ import { type RawPage, toPage } from '@/lib/springPage';
 
 export type Event = {
   id: string;
-  organizerId?: string;
+  /** True when the signed-in caller organizes the event; event reads are public, so organizer ids are never sent. */
+  mine?: boolean | null;
   categoryId?: string;
   title: string;
   description?: string | null;

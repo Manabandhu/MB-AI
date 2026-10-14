@@ -74,4 +74,63 @@ class AdminDirectoryServiceTest {
                 .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
         verifyNoInteractions(audit);
     }
+
+    @Test
+    void effectiveRoleReadsEveryArrayElementOrAPlainString() {
+        assertThat(AdminDirectoryService.effectiveRole("[\"user\",\"admin\"]")).isEqualTo("admin");
+        assertThat(AdminDirectoryService.effectiveRole("[\"admin\",\"super_admin\"]")).isEqualTo("super_admin");
+        assertThat(AdminDirectoryService.effectiveRole("[\"USER\",\" Super_Admin \"]")).isEqualTo("super_admin");
+        assertThat(AdminDirectoryService.effectiveRole("\"admin\"")).isEqualTo("admin");
+        assertThat(AdminDirectoryService.effectiveRole("[\"user\"]")).isEqualTo("user");
+        assertThat(AdminDirectoryService.effectiveRole(null)).isEqualTo("user");
+        assertThat(AdminDirectoryService.effectiveRole("[]")).isEqualTo("user");
+        assertThat(AdminDirectoryService.effectiveRole("not json")).isEqualTo("user");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void adminsCannotSuspendATargetWhoseAdminRoleIsNotFirst() throws Exception {
+        var target = UUID.randomUUID();
+        var rs = mock(java.sql.ResultSet.class);
+        when(rs.getObject("id")).thenReturn(target);
+        when(rs.getString("roles")).thenReturn("[\"user\",\"admin\"]");
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(target))).thenAnswer(invocation -> {
+            RowMapper<AdminDirectoryService.AdminUser> mapper = invocation.getArgument(1);
+            return List.of(mapper.mapRow(rs, 0));
+        });
+
+        assertThatThrownBy(() -> service.setStatus(admin, target, "suspended"))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void aSuperAdminRoleAnywhereInTheArrayBlocksSuspension() {
+        var target = UUID.randomUUID();
+        targetHasRole(target, AdminDirectoryService.effectiveRole("[\"admin\",\"super_admin\"]"));
+
+        assertThatThrownBy(() -> service.setStatus(superAdmin, target, "suspended"))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void onlySuperAdminsReactivateAdmins() {
+        var target = UUID.randomUUID();
+        targetHasRole(target, AdminDirectoryService.effectiveRole("[\"user\",\"admin\"]"));
+
+        assertThatThrownBy(() -> service.setStatus(admin, target, "active"))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void superAdminsCannotBeReactivatedHere() {
+        var target = UUID.randomUUID();
+        targetHasRole(target, "super_admin");
+
+        assertThatThrownBy(() -> service.setStatus(superAdmin, target, "active"))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
+        verifyNoInteractions(audit);
+    }
 }

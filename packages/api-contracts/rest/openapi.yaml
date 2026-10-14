@@ -3459,10 +3459,10 @@ paths:
     get:
       operationId: listPublicReferrals
       summary: List public referrals
-      description: Newest 100 open (pending, open, active) referrals without contact details. Public.
+      description: Newest 100 open (pending, open, active) referrals without contact details or owner ids. Public.
       security: []
       responses:
-        '200': { description: Referrals (contactInfo is always null) }
+        '200': { description: Referrals (contactInfo and ownerId are always null) }
   /referrals/offer:
     post:
       operationId: createReferralOffer
@@ -3544,7 +3544,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/UpdateJobPostingInput' }
       responses:
-        '200': { description: The updated posting }
+        '200': { description: 'The updated posting. Job postings never include ownerId; mine is true for the owner.' }
         '400': { description: 'Invalid status, blank required field, or salaryMax below salaryMin' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Not the owner or an admin }
@@ -5052,10 +5052,13 @@ components:
     Event:
       type: object
       additionalProperties: false
-      required: [id, organizerId, title, location, startAt, endAt, categoryId, status, createdAt, updatedAt]
+      description: >-
+        Event reads are public, so the organizer's user id is never returned; mine is true when the signed-in
+        caller organizes the event (false for other callers and anonymous viewers).
+      required: [id, mine, title, location, startAt, endAt, categoryId, status, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
-        organizerId: { type: string, format: uuid }
+        mine: { type: boolean }
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 4000 }
         location: { type: string, maxLength: 200 }

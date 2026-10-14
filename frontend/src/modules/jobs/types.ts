@@ -7,7 +7,8 @@ export type JobCategory = {
 
 export type JobPosting = {
   id: string;
-  ownerId: string;
+  /** True when the signed-in caller owns the posting; job reads are public, so owner ids are never sent. */
+  mine?: boolean | null;
   category?: JobCategory | null;
   title: string;
   company?: string | null;

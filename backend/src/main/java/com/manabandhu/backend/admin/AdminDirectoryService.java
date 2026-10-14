@@ -4,9 +4,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import com.manabandhu.backend.auth.Actor;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.manabandhu.backend.auth.SupabaseAdminClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +31,7 @@ class AdminDirectoryService {
     static final int LIMIT = 200;
     /** Supabase "ban" duration used for suspension (about 100 years); "none" lifts it. */
     private static final String SUSPEND_DURATION = "876000h";
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     record AdminUser(UUID id, String name, String email, String role, String status, Instant createdAt) {}
     record AdminRoom(UUID id, String title, String hostName, String status, boolean reported, Instant createdAt) {}
@@ -111,8 +115,9 @@ class AdminDirectoryService {
 
     /**
      * Suspends or reactivates an account by banning it in Supabase Auth, which also blocks new sessions.
-     * Admins only; nobody can change their own status, super admins cannot be suspended here, and only a
-     * super admin can suspend another admin. Every change is written to {@code admin_audit_log}.
+     * Admins only; nobody can change their own status, super admins cannot be suspended or reactivated here, and
+     * only a super admin can suspend or reactivate another admin (roles read from every element of
+     * {@code app_metadata.roles}, see {@link #effectiveRole}). Every change is written to {@code admin_audit_log}.
      */
     AdminUser setStatus(Actor actor, UUID id, String status) {
         actor.requireAdmin();
@@ -123,15 +128,14 @@ class AdminDirectoryService {
         if (actor.is(id)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot change your own account status");
         }
-        if (suspend) {
-            var role = user(id).role();
-            var targetRole = role == null ? "" : role.trim().toLowerCase(java.util.Locale.ROOT);
-            if (targetRole.equals("super_admin")) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Super admins cannot be suspended here");
-            }
-            if (targetRole.equals("admin") && !actor.superAdmin()) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a super admin can suspend an admin");
-            }
+        // Same rule both ways, so a plain admin can neither suspend another admin nor lift a super admin's suspension of one.
+        var role = user(id).role();
+        var targetRole = role == null ? "" : role.trim().toLowerCase(Locale.ROOT);
+        if (targetRole.equals("super_admin")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Super admin accounts cannot be changed here");
+        }
+        if (targetRole.equals("admin") && !actor.superAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a super admin can change an admin's status");
         }
         supabaseAdmin.setBanned(id, suspend ? SUSPEND_DURATION : "none");
         audit.record(actor.id().toString(), "user." + (suspend ? "suspended" : "active"), "USER", id.toString());
@@ -141,15 +145,42 @@ class AdminDirectoryService {
     private static final String USER_SELECT = """
             SELECT id, email, created_at, banned_until,
                    raw_user_meta_data ->> 'full_name' AS full_name,
-                   COALESCE(raw_app_meta_data -> 'roles' ->> 0, 'user') AS role
+                   raw_app_meta_data -> 'roles' AS roles
             FROM auth.users""";
+
+    /**
+     * The account's highest role from {@code app_metadata.roles}, read the same way {@code SecurityConfig.rolesFrom}
+     * grants authorities: any element of an array, or a plain string. {@code super_admin} wins over {@code admin},
+     * so a target with {@code ["user","admin"]} is treated as an admin by the suspension guard.
+     */
+    static String effectiveRole(String rolesJson) {
+        List<String> roles = List.of();
+        if (rolesJson != null && !rolesJson.isBlank()) {
+            try {
+                JsonNode node = JSON.readTree(rolesJson);
+                if (node.isArray()) {
+                    var values = new java.util.ArrayList<String>();
+                    node.forEach(element -> values.add(element.isTextual() ? element.asText() : element.toString()));
+                    roles = values;
+                } else if (node.isTextual() && !node.asText().isBlank()) {
+                    roles = List.of(node.asText());
+                }
+            } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+                roles = List.of();
+            }
+        }
+        var normalized = roles.stream().map(role -> role.trim().toLowerCase(Locale.ROOT)).toList();
+        if (normalized.contains("super_admin")) return "super_admin";
+        if (normalized.contains("admin")) return "admin";
+        return normalized.stream().filter(role -> !role.isEmpty()).findFirst().orElse("user");
+    }
 
     private AdminUser mapUser(ResultSet rs, int row) throws SQLException {
         var bannedUntil = rs.getTimestamp("banned_until");
         var suspended = bannedUntil != null && bannedUntil.toInstant().isAfter(Instant.now());
         var name = rs.getString("full_name");
         return new AdminUser((UUID) rs.getObject("id"), name != null ? name : "—", rs.getString("email"),
-                rs.getString("role"), suspended ? "Suspended" : "Active", instant(rs, "created_at"));
+                effectiveRole(rs.getString("roles")), suspended ? "Suspended" : "Active", instant(rs, "created_at"));
     }
 
     private static Instant instant(ResultSet rs, String column) throws SQLException {

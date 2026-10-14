@@ -213,4 +213,14 @@ class CommunityPostServiceTest {
         assertThat(views).extracting(CommentView::mine).containsExactly(true, false);
         assertThat(views).extracting(CommentView::authorName).containsOnly("Member");
     }
+
+    @Test
+    void graphqlReactionListIsCapped() {
+        var postId = UUID.randomUUID();
+        when(reactionRepo.findTop200ByPostIdOrderByCreatedAtDesc(postId)).thenReturn(List.of());
+
+        assertThat(service.findReactionsByPost(postId)).isEmpty();
+
+        verify(reactionRepo).findTop200ByPostIdOrderByCreatedAtDesc(postId);
+    }
 }

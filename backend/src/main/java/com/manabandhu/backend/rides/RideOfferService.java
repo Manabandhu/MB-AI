@@ -261,12 +261,20 @@ public class RideOfferService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
     }
 
+    /**
+     * The ride's chat, created at most once. The offer row stays locked while {@code provision} runs, so a
+     * concurrent call waits, sees the attached conversation and reuses it instead of creating a second chat.
+     */
     @Transactional
-    public void attachConversation(UUID rideId, UUID conversationId, Instant expiresAt) {
+    public UUID attachConversation(UUID rideId, java.util.function.Function<RideOffer, UUID> provision) {
         var offer = repository.findByIdForUpdate(rideId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (offer.getConversationId() != null) {
+            return offer.getConversationId();
+        }
+        var conversationId = provision.apply(offer);
         offer.setConversationId(conversationId);
-        offer.setChatExpiresAt(expiresAt);
         repository.save(offer);
+        return conversationId;
     }
 }

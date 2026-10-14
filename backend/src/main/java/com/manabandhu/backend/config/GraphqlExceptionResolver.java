@@ -5,6 +5,7 @@ import java.util.NoSuchElementException;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import graphql.schema.DataFetchingEnvironment;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.graphql.execution.DataFetcherExceptionResolverAdapter;
 import org.springframework.graphql.execution.ErrorType;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,9 @@ public class GraphqlExceptionResolver extends DataFetcherExceptionResolverAdapte
         }
         if (exception instanceof NoSuchElementException) {
             return error(environment, ErrorType.NOT_FOUND, "Resource not found");
+        }
+        if (exception instanceof ConstraintViolationException) {
+            return error(environment, ErrorType.BAD_REQUEST, "Invalid request");
         }
         if (exception instanceof IllegalArgumentException) {
             return error(environment, ErrorType.BAD_REQUEST, "Invalid request value");

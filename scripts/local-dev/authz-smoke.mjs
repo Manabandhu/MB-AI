@@ -152,6 +152,30 @@ await status('bad event dates are a 400', 400, 'A', 'POST', '/api/v1/events', {
     startAt,
     endAt,
   });
+  {
+    const anonymous = (await call(null, 'GET', `/api/v1/events/${event?.id}`)).body;
+    expect(
+      'public event detail hides the organizer id',
+      [anonymous?.organizerId, anonymous?.mine],
+      [undefined, false],
+    );
+    expect(
+      'organizer sees mine on the event',
+      (await call('A', 'GET', `/api/v1/events/${event?.id}`)).body?.mine,
+      true,
+    );
+    expect(
+      'member does not see mine on the event',
+      (await call('B', 'GET', `/api/v1/events/${event?.id}`)).body?.mine,
+      false,
+    );
+    const publicEvents = (await call(null, 'GET', '/api/v1/events?size=50')).body?.content ?? [];
+    expect(
+      'public event list hides organizer ids',
+      publicEvents.length > 0 && publicEvents.every((e) => !('organizerId' in e)),
+      true,
+    );
+  }
   await status('member RSVPs', 201, 'B', 'POST', `/api/v1/events/${event?.id}/attendance`, {
     status: 'GOING',
   });
@@ -932,6 +956,11 @@ expect(
   publicList.every((r) => r.contactInfo === null),
   true,
 );
+expect(
+  'public referrals never include owner ids',
+  publicList.length > 0 && publicList.every((r) => r.ownerId == null),
+  true,
+);
 {
   const offer = await status(
     'poster offers a referral',
@@ -1372,6 +1401,26 @@ console.log('== jobs, utilities');
       `/api/v1/jobs/${job.body.id}/applications`,
     );
     const jobPath = `/api/v1/jobs/${job.body.id}`;
+    {
+      const anonymous = (await call(null, 'GET', jobPath)).body;
+      expect(
+        'public job detail hides the owner id',
+        [anonymous?.ownerId, anonymous?.mine],
+        [undefined, false],
+      );
+      expect('owner sees mine on the job', (await call('A', 'GET', jobPath)).body?.mine, true);
+      expect(
+        'applicant does not see mine on the job',
+        (await call('B', 'GET', jobPath)).body?.mine,
+        false,
+      );
+      const publicJobs = (await call(null, 'GET', '/api/v1/jobs?size=50')).body?.content ?? [];
+      expect(
+        'public job list hides owner ids',
+        publicJobs.length > 0 && publicJobs.every((j) => !('ownerId' in j)),
+        true,
+      );
+    }
     await status('stranger cannot edit a job', 403, 'C', 'PATCH', jobPath, { title: 'Hacked' });
     await status('stranger cannot delete a job', 403, 'C', 'DELETE', jobPath);
     await status('unknown job status is 400', 400, 'A', 'PATCH', jobPath, { status: 'archived' });
@@ -1475,6 +1524,24 @@ await status(
   },
 );
 
+// F's app_metadata.roles is ["user", "admin"]: the guard reads every element, not just the first.
+const F = '66666666-6666-6666-6666-666666666666';
+await status(
+  'ADMIN cannot suspend an admin whose role is not listed first',
+  403,
+  'D',
+  'PATCH',
+  `/api/v1/admin/users/${F}/status`,
+  { status: 'Suspended' },
+);
+await status(
+  'ADMIN cannot reactivate an admin either',
+  403,
+  'D',
+  'PATCH',
+  `/api/v1/admin/users/${F}/status`,
+  { status: 'Active' },
+);
 await status(
   'admin cannot suspend themselves',
   403,

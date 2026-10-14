@@ -49,7 +49,8 @@ export function JobDetailsScreen() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const jobQuery = useQuery({
-    queryKey: ['jobs', 'detail', jobId],
+    // `mine` depends on who is asking, so the viewer is part of the key.
+    queryKey: ['jobs', 'detail', jobId, userId ?? null],
     queryFn: () => getJobPosting(String(jobId)),
     enabled: Boolean(jobId),
   });
@@ -135,7 +136,7 @@ export function JobDetailsScreen() {
     );
   }
 
-  const isOwner = Boolean(userId && job.ownerId === userId);
+  const isOwner = job.mine === true;
   const isOpen = jobStatusIs(job, 'open');
   const salary = formatSalaryRange(job.salaryMin, job.salaryMax, { compact: false });
   const where = job.location || (job.isRemote ? 'Remote' : null);

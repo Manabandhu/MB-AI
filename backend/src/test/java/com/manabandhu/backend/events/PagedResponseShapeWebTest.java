@@ -58,4 +58,21 @@ class PagedResponseShapeWebTest {
                 .andExpect(jsonPath("$.last").doesNotExist())
                 .andExpect(jsonPath("$.pageable").doesNotExist());
     }
+
+    @Test
+    void anonymousEventReadsHideTheOrganizerId() throws Exception {
+        var event = new Event(java.util.UUID.randomUUID(), "Meetup", null, "Irving", null, null,
+                java.time.Instant.now(), java.time.Instant.now().plusSeconds(3600), java.util.UUID.randomUUID(), "PUBLISHED");
+        when(service.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(event), PageRequest.of(0, 20), 1));
+        when(service.findById(event.getId())).thenReturn(java.util.Optional.of(event));
+
+        mockMvc.perform(get("/api/v1/events"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].organizerId").doesNotExist())
+                .andExpect(jsonPath("$.content[0].mine").value(false));
+        mockMvc.perform(get("/api/v1/events/" + event.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.organizerId").doesNotExist())
+                .andExpect(jsonPath("$.mine").value(false));
+    }
 }

@@ -25,11 +25,11 @@ public class ReferralService {
         this.repository = repository;
     }
 
-    /** The 100 newest open referrals, without contact details. */
+    /** The 100 newest open referrals, without contact details or owner ids (the route is public). */
     @Transactional(readOnly = true)
     public List<ReferralView> listPublic() {
         return repository.findTop100ByStatusInOrderByCreatedAtDesc(ReferralsContentService.OPEN_STATUSES).stream()
-                .map(r -> ReferralView.of(r, false)).toList();
+                .map(ReferralView::publicOf).toList();
     }
 
     @Transactional(readOnly = true)

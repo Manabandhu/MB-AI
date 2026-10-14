@@ -58,7 +58,7 @@ fi
 # Re-runs only print "already exists" notices; hide those but stop on real errors.
 PGOPTIONS="-c client_min_messages=warning" psql -d "$DB" -q -v ON_ERROR_STOP=1 -f "$ROOT/scripts/local-dev/supabase-stub.sql"
 # Fixed test users referenced by authz-smoke.mjs: A (driver/owner), B (rider/member), C (stranger), D (admin),
-# E (rider with a verified gender in app_metadata).
+# E (rider with a verified gender in app_metadata), F (admin listed second in app_metadata.roles).
 psql -d "$DB" -qc "insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'a@example.test'),
   ('22222222-2222-2222-2222-222222222222', 'b@example.test'),
@@ -66,6 +66,10 @@ psql -d "$DB" -qc "insert into auth.users (id, email) values
   ('44444444-4444-4444-4444-444444444444', 'admin@example.test'),
   ('55555555-5555-5555-5555-555555555555', 'e@example.test')
   on conflict (id) do nothing;"
+# F is an admin whose role is not the first array element (the admin status guard must still see it).
+psql -d "$DB" -qc "insert into auth.users (id, email, raw_app_meta_data) values
+  ('66666666-6666-6666-6666-666666666666', 'f@example.test', '{\"roles\": [\"user\", \"admin\"]}'::jsonb)
+  on conflict (id) do update set raw_app_meta_data = excluded.raw_app_meta_data;"
 
 if ! curl -sf http://localhost:9999/jwks.json >/dev/null 2>&1; then
   nohup node "$ROOT/scripts/local-dev/auth.mjs" serve >"$STATE/jwks.log" 2>&1 &

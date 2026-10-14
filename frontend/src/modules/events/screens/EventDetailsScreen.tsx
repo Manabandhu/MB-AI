@@ -57,7 +57,8 @@ export default function EventDetailsScreen({ eventId }: { eventId?: string }) {
   const userId = useAuthStore((s) => s.user?.id);
 
   const eventQuery = useQuery({
-    queryKey: ['events', id],
+    // `mine` depends on who is asking, so the viewer is part of the key.
+    queryKey: ['events', id, 'detail', userId ?? null],
     queryFn: () => getEvent(id),
     enabled: Boolean(id),
   });
@@ -108,7 +109,7 @@ export default function EventDetailsScreen({ eventId }: { eventId?: string }) {
     );
   }
 
-  const isOrganizer = Boolean(userId && event.organizerId === userId);
+  const isOrganizer = event.mine === true;
   const attendance = attendanceQuery.data ?? [];
   const mine = attendance.find((a) => a.userId === userId);
   const myStatus = mine && !rsvpIs(mine.status, 'not_going') ? mine.status : null;

@@ -19,6 +19,10 @@ public class Event {
     @Column(name = "organizer_id", nullable = false, updatable = false)
     private UUID organizerId;
 
+    /** Viewer flag set by {@link #viewedBy}; organizer ids are never serialized because event reads are public. */
+    @jakarta.persistence.Transient
+    private Boolean mine;
+
     @Column(nullable = false, length = 200)
     private String title;
 
@@ -72,7 +76,16 @@ public class Event {
     }
 
     public UUID getId() { return id; }
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public UUID getOrganizerId() { return organizerId; }
+    /** True when the viewer organizes the event, false otherwise; null when no viewer was applied. */
+    public Boolean getMine() { return mine; }
+
+    /** Sets {@link #getMine()} for the (optional) viewer and returns this event. */
+    public Event viewedBy(com.manabandhu.backend.auth.Actor viewer) {
+        this.mine = viewer != null && viewer.is(organizerId);
+        return this;
+    }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
     public String getLocation() { return location; }

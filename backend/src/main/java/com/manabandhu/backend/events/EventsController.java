@@ -31,34 +31,33 @@ public class EventsController {
     }
 
     @GetMapping
-    Page<Event> list(@RequestParam(required = false) String q, Pageable pageable) {
-        if (q != null && !q.isBlank()) {
-            return service.search(q, pageable);
-        }
-        return service.findAll(pageable);
+    Page<Event> list(Authentication authentication, @RequestParam(required = false) String q, Pageable pageable) {
+        return search(authentication, q, pageable);
     }
 
     @GetMapping("/search")
-    Page<Event> search(@RequestParam(required = false) String q, Pageable pageable) {
-        if (q != null && !q.isBlank()) {
-            return service.search(q, pageable);
-        }
-        return service.findAll(pageable);
+    Page<Event> search(Authentication authentication, @RequestParam(required = false) String q, Pageable pageable) {
+        var viewer = Actor.from(authentication).orElse(null);
+        var page = q != null && !q.isBlank() ? service.search(q, pageable) : service.findAll(pageable);
+        return page.map(event -> event.viewedBy(viewer));
     }
 
     @GetMapping("/saved")
     List<Event> saved(Authentication authentication) {
-        return service.findSaved(Actor.require(authentication));
+        var actor = Actor.require(authentication);
+        return service.findSaved(actor).stream().map(event -> event.viewedBy(actor)).toList();
     }
 
     @GetMapping("/mine")
     List<Event> mine(Authentication authentication) {
-        return service.findMyEvents(Actor.require(authentication).id());
+        var actor = Actor.require(authentication);
+        return service.findMyEvents(actor.id()).stream().map(event -> event.viewedBy(actor)).toList();
     }
 
     @GetMapping("/{eventId}")
-    Event detail(@PathVariable UUID eventId) {
-        return service.findById(eventId)
+    Event detail(Authentication authentication, @PathVariable UUID eventId) {
+        var viewer = Actor.from(authentication).orElse(null);
+        return service.findById(eventId).map(event -> event.viewedBy(viewer))
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Event not found"));
     }
@@ -69,7 +68,8 @@ public class EventsController {
                 input.location(), input.latitude(), input.longitude(),
                 EventsService.parseInstant(input.startAt(), "startAt"), EventsService.parseInstant(input.endAt(), "endAt"),
                 input.categoryId());
-        return ResponseEntity.created(URI.create("/api/v1/events/" + event.getId())).body(event);
+        return ResponseEntity.created(URI.create("/api/v1/events/" + event.getId()))
+                .body(event.viewedBy(Actor.require(authentication)));
     }
 
     @PostMapping("/{eventId}/attendance")

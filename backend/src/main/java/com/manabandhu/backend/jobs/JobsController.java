@@ -81,8 +81,9 @@ public class JobsController {
     }
 
     @GetMapping
-    Page<JobPosting> postings(Pageable pageable) {
-        return postingService.findAll(pageable);
+    Page<JobPosting> postings(Authentication authentication, Pageable pageable) {
+        var viewer = Actor.from(authentication).orElse(null);
+        return postingService.findAll(pageable).map(posting -> posting.viewedBy(viewer));
     }
 
     @PostMapping
@@ -90,19 +91,21 @@ public class JobsController {
         var posting = postingService.create(actorId(authentication), input.categoryId(),
                 input.title(), input.company(), input.location(), input.description(), input.employmentType(),
                 input.isRemote(), input.salaryMin(), input.salaryMax(), input.applicationUrl());
-        return ResponseEntity.created(URI.create("/api/v1/jobs/" + posting.getId())).body(posting);
+        return ResponseEntity.created(URI.create("/api/v1/jobs/" + posting.getId())).body(posting.viewedBy(Actor.require(authentication)));
     }
 
     @GetMapping("/{jobId}")
-    JobPosting posting(@PathVariable UUID jobId) {
-        return postingService.findById(jobId)
+    JobPosting posting(Authentication authentication, @PathVariable UUID jobId) {
+        var viewer = Actor.from(authentication).orElse(null);
+        return postingService.findById(jobId).map(posting -> posting.viewedBy(viewer))
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Job posting not found"));
     }
 
     @PatchMapping("/{jobId}")
     JobPosting update(Authentication authentication, @PathVariable UUID jobId, @Valid @RequestBody UpdateJobPostingInput input) {
-        return postingService.update(Actor.require(authentication), jobId, input);
+        var actor = Actor.require(authentication);
+        return postingService.update(actor, jobId, input).viewedBy(actor);
     }
 
     @DeleteMapping("/{jobId}")

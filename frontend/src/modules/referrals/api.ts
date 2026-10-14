@@ -2,7 +2,8 @@ import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/apiClient';
 
 export type Referral = {
   id: string;
-  ownerId: string;
+  /** Absent (`null`) on the public list, which never exposes user ids. */
+  ownerId?: string | null;
   recipientId?: string | null;
   type: 'request' | 'offer';
   /** Stored lowercase (`pending`, `open`, `active`, `closed`); compare case-insensitively. */

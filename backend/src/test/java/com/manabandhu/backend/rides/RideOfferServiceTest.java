@@ -170,4 +170,21 @@ class RideOfferServiceTest {
         assertThat(cloned.getRecurrencePattern()).isEqualTo("WEEKDAYS");
         assertThat(cloned.getDepartureAt()).isEqualTo(nextDate);
     }
+
+    @Test
+    void attachConversationCreatesTheChatOnlyOnce() {
+        var rideId = UUID.randomUUID();
+        var offer = offer(rideId, 3, 3, "active");
+        var first = UUID.randomUUID();
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+
+        assertThat(service.attachConversation(rideId, locked -> { calls.incrementAndGet(); return first; })).isEqualTo(first);
+        assertThat(offer.getConversationId()).isEqualTo(first);
+
+        // A second (for example concurrent) call sees the attached chat under the lock and does not provision again.
+        assertThat(service.attachConversation(rideId, locked -> { calls.incrementAndGet(); return UUID.randomUUID(); }))
+                .isEqualTo(first);
+        assertThat(offer.getConversationId()).isEqualTo(first);
+        assertThat(calls).hasValue(1);
+    }
 }
