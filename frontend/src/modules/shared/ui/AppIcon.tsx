@@ -41,6 +41,7 @@ import Monitor from 'lucide-react-native/icons/monitor';
 import Moon from 'lucide-react-native/icons/moon';
 import Package from 'lucide-react-native/icons/package';
 import PartyPopper from 'lucide-react-native/icons/party-popper';
+import Pencil from 'lucide-react-native/icons/pencil';
 import Phone from 'lucide-react-native/icons/phone';
 import Plane from 'lucide-react-native/icons/plane';
 import Plus from 'lucide-react-native/icons/plus';
@@ -57,6 +58,7 @@ import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
 import Sparkles from 'lucide-react-native/icons/sparkles';
 import Star from 'lucide-react-native/icons/star';
 import Sun from 'lucide-react-native/icons/sun';
+import Trash from 'lucide-react-native/icons/trash';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 import Truck from 'lucide-react-native/icons/truck';
 import User from 'lucide-react-native/icons/user';
@@ -161,6 +163,7 @@ const iconMap = {
   moon: Moon,
   more: Ellipsis,
   package: Package,
+  pencil: Pencil,
   phone: Phone,
   plane: Plane,
   plus: Plus,
@@ -175,6 +178,7 @@ const iconMap = {
   star: Star,
   sun: Sun,
   swap: ArrowUpDown,
+  trash: Trash,
   user: User,
   'verified-user': BadgeCheck,
   wallet: Wallet,

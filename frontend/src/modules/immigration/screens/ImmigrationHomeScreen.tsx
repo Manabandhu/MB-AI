@@ -1,9 +1,8 @@
 import { formatDate } from '@manabandhu/core';
-import { color, radius, space, typography } from '@manabandhu/design-system';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import {
   type ImmigrationChecklist,
@@ -22,7 +21,8 @@ import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { Heading } from '@/modules/shared/ui/AppText';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { Screen } from '@/modules/shared/ui/Screen';
@@ -90,14 +90,14 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
 
   return (
     <Screen onRefresh={onRefresh} refreshing={refreshing}>
-      <View style={s.container}>
+      <YStack gap="$x4" width="100%">
         <ScreenHeader
           back={screenId === 'home' ? false : { fallback: '/immigration' as Href }}
           subtitle={copy.subtitle}
           title={copy.title}
         />
         <ImmigrationSection screenId={screenId} />
-      </View>
+      </YStack>
     </Screen>
   );
 }
@@ -156,15 +156,15 @@ function ImmigrationHome() {
     );
 
   return (
-    <View style={s.stack}>
+    <YStack gap="$x3">
       {/* Latest update: the newest real news item, hidden when there is none */}
       {latestNews[0] ? <LatestUpdateCard item={latestNews[0]} /> : null}
 
-      <View style={s.linkRow}>
+      <XStack flexWrap="wrap" gap="$x2">
         <AppButton label="Resources" route="/immigration/resources" variant="secondary" />
         <AppButton label="Checklists" route="/immigration/checklists" variant="secondary" />
         <AppButton label="FAQ" route="/immigration/faq" variant="secondary" />
-      </View>
+      </XStack>
 
       <Heading variant="h4">Guides</Heading>
       {guides.isLoading ? (
@@ -224,34 +224,48 @@ function ImmigrationHome() {
       ) : (
         latestNews.slice(0, 3).map((item) => <NewsCard key={item.id} item={item} />)
       )}
-    </View>
+    </YStack>
   );
 }
 
 function LatestUpdateCard({ item }: { item: ImmigrationNews }) {
   const date = formatDate(item.publishedAt ?? item.createdAt);
   return (
-    <View style={s.heroCard}>
-      <Text style={s.heroTag}>
+    <Card>
+      <AppText tone="teal" variant="overline">
         LATEST UPDATE{item.source ? ` • ${item.source.toUpperCase()}` : ''}
         {date ? ` • ${date}` : ''}
-      </Text>
-      <Text style={s.heroTitle}>{item.title}</Text>
+      </AppText>
+      <Heading variant="h4">{item.title}</Heading>
       {item.body ? (
-        <Text numberOfLines={4} style={s.heroBody}>
+        <AppText numberOfLines={4} tone="muted">
           {item.body}
-        </Text>
+        </AppText>
       ) : null}
       {item.url ? (
-        <Pressable onPress={() => openUrl(item.url as string)} style={s.heroLink}>
-          <Text style={s.heroLinkText}>Read source ↗</Text>
-        </Pressable>
+        <XStack>
+          <AppButton
+            icon="globe"
+            label="Read source"
+            onPress={() => openUrl(item.url as string)}
+            size="sm"
+            variant="ghost"
+          />
+        </XStack>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
 // ─── Cards ────────────────────────────────────────────────────────────────────
+
+function CardMeta({ meta }: { meta: unknown[] }) {
+  return meta.length > 0 ? (
+    <AppText tone="muted" variant="caption">
+      {meta.join(' • ')}
+    </AppText>
+  ) : null;
+}
 
 function GuideCard({ guide }: { guide: ImmigrationGuide }) {
   const meta = [
@@ -263,22 +277,21 @@ function GuideCard({ guide }: { guide: ImmigrationGuide }) {
   const [open, setOpen] = useState(false);
   const hasContent = Boolean(guide.content?.trim());
   return (
-    <Pressable
-      accessibilityHint={
-        hasContent ? (open ? 'Hides the guide' : 'Shows the full guide') : undefined
-      }
-      accessibilityRole={hasContent ? 'button' : undefined}
-      accessibilityState={hasContent ? { expanded: open } : undefined}
-      disabled={!hasContent}
-      onPress={() => setOpen((v) => !v)}
-      style={s.card}
+    <Card
+      aria-expanded={hasContent ? open : undefined}
+      gap="$x1"
+      onPress={hasContent ? () => setOpen((v) => !v) : undefined}
     >
-      <Text style={s.cardTitle}>{guide.title}</Text>
-      {guide.description ? <Text style={s.cardBody}>{guide.description}</Text> : null}
-      {open && hasContent ? <Text style={s.guideContent}>{guide.content}</Text> : null}
-      {meta.length > 0 ? <Text style={s.cardMeta}>{meta.join(' • ')}</Text> : null}
-      {hasContent ? <Text style={s.cardAction}>{open ? 'Hide guide' : 'Read guide'}</Text> : null}
-    </Pressable>
+      <AppText variant="bodyStrong">{guide.title}</AppText>
+      {guide.description ? <AppText tone="muted">{guide.description}</AppText> : null}
+      {open && hasContent ? <AppText marginTop="$x2">{guide.content}</AppText> : null}
+      <CardMeta meta={meta} />
+      {hasContent ? (
+        <AppText tone="primary" variant="label">
+          {open ? 'Hide guide' : 'Read guide'}
+        </AppText>
+      ) : null}
+    </Card>
   );
 }
 
@@ -287,44 +300,38 @@ function NewsCard({ item }: { item: ImmigrationNews }) {
     Boolean,
   );
   return (
-    <Pressable
-      disabled={!item.url}
-      onPress={() => item.url && openUrl(item.url)}
-      style={s.card}
-      accessibilityRole={item.url ? 'link' : undefined}
+    <Card
+      gap="$x1"
+      onPress={item.url ? () => openUrl(item.url as string) : undefined}
+      role={item.url ? 'link' : undefined}
     >
-      <Text style={s.cardTitle}>{item.title}</Text>
+      <AppText variant="bodyStrong">{item.title}</AppText>
       {item.body ? (
-        <Text numberOfLines={3} style={s.cardBody}>
+        <AppText numberOfLines={3} tone="muted">
           {item.body}
-        </Text>
+        </AppText>
       ) : null}
-      {meta.length > 0 ? <Text style={s.cardMeta}>{meta.join(' • ')}</Text> : null}
-    </Pressable>
+      <CardMeta meta={meta} />
+    </Card>
   );
 }
 
 function ResourceCard({ resource }: { resource: ImmigrationResource }) {
-  const router = useRouter();
   const meta = [
     resource.resourceType ? resource.resourceType.toLowerCase() : null,
     resource.category,
     resource.verified ? 'verified by admin' : null,
   ].filter(Boolean);
   return (
-    <Pressable
-      onPress={() => router.push(`/immigration/resources/${resource.id}` as Href)}
-      style={s.card}
-      accessibilityRole="button"
-    >
-      <Text style={s.cardTitle}>{resource.title}</Text>
+    <Card gap="$x1" href={`/immigration/resources/${resource.id}`}>
+      <AppText variant="bodyStrong">{resource.title}</AppText>
       {resource.description ? (
-        <Text numberOfLines={3} style={s.cardBody}>
+        <AppText numberOfLines={3} tone="muted">
           {resource.description}
-        </Text>
+        </AppText>
       ) : null}
-      {meta.length > 0 ? <Text style={s.cardMeta}>{meta.join(' • ')}</Text> : null}
-    </Pressable>
+      <CardMeta meta={meta} />
+    </Card>
   );
 }
 
@@ -336,27 +343,26 @@ function ChecklistCard({ checklist }: { checklist: ImmigrationChecklist }) {
     checklist.dueDate ? `due ${formatDate(checklist.dueDate)}` : null,
   ].filter(Boolean);
   return (
-    <View style={s.card}>
-      <Text style={s.cardTitle}>{checklist.title}</Text>
-      {checklist.description ? <Text style={s.cardBody}>{checklist.description}</Text> : null}
-      {meta.length > 0 ? <Text style={s.cardMeta}>{meta.join(' • ')}</Text> : null}
-    </View>
+    <Card gap="$x1">
+      <AppText variant="bodyStrong">{checklist.title}</AppText>
+      {checklist.description ? <AppText tone="muted">{checklist.description}</AppText> : null}
+      <CardMeta meta={meta} />
+    </Card>
   );
 }
 
 function FaqCard({ item }: { item: ImmigrationFaqItem }) {
   const [open, setOpen] = useState(false);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ expanded: open }}
-      onPress={() => setOpen((v) => !v)}
-      style={s.card}
-    >
-      <Text style={s.cardTitle}>{item.question}</Text>
-      {open ? <Text style={s.cardBody}>{item.answer}</Text> : null}
-      {item.category ? <Text style={s.cardMeta}>{item.category}</Text> : null}
-    </Pressable>
+    <Card aria-expanded={open} gap="$x1" onPress={() => setOpen((v) => !v)}>
+      <AppText variant="bodyStrong">{item.question}</AppText>
+      {open ? <AppText tone="muted">{item.answer}</AppText> : null}
+      {item.category ? (
+        <AppText tone="muted" variant="caption">
+          {item.category}
+        </AppText>
+      ) : null}
+    </Card>
   );
 }
 
@@ -404,7 +410,7 @@ function QueryList<T extends { id: string }>({
       />
     );
   }
-  return <View style={s.stack}>{items.map((item) => render(item))}</View>;
+  return <YStack gap="$x3">{items.map((item) => render(item))}</YStack>;
 }
 
 function GuidesList() {
@@ -521,40 +527,3 @@ function SavedPlaceholder() {
     />
   );
 }
-
-const s = StyleSheet.create({
-  container: { width: '100%', gap: space.x4 },
-  stack: { gap: space.x3 },
-  linkRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
-  heroCard: {
-    backgroundColor: color.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    padding: space.x4,
-    gap: space.x2,
-  },
-  heroTag: { color: color.teal, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
-  heroTitle: { color: color.ink, fontSize: 18, fontWeight: '800' },
-  heroBody: { color: color.muted, fontSize: 14, lineHeight: 20 },
-  heroLink: { alignSelf: 'flex-start', paddingVertical: space.x1 },
-  heroLinkText: { color: color.primary, fontWeight: '700' },
-  card: {
-    backgroundColor: color.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    padding: space.x4,
-    gap: space.x1,
-  },
-  cardTitle: { color: color.ink, fontSize: 15, fontWeight: '700' },
-  cardBody: { color: color.muted, fontSize: 14, lineHeight: 20 },
-  cardMeta: { color: color.muted, fontSize: 12, marginTop: space.x1 },
-  cardAction: { color: color.primary, fontSize: 13, fontWeight: '700', marginTop: space.x1 },
-  guideContent: {
-    color: color.ink,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    marginTop: space.x2,
-  },
-});

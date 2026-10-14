@@ -344,7 +344,7 @@ export function AuthSwitch({
   return (
     <View style={styles.switchRow}>
       <Text style={styles.switchPrompt}>{prompt}</Text>
-      <Pressable role="link" hitSlop={10} onPress={onPress}>
+      <Pressable role="link" hitSlop={10} onPress={onPress} style={styles.switchLink}>
         <Text style={styles.switchAction}>{action}</Text>
       </Pressable>
     </View>
@@ -429,7 +429,13 @@ const makeStyles = (p: Palette) =>
       fontSize: 17,
       ...(Platform.OS === 'web' ? { outlineWidth: 0 } : null),
     },
-    reveal: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+    reveal: {
+      width: 44,
+      height: 44,
+      marginRight: -space.x2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     hint: { color: p.muted, fontSize: 13, lineHeight: 18 },
     fieldError: { color: p.error, fontSize: 13, lineHeight: 18, fontWeight: '600' },
     button: {
@@ -474,5 +480,6 @@ const makeStyles = (p: Palette) =>
       minHeight: 44,
     },
     switchPrompt: { color: p.muted, fontSize: 15 },
+    switchLink: { minHeight: 44, justifyContent: 'center' },
     switchAction: { color: p.primary, fontSize: 15, fontWeight: '700' },
   });
