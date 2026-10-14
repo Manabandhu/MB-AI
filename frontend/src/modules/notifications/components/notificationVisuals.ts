@@ -3,8 +3,13 @@ import type { AppIconName } from '@/modules/shared/ui/AppIcon';
 type Tone = 'primary' | 'teal' | 'warm' | 'danger';
 
 /** Icon and tint per notification type (the backend's `meta`); unknown types fall back to a bell. */
-export function notificationVisual(meta: string): { icon: AppIconName; tone: Tone; label: string } {
-  switch (meta?.toUpperCase()) {
+export function notificationVisual(meta: string | null | undefined): {
+  icon: AppIconName;
+  tone: Tone;
+  label: string;
+} {
+  const type = (meta ?? '').trim().toUpperCase();
+  switch (type) {
     case 'RIDE':
       return { icon: 'car', tone: 'teal', label: 'Rides' };
     case 'ROOM':
@@ -15,7 +20,7 @@ export function notificationVisual(meta: string): { icon: AppIconName; tone: Ton
       return { icon: 'wallet', tone: 'warm', label: 'Expenses' };
     case 'JOB':
     case 'REFERRAL':
-      return { icon: 'briefcase', tone: 'warm', label: meta === 'JOB' ? 'Jobs' : 'Referrals' };
+      return { icon: 'briefcase', tone: 'warm', label: type === 'JOB' ? 'Jobs' : 'Referrals' };
     case 'EVENT':
     case 'COMMUNITY':
       return { icon: 'calendar', tone: 'teal', label: 'Community' };

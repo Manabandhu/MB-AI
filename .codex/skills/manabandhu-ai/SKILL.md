@@ -13,22 +13,23 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 
 | Route | Screen Component | Type | States |
 |---|---|---|---|
-| `/assistant` | `AssistantScreen` | chat | loading, empty, error, offline |
+| `/assistant` | `AssistantScreen` | chat | loading, empty, error, sending |
 | `/assistant/history` | `AssistantHistoryScreen` | list | loading, empty, error |
 | `/assistant/citations` | `AssistantCitationsScreen` | list | loading, empty, error |
 
 ## Component Inventory
 
-- `AssistantScreen` - chat screen with `MessageBubble`, message input, offline banner, and history/citations actions
-- `AssistantHistoryScreen` - list screen of past conversations with `SectionHeader`
-- `AssistantCitationsScreen` - list screen of source citations with `SectionHeader`
-- Shared: `ScreenShell`, `MessageBubble`, `Input`, `AppButton`, `Avatar`, `SectionHeader`, `Banner`, `ListScreen`, `Card`
+- `AssistantScreen` - chat's `ChatFrame`/`ChatBubble`/`Composer` (imported from `@/modules/chat`); messages oldest first; honest subtitle ("not connected to an AI model yet"); pending question bubble + "Assistant is replying…"; a failed send restores the question into the input and shows an inline alert; header icon buttons for History and Citations; back falls back to `/`
+- `AssistantHistoryScreen` - `Screen`/`ScreenHeader`; each conversation `Card` expands to load and show its messages
+- `AssistantCitationsScreen` - citation `Card`s open their http(s) URL with `Linking` (other schemes are ignored)
+- Pure helpers: `ai-assistant/assistantFormat.ts` (`oldestFirst`, `isUserRole`, `safeExternalUrl`), tested in `frontend/test/safetyUtilities.test.mjs`
 
 ## API Surface
 
-- `getAssistantMessages()` -> `GET /api/v1/assistant/messages`
-- `sendAssistantMessage(input)` -> `POST /api/v1/assistant/messages`
+- `getAssistantMessages()` -> `GET /api/v1/assistant/messages` (latest conversation, oldest first)
+- `sendAssistantMessage({ content })` -> `POST /api/v1/assistant/messages` (stores the question in the latest conversation and returns the backend's fixed "not connected to an AI model yet" reply)
 - `getAssistantHistory()` -> `GET /api/v1/assistant/history`
+- `getAssistantConversationMessages(id)` -> `GET /api/v1/assistant/conversations/{id}/messages`
 - `getAssistantCitations()` -> `GET /api/v1/assistant/citations`
 
 ## Demo Fixtures
@@ -41,7 +42,7 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - **Empty**: `EmptyState` when no conversation history or citations exist
 - **Error**: `ErrorState` with retry action
 - **Success**: message sent confirmation
-- **Offline**: cached messages shown, new queries disabled
+- **Send failure**: the question goes back into the input with an inline alert; there is no offline mode
 - **Permission**: microphone permission optional for voice input; text-only mode shown if missing
 
 ## Navigation Actions and Cross-Module Links
@@ -54,10 +55,9 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 
 - Route files in `frontend/src/app/assistant/` are thin wrappers
 - Uses `useQuery` for messages, history, and citations
-- Message send uses mutation with offline catch
-- `useAdaptiveLayout` governs responsive max-width
-- Streaming UI is a placeholder; real streaming is pending orchestrator integration
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Message send is a mutation; the input is cleared on send and restored on failure
+- No streaming UI; replies arrive with the POST response
+- Styling uses shared Tamagui primitives and tokens only
 
 ## Accessibility and Responsive Behavior Rules
 
@@ -86,3 +86,5 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - Public API: `ai-assistant/index.ts` exports `moduleMeta` (launcher entry, route `/assistant`).
 - `ai-assistant/home/AssistantEntry.tsx` (exported from `index.ts`) is the Home entry: an input-like card plus quick prompts that open `/assistant?prompt=…`. `AssistantScreen` reads `prompt` and only pre-fills the input; the member still sends it.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['ask', 'question', 'help', 'ai', 'chatbot', 'answers']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+- P0/P1 pass (2026-10-13): fixed reversed message order, removed the false "Offline… disabled" banner, kept the question on failed sends, honest "not connected to an AI model yet" subtitle (matches `AssistantController`), thinking indicator, auto-scroll, keyboard-avoiding composer, back button, send icon (`arrow-right`), tappable history rows (per-conversation messages) and citation links. Screens moved off `SafeAreaView`/`StyleSheet` onto shared primitives.
+- `AssistantEntry` keyboard access (2026-10-14): the ask field and the search square spread `keyboardPress` and have a focus ring, so Tab + Enter/Space work on web.

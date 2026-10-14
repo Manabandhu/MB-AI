@@ -52,6 +52,14 @@ public class ExpenseBalanceService {
         return balances(List.of(groupId));
     }
 
+    /** Open balances in one group that the user owes or is owed (no access check; callers authorize first). */
+    @Transactional(readOnly = true)
+    public List<DebtBalance> openBalancesOf(UUID groupId, UUID userId) {
+        return balances(List.of(groupId)).stream()
+                .filter(b -> b.fromUserId().equals(userId) || b.toUserId().equals(userId))
+                .toList();
+    }
+
     private List<DebtBalance> balances(List<UUID> groupIds) {
         var groups = groupRepository.findAllById(groupIds).stream()
                 .collect(Collectors.toMap(ExpenseGroup::getId, Function.identity()));

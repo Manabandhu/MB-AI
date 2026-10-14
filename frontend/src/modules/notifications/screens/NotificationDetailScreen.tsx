@@ -1,7 +1,7 @@
 import { formatDate } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { XStack, YStack } from 'tamagui';
 import {
   getNotificationDetail,
@@ -40,20 +40,34 @@ export function NotificationDetailScreen() {
   });
   const notification = detail.data;
   const { mutate } = markRead;
+  // Marks read once per opened notification (the inbox only navigates here), so there is a single request.
+  const markedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (notification && !notification.read) mutate(notification.id);
+    if (!notification || notification.read || markedRef.current === notification.id) return;
+    markedRef.current = notification.id;
+    mutate(notification.id);
   }, [notification, mutate]);
 
-  if (detail.isLoading) return <LoadingState label="Loading notification..." />;
+  if (detail.isLoading) {
+    return (
+      <Screen>
+        <BackButton fallback="/notifications" />
+        <LoadingState label="Loading notification..." />
+      </Screen>
+    );
+  }
 
   if (detail.isError || !notification) {
     return (
-      <ErrorState
-        title="Notification not available"
-        body="It may have been removed, or it belongs to another account."
-        retryLabel="Back to inbox"
-        onRetry={() => router.replace('/notifications' as Href)}
-      />
+      <Screen>
+        <BackButton fallback="/notifications" />
+        <ErrorState
+          title="Notification not available"
+          body="It may have been removed, or it belongs to another account."
+          retryLabel="Back to inbox"
+          onRetry={() => router.replace('/notifications' as Href)}
+        />
+      </Screen>
     );
   }
 
@@ -66,7 +80,7 @@ export function NotificationDetailScreen() {
         <BackButton fallback="/notifications" />
         <YStack gap="$x2">
           <XStack gap="$x2">
-            <Chip label={visual.label} />
+            <Chip label={visual.label} variant="tag" />
           </XStack>
           <AppText role="heading" variant="h2">
             {notification.title}

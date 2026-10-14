@@ -20,11 +20,13 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 
 ## Component Inventory
 
-- `ChatListScreen` - list of conversations with search and navigation
-- `NewChatScreen` - start new conversation from contacts list
-- `ConversationScreen` - chat messages view with composer and send
-- `ConversationInfoScreen` - conversation details and participants
-- Shared: `ScreenShell`, `SearchBar`, `SectionHeader`, `ListScreen`, `Avatar`, `Card`, `AppButton`, `MessageBubble`, `Input`
+- `ChatListScreen` - list of conversations with search and navigation (foundation `ChatTab` owns the tab entry)
+- `NewChatScreen` - picks people from your chats (`useChatContacts`), opens an existing DIRECT chat with one person or creates DIRECT/GROUP (`createConversation` + `addParticipant`); empty state routes to rooms/rides
+- `ConversationScreen` - `ChatFrame` (fixed header, list pinned to newest, keyboard-avoiding composer on iOS and Android), `ChatBubble`, `Composer`; your unsent messages live in a pending list with "Sending…" / "Not sent" + Retry/Discard
+- `ConversationInfoScreen` - type badge, members (`PersonRow`, role labels), shared photos (http(s) only), Report member / Report conversation via safety's `ReportSheet`
+- Module components (`chat/components/`): `ChatFrame`, `ChatBubble`, `Composer` (also exported from `chat/index.ts`; the AI assistant screen reuses them)
+- Pure helpers: `chat/chatFormat.ts` (`participantLabel`, `conversationTypeLabel`, `conversationTitle`, `roleLabel`, `isHttpUrl`, `contactsFromParticipants`), tested by `frontend/test/chatFormat.test.mjs`
+- `chat/contacts.ts`: `listChatContacts` / `useChatContacts` (participants of your 20 most recent conversations, deduped) - the only source of other members' ids until a member search exists; exported for expenses (add member) and safety (file a report)
 
 ## API Surface
 
@@ -33,6 +35,8 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 - `listMessages(conversationId)` -> `GET /api/v1/chat/conversations/{id}/messages`
 - `sendMessage(conversationId, body)` -> `POST /api/v1/chat/conversations/{id}/messages`
 - `getParticipants(conversationId)` -> `GET /api/v1/chat/conversations/{id}/participants`
+- `createConversation({ type: 'DIRECT'|'GROUP', title? })` -> `POST /api/v1/chat/conversations`
+- `addParticipant(conversationId, userId)` -> `POST /api/v1/chat/conversations/{id}/participants` (owner only)
 - `markConversationRead(conversationId, messageId?)` -> `POST /api/v1/chat/conversations/{id}/read` (body `{ messageId? }`, returns `{ conversationId, lastReadAt, unreadCount }`)
 
 ## Demo Fixtures
@@ -59,9 +63,10 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 
 - Route files in `frontend/src/app/chat/` are thin wrappers
 - Uses `useQuery` for conversations, messages, and participants
-- Realtime transport is pending; current implementation uses demo fallbacks
-- Client-generated idempotency IDs used for offline send/retry
-- Attachments are UI placeholders; payload bounds and scanning are backend responsibilities
+- Realtime: `useRealtimeChat` (Supabase private channel, inserts + typing); read receipts: `useMarkConversationRead`
+- Sending: optimistic pending entries (`temp-` ids) are never merged into the stored list; success swaps in the server message, failure keeps the text with Retry
+- Picture sending is not offered: the media service has no chat bucket and a device file URI is unreadable to others. Received `IMAGE` messages render only when the body is an http(s) URL
+- No mute or leave: the backend has no endpoints for them
 
 ## Accessibility and Responsive Behavior Rules
 
@@ -101,3 +106,9 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 - Unread counts and read state (2026-10-12): V42 adds `conversation_participants.last_read_at` (existing rows backfilled to the migration time so old history is not unread) and the `messages (conversation_id, created_at)` index. `unreadCount` = messages from other senders with `created_at > coalesce(last_read_at, joined_at)` for the caller's active participation (no soft-delete flag exists on `messages`). `ConversationService.findByParticipant` fills it for every conversation with one grouped JPQL query (`MessageRepository.countUnreadByConversation`, `UnreadCount` record); `GET /conversations/{id}` goes through `ConversationService.findFor` (requireParticipant, then the caller's count; an admin who is not a member is audited and gets `unreadCount: null`). `POST /conversations/{id}/read` (`ConversationService.markRead`) needs an *active* participant (`ConversationParticipantService.requireActiveParticipant`: 403 for strangers, former members and non-member admins, no audit row); an optional `messageId` must belong to the conversation (404) and sets the marker to that message's `created_at`, otherwise now. `ConversationParticipantRepository.advanceLastReadAt` is a single conditional UPDATE so the marker never moves backwards; `last_read_at` is mapped `insertable/updatable = false` and has a package-private getter so participant lists never expose other members' read times. Frontend: `useMarkConversationRead` (in `ConversationScreen`) marks read up to the newest stored message (`readState.latestServerMessageId`, skipping optimistic `temp-` ids), debounced 600 ms, only while the screen is focused and the app is active, on open and when new messages arrive; it writes the server-returned count into the `['chat', 'conversations']` cache (`withUnreadCount`) and invalidates it only after a 2xx. Failures are ignored silently (the badge keeps the server's count; the next message or focus retries). Text and image sends both invalidate `['chat', 'conversations']`. Tests: `chat/ChatReadStateTest` (H2 `@DataJpaTest` through the services), `frontend/test/chatReadState.test.mjs`, and the smoke suite's ride-chat read-state checks.
 - Realtime (2026-10-12): `useRealtimeChat` marks a live row `sent` only when `sender_id` is the viewer, so other members' messages no longer render as the viewer's own.
 - Mark-read (2026-10-12): a failed background mark-read logs a `console.warn` and leaves the badge until a later attempt succeeds; the 0-row update returns 403 "Not an active participant in this conversation".
+- P0/P1 pass (2026-10-13): removed fake mute/leave/report and the false "Offline… sending disabled" banner; Report now files `POST /api/v1/safety/reports` (member: `user:<reason>`, conversation: `conversation:<reason>`). Failed sends show "Not sent" with Retry/Discard instead of a stale sent bubble. Image picking removed (no chat bucket). Conversation info labels GROUP/ROOM_INQUIRY/RIDE_TEMP correctly. NewChat starts real conversations. Screens use shared primitives and tokens (no hex). Icons: `more` for details and `arrow-right` for send until `AppIcon` gains `info`/`send`.
+- Review follow-up (2026-10-14):
+  - Ride chats really are deleted: `RideOfferService` sets `chat_expires_at` = completion + 2 h and `RideChatPurgeScheduler` runs `purge_expired_ride_chats()` every 10 minutes. `ConversationScreen` shows an honest notice for `type === 'RIDE_TEMP'` only (the old banner matched "ride" in the title and said "after trip arrival").
+  - Realtime copies of your own message drop the matching pending/failed entry (`withoutDeliveredPending`), so Retry cannot post a message the server already saved.
+  - `NewChatScreen` throws (and does not navigate) when every participant add fails; there is no endpoint to delete the empty conversation.
+  - `ChatFrame` drops the home-indicator inset under the composer while the keyboard is open.

@@ -15,23 +15,24 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 |---|---|---|---|
 | `/utilities` | `UtilitiesHomeScreen` | catalog | loading, empty, error |
 | `/utilities/packages` | `PackageTrackingScreen` | list | loading, empty, error |
-| `/utilities/nearby` | `NearbyScreen` | map | loading, empty, error, permission |
+| `/utilities/nearby` | `NearbyScreen` | list | loading, empty, error |
 | `/utilities/emergency` | `EmergencyResourcesScreen` | list | loading, empty, error |
 
 ## Component Inventory
 
-- `UtilitiesHomeScreen` - catalog screen using `FeatureScreen`
-- `PackageTrackingScreen` - list screen with `SearchBar`, timeline rows, and `SectionHeader`
-- `NearbyScreen` - list screen with permission banner, map-style filter, and `SectionHeader`
-- `EmergencyResourcesScreen` - list screen with warning banner and `SectionHeader`
-- Shared: `FeatureScreen`, `ScreenShell`, `SearchBar`, `ListScreen`, `Card`, `AppButton`, `SectionHeader`, `MapView`, `MapPin`, `FilterBar`, `Timeline`, `Banner`, `EmptyState`, `ErrorState`, `LoadingState`
+- `UtilitiesHomeScreen` - `Screen`/`ScreenHeader`, three shortcut `Card`s, searchable `/utilities/home` items (`TextField` with `leadingIcon` and a clear `IconButton`) in a `ResponsiveGrid`
+- `PackageTrackingScreen` - your packages with `StatusBadge` (`packageStatus`, case-insensitive), search, and an "Add package" `BottomSheet` (tracking number, carrier chips/other, status chips, optional `DateTimeField` date)
+- `NearbyScreen` - real search (`TextField`) plus category radio chips over `GET /utilities/nearby`; each place has Directions (maps search URL) and Call (`tel:`). No location permission UI: the endpoint is not location-aware
+- `EmergencyResourcesScreen` - Call 911 card, then resources with Call (`tel:`) and Directions; empty copy differs from the error state
+- Pure helpers: `utilities/utilitiesFormat.ts` (`PACKAGE_STATUSES`, `packageStatus`, `matchesSearch`, `formatDistance`, `telLink`, `mapsSearchUrl`, `trackingNumberError`), tested in `frontend/test/safetyUtilities.test.mjs`
 
 ## API Surface
 
-- `getUtilitiesHome()` -> `GET /api/v1/utilities/home`
-- `getPackages()` -> `GET /api/v1/utilities/packages`
-- `getNearby()` -> `GET /api/v1/utilities/nearby`
-- `getEmergencyResources()` -> `GET /api/v1/utilities/emergency`
+- `getUtilitiesHome()` -> `GET /api/v1/utilities/home` (`CatalogScreenContent`)
+- `getPackages()` -> `GET /api/v1/utilities/packages` (`PackageTracking`: `trackingNumber`, `carrier`, `status`, `estimatedDelivery`, `lastUpdate`)
+- `createPackage({ trackingNumber, carrier, status, estimatedDelivery? })` -> `POST /api/v1/utilities/packages`
+- `getNearby()` -> `GET /api/v1/utilities/nearby` (`NearbyPlace`: `name`, `category`, `address`, `distanceKm?`, `rating?`, `phone?`)
+- `getEmergencyResources()` -> `GET /api/v1/utilities/emergency` (`EmergencyResource`: `name`, `category`, `address`, `phone?`, `hours?`, `description`)
 
 ## Demo Fixtures
 
@@ -43,19 +44,18 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - **Empty**: `EmptyState` when no packages, nearby places, or emergency resources exist
 - **Error**: `ErrorState` with retry action
 - **Success**: not applicable
-- **Offline**: offline banner with cached data
-- **Permission**: permission banner for nearby screen with fallback list
+- **Offline**: none; failures show `ErrorState`
+- **Permission**: not applicable (no device location is used)
 
 ## Navigation Actions and Cross-Module Links
 
 - Home actions: Packages, Nearby, Emergency
-- Package detail -> back to packages
-- Nearby place detail -> back to nearby
-- Emergency resources -> external links with disclaimer
+- Every sub-screen has a back button falling back to `/utilities`
+- Phone numbers and directions open through `Linking`; failures surface via `showError`
 
 ## Implementation Notes for Expo React Native
 
-- Route files in `frontend/src/app/utilities/` are thin wrappers
+- Route files in `frontend/src/app/utilities*` are thin wrappers. `/utilities`, `/utilities/nearby` and `/utilities/emergency` are public (their endpoints are public in `SecurityConfig`, and emergency help must work signed out); only `/utilities/packages` calls `useRequireAuth('/sign-in')`
 - Uses `useQuery` for all utility data fetching
 - Providers are behind typed adapters with timeouts, retries, and caching
 - Location is requested only when needed
@@ -87,3 +87,4 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.
 - P0 fix (2026-10-10): `POST /utilities/packages` parses `status` case-insensitively with `TrackingStatus.parse`; unknown values are 400 instead of 500.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['packages', 'package tracking', 'delivery', 'nearby services', 'emergency numbers']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+- P0/P1 pass (2026-10-13): frontend types now match the backend entities (the old `title/body/meta` types made every list blank and search crash). Removed the fake Nearby search (a `Text` that set "Search nearby...") and the "Filter" button that toggled a fake location-permission banner; added a real search and category filter. Packages gain an Add form and status badges; emergency resources are callable/openable. UtilitiesHome dropped ~290 lines of dead styles and the `✕` text clear button. `/utilities/packages` is guarded; home, nearby and emergency stay public.

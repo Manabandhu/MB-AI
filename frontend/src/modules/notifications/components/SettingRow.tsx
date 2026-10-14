@@ -2,6 +2,7 @@ import { Switch } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 type Props = {
@@ -26,6 +27,8 @@ export function SettingRow({ icon, title, description, value, disabled, onChange
       gap="$x3"
       minHeight={56}
       onPress={disabled ? undefined : () => onChange(!value)}
+      {...keyboardPress(() => onChange(!value), !disabled)}
+      focusVisibleStyle={{ outlineWidth: 3, outlineStyle: 'solid', outlineColor: '$outlineColor' }}
       opacity={disabled ? 0.5 : 1}
       paddingVertical="$x2"
       role="switch"

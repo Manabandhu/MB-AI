@@ -7,6 +7,7 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 /**
@@ -39,6 +40,12 @@ export function AssistantEntry() {
           gap="$x3"
           minHeight={48}
           onPress={() => open()}
+          {...keyboardPress(() => open())}
+          focusVisibleStyle={{
+            outlineWidth: 3,
+            outlineStyle: 'solid',
+            outlineColor: '$outlineColor',
+          }}
           paddingHorizontal="$x3"
           pressStyle={{ opacity: 0.85 }}
           role="button"
@@ -67,6 +74,12 @@ export function AssistantEntry() {
           height={48}
           justifyContent="center"
           onPress={() => router.push('/search')}
+          {...keyboardPress(() => router.push('/search'))}
+          focusVisibleStyle={{
+            outlineWidth: 3,
+            outlineStyle: 'solid',
+            outlineColor: '$outlineColor',
+          }}
           pressStyle={{ opacity: 0.8 }}
           role="button"
           width={48}

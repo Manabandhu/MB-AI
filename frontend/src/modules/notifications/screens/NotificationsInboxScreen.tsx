@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import { useCallback } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import {
   getNotificationsInbox,
   markAllNotificationsRead,
@@ -21,8 +21,8 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
-import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 
 type InboxData = InfiniteData<NotificationInboxPage, number>;
 
@@ -77,26 +77,55 @@ export function NotificationsInboxScreen() {
     },
   });
 
+  // The detail screen marks the notification read once it loads, so opening never sends a second request.
   const open = (item: NotificationItem) => {
-    if (!item.read) markRead.mutate(item.id);
     router.push(`/notifications/${item.id}` as Href);
   };
 
-  if (inbox.isLoading) return <LoadingState label="Loading notifications..." />;
+  const items = inbox.data?.pages.flatMap((page) => page.items) ?? [];
+  const unread = inbox.data?.pages[0]?.unreadCount ?? 0;
 
-  if (inbox.isError) {
+  const header = (
+    <ScreenHeader
+      actions={
+        <AppButton
+          icon="settings"
+          label="Settings"
+          route="/notifications/settings"
+          size="sm"
+          variant="ghost"
+        />
+      }
+      back={{ fallback: '/' as Href }}
+      subtitle={
+        inbox.data ? (unread > 0 ? `${unread} unread` : 'You are all caught up') : undefined
+      }
+      title="Notifications"
+    />
+  );
+
+  if (inbox.isLoading) {
     return (
-      <ErrorState
-        title="Unable to load notifications"
-        body={inbox.error instanceof Error ? inbox.error.message : 'Please try again.'}
-        retryLabel="Retry"
-        onRetry={() => inbox.refetch()}
-      />
+      <Screen>
+        {header}
+        <LoadingState label="Loading notifications..." />
+      </Screen>
     );
   }
 
-  const items = inbox.data?.pages.flatMap((page) => page.items) ?? [];
-  const unread = inbox.data?.pages[0]?.unreadCount ?? 0;
+  if (inbox.isError) {
+    return (
+      <Screen onRefresh={() => inbox.refetch()} refreshing={inbox.isRefetching}>
+        {header}
+        <ErrorState
+          title="Unable to load notifications"
+          body={inbox.error instanceof Error ? inbox.error.message : 'Please try again.'}
+          retryLabel="Retry"
+          onRetry={() => inbox.refetch()}
+        />
+      </Screen>
+    );
+  }
 
   return (
     <Screen
@@ -104,24 +133,7 @@ export function NotificationsInboxScreen() {
       refreshing={inbox.isRefetching && !inbox.isFetchingNextPage}
     >
       <YStack gap="$x4">
-        <BackButton fallback="/" />
-        <XStack alignItems="center" gap="$x3" justifyContent="space-between">
-          <YStack flex={1} gap={2}>
-            <AppText role="heading" variant="h2">
-              Notifications
-            </AppText>
-            <AppText tone="muted" variant="caption">
-              {unread > 0 ? `${unread} unread` : 'You are all caught up'}
-            </AppText>
-          </YStack>
-          <AppButton
-            icon="settings"
-            label="Settings"
-            route="/notifications/settings"
-            size="sm"
-            variant="ghost"
-          />
-        </XStack>
+        {header}
 
         {unread > 0 ? (
           <AppButton
@@ -145,6 +157,8 @@ export function NotificationsInboxScreen() {
             title="No notifications yet"
             body="Ride requests, room inquiries, messages and other updates will show up here."
             iconName="bell"
+            actionLabel="Notification settings"
+            onAction={() => router.push('/notifications/settings' as Href)}
           />
         ) : (
           <YStack gap="$x2">

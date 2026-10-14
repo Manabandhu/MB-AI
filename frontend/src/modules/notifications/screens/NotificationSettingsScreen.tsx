@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { YStack } from 'tamagui';
 import {
   getNotificationSettings,
@@ -13,9 +14,9 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import type { AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
-import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { Section } from '@/modules/shared/ui/Section';
 
 /** Category toggles, in the order members think about them; keys match the backend settings. */
@@ -101,15 +102,32 @@ export function NotificationSettingsScreen() {
     onSuccess: (saved) => queryClient.setQueryData(notificationKeys.settings, saved),
   });
 
-  if (settings.isLoading) return <LoadingState label="Loading notification settings..." />;
+  const header = (
+    <ScreenHeader
+      back={{ fallback: '/notifications' as Href }}
+      subtitle="Choose what reaches you and when. Changes save automatically."
+      title="Notification settings"
+    />
+  );
+  if (settings.isLoading) {
+    return (
+      <Screen>
+        {header}
+        <LoadingState label="Loading notification settings..." />
+      </Screen>
+    );
+  }
   if (settings.isError || !settings.data) {
     return (
-      <ErrorState
-        title="Unable to load your settings"
-        body="Please check your connection and try again."
-        retryLabel="Retry"
-        onRetry={() => settings.refetch()}
-      />
+      <Screen onRefresh={() => settings.refetch()} refreshing={settings.isRefetching}>
+        {header}
+        <ErrorState
+          title="Unable to load your settings"
+          body="Please check your connection and try again."
+          retryLabel="Retry"
+          onRetry={() => settings.refetch()}
+        />
+      </Screen>
     );
   }
 
@@ -121,15 +139,7 @@ export function NotificationSettingsScreen() {
   return (
     <Screen onRefresh={() => settings.refetch()} refreshing={settings.isRefetching}>
       <YStack gap="$x5">
-        <BackButton fallback="/notifications" />
-        <YStack gap="$x1">
-          <AppText role="heading" variant="h2">
-            Notification settings
-          </AppText>
-          <AppText tone="muted" variant="caption">
-            Choose what reaches you and when. Changes save automatically.
-          </AppText>
-        </YStack>
+        {header}
 
         {save.isError ? (
           <AppText role="alert" tone="danger" variant="caption">

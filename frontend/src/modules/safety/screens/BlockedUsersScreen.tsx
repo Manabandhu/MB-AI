@@ -1,134 +1,102 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
+import { formatDate } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { getBlockedUsers, unblockUser } from '@/modules/safety/api';
+import type { Href } from 'expo-router';
+import { YStack } from 'tamagui';
+import { type BlockedUserItem, getBlockedUsers, unblockUser } from '@/modules/safety/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { SwipeAction } from '@/modules/shared/components/SwipeAction';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { showError } from '@/modules/shared/ui/notify';
+import { PersonRow } from '@/modules/shared/ui/PersonRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 
 /** Short, stable label until the app has a profile directory; never an invented name. */
 const memberLabel = (userId: string) => `Member ${userId.slice(0, 4).toUpperCase()}`;
 
+/** Members you blocked; unblocking asks first. */
 export function BlockedUsersScreen() {
-  const router = useRouter();
   const queryClient = useQueryClient();
-  const layout = useAdaptiveLayout();
+  const confirm = useConfirm();
   const users = useQuery({ queryKey: ['safety', 'blocked-users'], queryFn: getBlockedUsers });
   const unblock = useMutation({
     mutationFn: unblockUser,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['safety'] }),
-    onError: (err) => Alert.alert('Unable to unblock', err.message),
+    onError: (err) => showError('Unable to unblock', err),
   });
-  const data = users.data ?? [];
 
-  if (users.isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Safety" title="Blocked users" />
-          <LoadingState variant="skeleton" count={3} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const askUnblock = async (item: BlockedUserItem) => {
+    const ok = await confirm({
+      title: `Unblock ${memberLabel(item.blockedUserId)}?`,
+      body: 'They will be removed from your blocked list. You can block them again later.',
+      confirmLabel: 'Unblock',
+      destructive: true,
+    });
+    if (ok) unblock.mutate(item.blockedUserId);
+  };
 
-  if (users.isError) {
+  const body = () => {
+    if (users.isLoading) return <LoadingState count={3} variant="skeleton" />;
+    if (users.isError) {
+      return (
+        <ErrorState
+          body="Check your connection and try again."
+          onRetry={() => users.refetch()}
+          retryLabel="Retry"
+          title="Unable to load blocked users"
+        />
+      );
+    }
+    const data = users.data ?? [];
+    if (data.length === 0) {
+      return (
+        <EmptyState
+          body="Members you block appear here."
+          iconName="eye-closed"
+          title="No blocked users"
+        />
+      );
+    }
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Safety" title="Blocked users" />
-          <ErrorState
-            title="Unable to load blocked users"
-            body="Check your connection and try again."
-            retryLabel="Retry"
-            onRetry={() => users.refetch()}
+      <YStack gap="$x2">
+        {data.map((item) => (
+          <PersonRow
+            actions={
+              <AppButton
+                label="Unblock"
+                loading={unblock.isPending && unblock.variables === item.blockedUserId}
+                onPress={() => void askUnblock(item)}
+                size="sm"
+                variant="secondary"
+              />
+            }
+            detail={
+              item.reason ? (
+                <AppText tone="muted" variant="caption">
+                  {item.reason}
+                </AppText>
+              ) : undefined
+            }
+            key={item.id}
+            name={memberLabel(item.blockedUserId)}
+            subtitle={`Blocked ${formatDate(item.createdAt, 'short')}`}
           />
-        </View>
-      </SafeAreaView>
+        ))}
+      </YStack>
     );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.container, { maxWidth: layout.maxContentWidth, padding: space.x4 }]}>
-        <SectionHeader
-          eyebrow="Safety"
-          title="Blocked users"
-          subtitle="These users cannot contact you."
-        />
-        {data.length === 0 ? (
-          <EmptyState
-            title="No blocked users"
-            body="You have not blocked anyone yet."
-            actionLabel="Back to Safety Center"
-            onAction={() => router.push('/safety')}
-          />
-        ) : (
-          <View style={styles.list}>
-            {data.map((item) => (
-              <SwipeAction
-                key={item.id}
-                rightAction={{
-                  label: 'Unblock',
-                  color: colors.success,
-                  onPress: () => unblock.mutate(item.blockedUserId),
-                }}
-              >
-                <View style={styles.card}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {item.blockedUserId.slice(0, 2).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.details}>
-                    <Text style={styles.name}>{memberLabel(item.blockedUserId)}</Text>
-                    {item.reason ? <Text style={styles.reason}>{item.reason}</Text> : null}
-                    <Text style={styles.meta}>
-                      Blocked {new Date(item.createdAt).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <AppIcon color={colors.muted} name="shield" size={20} />
-                </View>
-              </SwipeAction>
-            ))}
-          </View>
-        )}
-      </View>
-    </SafeAreaView>
+    <Screen onRefresh={() => users.refetch()} refreshing={users.isRefetching}>
+      <ScreenHeader
+        back={{ fallback: '/safety' as Href }}
+        subtitle="Members you have blocked."
+        title="Blocked users"
+      />
+      {body()}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    padding: space.x4,
-  },
-  avatar: {
-    alignItems: 'center',
-    backgroundColor: colors.primarySoft,
-    borderRadius: radius.pill,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  avatarText: { color: colors.primary, fontSize: 14, fontWeight: '800' },
-  details: { flex: 1, gap: space.x1 },
-  name: { color: colors.ink, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  reason: { color: colors.muted, fontSize: 14, lineHeight: 20 },
-  meta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-});

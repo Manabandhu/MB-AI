@@ -86,3 +86,9 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 - Inbox, detail and settings have a `BackButton` (fallback route when there is no history), and the expense notification amount uses two decimals.
 - Dispatcher treats Expo's HTTP-200 `errors` response as a failed attempt (backoff), not as sent; stale stored setting values are logged when they fall back to defaults.
 - Expo Go (2026-10-12): `push.ts` imports `expo-notifications` lazily and only in development/store builds on iOS/Android. In Expo Go `requestPermissionAndRegister` returns `unsupported` ("Push notifications need the ManaBandhu app; Expo Go cannot receive them.") and push-tap routing is skipped; the in-app inbox works everywhere. Test push with a development build (`npx expo run:ios`/EAS dev client).
+- P0/P1 pass (2026-10-13):
+  - One mark-read per open: the inbox row only navigates; `NotificationDetailScreen` marks read once per notification id (guarded by a ref). The row's check button / swipe still marks read optimistically.
+  - Inbox, detail and settings render loading and error states inside `Screen` with a back button; inbox and settings use `ScreenHeader`; the empty inbox offers "Notification settings".
+  - `notificationVisual(meta)` trims and upper-cases once, so labels (Jobs vs Referrals) are case-insensitive too; the detail type chip is a read-only `tag`.
+  - Quiet hours stay as validated 24-hour `HH:MM` `TextField`s (with placeholders and a numbers keyboard) because `DateTimeField` has no time-only mode.
+  - Web keyboard access: `SettingRow` spreads `keyboardPress` (Enter/Space toggles) with a focus ring; the row's mark-read control is now a 44pt `IconButton`.

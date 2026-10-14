@@ -25,6 +25,40 @@ export async function getTrustedContacts(): Promise<TrustedContactItem[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/safety/trusted-contacts'), 'Trusted contacts');
 }
 
+export type ReportSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+/**
+ * Files a safety report about a member, conversation, or listing (`POST /api/v1/safety/reports`). `targetId` must be
+ * the target's id (a UUID); `category` says what kind of target it is and why, e.g. `user:harassment`.
+ */
+export async function createReport(input: {
+  targetId: string;
+  category: string;
+  description: string;
+  severity: ReportSeverity;
+}): Promise<ReportItem> {
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/safety/reports', { method: 'POST', body: JSON.stringify(input) }),
+    'File report',
+  );
+}
+
+/** Adds a trusted contact (`POST /api/v1/safety/trusted-contacts`). There is no edit or delete endpoint yet. */
+export async function createTrustedContact(input: {
+  name: string;
+  phone?: string;
+  email?: string;
+  relationship?: string;
+}): Promise<TrustedContactItem> {
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/safety/trusted-contacts', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+    'Add trusted contact',
+  );
+}
+
 type ReportStatus = 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED';
 
 /** Statuses that still need attention; matches the backend's open-report count. */
@@ -41,7 +75,7 @@ export type ReportItem = {
   category: string;
   description: string;
   status: ReportStatus;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  severity: ReportSeverity;
   evidenceUrls?: string | null;
   createdAt: string;
   resolvedAt?: string | null;

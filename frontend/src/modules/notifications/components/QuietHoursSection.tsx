@@ -54,8 +54,12 @@ export function QuietHoursSection({
               <YStack flex={1}>
                 <TextField
                   error={fromError}
+                  autoCorrect={false}
+                  helper={fromError ? undefined : '24-hour time'}
+                  keyboardType="numbers-and-punctuation"
                   label="From"
                   maxLength={5}
+                  placeholder="22:00"
                   onChangeText={setFrom}
                   value={from}
                 />
@@ -63,8 +67,12 @@ export function QuietHoursSection({
               <YStack flex={1}>
                 <TextField
                   error={toError}
+                  autoCorrect={false}
+                  helper={toError ? undefined : '24-hour time'}
+                  keyboardType="numbers-and-punctuation"
                   label="Until"
                   maxLength={5}
+                  placeholder="07:00"
                   onChangeText={setTo}
                   value={to}
                 />

@@ -18,11 +18,14 @@ public class ExpenseGroupService {
     private final ExpenseGroupRepository repository;
     private final ExpenseRepository expenseRepository;
     private final ExpenseAccess access;
+    private final ExpenseBalanceService balanceService;
 
-    ExpenseGroupService(ExpenseGroupRepository repository, ExpenseRepository expenseRepository, ExpenseAccess access) {
+    ExpenseGroupService(ExpenseGroupRepository repository, ExpenseRepository expenseRepository, ExpenseAccess access,
+                        ExpenseBalanceService balanceService) {
         this.repository = repository;
         this.expenseRepository = expenseRepository;
         this.access = access;
+        this.balanceService = balanceService;
     }
 
     @Transactional(readOnly = true)
@@ -76,11 +79,18 @@ public class ExpenseGroupService {
     public List<UUID> addMember(Actor actor, UUID groupId, UUID userId) {
         var group = access.requireGroup(groupId);
         actor.requireOwner(group.getOwnerId(), "Only the group owner can add members");
+        if (!access.userExists(userId)) {
+            // Expense splits reference auth.users, so a member id that matches no account would break every later expense.
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No ManaBandhu account has that member id");
+        }
         access.addMember(groupId, userId);
         return access.memberIds(groupId);
     }
 
-    /** The owner can remove anyone except themselves; members can leave on their own. */
+    /**
+     * The owner can remove anyone except themselves; members can leave on their own. Anyone with an open balance in
+     * the group must settle it first: once they are gone nobody could record the settlement (409).
+     */
     @Transactional
     public void removeMember(Actor actor, UUID groupId, UUID userId) {
         var group = access.requireGroup(groupId);
@@ -88,6 +98,10 @@ public class ExpenseGroupService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "The owner cannot leave; delete the group instead");
         }
         actor.requireAnyOf("Only the owner or the member can remove this membership", group.getOwnerId(), userId);
+        if (!balanceService.openBalancesOf(groupId, userId).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This member still owes or is owed money in this group. Settle up before they leave.");
+        }
         access.removeMember(groupId, userId);
     }
 

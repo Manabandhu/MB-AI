@@ -119,6 +119,8 @@ export async function createExpense(input: {
   amount: number;
   category: ExpenseCategory;
   splitType?: 'EQUAL' | 'EXACT';
+  /** Local calendar date `YYYY-MM-DD`; the server's default (UTC today) can be a different day. */
+  expenseDate?: string;
 }): Promise<Expense> {
   const { groupId, ...body } = input;
   return toExpense(
@@ -136,6 +138,15 @@ export async function listBalances(): Promise<DebtBalance[]> {
   const balances = await parseJsonOrThrow<RawAmount<DebtBalance>[]>(
     await apiFetch('/api/v1/expenses/balances'),
     'Balances',
+  );
+  return balances.map((b) => withAmount<DebtBalance>(b));
+}
+
+/** Every open pairwise balance in one group (members only). */
+export async function listGroupBalances(groupId: string): Promise<DebtBalance[]> {
+  const balances = await parseJsonOrThrow<RawAmount<DebtBalance>[]>(
+    await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/balances`),
+    'Group balances',
   );
   return balances.map((b) => withAmount<DebtBalance>(b));
 }
@@ -181,6 +192,37 @@ export async function updateSettlementStatus(
       'Update settlement',
     ),
   );
+}
+
+/** Member user ids of a group (any member may read them). */
+export async function listGroupMembers(groupId: string): Promise<string[]> {
+  return parseJsonOrThrow<string[]>(
+    await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/members`),
+    'Group members',
+  );
+}
+
+/** Owner only: adds a member by user id and returns the updated member ids. */
+export async function addGroupMember(groupId: string, userId: string): Promise<string[]> {
+  return parseJsonOrThrow<string[]>(
+    await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+    'Add member',
+  );
+}
+
+/**
+ * The owner removes a member, or a member leaves (pass your own id). The owner cannot leave, and anyone with an open
+ * balance in the group gets a 409 until it is settled.
+ */
+export async function removeGroupMember(groupId: string, userId: string): Promise<void> {
+  const response = await apiFetch(
+    `/api/v1/expenses/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`,
+    { method: 'DELETE' },
+  );
+  if (!response.ok) await parseJsonOrThrow(response, 'Remove member');
 }
 
 /** Short, stable label for a member until the app has a profile directory. */

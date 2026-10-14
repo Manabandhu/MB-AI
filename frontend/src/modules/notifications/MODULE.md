@@ -11,7 +11,7 @@ permission and device registration, and push-tap deep links.
 ## Screens
 - `NotificationsInboxScreen` - Server-paged inbox ("Load older"), unread count, mark all read, per-row mark read
   (button everywhere, swipe on phones), pull-to-refresh, real error state with retry.
-- `NotificationDetailScreen` - One notification; marks it read when opened; "Open" follows its in-app route.
+- `NotificationDetailScreen` - One notification; marks it read once when opened (the inbox only navigates); "Open" follows its in-app route.
 - `NotificationSettingsScreen` - All-notifications pause, in-app and push channels, category toggles, quiet hours.
   Each change saves at once and is restored if the server refuses it.
 

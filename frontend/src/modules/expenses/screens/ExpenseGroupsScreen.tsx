@@ -1,30 +1,41 @@
 import { formatMoney } from '@manabandhu/core';
-import { color, radius, space, typography } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { XStack, YStack } from 'tamagui';
 import {
   createExpenseGroup,
-  type ExpenseGroup,
   type ExpenseGroupType,
   listExpenseGroups,
 } from '@/modules/expenses/api';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { ScreenShell } from '@/modules/shared/components/ScreenShell';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { Section } from '@/modules/shared/ui/Section';
+import { TextField } from '@/modules/shared/ui/TextField';
 
-const GROUP_TYPES: ExpenseGroupType[] = ['APARTMENT', 'TRIP', 'CARPOOL', 'EVENT'];
+const GROUP_TYPES: { value: ExpenseGroupType; label: string }[] = [
+  { value: 'APARTMENT', label: 'Apartment' },
+  { value: 'TRIP', label: 'Trip' },
+  { value: 'CARPOOL', label: 'Carpool' },
+  { value: 'EVENT', label: 'Event' },
+];
 
+/** Your expense groups and a form to create one; creating opens the new group so you can add members. */
 export function ExpenseGroupsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [groupType, setGroupType] = useState<ExpenseGroupType>('APARTMENT');
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['expenses', 'groups'],
     queryFn: listExpenseGroups,
   });
@@ -33,146 +44,99 @@ export function ExpenseGroupsScreen() {
     onSuccess: (group) => {
       setName('');
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      router.push(`/expenses/groups/${group.id}`);
+      router.push(`/expenses/groups/${group.id}` as Href);
     },
   });
 
-  if (isLoading) {
-    return (
-      <ScreenShell>
-        <LoadingState label="Loading groups..." />
-      </ScreenShell>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <ScreenShell>
+  const list = () => {
+    if (isLoading) return <LoadingState label="Loading groups…" />;
+    if (error || !data) {
+      return (
         <ErrorState
-          title="Unable to load groups"
           body="There was a problem loading your expense groups."
-          retryLabel="Retry"
           onRetry={() => refetch()}
+          retryLabel="Retry"
+          title="Unable to load groups"
         />
-      </ScreenShell>
+      );
+    }
+    if (data.length === 0) {
+      return (
+        <EmptyState
+          body="Create your first group above to start tracking shared spending."
+          compact
+          iconName="wallet"
+          title="No groups yet"
+        />
+      );
+    }
+    return (
+      <YStack gap="$x3">
+        {data.map((group) => (
+          <Card
+            aria-label={`Open ${group.name}`}
+            href={`/expenses/groups/${group.id}` as Href}
+            key={group.id}
+          >
+            <XStack alignItems="center" gap="$x3">
+              <YStack flex={1} gap={2}>
+                <AppText variant="bodyStrong">{group.name}</AppText>
+                <AppText tone="muted" variant="caption">
+                  {GROUP_TYPES.find((t) => t.value === group.groupType)?.label ?? group.groupType} ·{' '}
+                  {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'} ·{' '}
+                  {formatMoney(group.totalExpenses, group.currency)} total
+                </AppText>
+              </YStack>
+              <AppIcon name="chevron-right" size={18} />
+            </XStack>
+          </Card>
+        ))}
+      </YStack>
     );
-  }
+  };
 
   return (
-    <ScreenShell>
-      <SectionHeader
-        eyebrow="Shared expenses"
-        title="Your groups"
+    <Screen keyboardAvoiding onRefresh={() => refetch()} refreshing={isRefetching}>
+      <ScreenHeader
+        back={{ fallback: '/expenses' as Href }}
         subtitle="Split rent, utilities, trips, and carpools with the people you live and travel with."
+        title="Your groups"
       />
-
-      <View style={styles.createCard}>
-        <Text style={styles.label}>New group</Text>
-        <TextInput
-          accessibilityLabel="Group name"
-          placeholder="e.g. Arbor Oaks 2BHK"
-          placeholderTextColor={color.muted}
-          value={name}
-          onChangeText={setName}
-          style={styles.input}
+      <Card gap="$x3">
+        <AppText role="heading" variant="h4">
+          New group
+        </AppText>
+        <TextField
+          label="Group name"
           maxLength={120}
+          onChangeText={setName}
+          placeholder="e.g. Arbor Oaks 2BHK"
+          value={name}
         />
-        <View style={styles.chips}>
+        <FilterChipRow label="Group type" role="radiogroup">
           {GROUP_TYPES.map((type) => (
-            <Pressable
-              key={type}
-              accessibilityRole="button"
-              accessibilityState={{ selected: type === groupType }}
-              onPress={() => setGroupType(type)}
-              style={[styles.chip, type === groupType && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, type === groupType && styles.chipTextActive]}>
-                {type.charAt(0) + type.slice(1).toLowerCase()}
-              </Text>
-            </Pressable>
+            <Chip
+              key={type.value}
+              label={type.label}
+              onPress={() => setGroupType(type.value)}
+              radio
+              selected={type.value === groupType}
+            />
           ))}
-        </View>
-        {create.error ? <Text style={styles.error}>{create.error.message}</Text> : null}
+        </FilterChipRow>
+        {create.error ? (
+          <AppText role="alert" tone="danger" variant="caption">
+            {create.error.message}
+          </AppText>
+        ) : null}
         <AppButton
+          disabled={!name.trim()}
           label="Create group"
           loading={create.isPending}
-          disabled={!name.trim()}
           onPress={() => create.mutate({ name: name.trim(), groupType })}
         />
-      </View>
-
-      {data.length === 0 ? (
-        <EmptyState
-          title="No groups yet"
-          body="Create your first expense group above to start tracking shared spending."
-          actionLabel="Refresh"
-          onAction={() => refetch()}
-        />
-      ) : (
-        <View style={styles.list}>
-          {data.map((group: ExpenseGroup) => (
-            <Pressable
-              key={group.id}
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${group.name}`}
-              onPress={() => router.push(`/expenses/groups/${group.id}`)}
-              style={styles.groupCard}
-            >
-              <Text style={styles.groupName}>{group.name}</Text>
-              <Text style={styles.groupMeta}>
-                {group.groupType.toLowerCase()} · {group.memberCount}{' '}
-                {group.memberCount === 1 ? 'member' : 'members'} ·{' '}
-                {formatMoney(group.totalExpenses, group.currency)} total
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-    </ScreenShell>
+      </Card>
+      <Section title="Groups">{list()}</Section>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  createCard: {
-    gap: space.x3,
-    marginTop: space.x4,
-    padding: space.x4,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.surface,
-  },
-  label: { ...typography.caption, color: color.muted, textTransform: 'uppercase' },
-  input: {
-    ...typography.body,
-    color: color.ink,
-    borderWidth: 1,
-    borderColor: color.border,
-    borderRadius: radius.control,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
-  chip: {
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x1,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: color.border,
-  },
-  chipActive: { backgroundColor: color.primarySoft, borderColor: color.primary },
-  chipText: { ...typography.caption, color: color.muted },
-  chipTextActive: { color: color.primary },
-  error: { ...typography.caption, color: color.error },
-  list: { gap: space.x3, marginTop: space.x4 },
-  groupCard: {
-    padding: space.x4,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.surface,
-    gap: space.x1,
-  },
-  groupName: { ...typography.h4, color: color.ink },
-  groupMeta: { ...typography.caption, color: color.muted },
-});

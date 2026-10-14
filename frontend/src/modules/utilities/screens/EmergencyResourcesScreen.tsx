@@ -1,107 +1,118 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Banner } from '@/modules/shared/components/Banner';
+import type { Href } from 'expo-router';
+import { Linking } from 'react-native';
+import { XStack, YStack } from 'tamagui';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { showError } from '@/modules/shared/ui/notify';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 import { getEmergencyResources } from '@/modules/utilities/api';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { mapsSearchUrl, telLink } from '@/modules/utilities/utilitiesFormat';
 
+const open = async (url: string, what: string) => {
+  try {
+    await Linking.openURL(url);
+  } catch (error) {
+    showError(`Could not open ${what}`, error);
+  }
+};
+
+/** 911 first, then the directory's crisis and aid resources, each with call and directions actions. */
 export function EmergencyResourcesScreen() {
-  const layout = useAdaptiveLayout();
   const resources = useQuery({
     queryKey: ['utilities', 'emergency'],
     queryFn: getEmergencyResources,
   });
-  const data = resources.data ?? [];
 
-  if (resources.isLoading) {
+  const body = () => {
+    if (resources.isLoading) return <LoadingState count={4} variant="skeleton" />;
+    if (resources.isError) {
+      return (
+        <ErrorState
+          body="Check your connection and try again. In an emergency, call 911."
+          onRetry={() => resources.refetch()}
+          retryLabel="Retry"
+          title="Unable to load emergency resources"
+        />
+      );
+    }
+    const data = resources.data ?? [];
+    if (data.length === 0) {
+      return (
+        <EmptyState
+          body="No local resources have been added yet. In an emergency, call 911."
+          iconName="emergency"
+          title="No resources listed"
+        />
+      );
+    }
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Utilities" title="Emergency resources" />
-          <LoadingState variant="skeleton" count={4} />
-        </View>
-      </SafeAreaView>
+      <YStack gap="$x3">
+        {data.map((item) => {
+          const tel = telLink(item.phone);
+          return (
+            <Card key={item.id}>
+              {item.category ? <StatusBadge label={item.category} tone="danger" /> : null}
+              <AppText variant="bodyStrong">{item.name}</AppText>
+              <AppText tone="muted" variant="body">
+                {item.description}
+              </AppText>
+              <AppText tone="muted" variant="caption">
+                {[item.address, item.hours].filter(Boolean).join(' · ')}
+              </AppText>
+              <XStack flexWrap="wrap" gap="$x2">
+                {tel ? (
+                  <AppButton
+                    icon="phone"
+                    label={`Call ${item.phone}`}
+                    onPress={() => void open(tel, 'the phone app')}
+                    size="sm"
+                  />
+                ) : null}
+                {item.address ? (
+                  <AppButton
+                    icon="map-pin"
+                    label="Directions"
+                    onPress={() => void open(mapsSearchUrl(item.address), 'maps')}
+                    size="sm"
+                    variant="secondary"
+                  />
+                ) : null}
+              </XStack>
+            </Card>
+          );
+        })}
+      </YStack>
     );
-  }
-
-  if (resources.isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Utilities" title="Emergency resources" />
-          <ErrorState
-            title="Unable to load emergency resources"
-            body="Check your connection and try again."
-            retryLabel="Retry"
-            onRetry={() => resources.refetch()}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader
-            eyebrow="Utilities"
-            title="Emergency resources"
-            subtitle="Quick links to crisis support and local aid."
-          />
-          <Banner
-            title="If you are in immediate danger"
-            body="Call 911 or your local emergency number first."
-            variant="error"
-          />
-          {data.length === 0 ? (
-            <EmptyState
-              title="No resources found"
-              body="Check your connection and try again."
-              actionLabel="Retry"
-              onAction={() => resources.refetch()}
-            />
-          ) : (
-            <View style={styles.list}>
-              {data.map((item) => (
-                <View key={item.id} style={styles.card}>
-                  <View style={styles.iconRow}>
-                    <AppIcon color={colors.error} name="shield" size={20} />
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                  </View>
-                  <Text style={styles.cardBody}>{item.body}</Text>
-                  <Text style={styles.cardMeta}>{item.meta}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Screen onRefresh={() => resources.refetch()} refreshing={resources.isRefetching}>
+      <ScreenHeader
+        back={{ fallback: '/utilities' as Href }}
+        subtitle="Crisis support and local aid."
+        title="Emergency resources"
+      />
+      <Card backgroundColor="$errorBg" borderColor="$error">
+        <AppText role="heading" variant="h4">
+          In immediate danger?
+        </AppText>
+        <AppText variant="body">Call 911 or your local emergency number first.</AppText>
+        <AppButton
+          icon="phone"
+          label="Call 911"
+          onPress={() => void open('tel:911', 'the phone app')}
+          size="lg"
+          variant="danger"
+        />
+      </Card>
+      {body()}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  iconRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  cardTitle: { color: colors.ink, flex: 1, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  cardBody: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  cardMeta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-});

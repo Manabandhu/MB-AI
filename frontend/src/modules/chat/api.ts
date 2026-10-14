@@ -86,3 +86,28 @@ export async function getParticipants(conversationId: string): Promise<Participa
     await apiFetch(`/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/participants`),
   );
 }
+
+/** Creates a DIRECT or GROUP conversation owned by the caller (`POST /conversations`). */
+export async function createConversation(input: {
+  type: 'DIRECT' | 'GROUP';
+  title?: string;
+}): Promise<Conversation> {
+  return parseJsonOrThrow(
+    await apiFetch('/api/v1/chat/conversations', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+    'Start conversation',
+  );
+}
+
+/** Adds a member to a conversation you own (`POST /conversations/{id}/participants`). */
+export async function addParticipant(conversationId: string, userId: string): Promise<Participant> {
+  return parseJsonOrThrow(
+    await apiFetch(
+      `/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/participants`,
+      { method: 'POST', body: JSON.stringify({ userId }) },
+    ),
+    'Add participant',
+  );
+}

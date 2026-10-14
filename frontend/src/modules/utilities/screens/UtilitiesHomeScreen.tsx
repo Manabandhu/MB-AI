@@ -1,593 +1,128 @@
-import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { XStack, YStack } from 'tamagui';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { TextField } from '@/modules/shared/ui/TextField';
 import { getUtilitiesHome } from '@/modules/utilities/api';
+import { matchesSearch } from '@/modules/utilities/utilitiesFormat';
 
 // The hub lists only what GET /api/v1/utilities/home returns. There is no built-in service directory, ratings, or
-// prices: those would be invented. Counts are not shown until the backend serves real ones per user.
+// prices: those would be invented.
 
-const C = {
-  primary: palette.primary,
-  primaryMuted: '#ece8ff',
-  teal: palette.teal,
-  tealMuted: '#e0f5f5',
-  accent: palette.warm,
-  accentMuted: palette.warmBg,
-  emerald: '#16a34a',
-  emeraldMuted: '#dcfce7',
-  bg: palette.background,
-  cardBg: '#ffffff',
-  border: '#e8e5f2',
-  ink: '#1b1829',
-  inkMuted: '#6b6882',
-};
+const SHORTCUTS: { icon: AppIconName; label: string; route: Href }[] = [
+  { icon: 'package', label: 'Packages', route: '/utilities/packages' as Href },
+  { icon: 'map', label: 'Nearby', route: '/utilities/nearby' as Href },
+  { icon: 'emergency', label: 'Emergency', route: '/utilities/emergency' as Href },
+];
 
 export function UtilitiesHomeScreen() {
-  const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= breakpoint.medium;
   const [searchQuery, setSearchQuery] = useState('');
+  const home = useQuery({ queryKey: ['utilities', 'home'], queryFn: getUtilitiesHome });
 
-  const home = useQuery({
-    queryKey: ['utilities', 'home'],
-    queryFn: getUtilitiesHome,
-  });
-
-  if (home.isLoading) {
-    return (
-      <SafeAreaView style={s.safe}>
-        <View style={s.center}>
-          <LoadingState label="Loading utilities..." />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (home.isError || !home.data) {
-    return (
-      <SafeAreaView style={s.safe}>
-        <View style={s.center}>
-          <ErrorState
-            title="Unable to load utilities"
-            body="Check your connection and try again."
-            retryLabel="Retry"
-            onRetry={() => home.refetch()}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const term = searchQuery.trim().toLowerCase();
-  const filtered = home.data.items.filter(
-    (item) =>
-      term.length === 0 ||
-      item.title.toLowerCase().includes(term) ||
-      item.body.toLowerCase().includes(term),
+  const header = (
+    <ScreenHeader
+      back={{ fallback: '/' as Href }}
+      subtitle={home.data?.subtitle || 'Packages, nearby services, and emergency help.'}
+      title={home.data?.title || 'Utilities'}
+    />
   );
+
+  const shortcuts = (
+    <XStack gap="$x3">
+      {SHORTCUTS.map((s) => (
+        <Card alignItems="center" aria-label={s.label} flex={1} href={s.route} key={s.label}>
+          <AppIcon name={s.icon} size={22} />
+          <AppText center variant="label">
+            {s.label}
+          </AppText>
+        </Card>
+      ))}
+    </XStack>
+  );
+
+  const body = () => {
+    if (home.isLoading) return <LoadingState label="Loading utilities…" />;
+    if (home.isError || !home.data) {
+      return (
+        <ErrorState
+          body="Check your connection and try again."
+          onRetry={() => home.refetch()}
+          retryLabel="Retry"
+          title="Unable to load utilities"
+        />
+      );
+    }
+    const items = home.data.items.filter((item) =>
+      matchesSearch(searchQuery, [item.title, item.body, item.meta]),
+    );
+    return (
+      <YStack gap="$x3">
+        <TextField
+          aria-label="Search utilities"
+          leadingIcon="search"
+          onChangeText={setSearchQuery}
+          placeholder="Search utilities"
+          trailing={
+            searchQuery ? (
+              <IconButton
+                icon="close"
+                label="Clear search"
+                onPress={() => setSearchQuery('')}
+                variant="plain"
+              />
+            ) : undefined
+          }
+          value={searchQuery}
+        />
+        {items.length === 0 ? (
+          <EmptyState
+            actionLabel={searchQuery ? 'Clear search' : undefined}
+            body={searchQuery ? 'Try a different search term.' : 'No utilities are listed yet.'}
+            compact
+            iconName="search"
+            onAction={searchQuery ? () => setSearchQuery('') : undefined}
+            title="Nothing found"
+          />
+        ) : (
+          <ResponsiveGrid>
+            {items.map((item) => (
+              <Card
+                aria-label={item.title}
+                href={item.route ? (item.route as Href) : undefined}
+                key={item.id}
+              >
+                {item.meta ? (
+                  <AppText tone="primary" variant="overline">
+                    {item.meta}
+                  </AppText>
+                ) : null}
+                <AppText variant="bodyStrong">{item.title}</AppText>
+                <AppText tone="muted" variant="body">
+                  {item.body}
+                </AppText>
+              </Card>
+            ))}
+          </ResponsiveGrid>
+        )}
+      </YStack>
+    );
+  };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}>
-        {/* Header */}
-        <View style={s.headerRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            onPress={() => router.back()}
-            style={s.backBtn}
-          >
-            <AppIcon name="chevron-left" size={20} color={C.ink} />
-          </Pressable>
-          <View style={s.headerTextCol}>
-            <View style={s.locationTag}>
-              <Text style={s.locationText}>{home.data.eyebrow}</Text>
-            </View>
-            <Text style={s.headerTitle}>{home.data.title}</Text>
-          </View>
-        </View>
-        {home.data.subtitle ? <Text style={s.serviceDesc}>{home.data.subtitle}</Text> : null}
-
-        {/* Search Bar */}
-        <View style={s.searchBar}>
-          <AppIcon name="search" size={18} color={C.inkMuted} />
-          <TextInput
-            accessibilityLabel="Search utilities"
-            placeholder="Search utilities..."
-            placeholderTextColor={C.inkMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            style={s.searchInput}
-          />
-          {searchQuery.length > 0 && (
-            <Pressable accessibilityLabel="Clear search" onPress={() => setSearchQuery('')}>
-              <Text style={{ fontSize: 16, color: C.inkMuted, fontWeight: '700' }}>✕</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* Quick Nav Shortcut Actions */}
-        <View style={s.quickActionsRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Packages"
-            onPress={() => router.push('/utilities/packages' as Href)}
-            style={s.quickActionCard}
-          >
-            <View style={[s.actionIconBox, { backgroundColor: C.primaryMuted }]}>
-              <AppIcon name="package" size={20} color={C.primary} />
-            </View>
-            <Text style={s.actionLabel}>Packages</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Nearby"
-            onPress={() => router.push('/utilities/nearby' as Href)}
-            style={s.quickActionCard}
-          >
-            <View style={[s.actionIconBox, { backgroundColor: C.tealMuted }]}>
-              <AppIcon name="map" size={20} color={C.teal} />
-            </View>
-            <Text style={s.actionLabel}>Nearby Map</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Emergency"
-            onPress={() => router.push('/utilities/emergency' as Href)}
-            style={s.quickActionCard}
-          >
-            <View style={[s.actionIconBox, { backgroundColor: C.accentMuted }]}>
-              <AppIcon name="warning" size={20} color={C.accent} />
-            </View>
-            <Text style={s.actionLabel}>Emergency</Text>
-          </Pressable>
-        </View>
-
-        {/* Backend-provided entries */}
-        <View style={s.servicesList}>
-          {filtered.length === 0 ? (
-            <View style={s.emptyBox}>
-              <AppIcon name="search" size={32} color={C.inkMuted} />
-              <Text style={s.emptyTitle}>Nothing found</Text>
-              <Text style={s.emptySubtitle}>
-                {term.length > 0 ? 'Try a different search term.' : 'No utilities are listed yet.'}
-              </Text>
-            </View>
-          ) : (
-            filtered.map((item) => (
-              <Pressable
-                key={item.id}
-                accessibilityRole={item.route ? 'button' : undefined}
-                accessibilityLabel={item.title}
-                disabled={!item.route}
-                onPress={() => item.route && router.push(item.route as Href)}
-                style={s.serviceCard}
-              >
-                <View style={s.cardHeader}>
-                  <View style={s.cardHeaderLeft}>
-                    {item.meta ? (
-                      <Text style={s.categoryLabel}>{item.meta.toUpperCase()}</Text>
-                    ) : null}
-                    <Text style={s.serviceTitle}>{item.title}</Text>
-                  </View>
-                </View>
-                <Text style={s.serviceDesc}>{item.body}</Text>
-              </Pressable>
-            ))
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Screen onRefresh={() => home.refetch()} refreshing={home.isRefetching}>
+      {header}
+      {shortcuts}
+      {body()}
+    </Screen>
   );
 }
-
-const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 48,
-    maxWidth: 680,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  contentDesktop: {
-    padding: 28,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTextCol: {
-    flex: 1,
-  },
-  locationTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 2,
-  },
-  locationText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: C.ink,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 16,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: C.ink,
-    padding: 0,
-  },
-  quickActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  quickActionCard: {
-    flex: 1,
-    backgroundColor: C.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 12,
-    alignItems: 'center',
-    gap: 8,
-  },
-  actionIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  featuredBanner: {
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 20,
-  },
-  featuredBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 10,
-  },
-  featuredBadgeText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  featuredTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 6,
-  },
-  featuredDesc: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    lineHeight: 18,
-    marginBottom: 14,
-  },
-  featuredBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.accent,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    gap: 6,
-  },
-  featuredBtnText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  categoriesScroll: {
-    marginBottom: 16,
-  },
-  categoriesContent: {
-    gap: 8,
-    paddingRight: 16,
-  },
-  categoryPill: {
-    backgroundColor: C.cardBg,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  categoryPillActive: {
-    backgroundColor: C.primary,
-    borderColor: C.primary,
-  },
-  categoryPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.inkMuted,
-  },
-  categoryPillTextActive: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  servicesList: {
-    gap: 12,
-  },
-  serviceCard: {
-    backgroundColor: C.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-    gap: 8,
-  },
-  cardHeaderLeft: {
-    flex: 1,
-  },
-  categoryLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: C.teal,
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  serviceTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: C.ink,
-    marginBottom: 2,
-  },
-  providerName: {
-    fontSize: 12,
-    color: C.inkMuted,
-  },
-  badgePill: {
-    backgroundColor: C.primaryMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgePillText: {
-    color: C.primary,
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  serviceDesc: {
-    fontSize: 13,
-    color: C.inkMuted,
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flex: 1,
-  },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  reviewCount: {
-    color: C.inkMuted,
-    fontWeight: '500',
-  },
-  locationDot: {
-    color: C.inkMuted,
-    marginHorizontal: 2,
-  },
-  locationSmall: {
-    fontSize: 11,
-    color: C.inkMuted,
-    flexShrink: 1,
-  },
-  priceTag: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: C.teal,
-  },
-  emptyBox: {
-    alignItems: 'center',
-    padding: 32,
-    backgroundColor: C.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: C.inkMuted,
-    textAlign: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: C.cardBg,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 36,
-    maxHeight: '85%',
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: C.border,
-    alignSelf: 'center',
-    marginBottom: 14,
-  },
-  modalTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: C.ink,
-    marginBottom: 2,
-  },
-  modalProvider: {
-    fontSize: 13,
-    color: C.inkMuted,
-    marginBottom: 16,
-  },
-  modalDetailsRow: {
-    flexDirection: 'row',
-    backgroundColor: C.bg,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-  },
-  detailCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  detailLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: C.inkMuted,
-    marginBottom: 2,
-  },
-  detailVal: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.ink,
-    marginBottom: 6,
-  },
-  modalDesc: {
-    fontSize: 13,
-    color: C.inkMuted,
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  modalActionRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  contactBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: C.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
-    gap: 8,
-  },
-  contactBtnText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  saveBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: C.cardBg,
-  },
-});

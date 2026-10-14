@@ -6,6 +6,7 @@ import type { NotificationItem } from '@/modules/notifications/api';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
+import { IconButton } from '@/modules/shared/ui/IconButton';
 import { useAppearance } from '@/theme/ThemeProvider';
 import { notificationVisual, toneBackground, toneColorKey } from './notificationVisuals';
 
@@ -58,17 +59,12 @@ export function NotificationRow({ item, onOpen, onMarkRead }: Props) {
           </AppText>
         </YStack>
         {item.read ? null : (
-          <YStack
-            aria-label={`Mark "${item.title}" as read`}
-            cursor="pointer"
-            hitSlop={8}
+          <IconButton
+            icon="check"
+            label={`Mark "${item.title}" as read`}
             onPress={onMarkRead}
-            padding="$x2"
-            pressStyle={{ opacity: 0.6 }}
-            role="button"
-          >
-            <AppIcon color={palette.primary} name="check" size={18} />
-          </YStack>
+            variant="plain"
+          />
         )}
       </XStack>
     </Card>

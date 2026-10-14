@@ -43,6 +43,13 @@ class ExpenseAccess {
         return group;
     }
 
+    /** True when the id belongs to a real account; split rows reference {@code auth.users}, so unknown ids break inserts. */
+    boolean userExists(UUID userId) {
+        var exists = jdbcTemplate.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM auth.users WHERE id = ?)", Boolean.class, userId);
+        return Boolean.TRUE.equals(exists);
+    }
+
     void addMember(UUID groupId, UUID userId) {
         jdbcTemplate.update("""
                 INSERT INTO public.expense_group_members (group_id, user_id) VALUES (?, ?)
