@@ -210,13 +210,13 @@ paths:
         200. Submitter ids are never returned; `mine` marks the caller's own (ImmigrationResourceView).
       responses:
         '200':
-          description: Immigration resources (ImmigrationResourceView, without ownerId)
+          description: Immigration resources (without submitter ids)
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ImmigrationResource'
+                  $ref: '#/components/schemas/ImmigrationResourceView'
       parameters:
         - name: category
           in: query
@@ -812,6 +812,7 @@ paths:
     get:
       operationId: listAssistantMessages
       summary: List assistant messages
+      description: Owner (or admin) only.
       parameters:
         - name: id
           in: path
@@ -826,14 +827,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AssistantMessage'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /assistant/messages:
+    get:
+      operationId: listLatestAssistantMessages
+      summary: List messages of my latest assistant conversation
+      description: Messages of the caller's most recent conversation; empty when the caller has none.
+      responses:
+        '200':
+          description: Assistant messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AssistantMessage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       operationId: sendAssistantMessage
       summary: Send assistant message
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+      description: >-
+        Appends the caller's message to their most recent conversation (creating one when they have none) and
+        returns the assistant's reply. Until the AI orchestrator is connected the reply is a fixed notice that the
+        assistant is not available.
       requestBody:
         required: true
         content:
@@ -842,31 +859,46 @@ paths:
               $ref: '#/components/schemas/SendAssistantMessageInput'
       responses:
         '201':
-          description: Message sent
+          description: The assistant's reply (role ASSISTANT)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AssistantMessage'
-  /assistant/conversations/{id}/stream:
+        '400': { description: Content is blank or longer than 4000 characters }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /assistant/history:
     get:
-      operationId: streamAssistantMessages
-      summary: Stream assistant messages
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+      operationId: listAssistantHistory
+      summary: List my assistant conversations
+      description: The caller's conversations (same data as GET /assistant/conversations).
       responses:
         '200':
-          description: Streaming assistant response
+          description: Assistant conversations
           content:
-            text/event-stream:
+            application/json:
               schema:
-                type: string
+                type: array
+                items: { $ref: '#/components/schemas/AssistantConversation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /assistant/citations:
+    get:
+      operationId: listLatestAssistantCitations
+      summary: List citations of my latest assistant conversation
+      description: Citations attached to messages in the caller's most recent conversation.
+      responses:
+        '200':
+          description: Citations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AssistantCitation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /assistant/messages/{id}/citations:
     get:
       operationId: listAssistantCitations
       summary: List assistant citations
+      description: Owner of the message's conversation (or admin) only.
       parameters:
         - name: id
           in: path
@@ -881,27 +913,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AssistantCitation'
-    post:
-      operationId: createAssistantCitation
-      summary: Create assistant citation
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAssistantCitationInput'
-      responses:
-        '201':
-          description: Citation created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssistantCitation'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /rooms/amenities:
     get:
       operationId: listRoomAmenities
@@ -2903,6 +2917,8 @@ paths:
     get:
       operationId: listCommunities
       summary: List communities
+      security: []
+      description: Public. Community cards; `isJoined` is true for communities the signed-in caller has joined.
       responses:
         '200':
           description: Communities
@@ -2910,7 +2926,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Community' }
+                items: { $ref: '#/components/schemas/CommunityView' }
     post:
       operationId: createCommunity
       summary: Create community
@@ -2925,6 +2941,23 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Community' }
+        '400': { description: Validation failed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /posts/communities/{communityId}:
+    get:
+      operationId: getCommunity
+      summary: Get a community
+      security: []
+      description: Public. `isJoined` is true when the signed-in caller has joined it.
+      parameters:
+        - { name: communityId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The community
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunityView' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /posts/{postId}/comments:
     get:
       operationId: listPostComments
@@ -3293,7 +3326,9 @@ paths:
     post:
       operationId: createExpense
       summary: Create expense
-      description: Members only. The caller pays; the amount is split equally across members to the cent.
+      description: >-
+        Members only. The caller pays; the amount is split equally across members to the cent (splitType is stored
+        but EXACT and PERCENTAGE are not applied yet).
       parameters:
         - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -3304,14 +3339,23 @@ paths:
               type: object
               required: [amount]
               properties:
-                amount: { type: number, minimum: 0.01 }
-                title: { type: string, maxLength: 150 }
-                category: { type: string }
-                currency: { type: string, description: Defaults to the group currency }
-                expenseDate: { type: string, format: date, description: Defaults to today }
+                amount: { type: number, exclusiveMinimum: 0, multipleOf: 0.01, maximum: 99999999.99 }
+                title: { type: string, maxLength: 150, description: Defaults to the description }
+                description: { type: string, maxLength: 4000 }
+                category: { type: string, maxLength: 50, description: Defaults to GENERAL }
+                currency: { type: string, pattern: '^[A-Z]{3}$', description: 'Defaults to the group currency; any other currency is a 400' }
+                splitType: { type: string, enum: [EQUAL, EXACT, PERCENTAGE], default: EQUAL }
+                expenseDate: { type: string, format: date, description: 'Defaults to today; past dates are allowed' }
       responses:
-        '201': { description: Recorded expense }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '201':
+          description: Recorded expense
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+        '400': { description: 'Validation failed, or the currency is not the group currency' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Not a member of the group }
+        '404': { description: Expense group not found }
   /expenses/balances:
     get:
       operationId: listExpenseBalances
@@ -3324,6 +3368,21 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/DebtBalance' } }
   /expenses/groups/{groupId}/settlements:
+    get:
+      operationId: listGroupSettlements
+      summary: List one group's settlements
+      description: Members (or the owner, or an admin) only. Every settlement recorded in the group, newest first.
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Settlements
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Settlement' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Not a member of the group }
+        '404': { description: Expense group not found }
     post:
       operationId: createSettlement
       summary: Create settlement
@@ -3343,14 +3402,20 @@ paths:
               properties:
                 fromUserId: { type: string, format: uuid, description: Defaults to the caller }
                 toUserId: { type: string, format: uuid }
-                amount: { type: number, minimum: 0.01 }
+                amount: { type: number, exclusiveMinimum: 0, multipleOf: 0.01, maximum: 99999999.99 }
+                currency: { type: string, pattern: '^[A-Z]{3}$', description: 'Defaults to the group currency; any other currency is a 400' }
                 status:
                   type: string
                   enum: [pending, completed]
                   description: A request; completed is honoured only for the recipient or an admin
       responses:
-        '201': { description: Recorded settlement }
-        '400': { description: Parties are not both group members }
+        '201':
+          description: Recorded settlement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settlement' }
+        '400': { description: 'Validation failed, parties are not both group members, or the currency is not the group currency' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { description: A pending record between these members already exists }
   /expenses/settlements/{settlementId}:
@@ -3372,7 +3437,11 @@ paths:
               properties:
                 status: { type: string, enum: [pending, completed, cancelled] }
       responses:
-        '200': { description: Updated settlement }
+        '200':
+          description: Updated settlement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settlement' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { description: Transition not allowed }
   /posts/communities/{communityId}/join:
@@ -3383,6 +3452,8 @@ paths:
         - { name: communityId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         '204': { description: Joined (idempotent) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /posts/communities/{communityId}/leave:
     post:
       operationId: leaveCommunity
@@ -3391,6 +3462,8 @@ paths:
         - { name: communityId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         '204': { description: Left (idempotent) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /me/export:
     get:
       operationId: exportMyData
@@ -3454,6 +3527,7 @@ paths:
                 path: { type: string }
       responses:
         '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { description: Not one of the caller's files }
   /referrals/public:
     get:
@@ -3462,14 +3536,33 @@ paths:
       description: Newest 100 open (pending, open, active) referrals without contact details or owner ids. Public.
       security: []
       responses:
-        '200': { description: Referrals (contactInfo and ownerId are always null) }
+        '200':
+          description: Referrals (contactInfo and ownerId are always null)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ReferralView' }
   /referrals/offer:
     post:
       operationId: createReferralOffer
       summary: Create referral offer
-      description: Creates an "offer" referral owned by the caller.
+      description: >-
+        Creates an "offer" referral owned by the caller (status pending) together with its offer details
+        (serviceType, availability, terms, expiresAt).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReferralOfferInput' }
       responses:
-        '201': { description: Created referral }
+        '201':
+          description: Created referral (the caller's own, so ownerId and contactInfo are included)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Referral' }
+        '400': { description: Validation failed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /referrals/{referralId}/request:
     get:
       operationId: getReferralRequestDetails
@@ -3566,7 +3659,11 @@ paths:
         The caller's notification settings (defaults merged with saved values): boolean channel and category
         toggles plus quietHours (boolean), quietStart/quietEnd ("HH:mm") and timeZone (IANA).
       responses:
-        '200': { description: Settings }
+        '200':
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
     patch:
       operationId: updateNotificationSettings
@@ -3574,34 +3671,77 @@ paths:
       description: >-
         Merges known keys into the caller's own settings; unknown keys are ignored. A known key with the wrong type
         or format is a 400, so nothing is silently dropped.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationSettings' }
       responses:
-        '200': { description: Settings }
+        '200':
+          description: The merged settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationSettings' }
         '400': { description: A known key has an invalid value }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /immigration/resources/{resourceId}:
     get:
       operationId: getImmigrationResource
       summary: Get immigration resource
+      description: >-
+        Public. Verified resources are visible to everyone; an unreviewed one only to its submitter and admins (404
+        otherwise). The submitter id is never returned; `mine` marks the caller's own.
       security: []
       parameters:
         - { name: resourceId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
-        '200': { description: Resource }
-        '404': { description: Not found }
+        '200':
+          description: Resource
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImmigrationResourceView' }
+        '404': { description: Not found or not visible to the caller }
   /admin/users:
     get:
       operationId: listAdminUsers
       summary: List admin users
       description: ADMIN or SUPER_ADMIN. Newest 200 accounts from Supabase Auth.
       responses:
-        '200': { description: Users }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AdminRequired' }
+        '503': { description: User directory is not available }
+  /admin/users/{id}:
+    get:
+      operationId: getAdminUser
+      summary: Get admin user
+      description: ADMIN or SUPER_ADMIN. One account from Supabase Auth.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AdminRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '503': { description: User directory is not available }
   /admin/users/{id}/status:
     patch:
       operationId: updateAdminUserStatus
       summary: Update admin user status
-      description: Suspends (bans) or reactivates an account through the Supabase Auth admin API. Audited.
+      description: >-
+        Suspends (bans) or reactivates an account through the Supabase Auth admin API. Requires a real signed-in
+        admin (never the public demo override). Nobody can change their own status, super admin accounts cannot be
+        changed here, and only a super admin can change another admin. Audited.
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -3610,18 +3750,90 @@ paths:
           application/json:
             schema: { type: object, required: [status], properties: { status: { type: string, enum: [Active, Suspended] } } }
       responses:
-        '200': { description: Updated user }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUser' }
+        '400': { description: Status is not Active or Suspended (case-insensitive) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: 'Not an admin, own account, a super admin target, or an admin target changed by a plain admin' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /admin/rooms:
-    get: { operationId: listAdminRooms, summary: List admin rooms, responses: { '200': { description: Newest 200 room listings } } }
+    get:
+      operationId: listAdminRooms
+      summary: List admin rooms
+      description: ADMIN or SUPER_ADMIN. Newest 200 room listings.
+      responses:
+        '200':
+          description: Newest 200 rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminRoom' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AdminRequired' }
   /admin/jobs:
-    get: { operationId: listAdminJobs, summary: List admin jobs, responses: { '200': { description: Newest 200 job postings } } }
+    get:
+      operationId: listAdminJobs
+      summary: List admin jobs
+      description: ADMIN or SUPER_ADMIN. Newest 200 job postings.
+      responses:
+        '200':
+          description: Newest 200 rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AdminRequired' }
   /admin/events:
-    get: { operationId: listAdminEvents, summary: List admin events, responses: { '200': { description: Newest 200 events } } }
+    get:
+      operationId: listAdminEvents
+      summary: List admin events
+      description: ADMIN or SUPER_ADMIN. Newest 200 events.
+      responses:
+        '200':
+          description: Newest 200 rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminEvent' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AdminRequired' }
   /admin/community:
-    get: { operationId: listAdminCommunityPosts, summary: List admin community posts, responses: { '200': { description: Newest 200 community posts } } }
+    get:
+      operationId: listAdminCommunityPosts
+      summary: List admin community posts
+      description: ADMIN or SUPER_ADMIN. Newest 200 community posts.
+      responses:
+        '200':
+          description: Newest 200 rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminCommunityPost' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AdminRequired' }
   /admin/audit-log:
-    get: { operationId: listAdminAuditLog, summary: List admin audit log, responses: { '200': { description: Newest 200 privileged actions } } }
+    get:
+      operationId: listAdminAuditLog
+      summary: List admin audit log
+      description: ADMIN or SUPER_ADMIN. Newest 200 privileged actions.
+      responses:
+        '200':
+          description: Newest 200 rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AuditLogEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AdminRequired' }
 components:
   securitySchemes:
     bearerAuth:
@@ -3652,6 +3864,36 @@ components:
         toUserId: { type: string, format: uuid }
         amount: { type: number }
         currency: { type: string }
+    Expense:
+      type: object
+      additionalProperties: false
+      required: [id, groupId, payerId, amount, currency, category, splitType, expenseDate, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        groupId: { type: string, format: uuid }
+        payerId: { type: string, format: uuid }
+        amount: { type: number }
+        currency: { type: string }
+        title: { type: [string, 'null'], maxLength: 150 }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        category: { type: [string, 'null'], maxLength: 50 }
+        splitType: { type: [string, 'null'], description: 'EQUAL, EXACT or PERCENTAGE' }
+        expenseDate: { type: string, format: date }
+        createdAt: { type: string, format: date-time }
+    Settlement:
+      type: object
+      additionalProperties: false
+      required: [id, groupId, fromUserId, toUserId, amount, currency, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        groupId: { type: string, format: uuid }
+        fromUserId: { type: string, format: uuid }
+        toUserId: { type: string, format: uuid }
+        amount: { type: number }
+        currency: { type: string }
+        status: { type: string, enum: [pending, completed, cancelled] }
+        settledAt: { type: [string, 'null'], format: date-time, description: Set by the server when completed }
+        createdAt: { type: string, format: date-time }
     Health:
       type: object
       required: [status, service]
@@ -3757,8 +3999,9 @@ components:
     CreatePostInput:
       type: object
       additionalProperties: false
-      required: [title, body]
+      required: [communityId, title, body]
       properties:
+        communityId: { type: string, format: uuid, description: The community to post in; the caller must have joined it }
         title: { type: string, minLength: 1, maxLength: 120 }
         body: { type: string, minLength: 1, maxLength: 4000 }
     CommunityPost:
@@ -3784,6 +4027,22 @@ components:
         resourceType: { type: string, enum: [DOCUMENT, GUIDE, LINK, FORM, TEMPLATE] }
         tags: { type: string, maxLength: 400 }
         verified: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    ImmigrationResourceView:
+      type: object
+      additionalProperties: false
+      description: A resource as shown to readers. The submitter's user id is never returned; `mine` is true for the caller's own submission.
+      required: [id, title, description, category, url, resourceType, tags, verified, mine, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        category: { type: string, maxLength: 80 }
+        url: { type: [string, 'null'], format: uri, maxLength: 500 }
+        resourceType: { type: string, enum: [DOCUMENT, GUIDE, LINK, FORM, TEMPLATE] }
+        tags: { type: [string, 'null'], maxLength: 400 }
+        verified: { type: boolean }
+        mine: { type: boolean }
         createdAt: { type: string, format: date-time }
     CreateImmigrationResourceInput:
       type: object
@@ -3988,11 +4247,87 @@ components:
         userId: { type: string, format: uuid }
         title: { type: string, maxLength: 200 }
         body: { type: string, maxLength: 4000 }
-        type: { type: string, enum: [SYSTEM, COMMUNITY, SAFETY, RIDE, ROOM, CHAT, AI] }
+        type: { type: string, enum: [SYSTEM, COMMUNITY, SAFETY, RIDE, ROOM, CHAT, AI, EXPENSE, REFERRAL, EVENT, JOB] }
         read: { type: boolean }
-        readAt: { type: string, format: date-time }
-        actionRoute: { type: string, maxLength: 200 }
+        readAt: { type: [string, 'null'], format: date-time }
+        actionRoute: { type: [string, 'null'], maxLength: 200 }
         createdAt: { type: string, format: date-time }
+        dispatched: { type: boolean, description: Push delivery bookkeeping (serialized from the entity) }
+        dispatchedAt: { type: [string, 'null'], format: date-time, description: Push delivery bookkeeping }
+        dispatchAttempts: { type: integer, minimum: 0, description: Push delivery bookkeeping }
+    ReferralView:
+      type: object
+      additionalProperties: false
+      description: >-
+        A referral as shown to a viewer. contactInfo is included only for the owner and admins; the public list
+        never carries contactInfo or ownerId (both null).
+      required: [id, ownerId, type, status, title, description, category, contactInfo, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: [string, 'null'], format: uuid }
+        type: { type: string, maxLength: 10, example: offer }
+        status: { type: string, maxLength: 20 }
+        title: { type: string, maxLength: 200 }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        category: { type: [string, 'null'], maxLength: 100 }
+        contactInfo: { type: [string, 'null'], maxLength: 200 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Referral:
+      type: object
+      additionalProperties: false
+      description: The referral entity, returned to its owner on create.
+      required: [id, ownerId, type, status, title, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        recipientId: { type: [string, 'null'], format: uuid }
+        type: { type: string, maxLength: 10 }
+        status: { type: string, maxLength: 20 }
+        title: { type: string, maxLength: 200 }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        category: { type: [string, 'null'], maxLength: 100 }
+        contactInfo: { type: [string, 'null'], maxLength: 200 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateReferralOfferInput:
+      type: object
+      required: [title, serviceType]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 4000 }
+        serviceType: { type: string, minLength: 1, maxLength: 100 }
+        availability: { type: string, maxLength: 4000 }
+        terms: { type: string, maxLength: 4000 }
+        expiresAt: { type: string, format: date-time }
+    NotificationSettings:
+      type: object
+      additionalProperties: false
+      required: [preferences]
+      properties:
+        preferences:
+          type: object
+          description: >-
+            Responses carry every key (defaults merged with saved values). In a PATCH, unknown keys and null values
+            are ignored; a known key with the wrong type or format is a 400.
+          properties:
+            allNotifications: { type: boolean, default: true }
+            inApp: { type: boolean, default: true }
+            push: { type: boolean, default: true }
+            email: { type: boolean, default: true }
+            sms: { type: boolean, default: false }
+            housingAlerts: { type: boolean, default: true }
+            rideAlerts: { type: boolean, default: true }
+            jobAlerts: { type: boolean, default: true }
+            referralAlerts: { type: boolean, default: true }
+            communityEvents: { type: boolean, default: true }
+            chatMessages: { type: boolean, default: true }
+            expenseAlerts: { type: boolean, default: true }
+            safetyAlerts: { type: boolean, default: true }
+            quietHours: { type: boolean, default: false }
+            quietStart: { type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', default: '22:00' }
+            quietEnd: { type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', default: '07:00' }
+            timeZone: { type: string, description: IANA time zone, default: UTC }
     CreateNotificationRequest:
       type: object
       additionalProperties: false
@@ -4135,14 +4470,6 @@ components:
         url: { type: string, format: uri, maxLength: 500 }
         snippet: { type: string, maxLength: 4000 }
         createdAt: { type: string, format: date-time }
-    CreateAssistantCitationInput:
-      type: object
-      additionalProperties: false
-      required: [title, snippet]
-      properties:
-        title: { type: string, maxLength: 300 }
-        url: { type: string, format: uri, maxLength: 500 }
-        snippet: { type: string, maxLength: 4000 }
     AutomationOperation:
       type: object
       additionalProperties: false
@@ -4167,14 +4494,82 @@ components:
     AutomationExecution:
       type: object
       additionalProperties: false
-      required: [executionId, operationId, status, environment, ref, requestedAt]
+      required: [executionId, operationId, status, environment, ref, acceptedAt]
       properties:
         executionId: { type: string, format: uuid }
         operationId: { type: string }
         status: { type: string, enum: [accepted] }
         environment: { type: string }
         ref: { type: string }
-        requestedAt: { type: string, format: date-time }
+        acceptedAt: { type: string, format: date-time }
+    AdminUser:
+      type: object
+      additionalProperties: false
+      required: [id, name, email, role, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, description: 'full_name from user metadata, else an em dash' }
+        email: { type: [string, 'null'] }
+        role: { type: string, description: 'Highest role from app_metadata.roles (super_admin, admin, else the first role, default user)' }
+        status: { type: string, enum: [Active, Suspended] }
+        createdAt: { type: [string, 'null'], format: date-time }
+    AdminRoom:
+      type: object
+      additionalProperties: false
+      required: [id, title, hostName, status, reported, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: [string, 'null'] }
+        hostName: { type: string, description: 'Pseudonymous label ("Member (<first 8 id chars>)") or Unknown; never a user id' }
+        status: { type: [string, 'null'] }
+        reported: { type: boolean, description: True when the listing has an open or in-review report }
+        createdAt: { type: [string, 'null'], format: date-time }
+    AdminJob:
+      type: object
+      additionalProperties: false
+      required: [id, title, company, status, reported, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: [string, 'null'] }
+        company: { type: [string, 'null'] }
+        status: { type: [string, 'null'] }
+        reported: { type: boolean, description: Always false (job reports are not tracked yet) }
+        createdAt: { type: [string, 'null'], format: date-time }
+    AdminEvent:
+      type: object
+      additionalProperties: false
+      required: [id, title, organizer, date, status, reported, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: [string, 'null'] }
+        organizer: { type: string, description: 'Pseudonymous label ("Member (<first 8 id chars>)") or Unknown' }
+        date: { type: [string, 'null'], format: date-time, description: Event start }
+        status: { type: [string, 'null'] }
+        reported: { type: boolean, description: Always false (event reports are not tracked yet) }
+        createdAt: { type: [string, 'null'], format: date-time }
+    AdminCommunityPost:
+      type: object
+      additionalProperties: false
+      required: [id, communityName, authorName, title, status, reported, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        communityName: { type: string, description: General when the post has no community }
+        authorName: { type: string, description: 'Pseudonymous label ("Member (<first 8 id chars>)") or Unknown' }
+        title: { type: [string, 'null'] }
+        status: { type: string, enum: [published] }
+        reported: { type: boolean, description: Always false (post reports are not tracked yet) }
+        createdAt: { type: [string, 'null'], format: date-time }
+    AuditLogEntry:
+      type: object
+      additionalProperties: false
+      required: [id, actor, action, targetType, targetId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        actor: { type: string, description: 'Actor user id, or public-demo' }
+        action: { type: string, example: user.suspended }
+        targetType: { type: [string, 'null'] }
+        targetId: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
     RoomListingStatus:
       type: string
       description: Stored lowercase. Only active and paused listings are public.
@@ -4943,8 +5338,29 @@ components:
         id: { type: string, format: uuid }
         ownerId: { type: string, format: uuid }
         name: { type: string, maxLength: 200 }
-        description: { type: string, maxLength: 4000 }
+        description: { type: [string, 'null'], maxLength: 4000 }
         createdAt: { type: string, format: date-time }
+        slug: { type: [string, 'null'], maxLength: 150, description: 'Database-managed; null in the create response' }
+        category: { type: [string, 'null'], maxLength: 50, description: 'Database-managed; null in the create response' }
+        metroArea: { type: [string, 'null'], maxLength: 100 }
+        memberCount: { type: integer, minimum: 0, description: 0 when not yet counted }
+        avatarUrl: { type: [string, 'null'] }
+        coverUrl: { type: [string, 'null'] }
+    CommunityView:
+      type: object
+      additionalProperties: false
+      description: Community card data plus whether the signed-in viewer has joined. Carries no owner id.
+      required: [id, name, description, memberCount, category, image, isJoined, slug, metroArea]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 4000, description: Empty string when the community has none }
+        memberCount: { type: integer, minimum: 0 }
+        category: { type: string, maxLength: 50, description: Defaults to CITY }
+        image: { type: [string, 'null'], description: 'Cover URL, else avatar URL' }
+        isJoined: { type: boolean, description: False for anonymous viewers }
+        slug: { type: [string, 'null'], maxLength: 150 }
+        metroArea: { type: [string, 'null'], maxLength: 100 }
     CreateCommunityInput:
       type: object
       additionalProperties: false
@@ -5116,6 +5532,7 @@ components:
   responses:
     Unauthorized: { description: Authentication is required }
     Forbidden: { description: SUPER_ADMIN role is required }
+    AdminRequired: { description: ADMIN or SUPER_ADMIN role is required }
     BadRequest: { description: 'Validation failed (problem+json body), or a service rule rejected a value ({error, message} body)' }
     NotOwner:
       description: The caller does not own the resource and is not an admin
