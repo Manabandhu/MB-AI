@@ -20,9 +20,6 @@
   "expenses/screens/ExpensesHomeScreen.tsx": {
     "colorLiteral": 3
   },
-  "foundation/screens/WelcomeScreen.tsx": {
-    "colorLiteral": 1
-  },
   "jobs/screens/JobDetailsScreen.tsx": {
     "colorLiteral": 1
   },

@@ -99,7 +99,7 @@ export function AppButton({
     <Frame
       aria-label={label}
       aria-expanded={expanded}
-      role="button"
+      role={route ? 'link' : 'button'}
       aria-busy={Boolean(loading)}
       aria-disabled={isDisabled}
       transition={reduceMotion ? null : 'quick'}

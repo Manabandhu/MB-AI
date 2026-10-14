@@ -7,6 +7,7 @@ import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { useQuickJump } from '@/modules/foundation/launcher/QuickJump';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { useFormFactor } from '@/platform/formFactor';
 
 const TAB_ROUTES = new Set(['/home', '/explore', '/community', '/chat', '/profile']);
 const AUTH_ROUTES = new Set([
@@ -26,6 +27,7 @@ const AUTH_ROUTES = new Set([
 /** Keeps every deep screen one tap from Home, the feature launcher and saved items. */
 export function WorkspaceDock() {
   const t = useT();
+  const { navigationStyle } = useFormFactor();
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const open = useQuickJump();
@@ -42,6 +44,7 @@ export function WorkspaceDock() {
   }, []);
   if (
     !user ||
+    navigationStyle === 'top' ||
     keyboardOpen ||
     TAB_ROUTES.has(pathname) ||
     AUTH_ROUTES.has(pathname) ||

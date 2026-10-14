@@ -51,10 +51,10 @@ export function BottomTabBar(props: BottomTabBarProps) {
       role="tablist"
       backgroundColor="$surface"
       borderTopColor="$borderColor"
-      borderTopWidth={1}
+      borderTopWidth={0}
       // Closer to the native iOS tab bar: the home-indicator inset already provides breathing room.
       paddingBottom={Math.max(props.insets.bottom - INDICATOR_OVERLAP, MIN_BAR_PADDING)}
-      paddingHorizontal="$x3"
+      paddingHorizontal="$x4"
       paddingTop={INDICATOR_OVERLAP}
     >
       {primaryTabs.map((tab) => {
@@ -86,7 +86,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
           >
             <YStack
               alignItems="center"
-              backgroundColor={selected ? '$surfaceContainerLow' : 'transparent'}
+              backgroundColor={selected ? '$primary' : 'transparent'}
               borderRadius="$pill"
               justifyContent="center"
               paddingHorizontal="$x4"
@@ -96,7 +96,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
             >
               <YStack position="relative">
                 <AppIcon
-                  color={selected ? palette.ink : palette.muted}
+                  color={selected ? palette.onPrimary : palette.muted}
                   name={tab.icon}
                   size={22}
                   strokeWidth={selected ? 2.4 : 2}

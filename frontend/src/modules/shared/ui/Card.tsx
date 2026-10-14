@@ -9,13 +9,13 @@ const CardFrame = styled(YStack, {
   name: 'Card',
   backgroundColor: '$surface',
   borderRadius: '$card',
-  borderWidth: 1,
+  borderWidth: 0,
   borderColor: '$borderColor',
   padding: '$x5',
   gap: '$x2',
   variants: {
     variant: {
-      outlined: {},
+      outlined: { borderWidth: 1 },
       elevated: {
         borderColor: '$borderColor',
         shadowColor: '$shadowColor',
@@ -24,7 +24,7 @@ const CardFrame = styled(YStack, {
         shadowOffset: { width: 0, height: 4 },
         elevation: 1,
       },
-      filled: { backgroundColor: '$surfaceContainerLow', borderColor: 'transparent' },
+      filled: { backgroundColor: '$surface', borderColor: 'transparent' },
       tinted: { backgroundColor: '$primaryTint', borderColor: '$primarySoft' },
     },
     interactive: {
@@ -39,7 +39,7 @@ const CardFrame = styled(YStack, {
       },
     },
   } as const,
-  defaultVariants: { variant: 'outlined' },
+  defaultVariants: { variant: 'filled' },
 });
 
 type CardProps = ComponentProps<typeof CardFrame> & {

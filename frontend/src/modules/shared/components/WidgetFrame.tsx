@@ -41,9 +41,9 @@ export function WidgetFrame({
 }: WidgetFrameProps) {
   const { palette } = useAppearance();
   return (
-    <Card gap="$x3" padding="$x4" variant="elevated">
+    <Card gap="$x3" padding="$x5" variant="filled">
       <XStack alignItems="center" gap="$x2">
-        <AppIcon color={palette.primary} name={icon} size={18} />
+        <AppIcon color={palette.ink} name={icon} size={18} />
         <YStack flex={1}>
           <Heading variant="h4">{title}</Heading>
           {subtitle ? (
@@ -70,7 +70,7 @@ export function WidgetFrame({
           <AppText tone="primary" variant="label">
             {seeAll.label ?? 'See all'}
           </AppText>
-          <AppIcon color={palette.primary} name="chevron-right" size={16} />
+          <AppIcon color={palette.ink} name="chevron-right" size={16} />
         </XStack>
       </XStack>
       {isLoading ? (

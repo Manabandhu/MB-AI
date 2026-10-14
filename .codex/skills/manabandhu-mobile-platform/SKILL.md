@@ -198,3 +198,11 @@ Premium browsing uses local react-native-svg artwork and the existing Tamagui/Ex
 ## Quiet task-first UI (2026-10-14)
 
 DiscoveryCard now uses neutral semantic icons and labeled surfaces instead of illustrated category panels. EditorialBanner uses a theme-aware text introduction and divider without gradients or decorative art. Home prioritizes search and a two-column shortcut grid on phones; the live module feed mounts only after the user selects Show what’s around you. Metrics, promotional hero, assistant promotion, and invitation are omitted from Home; destinations remain available through Explore and search. Verify keyboard destination navigation, feed toggle, responsive reflow, themes, and exports.
+
+## Researched neighborhood design
+
+Desktop tabs now use a persistent 224pt DesktopSidebar on the left; tablet NavRail and phone BottomTabBar retain the same routes, unread counts, and keyboard handling. TopNav and QuickAccess were removed. Home has a system-serif EditorialHeading, prominent global search, explicit location scope, and localized Live/Work/Connect content switches. Only the selected two module-owned widgets mount; module data is never invented. Explore and empty Search use scannable directory rows. Welcome uses a single introduction with signup/signin links instead of an illustrated carousel.
+
+Shared surfaces use warmer paper, ink/forest primary actions, inverse selected segments, consistent spacing, and borderless cards by default; outlined remains explicit. AppButton route actions expose link semantics. Compact EditorialBanner omits promotional text without a body/action, while detail titles remain. Tamagui registers an editorial system serif font with no font download. See docs/design-research.md for observed references and decisions. Verify all theme contrast, adaptive sidebar/tab navigation, intent switches, keyboard link navigation, global search/filters, real widget states, and all Expo exports.
+
+SidebarShell is shared by the tab navigator and WorkspaceFrame on signed-in deep routes. WorkspaceFrame wraps the root Stack and excludes auth/onboarding/primary tabs to prevent duplicate navigation. WorkspaceDock remains on touch layouts and hides on desktop where the sidebar replaces it.

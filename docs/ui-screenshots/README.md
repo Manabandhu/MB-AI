@@ -1,6 +1,6 @@
-# Simple UI gallery
+# Researched neighborhood UI
 
-84 fresh screenshots of the simpler, task-first design. Phone views are 390px wide; desktop views are 1440px. These cover main screens and selected states using local test data. Empty states reflect that database.
+92 fresh screenshots of the new neighborhood design, with an editorial Home, task groups, directory browsing, and desktop sidebar. Phone views are 390px wide; desktop views are 1440px. These cover main screens and selected states using local test data. Empty states reflect that database.
 
 Click a preview to open the full-size image.
 
@@ -285,6 +285,38 @@ Click a preview to open the full-size image.
 | [![sign-in, desktop, light](sign-in-1440-light.png)](sign-in-1440-light.png) | [![sign-in, desktop, dark](sign-in-1440-dark.png)](sign-in-1440-dark.png) |
 
 ## Additional states
+
+### Home Connect 1440 Dark
+
+[![Home Connect 1440 Dark](home-connect-1440-dark.png)](home-connect-1440-dark.png)
+
+### Home Connect 1440 Light
+
+[![Home Connect 1440 Light](home-connect-1440-light.png)](home-connect-1440-light.png)
+
+### Home Connect 390 Dark
+
+[![Home Connect 390 Dark](home-connect-390-dark.png)](home-connect-390-dark.png)
+
+### Home Connect 390 Light
+
+[![Home Connect 390 Light](home-connect-390-light.png)](home-connect-390-light.png)
+
+### Home Work 1440 Dark
+
+[![Home Work 1440 Dark](home-work-1440-dark.png)](home-work-1440-dark.png)
+
+### Home Work 1440 Light
+
+[![Home Work 1440 Light](home-work-1440-light.png)](home-work-1440-light.png)
+
+### Home Work 390 Dark
+
+[![Home Work 390 Dark](home-work-390-dark.png)](home-work-390-dark.png)
+
+### Home Work 390 Light
+
+[![Home Work 390 Light](home-work-390-light.png)](home-work-390-light.png)
 
 ### Launcher Dark
 

@@ -67,7 +67,7 @@ export function Screen({
   const scrollRef = useRef<ScrollView>(null);
   const { maxContentWidth, windowClass } = useAdaptiveLayout();
   const { palette } = useAppearance();
-  const gutter = windowClass === 'compact' ? 16 : 24;
+  const gutter = windowClass === 'compact' ? 20 : 32;
   // A `hero` runs edge to edge under the status bar, so it must pad itself by `insets.top` (HomeHeader does).
   const padTop = safeTop && !hero;
   const contentWidth =
@@ -100,7 +100,7 @@ export function Screen({
         {hero}
         <YStack
           alignSelf="center"
-          gap={windowClass === 'compact' ? '$x5' : '$x6'}
+          gap={windowClass === 'compact' ? '$x6' : '$x8'}
           maxWidth={contentWidth + gutter * 2}
           paddingHorizontal={gutter}
           paddingTop={hero ? 0 : 16}

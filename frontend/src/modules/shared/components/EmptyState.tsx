@@ -38,13 +38,13 @@ export function EmptyState({
       {icon ?? (
         <YStack
           alignItems="center"
-          backgroundColor="$primaryTint"
-          borderRadius="$pill"
+          backgroundColor="$surfaceContainerLow"
+          borderRadius="$card"
           height={compact ? 48 : 72}
           justifyContent="center"
           width={compact ? 48 : 72}
         >
-          <AppIcon color={palette.primary} name={iconName} size={compact ? 22 : 32} />
+          <AppIcon color={palette.ink} name={iconName} size={compact ? 22 : 28} />
         </YStack>
       )}
       <AppText center variant={compact ? 'bodyStrong' : 'h3'}>

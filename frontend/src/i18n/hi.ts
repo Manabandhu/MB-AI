@@ -2,6 +2,7 @@ import type { Strings } from './en';
 
 export const hi: Strings = {
   navigation: {
+    settings: 'सेटिंग्स',
     jump: 'सीधे जाएँ',
     openJump: 'किसी सुविधा पर जाएँ',
     title: 'जो चाहिए, खोजें',
@@ -33,6 +34,25 @@ export const hi: Strings = {
     welcomeBack: 'वापसी पर स्वागत है',
   },
   home: {
+    helloName: 'नमस्ते, {{name}}।',
+    cityHeadline: 'आपका शहर।\nआपके लोग।',
+    citySubtitle: 'अपना घर, अगला अवसर और नए दोस्त खोजें।',
+    intentLabel: 'आप क्या करना चाहते हैं?',
+    live: 'रहना',
+    work: 'काम',
+    connect: 'जुड़ें',
+    liveSection: 'अपना घर बनाएँ',
+    workSection: 'अगला कदम बढ़ाएँ',
+    connectSection: 'अपने लोगों से मिलें',
+    rooms: 'कमरे',
+    rides: 'राइड',
+    marketplace: 'बाज़ार',
+    jobs: 'नौकरियाँ',
+    referrals: 'रेफरल',
+    immigration: 'आप्रवासन',
+    community: 'समुदाय',
+    events: 'कार्यक्रम',
+    chat: 'चैट',
     heroEyebrow: 'आपका शहर. आपके लोग.',
     heroTitle: 'ज़िंदगी, थोड़ी\nबेहतर.',
     heroBody: 'रहने की जगह. साथ सफ़र. अपने जैसे लोग.',

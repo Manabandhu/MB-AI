@@ -19,6 +19,7 @@ export function EditorialBanner({
   action?: { label: string; route: string };
 }) {
   const compact = density === 'compact';
+  if (compact && !body && !action) return null;
   return (
     <YStack
       gap="$x3"

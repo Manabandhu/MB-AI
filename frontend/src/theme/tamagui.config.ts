@@ -64,6 +64,14 @@ const systemFont = createFont({
   weight: pick('fontWeight'),
 });
 
+const editorialFont = createFont({
+  family: Platform.OS === 'web' ? 'Georgia, serif' : Platform.OS === 'ios' ? 'Georgia' : 'serif',
+  size: pick('fontSize'),
+  lineHeight: pick('lineHeight'),
+  letterSpacing: pick('letterSpacing'),
+  weight: Object.fromEntries(Object.keys(pick('fontWeight')).map((key) => [key, '400'])),
+});
+
 type Palette = { [K in keyof typeof palette]: string };
 
 function baseTheme(p: Palette, dark: boolean) {
@@ -127,7 +135,7 @@ export const config = createTamagui({
   animations,
   tokens,
   themes,
-  fonts: { body: systemFont, heading: systemFont },
+  fonts: { body: systemFont, heading: systemFont, editorial: editorialFont },
   media: {
     medium: { minWidth: breakpoint.medium },
     expanded: { minWidth: breakpoint.expanded },

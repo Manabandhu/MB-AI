@@ -33,7 +33,7 @@ import { TextField } from '@/modules/shared/ui/TextField';
 import { useAppearance } from '@/theme/ThemeProvider';
 import { TabHeader } from '../TabHeader';
 
-const MODULE_COLUMNS = { compact: 2, medium: 2, expanded: 3, wide: 3 } as const;
+const MODULE_COLUMNS = { compact: 1, medium: 1, expanded: 2, wide: 2 } as const;
 const RECENT_COLUMNS = { compact: 2, medium: 2, expanded: 4, wide: 4 } as const;
 const RECENT_LIMIT = 4;
 
@@ -203,7 +203,7 @@ export function ExploreTab() {
           ) : null}
           {sections.map((section) => (
             <Section key={section.category} title={section.label}>
-              <ResponsiveGrid columns={MODULE_COLUMNS} gap={12}>
+              <ResponsiveGrid columns={MODULE_COLUMNS} gap={0}>
                 {section.modules.map(card)}
               </ResponsiveGrid>
             </Section>
@@ -232,7 +232,7 @@ export function ExploreTab() {
           <AppText aria-live="polite" tone="muted" variant="caption">
             {resultSummary(results.length, query, category)}
           </AppText>
-          <ResponsiveGrid columns={MODULE_COLUMNS} gap={12}>
+          <ResponsiveGrid columns={MODULE_COLUMNS} gap={0}>
             {results.map(card)}
           </ResponsiveGrid>
         </YStack>

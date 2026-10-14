@@ -1,6 +1,6 @@
 # Premium visual browsing
 
-This describes the preceding redesign. The current revision simplifies its discovery surfaces; see [Quiet, task-first UI](quiet-ui.md) and the [current screenshot gallery](ui-screenshots/README.md).
+This describes the preceding redesign. The current revision rebuilds its core discovery and navigation; see [Research and the resulting design](design-research.md) and the [current screenshot gallery](ui-screenshots/README.md).
 
 The app combines restrained premium styling with visual category browsing: warm neutral surfaces, charcoal feature panels, strong typography, original SVG illustrations, prominent search, and clear navigation. Home, Explore, search, Profile, authentication, module discovery, shared controls, and theme colors use the updated system. Events and Referrals now use consistent responsive cards, filters, loading, empty, and retry states.
 

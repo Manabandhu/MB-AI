@@ -17,8 +17,7 @@ export function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarPosition:
-          navigationStyle === 'top' ? 'top' : navigationStyle === 'rail' ? 'left' : 'bottom',
+        tabBarPosition: navigationStyle === 'bottom' ? 'bottom' : 'left',
         sceneStyle: { backgroundColor: palette.background },
         lazy: true,
       }}

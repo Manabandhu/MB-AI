@@ -1,11 +1,11 @@
 export const color = {
-  background: '#f7f7f8',
+  background: '#f5f5f0',
   ink: '#1c1b20',
   muted: '#5c5c66',
-  primary: '#4d35c8',
+  primary: '#243c32',
   onPrimary: '#ffffff',
-  primaryContainer: '#5b3fd6',
-  primarySoft: '#e8e2fa',
+  primaryContainer: '#365247',
+  primarySoft: '#dce6de',
   surface: '#ffffff',
   teal: '#00696b',
   warm: '#b84b15',
@@ -52,7 +52,7 @@ export const tone = {
   surfaceContainer: '#e5e2dc',
   surfaceContainerHigh: '#dcd8d1',
   /** Translucent fills behind primary, teal, and warm icons or chips. */
-  primaryTint: 'rgba(67,30,190,0.07)',
+  primaryTint: 'rgba(36,60,50,0.07)',
   tealTint: 'rgba(0,105,107,0.08)',
   warmTint: 'rgba(255,126,51,0.10)',
   /** Opaque pastel backgrounds for badges and icon wells. */
@@ -71,10 +71,10 @@ export const darkColor = {
   background: '#101013',
   ink: '#f7f5f0',
   muted: '#b9b5bf',
-  primary: '#bca6ff',
-  onPrimary: '#160b3d',
-  primaryContainer: '#6d48d7',
-  primarySoft: '#2e245a',
+  primary: '#b8d7c5',
+  onPrimary: '#10241b',
+  primaryContainer: '#456d56',
+  primarySoft: '#283d31',
   surface: '#1c1c21',
   teal: '#34d399',
   warm: '#ff955e',
@@ -93,7 +93,7 @@ export const darkTone = {
   surfaceContainerLow: '#232329',
   surfaceContainer: '#2b2b32',
   surfaceContainerHigh: '#33333b',
-  primaryTint: 'rgba(167,139,250,0.14)',
+  primaryTint: 'rgba(184,215,197,0.12)',
   tealTint: 'rgba(52,211,153,0.14)',
   warmTint: 'rgba(255,149,94,0.16)',
   tealBg: '#12343a',
@@ -136,7 +136,7 @@ export const space = {
   x12: 48,
   x16: 64,
 } as const;
-export const radius = { control: 12, card: 16, panel: 20, pill: 999 } as const;
+export const radius = { control: 12, card: 20, panel: 28, pill: 999 } as const;
 
 export const shadow = {
   sm: {

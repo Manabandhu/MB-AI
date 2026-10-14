@@ -1,6 +1,7 @@
 /** English strings for the app shell, Home, and settings. Modules add their own namespaces as they migrate. */
 export const en = {
   navigation: {
+    settings: 'Settings',
     jump: 'Jump to',
     openJump: 'Jump to a feature',
     title: 'Jump to anything',
@@ -38,6 +39,25 @@ export const en = {
     welcomeBack: 'Welcome back',
   },
   home: {
+    helloName: 'Hello, {{name}}.',
+    cityHeadline: 'Your city.\nYour people.',
+    citySubtitle: 'Find a place, make your next move, and feel at home.',
+    intentLabel: 'What would you like to do?',
+    live: 'Live',
+    work: 'Work',
+    connect: 'Connect',
+    liveSection: 'Make yourself at home',
+    workSection: 'Make your next move',
+    connectSection: 'Find your people',
+    rooms: 'Rooms',
+    rides: 'Rides',
+    marketplace: 'Marketplace',
+    jobs: 'Jobs',
+    referrals: 'Referrals',
+    immigration: 'Immigration',
+    community: 'Community',
+    events: 'Events',
+    chat: 'Chat',
     heroEyebrow: 'YOUR CITY. YOUR CIRCLE.',
     heroTitle: 'Life, a little\nbetter.',
     heroBody: 'A place to live. A ride to share. People who get you.',

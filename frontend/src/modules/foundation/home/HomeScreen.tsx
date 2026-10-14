@@ -1,77 +1,116 @@
 import { useQueryClient } from '@tanstack/react-query';
 import Head from 'expo-router/head';
 import { useCallback, useState } from 'react';
+import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';
+import { AppText } from '@/modules/shared/ui/AppText';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
-import { Section } from '@/modules/shared/ui/Section';
+import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 import { useAppearanceStore } from '@/theme/themePreferenceStore';
 import { greetingName } from './greetingName';
 import { HomeHeader } from './HomeHeader';
 import { NicknameNudge } from './NicknameNudge';
 import { NicknameSheet } from './NicknameSheet';
-import { QuickAccess } from './QuickAccess';
 import { homeWidgets } from './registry';
 import { WidgetBoundary } from './WidgetBoundary';
 
-/** Search-first Home with an optional local discovery feed. */
+type Intent = 'live' | 'work' | 'connect';
+const groups = {
+  live: {
+    widgets: ['rooms', 'rides'],
+    routes: ['/rooms', '/rides', '/marketplace'],
+    labels: ['home.rooms', 'home.rides', 'home.marketplace'],
+    icons: ['bed', 'car', 'marketplace'],
+  },
+  work: {
+    widgets: ['jobs', 'referrals'],
+    routes: ['/jobs', '/referrals', '/immigration'],
+    labels: ['home.jobs', 'home.referrals', 'home.immigration'],
+    icons: ['briefcase', 'handshake', 'globe'],
+  },
+  connect: {
+    widgets: ['community', 'events'],
+    routes: ['/community', '/events', '/chat'],
+    labels: ['home.community', 'home.events', 'home.chat'],
+    icons: ['community', 'calendar', 'message'],
+  },
+} as const;
+
+/** Task-led discovery: only the selected pair of independent module widgets mounts. */
 export function HomeScreen() {
-  const queryClient = useQueryClient();
   const t = useT();
+  const client = useQueryClient();
+  const [intent, setIntent] = useState<Intent>('live');
   const [refreshing, setRefreshing] = useState(false);
-  const [showFeed, setShowFeed] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[1] === 'home-widget' || query.queryKey[2] === 'home',
-      });
+      await client.invalidateQueries({ predicate: (q) => q.queryKey[1] === 'home-widget' });
     } finally {
       setRefreshing(false);
     }
-  }, [queryClient]);
-
+  }, [client]);
   const user = useAuthStore((s) => s.user);
-  const nudgeDismissed = useAppearanceStore((s) => s.nicknamePromptDismissed);
+  const dismissed = useAppearanceStore((s) => s.nicknamePromptDismissed);
   const [nicknameOpen, setNicknameOpen] = useState(false);
-  const showNudge = !nudgeDismissed && greetingName(user?.user_metadata) === null;
-
+  const group = groups[intent];
   return (
-    <Screen hero={<HomeHeader />} onRefresh={onRefresh} refreshing={refreshing}>
+    <Screen hero={<HomeHeader />} refreshing={refreshing} onRefresh={onRefresh}>
       <Head>
         <title>Home · ManaBandhu</title>
       </Head>
-      {showNudge ? <NicknameNudge onSet={() => setNicknameOpen(true)} /> : null}
-      <FadeIn index={1}>
-        <Section
-          title={t('home.quickAccess')}
-          action={{ label: t('navigation.allFeatures'), href: '/explore' }}
-        >
-          <QuickAccess />
-        </Section>
-      </FadeIn>
-      <AppButton
-        label={showFeed ? t('home.hideFeed') : t('home.showFeed')}
-        icon={showFeed ? 'minus' : 'plus'}
-        variant="secondary"
-        expanded={showFeed}
-        onPress={() => setShowFeed((value) => !value)}
+      <SegmentedControl
+        label={t('home.intentLabel')}
+        options={[
+          { value: 'live', label: t('home.live') },
+          { value: 'work', label: t('home.work') },
+          { value: 'connect', label: t('home.connect') },
+        ]}
+        value={intent}
+        onChange={setIntent}
       />
-      {showFeed ? (
-        <ResponsiveGrid columns={{ compact: 1, medium: 2, expanded: 2, wide: 3 }}>
-          {homeWidgets.map(({ id, Component }, index) => (
-            <FadeIn index={index + 3} key={id}>
-              <WidgetBoundary name={id}>
+      <XStack gap="$x2" flexWrap="wrap">
+        {group.routes.map((route, index) => (
+          <AppButton
+            key={route}
+            route={route}
+            label={t(group.labels[index])}
+            icon={group.icons[index]}
+            variant="ghost"
+            size="sm"
+          />
+        ))}
+      </XStack>
+      <YStack gap="$x4">
+        <XStack alignItems="center" flexWrap="wrap" gap="$x2">
+          <AppText variant="h3" flex={1}>
+            {t(`home.${intent}Section`)}
+          </AppText>
+          <AppButton
+            label={t('navigation.allFeatures')}
+            route="/explore"
+            variant="ghost"
+            iconAfter="arrow-right"
+            size="sm"
+          />
+        </XStack>
+        <ResponsiveGrid columns={{ compact: 1, medium: 2, expanded: 2, wide: 2 }} gap={20}>
+          {homeWidgets
+            .filter((w) => group.widgets.some((id) => id === w.id))
+            .map(({ id, Component }) => (
+              <WidgetBoundary key={id} name={id}>
                 <Component />
               </WidgetBoundary>
-            </FadeIn>
-          ))}
+            ))}
         </ResponsiveGrid>
+      </YStack>
+      {!dismissed && greetingName(user?.user_metadata) === null ? (
+        <NicknameNudge onSet={() => setNicknameOpen(true)} />
       ) : null}
-      <NicknameSheet onClose={() => setNicknameOpen(false)} visible={nicknameOpen} />
+      <NicknameSheet visible={nicknameOpen} onClose={() => setNicknameOpen(false)} />
     </Screen>
   );
 }

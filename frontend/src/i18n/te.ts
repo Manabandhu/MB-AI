@@ -2,6 +2,7 @@ import type { Strings } from './en';
 
 export const te: Strings = {
   navigation: {
+    settings: 'సెట్టింగులు',
     jump: 'వెళ్లండి',
     openJump: 'ఒక ఫీచర్‌కు వెళ్లండి',
     title: 'మీకు కావలసినది కనుగొనండి',
@@ -33,6 +34,25 @@ export const te: Strings = {
     welcomeBack: 'మళ్ళీ స్వాగతం',
   },
   home: {
+    helloName: 'నమస్తే, {{name}}.',
+    cityHeadline: 'మీ నగరం.\nమీ మనుషులు.',
+    citySubtitle: 'ఇల్లు, తదుపరి అవకాశం, కొత్త స్నేహితులను కనుగొనండి.',
+    intentLabel: 'మీరు ఏమి చేయాలనుకుంటున్నారు?',
+    live: 'నివాసం',
+    work: 'పని',
+    connect: 'కలవండి',
+    liveSection: 'మీ ఇంటిని కనుగొనండి',
+    workSection: 'తదుపరి అడుగు వేయండి',
+    connectSection: 'మీ మనుషులను కలవండి',
+    rooms: 'గదులు',
+    rides: 'రైడ్స్',
+    marketplace: 'మార్కెట్',
+    jobs: 'ఉద్యోగాలు',
+    referrals: 'రెఫరల్స్',
+    immigration: 'ఇమ్మిగ్రేషన్',
+    community: 'కమ్యూనిటీ',
+    events: 'ఈవెంట్స్',
+    chat: 'చాట్',
     heroEyebrow: 'మీ నగరం. మీ వాళ్లు.',
     heroTitle: 'జీవితం, ఇంకాస్త\nమెరుగ్గా.',
     heroBody: 'ఉండటానికి ఇల్లు. కలిసి ప్రయాణం. మీలా ఆలోచించే వాళ్లు.',

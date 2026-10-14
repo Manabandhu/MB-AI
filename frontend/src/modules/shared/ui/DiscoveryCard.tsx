@@ -5,7 +5,7 @@ import { AppText } from './AppText';
 import { Card } from './Card';
 import type { DiscoveryKind } from './DiscoveryArtwork';
 
-const destinationIcons: Record<DiscoveryKind, AppIconName> = {
+const icons: Record<DiscoveryKind, AppIconName> = {
   rooms: 'bed',
   rides: 'car',
   jobs: 'briefcase',
@@ -17,8 +17,6 @@ const destinationIcons: Record<DiscoveryKind, AppIconName> = {
   essentials: 'compass',
   connection: 'community',
 };
-
-/** One quiet navigation target, with a readable label and optional supporting text. */
 export function DiscoveryCard({
   title,
   description,
@@ -40,24 +38,33 @@ export function DiscoveryCard({
       aria-label={`${title}. ${description}`}
       href={href}
       onPress={onPress}
-      padding={compact ? '$x4' : '$x5'}
-      gap="$x4"
-      flexGrow={1}
-      backgroundColor="$surface"
-      minHeight={compact ? 108 : 152}
+      padding="$x4"
+      borderWidth={0}
+      borderRadius="$control"
+      backgroundColor="transparent"
+      hoverStyle={{ backgroundColor: '$surfaceContainerLow' }}
     >
-      <XStack alignItems="center" justifyContent="space-between">
-        <AppIcon name={destinationIcons[kind]} size={24} color={palette.ink} />
-        {!compact ? <AppIcon name="arrow-right" size={18} color={palette.muted} /> : null}
+      <XStack gap="$x4" alignItems="center">
+        <YStack
+          width={48}
+          height={48}
+          borderRadius="$control"
+          backgroundColor="$surfaceContainerLow"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <AppIcon name={icons[kind]} color={palette.ink} size={22} />
+        </YStack>
+        <YStack flex={1} minWidth={0} gap="$x1">
+          <AppText variant="bodyStrong">{title}</AppText>
+          {!compact ? (
+            <AppText tone="muted" variant="caption">
+              {description}
+            </AppText>
+          ) : null}
+        </YStack>
+        <AppIcon name="arrow-right" color={palette.muted} size={18} />
       </XStack>
-      <YStack gap="$x2">
-        <AppText variant={compact ? 'label' : 'h4'}>{title}</AppText>
-        {!compact ? (
-          <AppText tone="muted" variant="caption">
-            {description}
-          </AppText>
-        ) : null}
-      </YStack>
     </Card>
   );
 }

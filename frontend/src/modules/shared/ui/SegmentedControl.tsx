@@ -32,7 +32,7 @@ export function SegmentedControl<T extends string>({
       aria-label={label}
       role="radiogroup"
       backgroundColor="$surfaceContainerLow"
-      borderRadius="$control"
+      borderRadius="$pill"
       gap={4}
       padding={4}
     >
@@ -45,8 +45,8 @@ export function SegmentedControl<T extends string>({
             role="radio"
             aria-checked={selected}
             alignItems="center"
-            backgroundColor={selected ? '$surface' : 'transparent'}
-            borderRadius={10}
+            backgroundColor={selected ? '$primary' : 'transparent'}
+            borderRadius="$pill"
             cursor="pointer"
             flex={1}
             focusVisibleStyle={{
@@ -69,13 +69,13 @@ export function SegmentedControl<T extends string>({
           >
             {option.icon ? (
               <AppIcon
-                color={selected ? palette.primary : palette.muted}
+                color={selected ? palette.onPrimary : palette.muted}
                 name={option.icon}
                 size={16}
               />
             ) : null}
             <AppText
-              color={selected ? '$primary' : '$colorMuted'}
+              color={selected ? '$onPrimary' : '$colorMuted'}
               numberOfLines={2}
               flexShrink={1}
               textAlign="center"
@@ -86,13 +86,13 @@ export function SegmentedControl<T extends string>({
             {hasCount ? (
               <XStack
                 alignItems="center"
-                backgroundColor={selected ? '$primary' : '$surfaceContainerHigh'}
+                backgroundColor={selected ? '$onPrimary' : '$surfaceContainerHigh'}
                 borderRadius="$pill"
                 justifyContent="center"
                 minWidth={20}
                 paddingHorizontal={6}
               >
-                <AppText color={selected ? '$onPrimary' : '$colorMuted'} variant="caption">
+                <AppText color={selected ? '$primary' : '$colorMuted'} variant="caption">
                   {option.count}
                 </AppText>
               </XStack>
