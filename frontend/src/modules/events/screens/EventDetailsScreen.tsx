@@ -1,573 +1,310 @@
 import { formatDate, formatTimeRange } from '@manabandhu/core';
-import { color as baseColors, palette, radius } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Href } from 'expo-router';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { Linking } from 'react-native';
+import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
+import { shareLink } from '@/lib/share';
 import {
   getEvent,
   listEventAttendance,
   listEventCategories,
+  type RsvpStatus,
   rsvpEvent,
 } from '@/modules/events/api';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { rsvpIs } from '@/modules/events/utils/eventTime';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { errorText, showError, showMessage } from '@/modules/shared/ui/notify';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 
-const colors = {
-  ...baseColors,
-  canvas: '#ffffff',
-  canvasMuted: '#f8f9fe',
-  accentBrand: palette.primary,
-  warm: palette.warm,
-  inkSecondary: baseColors.muted,
-  borderSubtle: palette.border,
-  danger: '#ef4444',
-};
+const RSVP_OPTIONS: { status: RsvpStatus; label: string }[] = [
+  { status: 'going', label: 'Going' },
+  { status: 'interested', label: 'Interested' },
+  { status: 'maybe', label: 'Maybe' },
+];
 
-const sp = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 20,
-  xl: 24,
-  xxl: 32,
-};
-
-interface EventDetailsScreenProps {
-  eventId?: string;
+function rsvpLabel(status?: string | null) {
+  if (rsvpIs(status, 'going')) return "You're going";
+  if (rsvpIs(status, 'interested')) return "You're interested";
+  if (rsvpIs(status, 'maybe')) return 'You might go';
+  if (rsvpIs(status, 'saved')) return 'Saved';
+  return null;
 }
 
-export default function EventDetailsScreen({ eventId }: EventDetailsScreenProps) {
+/**
+ * One event. Members RSVP (going, interested, maybe), change or cancel it, or just save the event. The organizer
+ * sees who is coming instead; editing or cancelling an event has no backend endpoint yet.
+ */
+export default function EventDetailsScreen({ eventId }: { eventId?: string }) {
   const router = useRouter();
   const params = useLocalSearchParams<{ eventId: string }>();
-  const resolvedEventId = eventId ?? params.eventId;
-  const { session, user } = useAuthStore();
+  const id = String(eventId ?? params.eventId ?? '');
   const queryClient = useQueryClient();
-  const [rsvpError, setRsvpError] = useState<string | null>(null);
+  const confirm = useConfirm();
+  const signedIn = useAuthStore((s) => s.status === 'authenticated');
+  const userId = useAuthStore((s) => s.user?.id);
 
-  const {
-    data: event,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ['events', resolvedEventId],
-    queryFn: () => getEvent(resolvedEventId as string),
-    enabled: !!resolvedEventId,
+  const eventQuery = useQuery({
+    queryKey: ['events', id],
+    queryFn: () => getEvent(id),
+    enabled: Boolean(id),
   });
-
-  const { data: categories } = useQuery({
+  const categoriesQuery = useQuery({
     queryKey: ['events', 'categories'],
     queryFn: listEventCategories,
     staleTime: 1000 * 60 * 10,
   });
-
   // Signed-in members see their own RSVP; the organizer sees every RSVP.
-  const { data: attendance } = useQuery({
-    queryKey: ['events', resolvedEventId, 'attendance'],
-    queryFn: () => listEventAttendance(resolvedEventId as string),
-    enabled: Boolean(resolvedEventId && session),
+  const attendanceQuery = useQuery({
+    queryKey: ['events', id, 'attendance'],
+    queryFn: () => listEventAttendance(id),
+    enabled: Boolean(id && signedIn),
   });
 
   const rsvpMutation = useMutation({
-    mutationFn: () => rsvpEvent(resolvedEventId as string, 'GOING'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events', resolvedEventId, 'attendance'] });
-      queryClient.invalidateQueries({ queryKey: ['events', 'saved'] });
-    },
-    onError: (err: Error) => setRsvpError(err.message),
+    mutationFn: (status: RsvpStatus) => rsvpEvent(id, status),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['events', id, 'attendance'] }),
+        queryClient.invalidateQueries({ queryKey: ['events', 'saved'] }),
+      ]),
+    onError: (error) => showError('Could not update your RSVP', error),
   });
 
-  if (isLoading) {
+  if (eventQuery.isLoading) {
     return (
-      <View style={s.centerContainer}>
-        <Text style={s.loadingText}>Loading event details...</Text>
-      </View>
+      <Screen>
+        <BackButton fallback="/events" />
+        <LoadingState label="Loading event…" />
+      </Screen>
     );
   }
 
-  if (isError || !event) {
+  const event = eventQuery.data;
+  if (eventQuery.isError || !event) {
+    const notFound = (eventQuery.error as { status?: number } | null)?.status === 404;
     return (
-      <View style={s.centerContainer}>
-        <Text style={s.errorEmoji}>⚠️</Text>
-        <Text style={s.errorTitle}>Event Not Found</Text>
-        <Text style={s.errorSubtitle}>
-          This event might have concluded or the link has expired.
-        </Text>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
-          <Text style={s.backBtnText}>Back to Events</Text>
-        </Pressable>
-      </View>
+      <Screen>
+        <BackButton fallback="/events" />
+        <ErrorState
+          body={notFound ? 'This event was removed.' : errorText(eventQuery.error)}
+          onRetry={notFound ? undefined : () => eventQuery.refetch()}
+          retryLabel="Retry"
+          title={notFound ? 'Event not found' : 'Could not load this event'}
+        />
+      </Screen>
     );
   }
 
-  const isOrganizer = Boolean(user?.id && event.organizerId === user.id);
-  const myRsvp = attendance?.find((a) => a.userId === user?.id);
-  const goingCount = attendance?.filter((a) => a.status?.toUpperCase() === 'GOING').length;
-  const category = categories?.find((c) => c.id === event.categoryId)?.name;
+  const isOrganizer = Boolean(userId && event.organizerId === userId);
+  const attendance = attendanceQuery.data ?? [];
+  const mine = attendance.find((a) => a.userId === userId);
+  const myStatus = mine && !rsvpIs(mine.status, 'not_going') ? mine.status : null;
+  const category = categoriesQuery.data?.find((c) => c.id === event.categoryId)?.name;
+  const ended = event.endAt ? new Date(event.endAt).getTime() < Date.now() : false;
+  const count = (status: string) => attendance.filter((a) => rsvpIs(a.status, status)).length;
 
-  const handleRsvp = () => {
-    if (!session) {
-      router.push('/sign-in' as Href);
-      return;
-    }
-    setRsvpError(null);
-    rsvpMutation.mutate();
+  const requireSignIn = () => {
+    if (signedIn) return true;
+    router.push('/sign-in' as Href);
+    return false;
   };
 
-  const handleDirections = async () => {
+  const setRsvp = (status: RsvpStatus) => {
+    if (!requireSignIn() || rsvpMutation.isPending) return;
+    if (attendanceQuery.isError || attendanceQuery.isLoading) {
+      showError('Your RSVP is not loaded', 'Retry loading it first.');
+      return;
+    }
+    rsvpMutation.mutate(status);
+  };
+
+  const cancelRsvp = async () => {
+    const ok = await confirm({
+      title: 'Cancel your RSVP?',
+      body: 'The organizer will no longer count you. You can RSVP again any time.',
+      confirmLabel: 'Cancel RSVP',
+      cancelLabel: 'Keep it',
+      destructive: true,
+    });
+    if (ok) rsvpMutation.mutate('not_going');
+  };
+
+  const onDirections = async () => {
     const query =
       event.latitude != null && event.longitude != null
         ? `${event.latitude},${event.longitude}`
         : event.location;
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
     try {
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert('Unable to open maps', event.location);
+      await Linking.openURL(
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+      );
+    } catch (error) {
+      showError('Could not open maps', error);
     }
   };
 
-  const handleShare = async () => {
+  const onShare = async () => {
     try {
-      await Share.share({
-        message: `${event.title} — ${formatDate(event.startAt, 'long') ?? 'Date not set'} at ${event.location}`,
-      });
-    } catch (err) {
-      Alert.alert('Unable to share', err instanceof Error ? err.message : 'Please try again.');
+      const result = await shareLink(`/events/${event.id}`, event.title);
+      if (result === 'copied') showMessage('Link copied', 'The event link is on your clipboard.');
+    } catch (error) {
+      showError('Could not share this event', error);
     }
   };
+
+  const showBar = !isOrganizer && !ended;
+  const online = event.location?.trim().toLowerCase() === 'online';
 
   return (
-    <View style={s.container}>
-      {/* Top App Bar */}
-      <View style={s.topBar}>
-        <Pressable onPress={() => router.back()} style={s.iconButton} accessibilityLabel="Back">
-          <AppIcon name="chevron-left" size={20} color={colors.ink} />
-        </Pressable>
+    <YStack flex={1}>
+      <Screen
+        bottomInset={showBar ? ACTION_BAR_SPACE + 48 : 0}
+        onRefresh={() => Promise.all([eventQuery.refetch(), attendanceQuery.refetch()])}
+        refreshing={eventQuery.isRefetching}
+      >
+        <YStack gap="$x4">
+          <ScreenHeader
+            actions={<IconButton icon="share" label="Share event" onPress={onShare} />}
+            back={{ fallback: '/events' as Href }}
+            title="Event"
+          />
+          <Card gap="$x3">
+            <XStack flexWrap="wrap" gap="$x2">
+              {category ? <StatusBadge label={category} tone="primary" /> : null}
+              {ended ? <StatusBadge label="Ended" /> : null}
+              {isOrganizer ? <StatusBadge label="You're hosting" tone="success" /> : null}
+              {!isOrganizer && myStatus ? (
+                <StatusBadge label={rsvpLabel(myStatus) ?? myStatus} tone="success" />
+              ) : null}
+            </XStack>
+            <Heading variant="h3">{event.title}</Heading>
+            <YStack gap={2}>
+              <AppText variant="bodyStrong">
+                {formatDate(event.startAt, 'long') ?? 'Date to be announced'}
+              </AppText>
+              <AppText tone="muted">{formatTimeRange(event.startAt, event.endAt) ?? ''}</AppText>
+            </YStack>
+            <AppText>{event.location}</AppText>
+            {online ? null : (
+              <XStack flexWrap="wrap" gap="$x3">
+                <AppButton
+                  icon="map-pin"
+                  label="Directions"
+                  onPress={onDirections}
+                  size="sm"
+                  variant="secondary"
+                />
+                <AppButton
+                  icon="car"
+                  label="Find a carpool"
+                  onPress={() =>
+                    router.push(`/rides?to=${encodeURIComponent(event.location)}` as Href)
+                  }
+                  size="sm"
+                  variant="ghost"
+                />
+              </XStack>
+            )}
+          </Card>
 
-        <Text style={s.topBarTitle}>Event Details</Text>
+          <Card gap="$x2">
+            <Heading variant="h4">About</Heading>
+            <AppText selectable>
+              {event.description || 'The host has not added a description yet.'}
+            </AppText>
+          </Card>
 
-        <View style={s.topBarRight}>
-          <Pressable onPress={handleShare} style={s.iconButton} accessibilityLabel="Share event">
-            <Text style={s.actionEmoji}>↗️</Text>
-          </Pressable>
-        </View>
-      </View>
+          {isOrganizer ? (
+            <Card gap="$x2">
+              <Heading variant="h4">RSVPs</Heading>
+              {attendanceQuery.isLoading ? (
+                <LoadingState label="Loading RSVPs…" />
+              ) : attendanceQuery.isError ? (
+                <ErrorState
+                  body={errorText(attendanceQuery.error)}
+                  compact
+                  onRetry={() => attendanceQuery.refetch()}
+                  retryLabel="Retry"
+                  title="Could not load RSVPs"
+                />
+              ) : (
+                <AppText>
+                  {count('going')} going · {count('interested')} interested · {count('maybe')} maybe
+                </AppText>
+              )}
+            </Card>
+          ) : null}
+        </YStack>
+      </Screen>
 
-      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Hero Card */}
-        <View style={s.heroCard}>
-          <View style={s.heroHeaderBg}>
-            {category ? (
-              <View style={s.badgeRow}>
-                <View style={s.categoryPill}>
-                  <Text style={s.categoryPillText}>{category}</Text>
-                </View>
-              </View>
-            ) : null}
-
-            <Text style={s.heroTitle}>{event.title}</Text>
-
-            <View style={s.organizerRow}>
-              <View style={s.orgBadge}>
-                <Text style={s.orgBadgeEmoji}>🇮🇳</Text>
-              </View>
-              <View style={s.orgMeta}>
-                <View style={s.orgNameRow}>
-                  <Text style={s.orgName}>
-                    {isOrganizer ? 'You are hosting this event' : 'Hosted by a community member'}
-                  </Text>
-                </View>
-                {isOrganizer && goingCount !== undefined ? (
-                  <Text style={s.orgSubtitle}>
-                    {goingCount} {goingCount === 1 ? 'member' : 'members'} going
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Date & Time Card */}
-        <View style={s.sectionCard}>
-          <View style={s.dateSectionRow}>
-            <View style={s.dateIconBox}>
-              <Text style={s.dateIconEmoji}>📅</Text>
-            </View>
-            <View style={s.dateMeta}>
-              <Text style={s.dateTitle}>{formatDate(event.startAt, 'long') ?? 'Date not set'}</Text>
-              <Text style={s.timeSubtitle}>
-                {formatTimeRange(event.startAt, event.endAt) ?? 'Time not set'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Location Card */}
-        <View style={s.sectionCard}>
-          <View style={s.venueHeaderRow}>
-            <View style={s.venueIconBox}>
-              <Text style={s.venueIconEmoji}>📍</Text>
-            </View>
-            <View style={s.venueMeta}>
-              <Text style={s.venueTitle}>{event.location}</Text>
-            </View>
-          </View>
-
-          <View style={s.venueActionsRow}>
-            <Pressable onPress={handleDirections} style={s.directionsBtn}>
-              <Text style={s.directionsBtnText}>Get Directions 🗺️</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push(`/rides?to=${encodeURIComponent(event.location)}` as Href)}
-              style={s.carpoolPromoBtn}
-            >
-              <Text style={s.carpoolPromoText}>🚗 Find a Carpool</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Event Overview Description */}
-        <View style={s.sectionCard}>
-          <Text style={s.sectionTitle}>About the Event</Text>
-          <Text style={s.bodyText}>
-            {event.description || 'The host has not added a description yet.'}
-          </Text>
-        </View>
-
-        {rsvpError ? (
-          <View style={s.sectionCard}>
-            <Text style={s.bodyText}>⚠️ {rsvpError}</Text>
-          </View>
-        ) : null}
-      </ScrollView>
-
-      {/* Sticky Bottom Action Bar */}
-      <View style={s.stickyBottomBar}>
-        <View style={s.stickyBottomLeft}>
-          <Text style={s.admissionLabel}>YOUR RSVP</Text>
-          <Text style={s.admissionValue}>
-            {myRsvp ? myRsvp.status.toLowerCase() : session ? 'Not yet' : 'Sign in to RSVP'}
-          </Text>
-        </View>
-
-        <Pressable
-          onPress={handleRsvp}
-          disabled={rsvpMutation.isPending || myRsvp?.status?.toUpperCase() === 'GOING'}
-          style={s.rsvpPrimaryBtn}
+      {showBar ? (
+        <ActionBar
+          label="RSVP"
+          leading={
+            attendanceQuery.isError ? (
+              <AppButton
+                icon="refresh"
+                label="Couldn't load your RSVP. Retry"
+                onPress={() => attendanceQuery.refetch()}
+                size="sm"
+                variant="ghost"
+              />
+            ) : (
+              <AppText tone="muted" variant="caption">
+                {!signedIn
+                  ? 'Sign in to RSVP'
+                  : attendanceQuery.isLoading
+                    ? 'Loading your RSVP…'
+                    : (rsvpLabel(myStatus) ?? 'Not responded yet')}
+              </AppText>
+            )
+          }
         >
-          <Text style={s.rsvpPrimaryText}>
-            {rsvpMutation.isPending
-              ? 'Sending RSVP...'
-              : myRsvp?.status?.toUpperCase() === 'GOING'
-                ? "✓ You're going"
-                : 'RSVP 🪔'}
-          </Text>
-        </Pressable>
-      </View>
-    </View>
+          <FilterChipRow label="Your RSVP" role="radiogroup">
+            {RSVP_OPTIONS.map((option) => (
+              <Chip
+                disabled={rsvpMutation.isPending}
+                key={option.status}
+                label={option.label}
+                onPress={() => setRsvp(option.status)}
+                radio
+                selected={rsvpIs(myStatus, option.status)}
+              />
+            ))}
+          </FilterChipRow>
+          {myStatus && !rsvpIs(myStatus, 'saved') ? (
+            <AppButton
+              disabled={rsvpMutation.isPending}
+              label="Cancel RSVP"
+              onPress={cancelRsvp}
+              size="sm"
+              variant="ghost"
+            />
+          ) : (
+            <AppButton
+              disabled={rsvpMutation.isPending}
+              icon="bookmark"
+              label={rsvpIs(myStatus, 'saved') ? 'Unsave' : 'Save'}
+              onPress={() => setRsvp(rsvpIs(myStatus, 'saved') ? 'not_going' : 'saved')}
+              size="sm"
+              variant="ghost"
+            />
+          )}
+        </ActionBar>
+      ) : null}
+    </YStack>
   );
 }
-
-const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fe',
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: sp.lg,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: colors.inkSecondary,
-  },
-  errorEmoji: {
-    fontSize: 44,
-    marginBottom: sp.sm,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.ink,
-    marginBottom: 4,
-  },
-  errorSubtitle: {
-    fontSize: 13,
-    color: colors.inkSecondary,
-    textAlign: 'center',
-    marginBottom: sp.md,
-  },
-  backBtn: {
-    backgroundColor: colors.accentBrand,
-    paddingHorizontal: sp.lg,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-  },
-  backBtnText: {
-    color: colors.canvas,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: sp.lg,
-    paddingTop: sp.md,
-    paddingBottom: sp.md,
-    backgroundColor: colors.canvas,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
-  },
-  topBarTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  topBarRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.xs,
-  },
-  iconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
-    backgroundColor: colors.canvasMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionEmoji: {
-    fontSize: 16,
-  },
-  scrollContent: {
-    padding: sp.lg,
-    paddingBottom: 110,
-  },
-  heroCard: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.panel,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: '#fed7aa',
-    shadowColor: '#f97316',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-    marginBottom: sp.md,
-  },
-  heroHeaderBg: {
-    backgroundColor: '#fff7ed',
-    padding: sp.lg,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: sp.sm,
-  },
-  categoryPill: {
-    backgroundColor: '#ea580c',
-    paddingHorizontal: sp.sm,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  categoryPillText: {
-    color: colors.canvas,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  heroTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#7c2d12',
-    letterSpacing: -0.5,
-    marginBottom: sp.md,
-  },
-  organizerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.sm,
-    marginBottom: sp.md,
-  },
-  orgBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: '#ffedd5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  orgBadgeEmoji: {
-    fontSize: 20,
-  },
-  orgMeta: {
-    flex: 1,
-  },
-  orgNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  orgName: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#7c2d12',
-  },
-  orgSubtitle: {
-    fontSize: 11,
-    color: '#9a3412',
-  },
-  sectionCard: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.card,
-    padding: sp.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    marginBottom: sp.md,
-  },
-  dateSectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.md,
-  },
-  dateIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.control,
-    backgroundColor: '#fff7ed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dateIconEmoji: {
-    fontSize: 20,
-  },
-  dateMeta: {
-    flex: 1,
-  },
-  dateTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  timeSubtitle: {
-    fontSize: 12,
-    color: '#ea580c',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  venueHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.md,
-    marginBottom: sp.md,
-  },
-  venueIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.control,
-    backgroundColor: '#ede9fe',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  venueIconEmoji: {
-    fontSize: 20,
-  },
-  venueMeta: {
-    flex: 1,
-  },
-  venueTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  venueActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sp.sm,
-  },
-  directionsBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  directionsBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
-  },
-  carpoolPromoBtn: {
-    flex: 1.5,
-    height: 40,
-    borderRadius: radius.control,
-    backgroundColor: '#ede9fe',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  carpoolPromoText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.accentBrand,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-    letterSpacing: -0.3,
-    marginBottom: sp.sm,
-  },
-  bodyText: {
-    fontSize: 13,
-    color: colors.inkSecondary,
-    lineHeight: 20,
-  },
-  stickyBottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.canvas,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-    paddingHorizontal: sp.lg,
-    paddingVertical: sp.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  stickyBottomLeft: {
-    flex: 1,
-  },
-  admissionLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.inkSecondary,
-    textTransform: 'uppercase',
-  },
-  admissionValue: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#059669',
-  },
-  rsvpPrimaryBtn: {
-    backgroundColor: colors.accentBrand,
-    paddingHorizontal: sp.xl,
-    paddingVertical: 12,
-    borderRadius: radius.pill,
-  },
-  rsvpPrimaryText: {
-    color: colors.canvas,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-});

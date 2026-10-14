@@ -24,8 +24,11 @@ public class ReferralController {
     private final ReferralRequestService requestService;
     private final ReferralOfferService offerService;
     private final ReferralsContentService contentService;
+    private final ReferralContactService contactService;
 
-    ReferralController(ReferralService referralService, ReferralRequestService requestService, ReferralOfferService offerService, ReferralsContentService contentService) {
+    ReferralController(ReferralService referralService, ReferralRequestService requestService, ReferralOfferService offerService,
+                       ReferralsContentService contentService, ReferralContactService contactService) {
+        this.contactService = contactService;
         this.referralService = referralService;
         this.requestService = requestService;
         this.offerService = offerService;
@@ -91,5 +94,12 @@ public class ReferralController {
         return offerService.findForViewer(Actor.require(authentication), referralId)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Referral offer not found"));
+    }
+
+    /** Message the poster of an open referral; reuses your direct chat with them. Returns the conversation id. */
+    @PostMapping("/{referralId}/contact")
+    ContactReferralResponse contact(Authentication authentication, @PathVariable UUID referralId,
+                                    @Valid @RequestBody ContactReferralInput input) {
+        return new ContactReferralResponse(contactService.contact(Actor.require(authentication), referralId, input.message()));
     }
 }

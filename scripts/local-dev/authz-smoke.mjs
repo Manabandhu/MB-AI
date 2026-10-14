@@ -688,6 +688,14 @@ await status(
   { userId: B },
 );
 await status(
+  'adding an id with no account is rejected',
+  404,
+  'A',
+  'POST',
+  `/api/v1/expenses/groups/${group?.id}/members`,
+  { userId: '99999999-9999-4999-8999-999999999999' },
+);
+await status(
   'owner records 100.01',
   201,
   'A',
@@ -697,6 +705,20 @@ await status(
 );
 const owed = (await call('B', 'GET', `/api/v1/expenses/groups/${group?.id}/balances`)).body;
 expect('member owes their equal share', owed?.[0]?.amount, 50);
+await status(
+  'member with an open balance cannot leave',
+  409,
+  'B',
+  'DELETE',
+  `/api/v1/expenses/groups/${group?.id}/members/${B}`,
+);
+await status(
+  'owner cannot remove a member with an open balance',
+  409,
+  'A',
+  'DELETE',
+  `/api/v1/expenses/groups/${group?.id}/members/${B}`,
+);
 const settlement = await status(
   'member records paying 50',
   201,
@@ -759,6 +781,13 @@ await status(
   `/api/v1/expenses/groups/${group?.id}/settlements`,
   { toUserId: C, amount: 5 },
 );
+await status(
+  'settled member can leave',
+  204,
+  'B',
+  'DELETE',
+  `/api/v1/expenses/groups/${group?.id}/members/${B}`,
+);
 
 console.log('== community, referrals, notifications, assistant, events');
 const communities = (await call('B', 'GET', '/api/v1/posts/communities')).body ?? [];
@@ -795,6 +824,100 @@ if (communities.length > 0) {
   skip += 1;
   console.log('  skip community checks (no communities seeded)');
 }
+{
+  // Posts: author names, counts, and the viewer's reaction come from the server; only you can remove your reaction.
+  const space = await status('create a community', 201, 'A', 'POST', '/api/v1/posts/communities', {
+    name: `Smoke community ${Date.now()}`,
+    description: 'authz smoke',
+  });
+  const missing = '00000000-0000-0000-0000-000000000000';
+  await status('non-member cannot post', 403, 'A', 'POST', '/api/v1/posts', {
+    communityId: space?.id,
+    title: 'Hi',
+    body: 'Hello',
+  });
+  // Posting is for members only, and creating a community does not join it.
+  await status('join to post', 204, 'A', 'POST', `/api/v1/posts/communities/${space?.id}/join`);
+  await status('anonymous cannot create a post', 401, null, 'POST', '/api/v1/posts', {
+    communityId: space?.id,
+    title: 'Hi',
+    body: 'Hello',
+  });
+  await status('post into a missing community is 404', 404, 'A', 'POST', '/api/v1/posts', {
+    communityId: missing,
+    title: 'Hi',
+    body: 'Hello',
+  });
+  const post = await status('create a post', 201, 'A', 'POST', '/api/v1/posts', {
+    communityId: space?.id,
+    title: 'Smoke post',
+    body: 'Hello community',
+  });
+  expect('post view has an author name', typeof post?.authorName, 'string');
+  expect('new post has no comments', post?.commentCount, 0);
+  const postPath = `/api/v1/posts/${post?.id}`;
+  expect('post views carry no user ids', 'ownerId' in (post ?? {}), false);
+  expect('author sees the post as theirs', post?.mine, true);
+  expect('others do not', (await call('B', 'GET', postPath)).body?.mine, false);
+  await status('unknown reaction type is 400', 400, 'B', 'POST', `${postPath}/reactions`, {
+    type: 'ANGRY',
+  });
+  await status('react to a post', 201, 'B', 'POST', `${postPath}/reactions`, { type: 'heart' });
+  await status(
+    'react to a missing post is 404',
+    404,
+    'B',
+    'POST',
+    `/api/v1/posts/${missing}/reactions`,
+    {
+      type: 'LIKE',
+    },
+  );
+  const seen = (await call('B', 'GET', postPath)).body;
+  expect('viewer sees own reaction', seen?.viewerReaction, 'HEART');
+  expect('reaction counted by type', seen?.reactionCounts?.HEART, 1);
+  const anon = await call(null, 'GET', postPath);
+  expect('anonymous can read a post', anon.status, 200);
+  expect('anonymous has no viewer reaction', anon.body?.viewerReaction ?? null, null);
+  const counts = await call(null, 'GET', `${postPath}/reactions`);
+  expect('public reaction list is counts without user ids', counts.body, [
+    { type: 'HEART', count: 1 },
+  ]);
+  await status('anonymous cannot remove a reaction', 401, null, 'DELETE', `${postPath}/reactions`);
+  await status('stranger un-react is a no-op', 204, 'C', 'DELETE', `${postPath}/reactions`);
+  expect(
+    "stranger cannot remove someone else's reaction",
+    (await call('B', 'GET', postPath)).body?.reactionCount,
+    1,
+  );
+  await status('remove own reaction', 204, 'B', 'DELETE', `${postPath}/reactions`);
+  const cleared = (await call('B', 'GET', postPath)).body;
+  expect('reaction removed', [cleared?.reactionCount, cleared?.viewerReaction ?? null], [0, null]);
+  const comment = await status('comment on a post', 201, 'B', 'POST', `${postPath}/comments`, {
+    body: 'Welcome!',
+  });
+  expect('comment view has an author name', typeof comment?.authorName, 'string');
+  expect('comment views carry no user ids', 'authorId' in (comment ?? {}), false);
+  expect('commenter sees the comment as theirs', comment?.mine, true);
+  await status(
+    'comment on a missing post is 404',
+    404,
+    'B',
+    'POST',
+    `/api/v1/posts/${missing}/comments`,
+    {
+      body: 'Hi',
+    },
+  );
+  await status(
+    'comments of a missing post are 404',
+    404,
+    null,
+    'GET',
+    `/api/v1/posts/${missing}/comments`,
+  );
+  expect('comment counted', (await call(null, 'GET', postPath)).body?.commentCount, 1);
+}
 const referral = await status('owner creates a referral', 201, 'A', 'POST', '/api/v1/referrals', {
   title: 'Need a referral',
   description: 'SWE',
@@ -809,6 +932,59 @@ expect(
   publicList.every((r) => r.contactInfo === null),
   true,
 );
+{
+  const offer = await status(
+    'poster offers a referral',
+    201,
+    'A',
+    'POST',
+    '/api/v1/referrals/offer',
+    {
+      title: 'Referrals at Acme',
+      serviceType: 'Tech',
+    },
+  );
+  const contactPath = `/api/v1/referrals/${offer?.id}/contact`;
+  const pitch = { message: 'Hi, I am a backend engineer and would love a referral.' };
+  await status('anonymous cannot contact a referrer', 401, null, 'POST', contactPath, pitch);
+  await status('short contact message is 400', 400, 'B', 'POST', contactPath, { message: 'hi' });
+  await status('owner cannot contact themselves', 400, 'A', 'POST', contactPath, pitch);
+  const first = await status('member contacts the referrer', 200, 'B', 'POST', contactPath, pitch);
+  const again = await status(
+    'second contact reuses the chat',
+    200,
+    'B',
+    'POST',
+    contactPath,
+    pitch,
+  );
+  expect('same conversation both times', again?.conversationId, first?.conversationId);
+  await status(
+    'referrer is in the conversation',
+    200,
+    'A',
+    'GET',
+    `/api/v1/chat/conversations/${first?.conversationId}/messages`,
+  );
+  await status(
+    'stranger cannot read that conversation',
+    403,
+    'C',
+    'GET',
+    `/api/v1/chat/conversations/${first?.conversationId}/messages`,
+  );
+  await status(
+    'owner closes the offer',
+    200,
+    'A',
+    'PATCH',
+    `/api/v1/referrals/${offer?.id}/status`,
+    {
+      status: 'closed',
+    },
+  );
+  await status('closed referral cannot be contacted', 404, 'B', 'POST', contactPath, pitch);
+}
 await status(
   'stranger cannot change referral status',
   403,
@@ -1195,6 +1371,23 @@ console.log('== jobs, utilities');
       'GET',
       `/api/v1/jobs/${job.body.id}/applications`,
     );
+    const jobPath = `/api/v1/jobs/${job.body.id}`;
+    await status('stranger cannot edit a job', 403, 'C', 'PATCH', jobPath, { title: 'Hacked' });
+    await status('stranger cannot delete a job', 403, 'C', 'DELETE', jobPath);
+    await status('unknown job status is 400', 400, 'A', 'PATCH', jobPath, { status: 'archived' });
+    const edited = await status('owner clears optional fields', 200, 'A', 'PATCH', jobPath, {
+      company: '',
+      salaryMin: 90000,
+    });
+    expect('blank company is cleared', edited?.company ?? null, null);
+    const cleared = await status('owner clears the salary', 200, 'A', 'PATCH', jobPath, {
+      clearSalary: true,
+    });
+    expect(
+      'salary cleared, location kept',
+      [cleared?.salaryMin ?? null, cleared?.location],
+      [null, 'Irving'],
+    );
     await status(
       'employer accepts',
       200,
@@ -1205,6 +1398,8 @@ console.log('== jobs, utilities');
         status: 'accepted',
       },
     );
+    await status('owner deletes the job', 204, 'A', 'DELETE', `/api/v1/jobs/${job.body.id}`);
+    await status('deleted job is gone', 404, null, 'GET', `/api/v1/jobs/${job.body.id}`);
   } else {
     console.log(`  skip jobs checks (create returned ${job.status})`);
     skip += 1;

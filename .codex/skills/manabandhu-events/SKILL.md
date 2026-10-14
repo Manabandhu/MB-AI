@@ -32,12 +32,15 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 
 ## API Surface
 
-- `listEvents()` -> `GET /api/v1/events`
-- `searchEvents(query)` -> `GET /api/v1/events/search?q={query}`
+- `listEvents()` -> `GET /api/v1/events` (PagedModel)
+- `searchEvents(query)` -> `GET /api/v1/events/search?q={query}` (results shown as returned; the search screen debounces 350 ms)
 - `getEvent(id)` -> `GET /api/v1/events/{id}`
-- `createEvent(input)` -> `POST /api/v1/events`
+- `listEventCategories()` -> `GET /api/v1/events/categories`
+- `createEvent(input)` -> `POST /api/v1/events` (`categoryId` required, `endAt` after `startAt`)
 - `listSavedEvents()` -> `GET /api/v1/events/saved`
-- `listMyEvents()` -> `GET /api/v1/events/mine`
+- `listMyEvents()` -> `GET /api/v1/events/mine` (errors throw)
+- `listEventAttendance(id)` -> `GET /api/v1/events/{id}/attendance`
+- `rsvpEvent(id, status)` -> `POST /api/v1/events/{id}/attendance` (`going|interested|maybe|saved|not_going`; one row per user, so this also changes or cancels)
 
 ## Demo Fixtures
 
@@ -92,3 +95,5 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - RSVP notifications go to the organiser only when the status actually changes to going or interested.
 - Paged responses (2026-10-12): `GET /api/v1/events` and `/events/search` return a `PagedModel` (`{ content, page }`, documented as `EventPage`); `listEvents`/`searchEvents` read it through `toPage` from `@/lib/springPage`.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['festival', 'meetup', 'diwali', 'ugadi', 'networking', 'party', 'cultural']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+- Phase 1 correctness pass (2026-10-14): `CreateEventScreen` uses `DateTimeField` start and end (end defaults to start + 3 h and moves with the start; end must be after start, start in the future), a required category (empty-state when none exist), and quick dates computed from today in local time (`utils/eventTime.ts` `nextWeekday`; the old UTC `toISOString().slice` default and fixed day offsets are gone). Opens the new event. `EventDetailsScreen` (shared primitives): RSVP Going/Interested/Maybe can be changed, cancelled (confirm → `not_going`), or the event saved/unsaved; the organizer sees RSVP counts instead. Search/My/Saved lists render `startAt` through `EventCard` (they showed the undefined `e.date`), have back buttons and pull-to-refresh. Known gap: there is no backend endpoint to edit or cancel an event, so organizers cannot yet; `EventsHomeScreen` is unchanged legacy styling (Phase 2).
+- Review fixes (2026-10-14): `EventDetailsScreen` shows a retry in the RSVP bar when the attendance query fails and refuses to change an RSVP it has not loaded. Create-event quick dates are labelled with their real date ("Sat, Oct 24 · 6 PM", "Tomorrow · 11 AM"), so a Saturday evening never offers "This Saturday" for next week.

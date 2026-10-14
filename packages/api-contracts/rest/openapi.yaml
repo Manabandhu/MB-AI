@@ -133,6 +133,9 @@ paths:
     get:
       operationId: listCommunityPosts
       summary: List community posts
+      description: >-
+        Public. The newest 100 posts, with the author's display name, counts, and the signed-in viewer's own
+        reaction.
       responses:
         '200':
           description: Community posts
@@ -141,7 +144,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/CommunityPost'
+                  $ref: '#/components/schemas/PostView'
     post:
       operationId: createCommunityPost
       summary: Create community post
@@ -157,7 +160,47 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommunityPost'
+                $ref: '#/components/schemas/PostView'
+        '400': { description: Validation failed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: The caller has not joined the community }
+        '404': { description: Community not found }
+  /posts/{postId}:
+    get:
+      operationId: getCommunityPost
+      summary: Get a community post
+      description: Public. The viewer's own reaction is included when signed in.
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The post
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostView' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /posts/communities/{communityId}/posts:
+    get:
+      operationId: listCommunityPostsByCommunity
+      summary: List a community's posts
+      description: Public. The community's newest 100 posts.
+      parameters:
+        - name: communityId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The community's posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PostView' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /immigration/resources:
     get:
       operationId: listImmigrationResources
@@ -2898,7 +2941,8 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/PostComment' }
+                items: { $ref: '#/components/schemas/CommentView' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       operationId: createPostComment
       summary: Create post comment
@@ -2917,7 +2961,10 @@ paths:
           description: Comment created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PostComment' }
+              schema: { $ref: '#/components/schemas/CommentView' }
+        '400': { description: Validation failed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /posts/{postId}/reactions:
     get:
       operationId: listPostReactions
@@ -2929,12 +2976,13 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Post reactions
+          description: Count per reaction type (public; no user ids)
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/PostReaction' }
+                items: { $ref: '#/components/schemas/ReactionCount' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       operationId: createPostReaction
       summary: Create post reaction
@@ -2950,10 +2998,26 @@ paths:
             schema: { $ref: '#/components/schemas/CreatePostReactionInput' }
       responses:
         '201':
-          description: Reaction created
+          description: The caller's reaction (replaces an earlier one)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PostReaction' }
+        '400': { description: 'Type is not LIKE, HELPFUL or HEART' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deletePostReaction
+      summary: Remove my reaction
+      description: Removes only the caller's own reaction. Idempotent.
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Reaction removed (or there was none) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /events:
     get:
       operationId: listEvents
@@ -3173,10 +3237,19 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ExpenseGroup' }
   /expenses/groups/{groupId}/members:
+    get:
+      operationId: listExpenseGroupMembers
+      summary: List expense group members
+      description: Members only. User ids of the group's members, oldest first.
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Member ids, content: { application/json: { schema: { type: array, items: { type: string, format: uuid } } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       operationId: addExpenseGroupMember
       summary: Add expense group member
-      description: Owner only. Adds a member by user id.
+      description: Owner only. Adds a member by user id; 404 when the id matches no account.
       parameters:
         - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -3186,6 +3259,35 @@ paths:
             schema: { type: object, required: [userId], properties: { userId: { type: string, format: uuid } } }
       responses:
         '200': { description: Member ids, content: { application/json: { schema: { type: array, items: { type: string, format: uuid } } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /expenses/groups/{groupId}/members/{userId}:
+    delete:
+      operationId: removeExpenseGroupMember
+      summary: Remove or leave an expense group
+      description: >-
+        The owner removes a member, or a member removes themselves. The owner cannot leave (409), and nobody with an
+        open balance in the group can leave or be removed until it is settled (409).
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Membership removed }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: 'The owner tried to leave, or the member still has an open balance' }
+  /expenses/groups/{groupId}/balances:
+    get:
+      operationId: listExpenseGroupBalances
+      summary: List one group's balances
+      description: Members only. Every open pairwise balance in the group after completed settlements.
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Balances
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/DebtBalance' } }
         '403': { $ref: '#/components/responses/Forbidden' }
   /expenses/groups/{groupId}/expenses:
     post:
@@ -3392,6 +3494,70 @@ paths:
         '200': { description: Offer details }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { description: Not found or not visible to the caller }
+  /referrals/{referralId}/contact:
+    post:
+      operationId: contactReferralOwner
+      summary: Message the poster of an open referral
+      description: >-
+        In one transaction: checks the referral is open and not the caller's own, reuses the newest direct chat in
+        which exactly the caller and the poster are active participants (or creates one), adds both, sends the
+        message, and notifies the poster. Returns the conversation id.
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [message]
+              properties:
+                message: { type: string, minLength: 20, maxLength: 2000 }
+      responses:
+        '200':
+          description: The conversation the message was sent in
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [conversationId]
+                properties:
+                  conversationId: { type: string, format: uuid }
+        '400': { description: 'Message shorter than 20 characters, or the caller owns the referral' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Not found or closed (hidden from the caller) }
+  /jobs/{jobId}:
+    parameters:
+      - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: updateJobPosting
+      summary: Edit a job posting
+      description: >-
+        Owner or admin only (enforced in JobPostingService). A null or absent field keeps its value; a blank
+        optional text field (company, location, employmentType, applicationUrl) clears it; a blank title or
+        description is 400. clearSalary empties both salary bounds before salaryMin/salaryMax apply. Status is
+        open or closed (case-insensitive, stored lowercase).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateJobPostingInput' }
+      responses:
+        '200': { description: The updated posting }
+        '400': { description: 'Invalid status, blank required field, or salaryMax below salaryMin' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Not the owner or an admin }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteJobPosting
+      summary: Delete a job posting
+      description: Owner or admin only. Applications are deleted with it.
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Not the owner or an admin }
+        '404': { $ref: '#/components/responses/NotFound' }
   /notifications/settings:
     get:
       operationId: getNotificationSettings
@@ -4817,7 +4983,62 @@ components:
       additionalProperties: false
       required: [type]
       properties:
-        type: { type: string, maxLength: 20 }
+        type: { type: string, enum: [LIKE, HELPFUL, HEART], description: Case-insensitive; stored upper case }
+    UpdateJobPostingInput:
+      type: object
+      additionalProperties: false
+      properties:
+        categoryId: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        company: { type: string, maxLength: 200, description: Blank clears }
+        location: { type: string, maxLength: 200, description: Blank clears }
+        description: { type: string, maxLength: 4000 }
+        employmentType: { type: string, maxLength: 50, description: Blank clears }
+        isRemote: { type: boolean }
+        salaryMin: { type: integer, minimum: 0 }
+        salaryMax: { type: integer, minimum: 0 }
+        applicationUrl: { type: string, maxLength: 500, description: Blank clears }
+        status: { type: string, enum: [open, closed, OPEN, CLOSED] }
+        clearSalary: { type: boolean, description: Empties both salary bounds before salaryMin/salaryMax apply }
+    ReactionCount:
+      type: object
+      additionalProperties: false
+      required: [type, count]
+      properties:
+        type: { type: string, enum: [LIKE, HELPFUL, HEART] }
+        count: { type: integer, format: int64, minimum: 1 }
+    PostView:
+      type: object
+      additionalProperties: false
+      description: Public; carries no user ids. `mine` is true when the signed-in viewer wrote the post.
+      required: [id, authorName, mine, title, body, createdAt, commentCount, reactionCounts, reactionCount]
+      properties:
+        id: { type: string, format: uuid }
+        communityId: { type: [string, 'null'], format: uuid }
+        mine: { type: boolean }
+        authorName: { type: string, maxLength: 40, description: 'Nickname, else first name, else "Member"' }
+        title: { type: string, maxLength: 120 }
+        body: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
+        commentCount: { type: integer, format: int64, minimum: 0 }
+        reactionCounts:
+          type: object
+          description: Count per reaction type (LIKE, HELPFUL, HEART); absent types are zero
+          additionalProperties: { type: integer, format: int64, minimum: 0 }
+        reactionCount: { type: integer, format: int64, minimum: 0 }
+        viewerReaction: { type: [string, 'null'], enum: [LIKE, HELPFUL, HEART, null] }
+    CommentView:
+      type: object
+      additionalProperties: false
+      description: Public; carries no user ids. `mine` is true when the signed-in viewer wrote the comment.
+      required: [id, postId, authorName, mine, body, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        postId: { type: string, format: uuid }
+        mine: { type: boolean }
+        authorName: { type: string, maxLength: 40 }
+        body: { type: string, maxLength: 4000 }
+        createdAt: { type: string, format: date-time }
     EventPage:
       type: object
       additionalProperties: false

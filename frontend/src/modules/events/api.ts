@@ -6,18 +6,12 @@ export type Event = {
   organizerId?: string;
   categoryId?: string;
   title: string;
-  description: string;
+  description?: string | null;
   location: string;
   latitude?: number;
   longitude?: number;
   startAt?: string;
   endAt?: string;
-  date?: string;
-  organizer?: string;
-  category?: string;
-  image?: string;
-  attendeeCount?: number;
-  isSaved?: boolean;
   status?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -59,13 +53,13 @@ export async function createEvent(input: {
   location: string;
   latitude?: number;
   longitude?: number;
-  categoryId?: string;
+  categoryId: string;
 }): Promise<Event> {
   const response = await apiFetch('/api/v1/events', {
     method: 'POST',
     body: JSON.stringify(input),
   });
-  return parseJsonOrThrow<Event>(response, 'Create event');
+  return parseJson<Event>(response);
 }
 
 /** Events the signed-in member has RSVPed to (going, interested, maybe) or saved. */
@@ -74,17 +68,18 @@ export async function listSavedEvents(): Promise<Event[]> {
 }
 
 export async function listMyEvents(): Promise<Event[]> {
-  const response = await apiFetch('/api/v1/events/mine');
-  const data = await parseJson<Event[]>(response);
-  if (Array.isArray(data)) return data;
-  return [];
+  return parseJsonOrThrow(await apiFetch('/api/v1/events/mine'), 'My events');
 }
+
+/** RSVP statuses the backend accepts (stored lowercase). `saved` is a bookmark without attending. */
+export type RsvpStatus = 'going' | 'interested' | 'maybe' | 'saved' | 'not_going';
 
 /** Mirrors backend `EventAttendance`. */
 export type EventAttendance = {
   id: string;
   eventId: string;
   userId: string;
+  /** Lowercase; compare case-insensitively. */
   status: string;
   createdAt: string;
 };
@@ -97,12 +92,12 @@ export async function listEventAttendance(eventId: string): Promise<EventAttenda
   );
 }
 
-export async function rsvpEvent(eventId: string, status = 'GOING'): Promise<EventAttendance> {
-  return parseJsonOrThrow(
+/** Sets (or changes) the caller's one RSVP; `not_going` cancels it. */
+export async function rsvpEvent(eventId: string, status: RsvpStatus): Promise<EventAttendance> {
+  return parseJson(
     await apiFetch(`/api/v1/events/${encodeURIComponent(eventId)}/attendance`, {
       method: 'POST',
       body: JSON.stringify({ status }),
     }),
-    'Event RSVP',
   );
 }

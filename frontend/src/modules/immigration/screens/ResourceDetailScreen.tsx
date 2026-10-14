@@ -1,87 +1,102 @@
-import { color, space, typography } from '@manabandhu/design-system';
+import { formatDate } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, Text, View } from 'react-native';
-import { apiFetch } from '@/lib/api';
+import type { Href } from 'expo-router';
+import { XStack, YStack } from 'tamagui';
+import { getImmigrationResource } from '@/modules/immigration/api';
+import { openUrl } from '@/modules/immigration/utils/openUrl';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { ScreenShell } from '@/modules/shared/components/ScreenShell';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-
-type ResourceDetailContent = {
-  title: string;
-  body: string;
-  eyebrow: string;
-  meta?: string;
-};
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { errorText } from '@/modules/shared/ui/notify';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 
 type ResourceDetailScreenProps = {
   resourceId: string;
 };
 
+/** One immigration resource (`GET /api/v1/immigration/resources/{id}`) with its link opened in the browser. */
 export function ResourceDetailScreen({ resourceId }: ResourceDetailScreenProps) {
-  const { data, isLoading, error, refetch } = useQuery({
+  const resourceQuery = useQuery({
     queryKey: ['immigration', 'resource', resourceId],
-    queryFn: async (): Promise<ResourceDetailContent> => {
-      const response = await apiFetch(`/api/v1/immigration/resources/${resourceId}`);
-      if (!response.ok) throw new Error(`Resource failed: ${response.status}`);
-      const resource = (await response.json()) as {
-        title: string;
-        description?: string | null;
-        category?: string | null;
-        url?: string | null;
-      };
-      return {
-        title: resource.title,
-        body: resource.description ?? '',
-        eyebrow: resource.category ?? 'Resource',
-        meta: resource.url ?? undefined,
-      };
-    },
+    queryFn: () => getImmigrationResource(resourceId),
+    enabled: Boolean(resourceId),
   });
 
-  if (isLoading) {
+  if (resourceQuery.isLoading) {
     return (
-      <ScreenShell>
-        <SectionHeader title="Loading..." />
-        <Text style={styles.loadingText}>Loading resource...</Text>
-      </ScreenShell>
+      <Screen>
+        <BackButton fallback="/immigration/resources" />
+        <LoadingState label="Loading resource…" />
+      </Screen>
     );
   }
 
-  if (error || !data) {
+  const resource = resourceQuery.data;
+  if (resourceQuery.isError || !resource) {
+    const notFound = (resourceQuery.error as { status?: number } | null)?.status === 404;
     return (
-      <ScreenShell>
+      <Screen>
+        <BackButton fallback="/immigration/resources" />
         <ErrorState
-          title="Unable to load resource"
-          body="There was a problem loading this resource."
+          body={notFound ? 'This resource was removed.' : errorText(resourceQuery.error)}
+          onRetry={notFound ? undefined : () => resourceQuery.refetch()}
           retryLabel="Retry"
-          onRetry={() => refetch()}
+          title={notFound ? 'Resource not found' : 'Could not load this resource'}
         />
-      </ScreenShell>
+      </Screen>
     );
   }
 
-  const content = data;
+  const link = resource.url && /^https?:\/\//i.test(resource.url) ? resource.url : null;
 
   return (
-    <ScreenShell>
-      <SectionHeader eyebrow={content.eyebrow} title={content.title} subtitle={content.meta} />
-      <Text style={styles.body}>{content.body}</Text>
-      <View style={styles.actions}>
-        <AppButton label="Back to resources" route="/immigration/resources" variant="secondary" />
-        <AppButton label="Save resource" route="/immigration/saved" />
-      </View>
-    </ScreenShell>
+    <Screen onRefresh={() => resourceQuery.refetch()} refreshing={resourceQuery.isRefetching}>
+      <YStack gap="$x4">
+        <ScreenHeader
+          back={{ fallback: '/immigration/resources' as Href }}
+          subtitle={resource.category ?? undefined}
+          title="Resource"
+        />
+        <Card gap="$x3">
+          <Heading variant="h3">{resource.title}</Heading>
+          <XStack flexWrap="wrap" gap="$x2">
+            {resource.resourceType ? (
+              <StatusBadge label={resource.resourceType.toLowerCase()} tone="primary" />
+            ) : null}
+            {resource.verified ? (
+              <StatusBadge icon="verified-user" label="Reviewed by admin" tone="success" />
+            ) : (
+              <StatusBadge label="Not reviewed yet" tone="warning" />
+            )}
+          </XStack>
+          {resource.description ? (
+            <AppText selectable>{resource.description}</AppText>
+          ) : (
+            <AppText tone="muted">No description was added.</AppText>
+          )}
+          <AppText tone="muted" variant="caption">
+            Added {formatDate(resource.createdAt) ?? ''}
+          </AppText>
+        </Card>
+        {link ? (
+          <Card gap="$x2">
+            <AppText numberOfLines={2} selectable tone="muted" variant="caption">
+              {link}
+            </AppText>
+            <XStack>
+              <AppButton icon="globe" label="Open link" onPress={() => openUrl(link)} />
+            </XStack>
+          </Card>
+        ) : null}
+        <AppText tone="muted" variant="caption">
+          Resources are shared for information only and are not legal advice.
+        </AppText>
+      </YStack>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  body: {
-    color: color.ink,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    marginTop: space.x4,
-  },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3, marginTop: space.x6 },
-  loadingText: { color: color.muted, fontSize: typography.body.fontSize, padding: space.x6 },
-});

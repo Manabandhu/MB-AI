@@ -1,1015 +1,301 @@
-import { breakpoint, color as colors, palette, radius, space } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { formatRelative } from '@manabandhu/core';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import {
+  contactReferral,
   getReferralDetail,
   getReferralOffer,
   getReferralRequest,
-  type Referral,
+  updateReferralStatus,
 } from '@/modules/referrals/api';
+import {
+  isOpenReferral,
+  REFERRALS_KEY,
+  referralStatusLabel,
+  referralStatusTone,
+} from '@/modules/referrals/utils/referralStatus';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
+import { Card } from '@/modules/shared/ui/Card';
+import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { errorText, showError } from '@/modules/shared/ui/notify';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
+import { TextField } from '@/modules/shared/ui/TextField';
 
+const PITCH_MIN = 20;
+
+function DetailRow({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <YStack gap={2}>
+      <AppText tone="muted" variant="caption">
+        {label}
+      </AppText>
+      <AppText selectable>{value}</AppText>
+    </YStack>
+  );
+}
+
+/**
+ * One referral. Members message the poster in chat with a short pitch (the server reuses or opens one direct chat); the
+ * poster closes or reopens it instead.
+ */
 export function ReferralDetailsScreen() {
   const { referralId } = useLocalSearchParams<{ referralId: string }>();
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= breakpoint.medium;
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const authStatus = useAuthStore((s) => s.status);
+  const userId = useAuthStore((s) => s.user?.id);
   const signedIn = authStatus === 'authenticated';
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [pitch, setPitch] = useState('');
+  const [pitchError, setPitchError] = useState<string | null>(null);
 
-  const [bookmarked, setBookmarked] = useState(false);
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  const [jobReqId, setJobReqId] = useState('');
-  const [fitPitch, setFitPitch] = useState('');
-  const [requestSent, setRequestSent] = useState(false);
-
-  const {
-    data: referral,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
+  const referralQuery = useQuery({
     queryKey: ['referrals', 'detail', referralId],
     queryFn: () => getReferralDetail(referralId),
     // Referral details are for members; signed-out visitors are asked to sign in instead of seeing an error.
     enabled: Boolean(referralId) && signedIn,
   });
-
-  const { data: offerDetails } = useQuery({
+  const referral = referralQuery.data;
+  const offerQuery = useQuery({
     queryKey: ['referrals', 'offer', referralId],
     queryFn: () => getReferralOffer(referralId),
     enabled: Boolean(referralId && referral?.type === 'offer'),
   });
-
-  const { data: requestDetails } = useQuery({
+  const requestQuery = useQuery({
     queryKey: ['referrals', 'request', referralId],
     queryFn: () => getReferralRequest(referralId),
     enabled: Boolean(referralId && referral?.type === 'request'),
   });
 
+  const statusMutation = useMutation({
+    mutationFn: (status: 'open' | 'closed') => updateReferralStatus(referralId, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: REFERRALS_KEY }),
+    onError: (error) => showError('Could not update the referral', error),
+  });
+
+  const contactMutation = useMutation({
+    mutationFn: (message: string) => contactReferral(referralId, message),
+    onSuccess: ({ conversationId }) => {
+      setSheetOpen(false);
+      setPitch('');
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+      router.push(`/chat/${conversationId}` as Href);
+    },
+    onError: (error) => setPitchError(errorText(error, 'Your message was not sent.')),
+  });
+
   if (authStatus === 'unauthenticated') {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <Screen>
+        <BackButton fallback="/referrals" />
         <ErrorState
-          title="Sign in to view this referral"
-          body="Referral details and contact requests are available to ManaBandhu members."
+          actionIcon={null}
+          body="Referral details are available to signed-in ManaBandhu members."
+          onRetry={() => router.push('/sign-in' as Href)}
           retryLabel="Sign in"
-          onRetry={() => router.push('/sign-in')}
+          title="Sign in to view this referral"
         />
-      </SafeAreaView>
+      </Screen>
     );
   }
 
-  if (isLoading || authStatus === 'loading') {
+  if (authStatus === 'loading' || referralQuery.isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <LoadingState />
-      </SafeAreaView>
+      <Screen>
+        <BackButton fallback="/referrals" />
+        <LoadingState label="Loading referral…" />
+      </Screen>
     );
   }
 
-  if (isError || !referral) {
+  if (referralQuery.isError || !referral) {
+    const notFound = (referralQuery.error as { status?: number } | null)?.status === 404;
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <Screen>
+        <BackButton fallback="/referrals" />
         <ErrorState
-          title="Referral not found"
-          body="The referral you are looking for does not exist or has been removed."
+          body={
+            notFound
+              ? 'This referral was removed or is no longer open.'
+              : errorText(referralQuery.error)
+          }
+          onRetry={notFound ? undefined : () => referralQuery.refetch()}
           retryLabel="Retry"
-          onRetry={() => refetch()}
+          title={notFound ? 'Referral not found' : 'Could not load this referral'}
         />
-      </SafeAreaView>
+      </Screen>
     );
   }
 
-  const data: Referral = referral;
+  const isOwner = Boolean(userId && referral.ownerId === userId);
+  const open = isOpenReferral(referral);
+  const offer = offerQuery.data;
+  const request = requestQuery.data;
+  const detailsError = offerQuery.error ?? requestQuery.error;
 
-  function getCompanyInitials(title: string): { letter: string; color: string; bg: string } {
-    const lower = title.toLowerCase();
-    if (lower.includes('google')) return { letter: 'G', color: palette.info, bg: '#EFF6FF' };
-    if (lower.includes('microsoft')) return { letter: 'M', color: '#0284C7', bg: '#F0F9FF' };
-    if (lower.includes('amazon')) return { letter: 'A', color: palette.warning, bg: '#FFFBEB' };
-    if (lower.includes('apple')) return { letter: '', color: '#1E1B4B', bg: '#F8FAFC' };
-    if (lower.includes('meta')) return { letter: 'M', color: '#0866FF', bg: '#EFF6FF' };
-    return { letter: title.charAt(0).toUpperCase() || 'R', color: colors.primary, bg: '#EEF2FF' };
-  }
+  const onToggleStatus = async () => {
+    if (open) {
+      const ok = await confirm({
+        title: 'Close this referral?',
+        body: 'It leaves the public board. You can reopen it later.',
+        confirmLabel: 'Close',
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    statusMutation.mutate(open ? 'closed' : 'open');
+  };
 
-  const company = getCompanyInitials(data.title);
-
-  function handleSendRequest() {
-    setRequestSent(true);
-    setTimeout(() => {
-      setShowRequestModal(false);
-      setRequestSent(false);
-      setJobReqId('');
-      setFitPitch('');
-    }, 2000);
-  }
+  const onSend = () => {
+    const text = pitch.trim();
+    if (text.length < PITCH_MIN) {
+      setPitchError(
+        `Write at least ${PITCH_MIN} characters: who you are and what you're looking for.`,
+      );
+      return;
+    }
+    setPitchError(null);
+    contactMutation.mutate(text);
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Top App Bar */}
-      <View style={styles.headerBar}>
-        <View style={styles.headerLeft}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            onPress={() => router.back()}
-            style={styles.backBtn}
-          >
-            <AppIcon name="chevron-left" size={20} color={colors.ink} />
-          </Pressable>
-          <View>
-            <View style={styles.headerTitleRow}>
-              <Text style={styles.headerTitle}>Referral Details</Text>
-              <View style={styles.teluguPill}>
-                <Text style={styles.teluguPillText}>రెఫరల్ వివరాలు</Text>
-              </View>
-            </View>
-            <Text style={styles.headerSubtitle}>ManaBandhu Desi Professional Network</Text>
-          </View>
-        </View>
-
-        <View style={styles.headerRight}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Bookmark"
-            onPress={() => setBookmarked(!bookmarked)}
-            style={styles.iconBtn}
-          >
-            <AppIcon name="star" size={18} color={bookmarked ? '#EA580C' : colors.muted} />
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Main Content Area */}
-      <ScrollView
-        contentContainerStyle={[styles.scrollContainer, isDesktop && styles.scrollContainerDesktop]}
-        showsVerticalScrollIndicator={false}
+    <YStack flex={1}>
+      <Screen
+        bottomInset={isOwner || !open ? 0 : ACTION_BAR_SPACE}
+        onRefresh={() =>
+          Promise.all([referralQuery.refetch(), offerQuery.refetch(), requestQuery.refetch()])
+        }
+        refreshing={referralQuery.isRefetching}
       >
-        <View style={[styles.mainWrapper, isDesktop && styles.mainWrapperDesktop]}>
-          {/* Bento Card 1: Role & Company Header */}
-          <View style={styles.bentoCard}>
-            <View style={styles.roleHeaderRow}>
-              <View style={[styles.companyLogo, { backgroundColor: company.bg }]}>
-                <Text style={[styles.companyLogoText, { color: company.color }]}>
-                  {company.letter}
-                </Text>
-              </View>
+        <YStack gap="$x4">
+          <ScreenHeader
+            back={{ fallback: '/referrals' as Href }}
+            title={referral.type === 'offer' ? 'Referral offer' : 'Referral request'}
+          />
+          <Card gap="$x3">
+            <Heading variant="h3">{referral.title}</Heading>
+            <XStack flexWrap="wrap" gap="$x2">
+              <StatusBadge
+                label={referralStatusLabel(referral.status)}
+                tone={referralStatusTone(referral.status)}
+              />
+              {referral.category ? <StatusBadge label={referral.category} /> : null}
+              {offer?.serviceType ? <StatusBadge label={offer.serviceType} tone="primary" /> : null}
+              {request?.urgency ? (
+                <StatusBadge
+                  label={`${request.urgency.charAt(0).toUpperCase()}${request.urgency.slice(1)} urgency`}
+                  tone={request.urgency.toLowerCase() === 'high' ? 'warning' : 'info'}
+                />
+              ) : null}
+            </XStack>
+            <AppText tone="muted" variant="caption">
+              {isOwner ? 'Posted by you' : 'Posted by a member'} ·{' '}
+              {formatRelative(referral.createdAt) ?? ''}
+            </AppText>
+          </Card>
 
-              <View style={styles.roleInfo}>
-                <View style={styles.roleBadgesRow}>
-                  <View style={styles.verifiedReferrerPill}>
-                    <Text style={styles.verifiedReferrerText}>
-                      {data.type === 'offer' ? 'Referral offer' : 'Referral request'}
-                    </Text>
-                  </View>
-                  <View style={styles.statusPill}>
-                    <Text style={styles.statusPillText}>{data.status.toUpperCase()}</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.roleTitle}>{data.title}</Text>
-                <Text style={styles.roleLocation}>{data.category || 'Referral'}</Text>
-              </View>
-            </View>
-
-            {/* Meta Tags Row */}
-            <View style={styles.metaPillsRow}>
-              <View style={[styles.metaPill, { backgroundColor: '#ECFDF5' }]}>
-                <AppIcon name="shield" size={12} color="#059669" />
-                <Text style={[styles.metaPillText, { color: '#047857' }]}>Free, no brokerage</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Bento Card 2: Referrer Profile */}
-          <View style={styles.bentoCard}>
-            <View style={styles.referrerProfileRow}>
-              <View style={styles.avatarRing}>
-                <View style={styles.avatarInner}>
-                  <Text style={styles.avatarInitials}>MB</Text>
-                </View>
-              </View>
-
-              <View style={styles.referrerInfo}>
-                <View style={styles.referrerNameRow}>
-                  <Text style={styles.referrerName}>
-                    {data.type === 'offer' ? 'Community referrer' : 'Community member'}
-                  </Text>
-                </View>
-                <Text style={styles.referrerRole}>{data.category || 'Professional Network'}</Text>
-                <Text style={styles.referrerChapter}>ManaBandhu Member Network</Text>
-              </View>
-            </View>
-
-            {/* Metrics Grid */}
-            <View style={styles.metricsGrid}>
-              <View style={styles.metricCell}>
-                <Text style={[styles.metricNumber, { color: '#1E1B4B' }]}>Direct</Text>
-                <Text style={styles.metricLabel}>Connection</Text>
-              </View>
-              <View style={styles.metricCell}>
-                <Text style={[styles.metricNumber, { color: '#EA580C' }]}>
-                  {data.status.charAt(0).toUpperCase() + data.status.slice(1)}
-                </Text>
-                <Text style={styles.metricLabel}>Status</Text>
-              </View>
-              <View style={styles.metricCell}>
-                <Text style={[styles.metricNumber, { color: '#10B981' }]}>Free</Text>
-                <Text style={styles.metricLabel}>No brokerage</Text>
-              </View>
-            </View>
-
-            {/* Quote Box */}
-            <View style={styles.quoteBox}>
-              <Text style={styles.quoteText}>{data.description}</Text>
-            </View>
-
-            {offerDetails?.terms ? (
-              <View style={styles.termsBox}>
-                <Text style={styles.termsLabel}>Terms & Preferences:</Text>
-                <Text style={styles.termsValue}>{offerDetails.terms}</Text>
-              </View>
+          <Card gap="$x3">
+            <DetailRow label="Details" value={referral.description} />
+            <DetailRow label="Availability" value={offer?.availability} />
+            <DetailRow label="Terms" value={offer?.terms} />
+            <DetailRow label="More about the request" value={request?.details} />
+            <DetailRow label="Hoping for" value={request?.desiredOutcome} />
+            {isOwner ? <DetailRow label="Your contact info" value={referral.contactInfo} /> : null}
+            {detailsError ? (
+              <AppText tone="danger" variant="caption">
+                Some details could not load: {errorText(detailsError)}
+              </AppText>
             ) : null}
-
-            {offerDetails?.availability ? (
-              <View style={styles.termsBox}>
-                <Text style={styles.termsLabel}>Availability:</Text>
-                <Text style={styles.termsValue}>{offerDetails.availability}</Text>
-              </View>
+            {!referral.description && !offer && !request && !detailsError ? (
+              <AppText tone="muted">No further details were added.</AppText>
             ) : null}
+          </Card>
 
-            {requestDetails?.details ? (
-              <View style={styles.termsBox}>
-                <Text style={styles.termsLabel}>Details:</Text>
-                <Text style={styles.termsValue}>{requestDetails.details}</Text>
-              </View>
-            ) : null}
+          <Card gap="$x1" variant="filled">
+            <AppText variant="label">Referrals are free</AppText>
+            <AppText tone="muted" variant="caption">
+              Never pay for a referral. If someone asks for money, report them from Safety.
+            </AppText>
+          </Card>
 
-            {requestDetails?.desiredOutcome ? (
-              <View style={styles.termsBox}>
-                <Text style={styles.termsLabel}>Hoping for:</Text>
-                <Text style={styles.termsValue}>
-                  {requestDetails.desiredOutcome}
-                  {requestDetails.urgency ? ` · ${requestDetails.urgency} urgency` : ''}
-                </Text>
-              </View>
-            ) : null}
-          </View>
+          {isOwner ? (
+            <Card gap="$x3">
+              <Heading variant="h4">Manage</Heading>
+              <AppText tone="muted">
+                {open
+                  ? 'Close it when you have found someone, so members stop reaching out.'
+                  : 'This referral is closed and hidden from the board.'}
+              </AppText>
+              <XStack>
+                <AppButton
+                  label={open ? 'Close referral' : 'Reopen referral'}
+                  loading={statusMutation.isPending}
+                  onPress={onToggleStatus}
+                  variant={open ? 'danger' : 'secondary'}
+                />
+              </XStack>
+            </Card>
+          ) : null}
+        </YStack>
+      </Screen>
 
-          {/* Bento Card 3: Eligibility & Criteria */}
-          <View style={styles.bentoCard}>
-            <View style={styles.sectionTitleRow}>
-              <View style={styles.sectionIconCircle}>
-                <AppIcon name="briefcase" size={15} color="#4338CA" />
-              </View>
-              <Text style={styles.sectionTitle}>Eligibility & Criteria</Text>
-            </View>
+      {!isOwner && open ? (
+        <ActionBar label="Referral actions">
+          <AppButton
+            icon="message"
+            label={referral.type === 'offer' ? 'Request introduction' : 'Offer to help'}
+            onPress={() => {
+              setPitchError(null);
+              setSheetOpen(true);
+            }}
+          />
+        </ActionBar>
+      ) : null}
 
-            <View style={styles.criteriaList}>
-              <View style={styles.criteriaItem}>
-                <View style={styles.criteriaBullet}>
-                  <AppIcon name="star" size={14} color="#EA580C" />
-                </View>
-                <View style={styles.criteriaContent}>
-                  <Text style={styles.criteriaHeading}>Target Seniority Levels</Text>
-                  <Text style={styles.criteriaText}>
-                    L4 (Mid-Level), L5 (Senior SWE), and L6 (Staff / Principal).
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.criteriaItem}>
-                <View style={styles.criteriaBullet}>
-                  <AppIcon name="sparks" size={14} color="#4338CA" />
-                </View>
-                <View style={styles.criteriaContent}>
-                  <Text style={styles.criteriaHeading}>Technical Stack & Experience</Text>
-                  <Text style={styles.criteriaText}>
-                    3+ years experience with Distributed Systems, High-throughput microservices, Go,
-                    Java, C++, Python, or Rust.
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.criteriaItem}>
-                <View style={styles.criteriaBullet}>
-                  <AppIcon name="shield" size={14} color="#10B981" />
-                </View>
-                <View style={styles.criteriaContent}>
-                  <Text style={styles.criteriaHeading}>Visa & Work Authorization</Text>
-                  <Text style={styles.criteriaText}>
-                    H-1B transfer supported, OPT STEM extensions, and Green Card PERM processing for
-                    full-time hires.
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Bento Card 4: What to Prepare */}
-          <View style={styles.bentoCard}>
-            <View style={styles.sectionTitleRow}>
-              <View style={[styles.sectionIconCircle, { backgroundColor: palette.goldBg }]}>
-                <AppIcon name="book" size={15} color={palette.warning} />
-              </View>
-              <Text style={styles.sectionTitle}>What to Prepare Before Requesting</Text>
-            </View>
-
-            <View style={styles.checklist}>
-              <View style={styles.checklistItem}>
-                <View style={styles.numberCircle}>
-                  <Text style={styles.numberText}>1</Text>
-                </View>
-                <View style={styles.checklistContent}>
-                  <Text style={styles.checklistTitle}>Updated Resume PDF</Text>
-                  <Text style={styles.checklistDesc}>
-                    Clean 1-page format highlighting production metrics, scale, and modern tech
-                    stack.
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.checklistItem}>
-                <View style={styles.numberCircle}>
-                  <Text style={styles.numberText}>2</Text>
-                </View>
-                <View style={styles.checklistContent}>
-                  <Text style={styles.checklistTitle}>Target Job Requisition ID</Text>
-                  <Text style={styles.checklistDesc}>
-                    Exact requisition number from the company's careers portal.
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.checklistItem}>
-                <View style={styles.numberCircle}>
-                  <Text style={styles.numberText}>3</Text>
-                </View>
-                <View style={styles.checklistContent}>
-                  <Text style={styles.checklistTitle}>3-Sentence Fit Pitch</Text>
-                  <Text style={styles.checklistDesc}>
-                    Concise summary explaining why your background matches the target opening.
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Community Trust Pledge */}
-          <View style={styles.pledgeCard}>
-            <AppIcon name="verified-user" size={24} color="#EA580C" />
-            <Text style={styles.pledgeTitle}>ManaBandhu Community Pledge</Text>
-            <Text style={styles.pledgeText}>
-              Free and direct. ManaBandhu members never charge or accept money for job referrals. If
-              anyone asks for payment, report immediately.
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Sticky Bottom Action Bar */}
-      <View style={styles.bottomBar}>
-        <View style={[styles.bottomBarContent, isDesktop && styles.bottomBarContentDesktop]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Message Referrer"
-            onPress={() => router.push('/chat')}
-            style={styles.secondaryActionBtn}
-          >
-            <AppIcon name="message" size={18} color="#1E1B4B" />
-            <Text style={styles.secondaryActionBtnText}>Message</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Request Referral Introduction"
-            onPress={() => setShowRequestModal(true)}
-            style={styles.primaryActionBtn}
-          >
-            <AppIcon name="mail" size={18} color="#FFFFFF" />
-            <Text style={styles.primaryActionBtnText}>Request Introduction</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Request Referral Modal */}
-      <Modal
-        visible={showRequestModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowRequestModal(false)}
+      <BottomSheet
+        onClose={() => setSheetOpen(false)}
+        subtitle="Sends this to the poster in your private chat with them."
+        title={referral.type === 'offer' ? 'Request introduction' : 'Offer to help'}
+        visible={sheetOpen}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowRequestModal(false)}>
-          <Pressable
-            style={[styles.modalCard, isDesktop && styles.modalCardDesktop]}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Request Referral</Text>
-                <Text style={styles.modalSubtitle}>Direct introduction to referrer</Text>
-              </View>
-              <Pressable onPress={() => setShowRequestModal(false)}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.ink }}>✕</Text>
-              </Pressable>
-            </View>
-
-            {requestSent ? (
-              <View style={styles.successBox}>
-                <AppIcon name="check" size={32} color="#10B981" />
-                <Text style={styles.successHeading}>Request Sent!</Text>
-                <Text style={styles.successSubtext}>
-                  The referrer will review your request and get back to you shortly.
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.modalBody}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Job Requisition ID *</Text>
-                  <TextInput
-                    value={jobReqId}
-                    onChangeText={setJobReqId}
-                    placeholder="e.g. Req #12948210"
-                    placeholderTextColor="#94A3B8"
-                    style={styles.modalInput}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>3-Sentence Fit Pitch *</Text>
-                  <TextInput
-                    value={fitPitch}
-                    onChangeText={setFitPitch}
-                    placeholder="Briefly explain your relevant experience and why you are a fit..."
-                    placeholderTextColor="#94A3B8"
-                    multiline
-                    numberOfLines={4}
-                    style={[styles.modalInput, styles.modalTextArea]}
-                  />
-                </View>
-
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Submit Referral Request"
-                  onPress={handleSendRequest}
-                  style={styles.submitBtn}
-                >
-                  <Text style={styles.submitBtnText}>Submit Referral Request</Text>
-                </Pressable>
-              </View>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </SafeAreaView>
+        <YStack gap="$x3">
+          <TextField
+            error={pitchError}
+            label="Your message"
+            maxLength={2000}
+            multiline
+            numberOfLines={5}
+            onChangeText={setPitch}
+            placeholder={
+              referral.type === 'offer'
+                ? 'Your background, the role or job ID, and a link to your resume or LinkedIn'
+                : 'How you can help and where you can refer'
+            }
+            textAlignVertical="top"
+            value={pitch}
+          />
+          <AppButton
+            disabled={contactMutation.isPending}
+            fullWidth
+            label="Send message"
+            loading={contactMutation.isPending}
+            onPress={onSend}
+          />
+        </YStack>
+      </BottomSheet>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  headerBar: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  teluguPill: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  teluguPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#4338CA',
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollContainer: {
-    paddingHorizontal: space.x4,
-    paddingTop: space.x3,
-    paddingBottom: 110,
-  },
-  scrollContainerDesktop: {
-    alignItems: 'center',
-  },
-  mainWrapper: {
-    width: '100%',
-    gap: space.x4,
-  },
-  mainWrapperDesktop: {
-    maxWidth: 680,
-  },
-  bentoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: space.x4,
-    gap: space.x3,
-  },
-  roleHeaderRow: {
-    flexDirection: 'row',
-    gap: space.x3,
-  },
-  companyLogo: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-    position: 'relative',
-  },
-  companyLogoText: {
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  roleInfo: {
-    flex: 1,
-  },
-  roleBadgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  verifiedReferrerPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  verifiedReferrerText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#4338CA',
-  },
-  statusPill: {
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  statusPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#15803D',
-  },
-  roleTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    lineHeight: 22,
-  },
-  roleLocation: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
-    marginTop: 2,
-  },
-  metaPillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    paddingTop: space.x2,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  metaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: palette.border,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  metaPillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#334155',
-  },
-  referrerProfileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-  },
-  avatarRing: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    padding: 2,
-    backgroundColor: '#EA580C',
-    position: 'relative',
-  },
-  avatarInner: {
-    flex: 1,
-    borderRadius: 24,
-    backgroundColor: '#1E1B4B',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  referrerInfo: {
-    flex: 1,
-  },
-  referrerNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  referrerName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  referrerRole: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#475569',
-    marginTop: 1,
-  },
-  referrerChapter: {
-    fontSize: 11,
-    color: '#EA580C',
-    fontWeight: '600',
-    marginTop: 1,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    gap: space.x2,
-  },
-  metricCell: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: palette.border,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  metricNumber: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  metricLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
-    marginTop: 2,
-  },
-  quoteBox: {
-    backgroundColor: '#F8FAFC',
-    borderLeftWidth: 3,
-    borderLeftColor: '#4338CA',
-    borderRadius: 8,
-    padding: space.x3,
-  },
-  quoteText: {
-    fontSize: 12,
-    color: '#334155',
-    lineHeight: 18,
-    fontStyle: 'italic',
-  },
-  termsBox: {
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 8,
-    padding: space.x3,
-  },
-  termsLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: palette.goldText,
-  },
-  termsValue: {
-    fontSize: 12,
-    color: '#78350F',
-    marginTop: 2,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  criteriaList: {
-    gap: space.x3,
-  },
-  criteriaItem: {
-    flexDirection: 'row',
-    gap: space.x3,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: space.x3,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  criteriaBullet: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  criteriaContent: {
-    flex: 1,
-  },
-  criteriaHeading: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  criteriaText: {
-    fontSize: 12,
-    color: '#475569',
-    marginTop: 2,
-    lineHeight: 17,
-  },
-  checklist: {
-    gap: space.x3,
-  },
-  checklistItem: {
-    flexDirection: 'row',
-    gap: space.x3,
-  },
-  numberCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#1E1B4B',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  numberText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 11,
-  },
-  checklistContent: {
-    flex: 1,
-  },
-  checklistTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  checklistDesc: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 1,
-    lineHeight: 17,
-  },
-  pledgeCard: {
-    backgroundColor: '#FFF7ED',
-    borderWidth: 1,
-    borderColor: '#FED7AA',
-    borderRadius: radius.card,
-    padding: space.x4,
-    alignItems: 'center',
-    gap: 6,
-  },
-  pledgeTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#C2410C',
-  },
-  pledgeText: {
-    fontSize: 12,
-    color: '#9A3412',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: palette.border,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  bottomBarContent: {
-    flexDirection: 'row',
-    gap: space.x2,
-    width: '100%',
-  },
-  bottomBarContentDesktop: {
-    maxWidth: 680,
-    alignSelf: 'center',
-  },
-  secondaryActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 12,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  secondaryActionBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  primaryActionBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#EA580C',
-    paddingVertical: 12,
-    borderRadius: radius.control,
-    shadowColor: '#EA580C',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  primaryActionBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: space.x4,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 440,
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.card,
-    padding: space.x5,
-    gap: space.x4,
-  },
-  modalCardDesktop: {
-    maxWidth: 480,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1E1B4B',
-  },
-  modalSubtitle: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  modalBody: {
-    gap: space.x3,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  modalInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: radius.control,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: '#1E1B4B',
-  },
-  modalTextArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  submitBtn: {
-    backgroundColor: '#EA580C',
-    paddingVertical: 12,
-    borderRadius: radius.control,
-    alignItems: 'center',
-    marginTop: space.x1,
-  },
-  submitBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  successBox: {
-    alignItems: 'center',
-    paddingVertical: space.x4,
-    gap: space.x2,
-  },
-  successHeading: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#10B981',
-  },
-  successSubtext: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-});

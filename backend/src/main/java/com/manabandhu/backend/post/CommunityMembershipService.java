@@ -29,6 +29,14 @@ public class CommunityMembershipService {
                 "SELECT community_id FROM public.community_members WHERE user_id = ?", UUID.class, userId));
     }
 
+    @Transactional(readOnly = true)
+    public boolean isMember(UUID communityId, UUID userId) {
+        var count = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM public.community_members WHERE community_id = ? AND user_id = ?",
+                Long.class, communityId, userId);
+        return count != null && count > 0;
+    }
+
     @Transactional
     public void join(UUID communityId, UUID userId) {
         requireCommunity(communityId);

@@ -1,124 +1,359 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { color, space, typography } from '@manabandhu/design-system';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { z } from 'zod';
-
-import { createJobPosting } from '@/modules/jobs/api';
-import { ScreenShell } from '@/modules/shared/components/ScreenShell';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { TextArea } from '@/modules/shared/components/TextArea';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import {
+  createJobPosting,
+  getJobPosting,
+  listJobCategories,
+  updateJobPosting,
+} from '@/modules/jobs/api';
+import { EMPLOYMENT_TYPES } from '@/modules/jobs/types';
+import {
+  EMPTY_JOB_FORM,
+  fromJob,
+  type JobFormValues,
+  jobFormSchema,
+  toJobInput,
+  toJobUpdate,
+} from '@/modules/jobs/utils/jobForm';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { errorText } from '@/modules/shared/ui/notify';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { TextField } from '@/modules/shared/ui/TextField';
 
-const jobSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  company: z.string().min(1, 'Company is required'),
-  description: z.string().min(1, 'Description is required'),
-  location: z.string().min(1, 'Location is required'),
-});
+function FieldError({ message }: { message?: string }) {
+  return message ? (
+    <AppText role="alert" tone="danger" variant="caption">
+      {message}
+    </AppText>
+  ) : null;
+}
 
-type JobFormData = z.infer<typeof jobSchema>;
-
+/** Post a job (`/jobs/post`) or edit your own (`/jobs/post?jobId=…`). */
 export function PostJobScreen() {
-  const [submitted, setSubmitted] = useState(false);
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const {
-    control,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<JobFormData>({
-    resolver: zodResolver(jobSchema),
-    defaultValues: { title: '', company: '', description: '', location: '' },
+  const { jobId } = useLocalSearchParams<{ jobId?: string }>();
+  const editing = Boolean(jobId);
+  const userId = useAuthStore((s) => s.user?.id);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const categoriesQuery = useQuery({
+    queryKey: ['jobs', 'categories'],
+    queryFn: listJobCategories,
   });
+  const jobQuery = useQuery({
+    queryKey: ['jobs', 'detail', jobId],
+    queryFn: () => getJobPosting(String(jobId)),
+    enabled: editing,
+  });
+
+  const { control, handleSubmit, reset } = useForm<JobFormValues>({
+    resolver: zodResolver(jobFormSchema),
+    defaultValues: EMPTY_JOB_FORM,
+  });
+
+  useEffect(() => {
+    if (jobQuery.data) reset(fromJob(jobQuery.data));
+  }, [jobQuery.data, reset]);
 
   const mutation = useMutation({
-    mutationFn: createJobPosting,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    mutationFn: (values: JobFormValues) =>
+      editing
+        ? updateJobPosting(String(jobId), toJobUpdate(values))
+        : createJobPosting(toJobInput(values)),
+    onSuccess: async (job) => {
+      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['foundation', 'shell', 'explore'] });
-      setSubmitted(true);
+      router.replace(`/jobs/${job.id}` as Href);
     },
-    onError: (err: Error) => {
-      Alert.alert('Post Failed', err.message);
-    },
+    onError: (error) =>
+      setSubmitError(
+        errorText(error, editing ? 'Your changes were not saved.' : 'Your job was not posted.'),
+      ),
   });
 
-  const onSubmit = (data: JobFormData) => {
-    mutation.mutate({
-      title: data.title,
-      company: data.company,
-      description: data.description,
-      location: data.location,
-    });
-  };
+  const backTo = (editing ? `/jobs/${jobId}` : '/jobs') as Href;
+  const header = (
+    <ScreenHeader back={{ fallback: backTo }} title={editing ? 'Edit job' : 'Post a job'} />
+  );
 
-  if (submitted) {
+  if (categoriesQuery.isLoading || (editing && jobQuery.isLoading)) {
     return (
-      <ScreenShell>
-        <View style={styles.success}>
-          <Text style={styles.successTitle}>Job posted</Text>
-          <Text style={styles.successBody}>Your job posting is now live.</Text>
-          <AppButton label="Back to jobs" route="/jobs" />
-        </View>
-      </ScreenShell>
+      <Screen maxWidth="form">
+        {header}
+        <LoadingState label="Loading…" />
+      </Screen>
+    );
+  }
+  if (categoriesQuery.isError || (editing && jobQuery.isError)) {
+    const error = categoriesQuery.error ?? jobQuery.error;
+    return (
+      <Screen maxWidth="form">
+        {header}
+        <ErrorState
+          body={errorText(error)}
+          onRetry={() => {
+            categoriesQuery.refetch();
+            if (editing) jobQuery.refetch();
+          }}
+          retryLabel="Retry"
+          title="Could not load the form"
+        />
+      </Screen>
+    );
+  }
+  if (editing && jobQuery.data && userId && jobQuery.data.ownerId !== userId) {
+    return (
+      <Screen maxWidth="form">
+        {header}
+        <EmptyState body="Only the person who posted this job can edit it." title="Not your job" />
+      </Screen>
+    );
+  }
+  const categories = categoriesQuery.data ?? [];
+  if (categories.length === 0) {
+    return (
+      <Screen maxWidth="form">
+        {header}
+        <EmptyState
+          body="Job categories have not been set up yet, so jobs can't be posted. Please try again later."
+          iconName="briefcase"
+          title="Posting isn't open yet"
+        />
+      </Screen>
     );
   }
 
+  const onSubmit = handleSubmit((values) => {
+    setSubmitError(null);
+    mutation.mutate(values);
+  });
+
   return (
-    <ScreenShell>
-      <SectionHeader title="Post a job" subtitle="Create a new job listing." />
-      <View style={styles.form}>
-        <View style={styles.field}>
-          <Text style={styles.label}>Title</Text>
-          <TextField placeholder="Job title" {...control.register('title')} />
-          {errors.title ? <Text style={styles.error}>{errors.title.message}</Text> : null}
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.label}>Company</Text>
-          <TextField placeholder="Company name" {...control.register('company')} />
-          {errors.company ? <Text style={styles.error}>{errors.company.message}</Text> : null}
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.label}>Location</Text>
-          <TextField placeholder="City or remote" {...control.register('location')} />
-          {errors.location ? <Text style={styles.error}>{errors.location.message}</Text> : null}
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.label}>Description</Text>
-          <TextArea
-            value={watch('description') ?? ''}
-            onChangeText={(text) => setValue('description', text)}
-            placeholder="Describe the role..."
+    <Screen keyboardAvoiding maxWidth="form">
+      <YStack gap="$x4">
+        {header}
+
+        <Controller
+          control={control}
+          name="categoryId"
+          render={({ field, fieldState }) => (
+            <YStack gap="$x1">
+              <AppText variant="label">Category</AppText>
+              <FilterChipRow label="Category" role="radiogroup">
+                {categories.map((category) => (
+                  <Chip
+                    key={category.id}
+                    label={category.name}
+                    onPress={() => field.onChange(category.id)}
+                    radio
+                    selected={field.value === category.id}
+                  />
+                ))}
+              </FilterChipRow>
+              <FieldError message={fieldState.error?.message} />
+            </YStack>
+          )}
+        />
+
+        <Card gap="$x3">
+          <Controller
+            control={control}
+            name="title"
+            render={({ field, fieldState }) => (
+              <TextField
+                error={fieldState.error?.message}
+                label="Job title"
+                maxLength={200}
+                onBlur={field.onBlur}
+                onChangeText={field.onChange}
+                placeholder="e.g. Senior Backend Engineer"
+                value={field.value}
+              />
+            )}
           />
-          {errors.description ? (
-            <Text style={styles.error}>{errors.description.message}</Text>
-          ) : null}
-        </View>
-        <AppButton label="Post job" onPress={handleSubmit(onSubmit)} loading={mutation.isPending} />
-      </View>
-    </ScreenShell>
+          <Controller
+            control={control}
+            name="company"
+            render={({ field, fieldState }) => (
+              <TextField
+                error={fieldState.error?.message}
+                label="Company (optional)"
+                maxLength={200}
+                onBlur={field.onBlur}
+                onChangeText={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="location"
+            render={({ field, fieldState }) => (
+              <TextField
+                error={fieldState.error?.message}
+                label="Location (optional)"
+                leadingIcon="map-pin"
+                maxLength={200}
+                onBlur={field.onBlur}
+                onChangeText={field.onChange}
+                placeholder="City, state"
+                value={field.value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="isRemote"
+            render={({ field }) => (
+              <FilterChipRow label="Work model" role="radiogroup">
+                <Chip
+                  label="On-site / hybrid"
+                  onPress={() => field.onChange(false)}
+                  radio
+                  selected={!field.value}
+                />
+                <Chip
+                  label="Remote OK"
+                  onPress={() => field.onChange(true)}
+                  radio
+                  selected={field.value}
+                />
+              </FilterChipRow>
+            )}
+          />
+          <Controller
+            control={control}
+            name="employmentType"
+            render={({ field }) => (
+              <YStack gap="$x1">
+                <AppText variant="label">Type (optional)</AppText>
+                <FilterChipRow label="Employment type" role="radiogroup">
+                  {EMPLOYMENT_TYPES.map((type) => (
+                    <Chip
+                      key={type}
+                      label={type}
+                      onPress={() => field.onChange(field.value === type ? '' : type)}
+                      radio
+                      selected={field.value === type}
+                    />
+                  ))}
+                </FilterChipRow>
+              </YStack>
+            )}
+          />
+        </Card>
+
+        <Card gap="$x3">
+          <XStack flexWrap="wrap" gap="$x3">
+            <YStack flexBasis={180} flexGrow={1}>
+              <Controller
+                control={control}
+                name="salaryMin"
+                render={({ field, fieldState }) => (
+                  <TextField
+                    error={fieldState.error?.message}
+                    inputMode="numeric"
+                    keyboardType="number-pad"
+                    label="Salary from (USD/yr, optional)"
+                    onBlur={field.onBlur}
+                    onChangeText={field.onChange}
+                    value={field.value}
+                  />
+                )}
+              />
+            </YStack>
+            <YStack flexBasis={180} flexGrow={1}>
+              <Controller
+                control={control}
+                name="salaryMax"
+                render={({ field, fieldState }) => (
+                  <TextField
+                    error={fieldState.error?.message}
+                    inputMode="numeric"
+                    keyboardType="number-pad"
+                    label="Salary to (optional)"
+                    onBlur={field.onBlur}
+                    onChangeText={field.onChange}
+                    value={field.value}
+                  />
+                )}
+              />
+            </YStack>
+          </XStack>
+          <Controller
+            control={control}
+            name="applicationUrl"
+            render={({ field, fieldState }) => (
+              <TextField
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={fieldState.error?.message}
+                helper="Where candidates can also apply on the employer's site."
+                inputMode="url"
+                keyboardType="url"
+                label="Application link (optional)"
+                maxLength={500}
+                onBlur={field.onBlur}
+                onChangeText={field.onChange}
+                placeholder="https://"
+                value={field.value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="description"
+            render={({ field, fieldState }) => (
+              <TextField
+                error={fieldState.error?.message}
+                label="Description"
+                maxLength={4000}
+                multiline
+                numberOfLines={6}
+                onBlur={field.onBlur}
+                onChangeText={field.onChange}
+                placeholder="Responsibilities, requirements, visa sponsorship…"
+                textAlignVertical="top"
+                value={field.value}
+              />
+            )}
+          />
+        </Card>
+
+        {submitError ? (
+          <AppText role="alert" tone="danger">
+            {submitError}
+          </AppText>
+        ) : null}
+
+        <XStack gap="$x3" justifyContent="flex-end">
+          <AppButton
+            label="Cancel"
+            onPress={() => (router.canGoBack() ? router.back() : router.replace(backTo))}
+            variant="ghost"
+          />
+          <AppButton
+            disabled={mutation.isPending}
+            label={editing ? 'Save changes' : 'Post job'}
+            loading={mutation.isPending}
+            onPress={onSubmit}
+          />
+        </XStack>
+      </YStack>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  form: { gap: space.x4, marginTop: space.x4 },
-  field: { gap: space.x2 },
-  label: {
-    color: color.ink,
-    fontSize: typography.caption.fontSize,
-    fontWeight: typography.caption.fontWeight,
-  },
-  error: { color: color.error, fontSize: typography.caption.fontSize },
-  success: { gap: space.x4, padding: space.x6, alignItems: 'center' },
-  successTitle: {
-    color: color.ink,
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
-  },
-  successBody: { color: color.muted, fontSize: typography.body.fontSize, textAlign: 'center' },
-});

@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import Head from 'expo-router/head';
 import { XStack } from 'tamagui';
 import { useT } from '@/i18n';
-import { listPosts } from '@/modules/community';
+import { FEED_LIMIT, listPosts } from '@/modules/community';
 import { useShellContent } from '@/modules/foundation/shell/shellApi';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -59,7 +59,14 @@ export function CommunityTab() {
           </AppText>
         ))}
       </XStack>
-      <Section title="Latest posts">
+      <Section
+        subtitle={
+          (posts.data?.length ?? 0) >= FEED_LIMIT
+            ? `Showing the latest ${FEED_LIMIT} posts`
+            : undefined
+        }
+        title="Latest posts"
+      >
         {posts.isLoading ? (
           <SkeletonCard />
         ) : posts.isError ? (

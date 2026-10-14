@@ -7,6 +7,7 @@ import java.util.UUID;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,22 +29,21 @@ public class CommunityPostController {
     }
 
     @GetMapping
-    List<CommunityPost> findAll() {
-        return service.findAll();
+    List<PostView> findAll(Authentication authentication) {
+        return service.feed(viewerId(authentication));
     }
 
     @GetMapping("/{postId}")
-    CommunityPost findById(@PathVariable UUID postId) {
-        return service.findById(postId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Post not found"));
+    PostView findById(Authentication authentication, @PathVariable UUID postId) {
+        return service.view(postId, viewerId(authentication));
     }
 
     @PostMapping
-    ResponseEntity<CommunityPost> create(
+    ResponseEntity<PostView> create(
             Authentication authentication, @Valid @RequestBody CreatePostInput input) {
-        var post = service.create(Actor.require(authentication).id(), input);
-        return ResponseEntity.created(URI.create("/api/v1/posts/" + post.getId())).body(post);
+        var actor = Actor.require(authentication);
+        var post = service.create(actor.id(), input);
+        return ResponseEntity.created(URI.create("/api/v1/posts/" + post.getId())).body(service.view(post, actor.id()));
     }
 
     @GetMapping("/communities")
@@ -75,9 +75,13 @@ public class CommunityPostController {
                 .orElse(java.util.Set.of());
     }
 
+    private static UUID viewerId(Authentication authentication) {
+        return Actor.from(authentication).map(Actor::id).orElse(null);
+    }
+
     @GetMapping("/communities/{communityId}/posts")
-    List<CommunityPost> postsByCommunity(@PathVariable UUID communityId) {
-        return service.findPostsByCommunity(communityId);
+    List<PostView> postsByCommunity(Authentication authentication, @PathVariable UUID communityId) {
+        return service.communityFeed(communityId, viewerId(authentication));
     }
 
     @PostMapping("/communities")
@@ -87,20 +91,23 @@ public class CommunityPostController {
     }
 
     @GetMapping("/{postId}/comments")
-    List<PostComment> comments(@PathVariable UUID postId) {
-        return service.findCommentsByPost(postId);
+    List<CommentView> comments(Authentication authentication, @PathVariable UUID postId) {
+        return service.commentViews(postId, viewerId(authentication));
     }
 
     @PostMapping("/{postId}/comments")
-    ResponseEntity<PostComment> comment(@PathVariable UUID postId, Authentication authentication,
+    ResponseEntity<CommentView> comment(@PathVariable UUID postId, Authentication authentication,
                                         @Valid @RequestBody CreatePostCommentInput input) {
-        var comment = service.addComment(postId, Actor.require(authentication).id(), input.body());
-        return ResponseEntity.created(URI.create("/api/v1/posts/" + postId + "/comments/" + comment.getId())).body(comment);
+        var actor = Actor.require(authentication);
+        var comment = service.addComment(postId, actor.id(), input.body());
+        return ResponseEntity.created(URI.create("/api/v1/posts/" + postId + "/comments/" + comment.getId()))
+                .body(service.commentView(comment, actor.id()));
     }
 
+    /** Public: counts per reaction type, without user ids. */
     @GetMapping("/{postId}/reactions")
-    List<PostReaction> reactions(@PathVariable UUID postId) {
-        return service.findReactionsByPost(postId);
+    List<ReactionCount> reactions(@PathVariable UUID postId) {
+        return service.reactionCounts(postId);
     }
 
     @PostMapping("/{postId}/reactions")
@@ -108,5 +115,12 @@ public class CommunityPostController {
                                        @Valid @RequestBody CreatePostReactionInput input) {
         var reaction = service.addReaction(postId, Actor.require(authentication).id(), input.type());
         return ResponseEntity.created(URI.create("/api/v1/posts/" + postId + "/reactions/" + reaction.getId())).body(reaction);
+    }
+
+    /** Removes the caller's own reaction from the post. */
+    @DeleteMapping("/{postId}/reactions")
+    ResponseEntity<Void> unreact(@PathVariable UUID postId, Authentication authentication) {
+        service.removeReaction(postId, Actor.require(authentication).id());
+        return ResponseEntity.noContent().build();
     }
 }

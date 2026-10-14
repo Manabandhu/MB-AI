@@ -102,30 +102,12 @@ public class JobsController {
 
     @PatchMapping("/{jobId}")
     JobPosting update(Authentication authentication, @PathVariable UUID jobId, @Valid @RequestBody UpdateJobPostingInput input) {
-        var actorId = actorId(authentication);
-        var posting = postingService.findById(jobId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Job posting not found"));
-        if (!posting.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to update this job posting");
-        }
-        return postingService.update(jobId, input.categoryId(), input.title(), input.company(), input.location(),
-                input.description(), input.employmentType(), input.isRemote(), input.salaryMin(), input.salaryMax(),
-                input.applicationUrl(), input.status());
+        return postingService.update(Actor.require(authentication), jobId, input);
     }
 
     @DeleteMapping("/{jobId}")
     ResponseEntity<Void> delete(Authentication authentication, @PathVariable UUID jobId) {
-        var actorId = actorId(authentication);
-        var posting = postingService.findById(jobId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Job posting not found"));
-        if (!posting.getOwnerId().equals(actorId) && !isAdmin(authentication)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "Not authorized to delete this job posting");
-        }
-        postingService.delete(jobId);
+        postingService.delete(Actor.require(authentication), jobId);
         return ResponseEntity.noContent().build();
     }
 

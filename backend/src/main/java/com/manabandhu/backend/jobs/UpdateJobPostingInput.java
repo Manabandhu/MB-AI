@@ -12,7 +12,9 @@ public record UpdateJobPostingInput(
         @Size(max = 4000) String description,
         @Size(max = 50) String employmentType,
         Boolean isRemote,
-        Integer salaryMin,
-        Integer salaryMax,
+        @jakarta.validation.constraints.PositiveOrZero Integer salaryMin,
+        @jakarta.validation.constraints.PositiveOrZero Integer salaryMax,
         @Size(max = 500) String applicationUrl,
-        @Size(max = 20) String status) {}
+        @Size(max = 20) String status,
+        /** True empties both salary bounds before salaryMin/salaryMax (if given) apply. */
+        Boolean clearSalary) {}

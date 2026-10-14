@@ -32,8 +32,15 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 
 ## API Surface
 
-- `getJobsScreen(screenId)` -> `GET /api/v1/jobs/screens/{screenId}`
-- Job-specific endpoints in `frontend/src/modules/jobs/api.ts` for search, detail, and post actions.
+- `listJobPostings(page, size)` -> `GET /api/v1/jobs?page&size` (PagedModel via `toPage`)
+- `getJobPosting(id)` -> `GET /api/v1/jobs/{id}`
+- `listJobCategories()` -> `GET /api/v1/jobs/categories`
+- `createJobPosting(input)` -> `POST /api/v1/jobs` (`categoryId` required by `@NotNull`)
+- `updateJobPosting(id, input)` -> `PATCH /api/v1/jobs/{id}` (owner/admin; null fields unchanged; `status: open|closed`)
+- `deleteJobPosting(id)` -> `DELETE /api/v1/jobs/{id}` (owner/admin; applications cascade)
+- `applyToJob(id, {coverLetter, resumeUrl})` -> `POST /api/v1/jobs/{id}/applications` (409 for own/closed/duplicate)
+- `listJobApplications(id)` -> `GET /api/v1/jobs/{id}/applications` (owner/admin; not used by a screen yet)
+- Referral requests from a job use `createReferralRequest` in the referrals module and invalidate `['referrals']`.
 
 ## Demo Fixtures
 
@@ -89,3 +96,6 @@ Owns job discovery, search, filters, saves, job details, posting, employer conte
 - P0 fixes (2026-10-10): application rules live in `JobApplicationService`. Applying requires an `open` posting, is refused on your own posting, and allows one live application per person and job (409). `withdrawn` frees the slot; there is no DB unique index yet because hosted data may already hold duplicates. Status changes lock the row: the employer (posting owner) or an admin sets `reviewing|shortlisted|accepted|rejected`, the applicant may only `withdraw`, and accepted/rejected/withdrawn are final (409). Statuses are stored lowercase. Listing applicants (`GET /jobs/{id}/applications`) is owner/admin only, in the service.
 - Paged responses (2026-10-12): `GET /api/v1/jobs` returns a `PagedModel` (`{ content, page }`); `listJobPostings` reads it through `toPage` from `@/lib/springPage`.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['work', 'career', 'hiring', 'openings', 'h1b', 'opt', 'remote', 'full-time']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+- Phase 1 correctness pass (2026-10-14): `PostJobScreen` uses one `Controller` per field (spreading `register()` onto `TextField` never reached the form on native), a required category picker from `GET /jobs/categories`, company/location/remote/type/salary/URL matching `CreateJobPostingInput`, zod rules in `utils/jobForm.ts`, and doubles as the owner edit form at `/jobs/post?jobId=` (no new route). When no categories exist the form says posting is not open instead of failing. `JobsHomeScreen` was rebuilt on shared primitives: real filters only (`utils/jobFilters.ts`: keyword, location, category, remote, type, min salary, sort; closed jobs hidden), `/jobs/search` reads them from the URL that `/jobs/filters` writes. Removed: local-only saved jobs, the city picker that wrote Austin's coordinates into the global `locationStore`, keyword-guessing H-1B/OPT/visa/hybrid/referral tags, and the card "Request Referral" button. `/jobs/saved` is an honest "saving isn't available" screen (no backend). `JobDetailsScreen`: owners get Edit, Close/Reopen (confirm) and Delete (red confirm) instead of apply/referral; members apply in the app (`BottomSheet`, validated link), open the employer site, or post a referral request. Shared via `lib/share`.
+- Known gap: job authorization still lives in `JobsController` (owner/admin checks), not `JobPostingService`; move it during the jobs backend review.
+- Review fixes (2026-10-14): owner/admin checks for `PATCH`/`DELETE /jobs/{id}` moved into `JobPostingService.update(Actor, …)`/`delete(Actor, …)` (tests in `JobPostingServiceTest`). PATCH semantics: null/absent keeps, blank optional text (company, location, employmentType, applicationUrl) clears, blank title/description is 400, `clearSalary: true` empties both bounds before new ones apply, salaryMax below salaryMin is 400, status must be open|closed (stored lowercase). The edit form sends `toJobUpdate` (every field, `''` for cleared, `clearSalary: true`). `JobsHomeScreen` pages with `useInfiniteQuery` (`listJobPostingsPage`, 50 per page, "Load more"), shows the server's `totalElements`, and labels filtered results "n match among the latest x of total" (filters still run on loaded pages; no server-side filter params yet).

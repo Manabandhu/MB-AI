@@ -1,636 +1,244 @@
-import { breakpoint, palette } from '@manabandhu/design-system';
+import { formatRelative } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import { shareLink } from '@/lib/share';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { addComment, getPost, reactPost } from '../api';
+  addComment,
+  COMMUNITY_QUERY_PREFIXES,
+  getPost,
+  listComments,
+  type Post,
+  type ReactionType,
+  reactPost,
+  unreactPost,
+} from '@/modules/community/api';
+import { nextReaction, REACTIONS, withViewerReaction } from '@/modules/community/utils/reactions';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { errorText, showError, showMessage } from '@/modules/shared/ui/notify';
+import { PersonRow } from '@/modules/shared/ui/PersonRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { TextField } from '@/modules/shared/ui/TextField';
 
-const C = {
-  primary: '#E05638', // Warm Saffron
-  secondary: '#0D5C75', // Deep Gulf Teal
-  bg: '#FFFDF9', // Soft warm ivory
-  cardBg: '#FFFFFF',
-  border: '#E8DEC8',
-  ink: '#151D21',
-  inkMuted: '#6B7280',
-  tealBg: '#E0F2FE',
-  saffronBg: '#FEE2E2',
-  goldBg: palette.goldBg,
-  goldText: palette.goldText,
-  emerald: '#16A34A',
-};
+const COMMENT_MAX = 4000;
 
+/** One post with live reactions (yours is highlighted; tap it again to remove it), comments, and sharing. */
 export function PostDetailsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= breakpoint.medium;
   const { postId } = useLocalSearchParams<{ postId: string }>();
-
+  const signedIn = useAuthStore((s) => s.status === 'authenticated');
   const [commentText, setCommentText] = useState('');
-  const [isSaved, setIsSaved] = useState(false);
-  const [reactionCounts, setReactionCounts] = useState({
-    helpful: 84,
-    like: 129,
-    heart: 42,
-  });
-  const [userReactions, setUserReactions] = useState<{ [key: string]: boolean }>({});
+  const [commentError, setCommentError] = useState<string | null>(null);
 
-  const {
-    data: postData,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['community', 'post', postId],
-    queryFn: () => getPost(String(postId || '')),
-    enabled: !!postId,
+  const postKey = ['community', 'post', postId] as const;
+  const postQuery = useQuery({
+    queryKey: postKey,
+    queryFn: () => getPost(String(postId)),
+    enabled: Boolean(postId),
+  });
+  const commentsQuery = useQuery({
+    queryKey: ['community', 'post', postId, 'comments'],
+    queryFn: () => listComments(String(postId)),
+    enabled: Boolean(postId),
+  });
+
+  const refreshCommunity = () =>
+    Promise.all(
+      COMMUNITY_QUERY_PREFIXES.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
+
+  const reactionMutation = useMutation({
+    mutationFn: (next: ReactionType | null) =>
+      next ? reactPost(String(postId), next) : unreactPost(String(postId)),
+    onMutate: async (next) => {
+      await queryClient.cancelQueries({ queryKey: postKey });
+      const previous = queryClient.getQueryData<Post>(postKey);
+      if (previous) queryClient.setQueryData(postKey, withViewerReaction(previous, next));
+      return { previous };
+    },
+    onError: (error, _next, context) => {
+      if (context?.previous) queryClient.setQueryData(postKey, context.previous);
+      showError('Could not update your reaction', error);
+    },
+    onSettled: refreshCommunity,
   });
 
   const commentMutation = useMutation({
-    mutationFn: (text: string) => addComment(String(postId || ''), text),
+    mutationFn: (text: string) => addComment(String(postId), text),
     onSuccess: () => {
       setCommentText('');
-      queryClient.invalidateQueries({ queryKey: ['community', 'post', postId] });
-      Alert.alert('Comment Posted', 'Your reply has been shared with the community.');
+      setCommentError(null);
+      return refreshCommunity();
     },
-    onError: () => {
-      Alert.alert('Unable to post comment', 'Please check your connection and try again.');
-    },
+    onError: (error) => setCommentError(errorText(error, 'Your comment was not posted.')),
   });
 
-  const toggleReaction = (type: 'helpful' | 'like' | 'heart') => {
-    const isAlready = !!userReactions[type];
-    setUserReactions((prev) => ({ ...prev, [type]: !isAlready }));
-    setReactionCounts((prev) => ({
-      ...prev,
-      [type]: isAlready ? prev[type] - 1 : prev[type] + 1,
-    }));
-    if (postId) {
-      reactPost(postId, type.toUpperCase()).catch(() => {
-        // Roll back the optimistic update so the count matches the server.
-        setUserReactions((prev) => ({ ...prev, [type]: isAlready }));
-        setReactionCounts((prev) => ({
-          ...prev,
-          [type]: isAlready ? prev[type] + 1 : prev[type] - 1,
-        }));
-      });
+  const requireSignIn = () => {
+    if (signedIn) return true;
+    router.push('/sign-in' as Href);
+    return false;
+  };
+
+  const onReact = (type: ReactionType) => {
+    const post = postQuery.data;
+    if (!post || !requireSignIn() || reactionMutation.isPending) return;
+    reactionMutation.mutate(nextReaction(post.viewerReaction, type));
+  };
+
+  const onSend = () => {
+    if (!requireSignIn()) return;
+    const text = commentText.trim();
+    if (!text) {
+      setCommentError('Write a comment first.');
+      return;
+    }
+    commentMutation.mutate(text);
+  };
+
+  const onShare = async () => {
+    const post = postQuery.data;
+    if (!post) return;
+    try {
+      const result = await shareLink(`/community/posts/${post.id}`, post.title);
+      if (result === 'copied') showMessage('Link copied', 'The post link is on your clipboard.');
+    } catch (error) {
+      showError('Could not share this post', error);
     }
   };
 
-  const handleSendComment = () => {
-    if (!commentText.trim()) return;
-    commentMutation.mutate(commentText.trim());
-  };
-
-  if (isLoading) {
+  if (postQuery.isLoading) {
     return (
-      <View style={s.centerRoot}>
-        <ActivityIndicator size="large" color={C.primary} />
-        <Text style={s.loadingText}>Loading discussion thread...</Text>
-      </View>
+      <Screen>
+        <BackButton fallback="/community" />
+        <LoadingState label="Loading post…" />
+      </Screen>
     );
   }
 
-  if (error || !postData) {
+  if (postQuery.isError || !postQuery.data) {
+    const status = (postQuery.error as { status?: number } | null)?.status;
+    const notFound = status === 404;
     return (
-      <View style={s.centerRoot}>
-        <AppIcon name="warning" size={44} color={C.primary} />
-        <Text style={s.errorTitle}>Discussion Not Found</Text>
-        <Text style={s.errorSub}>This post may have been removed or moved to another circle.</Text>
-        <Pressable style={s.backBtn} onPress={() => router.back()}>
-          <Text style={s.backBtnText}>Back to Community Hub</Text>
-        </Pressable>
-      </View>
+      <Screen>
+        <BackButton fallback="/community" />
+        <ErrorState
+          body={notFound ? 'This post was removed.' : errorText(postQuery.error)}
+          onRetry={notFound ? undefined : () => postQuery.refetch()}
+          retryLabel="Retry"
+          title={notFound ? 'Post not found' : 'Could not load this post'}
+        />
+      </Screen>
     );
   }
 
-  const comments = postData.comments ?? [];
+  const post = postQuery.data;
+  const comments = commentsQuery.data ?? [];
+  const backTo = (post.communityId ? `/community/${post.communityId}` : '/community') as Href;
 
   return (
-    <View style={s.root}>
-      {/* Top App Bar */}
-      <View style={s.navBar}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          style={s.navIconBtn}
-          onPress={() => router.back()}
-        >
-          <AppIcon name="chevron-left" size={20} color={C.ink} />
-        </Pressable>
-
-        <View style={s.commBadgePill}>
-          <AppIcon name="community" size={14} color={C.secondary} />
-          <Text style={s.commBadgeText}>Community Hub</Text>
-        </View>
-
-        <View style={s.navRight}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Share discussion"
-            style={s.navIconBtn}
-            onPress={() => Alert.alert('Share', 'Link copied to clipboard!')}
-          >
-            <AppIcon name="community" size={18} color={C.ink} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Save post"
-            style={s.navIconBtn}
-            onPress={() => setIsSaved(!isSaved)}
-          >
-            <Text style={[s.heartIcon, isSaved && s.heartIconSaved]}>{isSaved ? '♥' : '♡'}</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[s.scrollContent, isDesktop && s.scrollContentDesktop]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Author Header */}
-        <View style={s.authorCard}>
-          <View style={s.authorAvatarRing}>
-            <Text style={s.authorInitial}>{(postData.authorName || 'C')[0].toUpperCase()}</Text>
-          </View>
-          <View style={s.authorMeta}>
-            <View style={s.nameRow}>
-              <Text style={s.authorName}>{postData.authorName || 'Community Member'}</Text>
-              <AppIcon name="verified-user" size={15} color={C.secondary} />
-            </View>
-            <Text style={s.authorSub}>
-              Posted {new Date(postData.createdAt).toLocaleDateString()}
-            </Text>
-          </View>
-        </View>
-
-        {/* Post Title & Body */}
-        <View style={s.contentCard}>
-          <Text style={s.postTitle}>{postData.title}</Text>
-          <Text style={s.postBody}>{postData.body}</Text>
-
-          {/* Pinned Moderation Note */}
-          <View style={s.pinnedNote}>
-            <View style={s.pinnedHeader}>
-              <AppIcon name="shield" size={18} color={C.secondary} />
-              <Text style={s.pinnedTitle}>Community Guidelines & Moderation</Text>
-            </View>
-            <Text style={s.pinnedBody}>
-              ManaBandhu discussions are moderated for trust, mutual respect, and community safety.
-              Direct helpful advice and local insights are encouraged.
-            </Text>
-          </View>
-
-          {/* Interactive Reactions Bar */}
-          <View style={s.reactionBar}>
-            <Pressable
-              style={[s.reactionBtn, userReactions.helpful && s.reactionBtnActive]}
-              onPress={() => toggleReaction('helpful')}
-            >
-              <Text style={s.reactionEmoji}>💡</Text>
-              <Text style={[s.reactionText, userReactions.helpful && s.reactionTextActive]}>
-                Helpful ({reactionCounts.helpful})
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[s.reactionBtn, userReactions.like && s.reactionBtnActive]}
-              onPress={() => toggleReaction('like')}
-            >
-              <Text style={s.reactionEmoji}>👍</Text>
-              <Text style={[s.reactionText, userReactions.like && s.reactionTextActive]}>
-                Like ({reactionCounts.like})
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[s.reactionBtn, userReactions.heart && s.reactionBtnActive]}
-              onPress={() => toggleReaction('heart')}
-            >
-              <Text style={s.reactionEmoji}>❤️</Text>
-              <Text style={[s.reactionText, userReactions.heart && s.reactionTextActive]}>
-                Heart ({reactionCounts.heart})
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Comments Section */}
-        <View style={s.commentsSection}>
-          <View style={s.commentsHeaderRow}>
-            <Text style={s.commentsHeaderTitle}>
-              Discussion & Parent Insights ({comments.length})
-            </Text>
-            <Text style={s.topAnswersText}>Top Answers</Text>
-          </View>
-
-          {comments.map((comm) => (
-            <View key={comm.id} style={s.commentCard}>
-              <View style={s.commentAuthorRow}>
-                <View style={s.commentAvatar}>
-                  <Text style={s.commentAvatarText}>{(comm.authorName ?? 'B')[0]}</Text>
-                </View>
-                <View style={s.commentAuthorMeta}>
-                  <Text style={s.commentAuthorName}>{comm.authorName ?? 'Community Member'}</Text>
-                  <Text style={s.commentTime}>{new Date(comm.createdAt).toLocaleDateString()}</Text>
-                </View>
-                <View style={s.upvotePill}>
-                  <Text style={s.upvoteIcon}>💬</Text>
-                  <Text style={s.upvoteCount}>Reply</Text>
-                </View>
-              </View>
-              <Text style={s.commentBody}>{comm.body}</Text>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Sticky Bottom Reply Bar */}
-      <View style={[s.replyBar, isDesktop && s.replyBarDesktop]}>
-        <TextInput
-          style={s.replyInput}
-          placeholder="Join the conversation in Telugu or English..."
-          placeholderTextColor={C.inkMuted}
-          value={commentText}
-          onChangeText={setCommentText}
-          onSubmitEditing={handleSendComment}
-          returnKeyType="send"
+    <Screen
+      keyboardAvoiding
+      onRefresh={() => Promise.all([postQuery.refetch(), commentsQuery.refetch()])}
+      refreshing={postQuery.isRefetching || commentsQuery.isRefetching}
+    >
+      <YStack gap="$x4">
+        <ScreenHeader
+          actions={<IconButton icon="share" label="Share post" onPress={onShare} />}
+          back={{ fallback: backTo }}
+          title="Post"
         />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Submit reply"
-          style={[s.sendBtn, !commentText.trim() && s.sendBtnDisabled]}
-          onPress={handleSendComment}
-          disabled={!commentText.trim() || commentMutation.isPending}
-        >
-          {commentMutation.isPending ? (
-            <ActivityIndicator size="small" color="#FFF" />
+
+        <PersonRow name={post.authorName} subtitle={formatRelative(post.createdAt) ?? undefined} />
+
+        <Card gap="$x3">
+          <Heading variant="h3">{post.title}</Heading>
+          <AppText selectable>{post.body}</AppText>
+        </Card>
+
+        <FilterChipRow label="Reactions">
+          {REACTIONS.map((reaction) => (
+            <Chip
+              accessibilityLabel={`${reaction.label}, ${post.reactionCounts[reaction.type] ?? 0}`}
+              count={post.reactionCounts[reaction.type] ?? 0}
+              key={reaction.type}
+              label={reaction.label}
+              onPress={() => onReact(reaction.type)}
+              selected={post.viewerReaction === reaction.type}
+            />
+          ))}
+        </FilterChipRow>
+
+        <YStack gap="$x3">
+          <Heading variant="h4">
+            Comments{commentsQuery.data ? ` (${comments.length})` : ''}
+          </Heading>
+
+          <Card gap="$x2">
+            <TextField
+              accessibilityLabel="Write a comment"
+              error={commentError}
+              maxLength={COMMENT_MAX}
+              multiline
+              onChangeText={(text) => {
+                setCommentText(text);
+                if (commentError) setCommentError(null);
+              }}
+              placeholder={signedIn ? 'Add to the conversation' : 'Sign in to comment'}
+              value={commentText}
+            />
+            <XStack justifyContent="flex-end">
+              <AppButton
+                disabled={commentMutation.isPending}
+                label={signedIn ? 'Post comment' : 'Sign in to comment'}
+                loading={commentMutation.isPending}
+                onPress={onSend}
+                size="sm"
+              />
+            </XStack>
+          </Card>
+
+          {commentsQuery.isLoading ? (
+            <LoadingState label="Loading comments…" />
+          ) : commentsQuery.isError ? (
+            <ErrorState
+              body={errorText(commentsQuery.error)}
+              compact
+              onRetry={() => commentsQuery.refetch()}
+              retryLabel="Retry"
+              title="Could not load comments"
+            />
+          ) : comments.length === 0 ? (
+            <EmptyState
+              body="Be the first to reply."
+              compact
+              iconName="message"
+              title="No comments yet"
+            />
           ) : (
-            <AppIcon name="check" size={18} color="#FFF" />
+            comments.map((comment) => (
+              <PersonRow
+                detail={<AppText selectable>{comment.body}</AppText>}
+                key={comment.id}
+                name={comment.authorName}
+                subtitle={formatRelative(comment.createdAt) ?? undefined}
+              />
+            ))
           )}
-        </Pressable>
-      </View>
-    </View>
+        </YStack>
+      </YStack>
+    </Screen>
   );
 }
-
-const s = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  centerRoot: {
-    flex: 1,
-    backgroundColor: C.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: C.inkMuted,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  errorSub: {
-    fontSize: 13,
-    color: C.inkMuted,
-    textAlign: 'center',
-  },
-  backBtn: {
-    backgroundColor: C.secondary,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  backBtnText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.bg,
-    borderBottomWidth: 1,
-    borderColor: C.border,
-  },
-  navIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: C.tealBg,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  commBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  navRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  heartIcon: {
-    fontSize: 18,
-    color: C.ink,
-  },
-  heartIconSaved: {
-    color: '#EF4444',
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 90,
-  },
-  scrollContentDesktop: {
-    maxWidth: 900,
-    alignSelf: 'center',
-    width: '100%',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-  },
-  authorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 14,
-  },
-  authorAvatarRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: C.goldBg,
-    borderWidth: 2,
-    borderColor: '#D99B26',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  authorInitial: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: C.goldText,
-  },
-  authorMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  authorName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  modTag: {
-    backgroundColor: C.saffronBg,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  modTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: C.primary,
-  },
-  authorSub: {
-    fontSize: 12,
-    color: C.inkMuted,
-  },
-  contentCard: {
-    backgroundColor: C.cardBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 18,
-    gap: 14,
-    marginBottom: 20,
-  },
-  postTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: C.ink,
-    lineHeight: 26,
-  },
-  postBody: {
-    fontSize: 14,
-    color: C.ink,
-    lineHeight: 23,
-  },
-  pinnedNote: {
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 12,
-    padding: 14,
-    gap: 6,
-  },
-  pinnedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  pinnedTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  pinnedBody: {
-    fontSize: 12,
-    color: '#0369A1',
-    lineHeight: 18,
-  },
-  reactionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  reactionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  reactionBtnActive: {
-    backgroundColor: C.tealBg,
-    borderColor: C.secondary,
-  },
-  reactionEmoji: {
-    fontSize: 14,
-  },
-  reactionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.inkMuted,
-  },
-  reactionTextActive: {
-    color: C.secondary,
-  },
-  commentsSection: {
-    gap: 12,
-  },
-  commentsHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  commentsHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  topAnswersText: {
-    fontSize: 12,
-    color: C.secondary,
-    fontWeight: '600',
-  },
-  commentCard: {
-    backgroundColor: C.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    gap: 8,
-  },
-  commentAuthorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: C.tealBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commentAvatarText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  commentAuthorMeta: {
-    flex: 1,
-  },
-  commentAuthorName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  commentTime: {
-    fontSize: 11,
-    color: C.inkMuted,
-  },
-  upvotePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  upvoteIcon: {
-    fontSize: 10,
-    color: C.secondary,
-  },
-  upvoteCount: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  commentBody: {
-    fontSize: 13,
-    color: C.ink,
-    lineHeight: 20,
-  },
-  replyBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: C.cardBg,
-    borderTopWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    elevation: 8,
-  },
-  replyBarDesktop: {
-    maxWidth: 900,
-    alignSelf: 'center',
-    borderRadius: 16,
-    bottom: 16,
-    borderWidth: 1,
-  },
-  replyInput: {
-    flex: 1,
-    height: 44,
-    backgroundColor: C.bg,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 13,
-    color: C.ink,
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: C.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtnDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
-});

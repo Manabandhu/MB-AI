@@ -40,16 +40,13 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 
 ## API Surface
 
-- `getImmigrationScreen(screenId)` -> `GET /api/v1/immigration/screens/{screenId}`
-- `getResources(query?)` -> `GET /api/v1/immigration/resources?q={query}`
-- `getGuides()` -> `GET /api/v1/immigration/guides`
-- `getChecklists()` -> `GET /api/v1/immigration/checklists`
-- `getFaq(query?)` -> `GET /api/v1/immigration/faq?q={query}`
-- `getQuestions()` -> `GET /api/v1/immigration/questions`
-- `getUscis()` -> `GET /api/v1/immigration/uscis`
-- `getNews()` -> `GET /api/v1/immigration/news`
-- `getSaved()` -> `GET /api/v1/immigration/saved`
-- `getResourceDetail(resourceId)` -> `GET /api/v1/immigration/resources/{resourceId}`
+- `listImmigrationGuides(category?)` -> `GET /api/v1/immigration/guides`
+- `listImmigrationNews()` -> `GET /api/v1/immigration/news` (USCIS view filters by source/category/url)
+- `listImmigrationResources(category?)` -> `GET /api/v1/immigration/resources`
+- `getImmigrationResource(id)` -> `GET /api/v1/immigration/resources/{id}`
+- `listImmigrationChecklists(category?)` -> `GET /api/v1/immigration/checklists` (JWT)
+- `listImmigrationFaq(category?)` -> `GET /api/v1/immigration/faq`
+- External links open through `utils/openUrl.ts` (http/https only, failures shown with notify).
 
 ## Demo Fixtures
 
@@ -115,3 +112,4 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 - P0 privacy fix (2026-10-10): `SecurityConfig` no longer opens `/api/v1/immigration/**`; only published content is public (`screens/{screenId}`, `resources`, `resources/{resourceId}`, `guides`, `faq`, `news`). `GET /api/v1/immigration/checklists` requires a JWT and returns only the caller's checklists (newest 200, optional `category`) through `ImmigrationChecklistService.findForOwner`; completing a checklist requires ownership. `ChecklistsScreen` shows a sign-in prompt to signed-out visitors. Unknown `resourceType` values on `POST /resources` return 400 (case-insensitive match).
 - Review fix (2026-10-11): `GET /resources` and `/resources/{id}` return `ImmigrationResourceView` (no `ownerId`, adds `mine`). The lists are verified resources plus the caller's own unreviewed submissions (admins see all), newest 200; an unreviewed resource reads as 404 to everyone except its submitter and admins.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['visa', 'opt', 'stem opt', 'h1b', 'green card', 'uscis', 'f1', 'checklist']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+- Phase 1 correctness pass (2026-10-14): `ResourceDetailScreen` uses `getImmigrationResource` (was raw `apiFetch`), shows the reviewed/not-reviewed state, opens the link in the browser, and no longer has the fake "Save resource" button (it routed to the "not available" screen). Guides expand to their `content` ("Read guide"). `/immigration/questions` no longer duplicates the FAQ: it sends people to ask in Community or read the FAQ. Every immigration route uses `Screen` + `ScreenHeader` (back on sub-routes) with pull-to-refresh; `Alert.alert` was replaced with notify. `/immigration/saved` stays an honest "not available yet" placeholder that nothing links to.

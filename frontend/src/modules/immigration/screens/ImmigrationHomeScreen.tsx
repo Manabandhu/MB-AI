@@ -1,10 +1,9 @@
 import { formatDate } from '@manabandhu/core';
 import { color, radius, space, typography } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import {
   type ImmigrationChecklist,
@@ -18,11 +17,16 @@ import {
   listImmigrationNews,
   listImmigrationResources,
 } from '@/modules/immigration/api';
+import { openUrl } from '@/modules/immigration/utils/openUrl';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { Heading } from '@/modules/shared/ui/AppText';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 
 const immigrationRoutes = {
   home: '/immigration',
@@ -52,7 +56,10 @@ const SCREEN_COPY: Record<ImmigrationScreenId, { title: string; subtitle: string
   guides: { title: 'Guides', subtitle: 'Step-by-step walkthroughs for common filings.' },
   checklists: { title: 'Checklists', subtitle: 'Document checklists for filings and interviews.' },
   faq: { title: 'Frequently Asked Questions', subtitle: 'Answers to common questions.' },
-  questions: { title: 'Community Questions', subtitle: 'Questions answered so far.' },
+  questions: {
+    title: 'Ask a question',
+    subtitle: 'Questions are answered by members in Community.',
+  },
   uscis: { title: 'USCIS Updates', subtitle: 'News items published from USCIS sources.' },
   news: { title: 'Immigration News', subtitle: 'Policy and processing updates.' },
   saved: { title: 'Saved', subtitle: 'Your bookmarked guides and checklists.' },
@@ -68,31 +75,30 @@ function checklistItemCount(itemsJson?: string | null): number | null {
   }
 }
 
-async function openUrl(url: string) {
-  try {
-    await Linking.openURL(url);
-  } catch {
-    Alert.alert('Unable to open link', url);
-  }
-}
-
 export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
-  const layout = useAdaptiveLayout();
   const copy = SCREEN_COPY[screenId];
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.refetchQueries({ queryKey: ['immigration'], type: 'active' });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.scrollContent}>
-        <View style={[s.container, { maxWidth: layout.maxContentWidth }]}>
-          <View style={s.header}>
-            <Text style={s.eyebrow}>IMMIGRATION</Text>
-            <Text style={s.title}>{copy.title}</Text>
-            <Text style={s.subtitle}>{copy.subtitle}</Text>
-          </View>
-          <ImmigrationSection screenId={screenId} />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Screen onRefresh={onRefresh} refreshing={refreshing}>
+      <View style={s.container}>
+        <ScreenHeader
+          back={screenId === 'home' ? false : { fallback: '/immigration' as Href }}
+          subtitle={copy.subtitle}
+          title={copy.title}
+        />
+        <ImmigrationSection screenId={screenId} />
+      </View>
+    </Screen>
   );
 }
 
@@ -111,8 +117,9 @@ function ImmigrationSection({ screenId }: ImmigrationScreenProps) {
     case 'checklists':
       return <ChecklistsList />;
     case 'faq':
-    case 'questions':
       return <FaqList />;
+    case 'questions':
+      return <AskInCommunity />;
     case 'saved':
       return <SavedPlaceholder />;
     default:
@@ -159,7 +166,7 @@ function ImmigrationHome() {
         <AppButton label="FAQ" route="/immigration/faq" variant="secondary" />
       </View>
 
-      <Text style={s.sectionTitle}>Guides</Text>
+      <Heading variant="h4">Guides</Heading>
       {guides.isLoading ? (
         <LoadingState label="Loading guides..." />
       ) : guides.isError ? (
@@ -179,19 +186,17 @@ function ImmigrationHome() {
       ) : (
         <>
           {categories.length > 1 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipsRow}>
+            <FilterChipRow label="Guide category" role="radiogroup">
               {['all', ...categories].map((cat) => (
-                <Pressable
+                <Chip
                   key={cat}
-                  style={[s.chip, activeCategory === cat && s.chipActive]}
+                  label={cat === 'all' ? 'All' : cat}
                   onPress={() => setActiveCategory(cat)}
-                >
-                  <Text style={[s.chipText, activeCategory === cat && s.chipTextActive]}>
-                    {cat === 'all' ? 'All' : cat}
-                  </Text>
-                </Pressable>
+                  radio
+                  selected={activeCategory === cat}
+                />
               ))}
-            </ScrollView>
+            </FilterChipRow>
           ) : null}
           {visibleGuides.map((guide) => (
             <GuideCard key={guide.id} guide={guide} />
@@ -199,7 +204,7 @@ function ImmigrationHome() {
         </>
       )}
 
-      <Text style={s.sectionTitle}>Recent news</Text>
+      <Heading variant="h4">Recent news</Heading>
       {news.isLoading ? (
         <LoadingState label="Loading news..." />
       ) : news.isError ? (
@@ -255,12 +260,25 @@ function GuideCard({ guide }: { guide: ImmigrationGuide }) {
     guide.estimatedDurationMinutes ? `${guide.estimatedDurationMinutes} min` : null,
     formatDate(guide.createdAt),
   ].filter(Boolean);
+  const [open, setOpen] = useState(false);
+  const hasContent = Boolean(guide.content?.trim());
   return (
-    <View style={s.card}>
+    <Pressable
+      accessibilityHint={
+        hasContent ? (open ? 'Hides the guide' : 'Shows the full guide') : undefined
+      }
+      accessibilityRole={hasContent ? 'button' : undefined}
+      accessibilityState={hasContent ? { expanded: open } : undefined}
+      disabled={!hasContent}
+      onPress={() => setOpen((v) => !v)}
+      style={s.card}
+    >
       <Text style={s.cardTitle}>{guide.title}</Text>
       {guide.description ? <Text style={s.cardBody}>{guide.description}</Text> : null}
+      {open && hasContent ? <Text style={s.guideContent}>{guide.content}</Text> : null}
       {meta.length > 0 ? <Text style={s.cardMeta}>{meta.join(' • ')}</Text> : null}
-    </View>
+      {hasContent ? <Text style={s.cardAction}>{open ? 'Hide guide' : 'Read guide'}</Text> : null}
+    </Pressable>
   );
 }
 
@@ -329,7 +347,12 @@ function ChecklistCard({ checklist }: { checklist: ImmigrationChecklist }) {
 function FaqCard({ item }: { item: ImmigrationFaqItem }) {
   const [open, setOpen] = useState(false);
   return (
-    <Pressable onPress={() => setOpen((v) => !v)} style={s.card} accessibilityRole="button">
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+      onPress={() => setOpen((v) => !v)}
+      style={s.card}
+    >
       <Text style={s.cardTitle}>{item.question}</Text>
       {open ? <Text style={s.cardBody}>{item.answer}</Text> : null}
       {item.category ? <Text style={s.cardMeta}>{item.category}</Text> : null}
@@ -473,6 +496,20 @@ function FaqList() {
   );
 }
 
+function AskInCommunity() {
+  const router = useRouter();
+  return (
+    <EmptyState
+      title="Ask the community"
+      body="Post your visa or immigration question in Community, where members who have been through it can answer. Common questions are already answered in the FAQ."
+      actionLabel="Ask in Community"
+      onAction={() => router.push('/community/create-post' as Href)}
+      secondaryActionLabel="Read the FAQ"
+      onSecondaryAction={() => router.push('/immigration/faq' as Href)}
+    />
+  );
+}
+
 function SavedPlaceholder() {
   const router = useRouter();
   return (
@@ -486,28 +523,9 @@ function SavedPlaceholder() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: color.background },
-  scrollContent: { padding: space.x4, paddingBottom: space.x8 },
-  container: { width: '100%', alignSelf: 'center', gap: space.x4 },
-  header: { gap: space.x1 },
-  eyebrow: { color: color.teal, fontSize: 12, fontWeight: '800', letterSpacing: 1 },
-  title: { color: color.ink, fontSize: typography.h1.fontSize, fontWeight: '800' },
-  subtitle: { color: color.muted, fontSize: typography.body.fontSize },
+  container: { width: '100%', gap: space.x4 },
   stack: { gap: space.x3 },
   linkRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 },
-  sectionTitle: { color: color.ink, fontSize: 18, fontWeight: '800', marginTop: space.x2 },
-  chipsRow: { flexGrow: 0 },
-  chip: {
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: color.border,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x2,
-    marginRight: space.x2,
-  },
-  chipActive: { backgroundColor: color.primary, borderColor: color.primary },
-  chipText: { color: color.ink, fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: color.surface },
   heroCard: {
     backgroundColor: color.surface,
     borderRadius: radius.card,
@@ -532,4 +550,11 @@ const s = StyleSheet.create({
   cardTitle: { color: color.ink, fontSize: 15, fontWeight: '700' },
   cardBody: { color: color.muted, fontSize: 14, lineHeight: 20 },
   cardMeta: { color: color.muted, fontSize: 12, marginTop: space.x1 },
+  cardAction: { color: color.primary, fontSize: 13, fontWeight: '700', marginTop: space.x1 },
+  guideContent: {
+    color: color.ink,
+    fontSize: typography.body.fontSize,
+    lineHeight: typography.body.lineHeight,
+    marginTop: space.x2,
+  },
 });
