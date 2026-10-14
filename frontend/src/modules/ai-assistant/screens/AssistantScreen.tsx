@@ -62,7 +62,7 @@ export function AssistantScreen() {
           ManaBandhu assistant
         </AppText>
         <AppText numberOfLines={2} tone="muted" variant="caption">
-          Preview: not connected to an AI model yet, so it cannot answer questions.
+          Preview: no AI model connected, so it can't answer yet.
         </AppText>
       </YStack>
       <IconButton

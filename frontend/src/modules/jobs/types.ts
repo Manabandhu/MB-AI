@@ -58,3 +58,15 @@ export type JobApplication = {
 };
 
 export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Internship'] as const;
+
+/** Readable employment type: the form stores `Full-time` etc.; API clients may send enum-style `FULL_TIME`. */
+export function employmentTypeLabel(value: string): string {
+  const key = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-');
+  const known = EMPLOYMENT_TYPES.find((type) => type.toLowerCase() === key);
+  if (known) return known;
+  const text = value.replace(/_/g, ' ').toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

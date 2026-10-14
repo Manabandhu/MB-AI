@@ -92,3 +92,4 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
   - `notificationVisual(meta)` trims and upper-cases once, so labels (Jobs vs Referrals) are case-insensitive too; the detail type chip is a read-only `tag`.
   - Quiet hours stay as validated 24-hour `HH:MM` `TextField`s (with placeholders and a numbers keyboard) because `DateTimeField` has no time-only mode.
   - Web keyboard access: `SettingRow` spreads `keyboardPress` (Enter/Space toggles) with a focus ring; the row's mark-read control is now a 44pt `IconButton`.
+- Visual QA pass (2026-10-14, offline stack, 390/768/1440 light+dark): on web `SettingRow` draws a visual-only track and thumb instead of react-native-web's `Switch`, whose unlabelled `<input>` was a second, nameless Tab stop inside every row (the row is the one `role=switch` control). Native still renders `Switch`.

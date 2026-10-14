@@ -52,6 +52,9 @@ export const AppText = styled(Text, {
       teal: { color: '$teal' },
     },
     center: { true: { textAlign: 'center' } },
+    // Tamagui's web Text writes a raw `selectable` prop to the DOM as an invalid attribute. As a style it becomes CSS
+    // `user-select` on web, and Tamagui turns `userSelect` back into the `selectable` prop on native.
+    selectable: { true: { userSelect: 'text' }, false: { userSelect: 'none' } },
   } as const,
   defaultVariants: { variant: 'body', tone: 'default' },
 });

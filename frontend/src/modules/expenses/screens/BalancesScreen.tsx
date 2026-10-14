@@ -185,11 +185,8 @@ export function BalancesScreen() {
                 {involved ? (
                   <AppButton
                     icon="check"
-                    label={
-                      owedToMe
-                        ? `Mark ${amount} from ${name(b.fromUserId)} received`
-                        : `Record paying ${name(b.toUserId)} ${amount}`
-                    }
+                    // The row above names the person; repeating it here cut the label off on phones.
+                    label={owedToMe ? `Mark ${amount} received` : `Record paying ${amount}`}
                     loading={settlingKey === balanceKey(b)}
                     onPress={() => void askSettle(b)}
                     size="sm"

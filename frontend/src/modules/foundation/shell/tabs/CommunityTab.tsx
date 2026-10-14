@@ -90,8 +90,7 @@ export function CommunityTab() {
                 <ListRow
                   href={`/community/posts/${post.id}`}
                   icon="message"
-                  meta={formatRelative(post.createdAt)}
-                  subtitle={post.body}
+                  subtitle={`${formatRelative(post.createdAt)} · ${post.body}`}
                   title={post.title}
                 />
               </FadeIn>

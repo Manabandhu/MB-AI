@@ -7,6 +7,7 @@ import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { shareLink } from '@/lib/share';
 import { applyToJob, deleteJobPosting, getJobPosting, updateJobPosting } from '@/modules/jobs/api';
+import { employmentTypeLabel } from '@/modules/jobs/types';
 import { jobStatusIs } from '@/modules/jobs/utils/jobForm';
 import { createReferralRequest } from '@/modules/referrals/api';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
@@ -244,7 +245,9 @@ export function JobDetailsScreen() {
                 tone={isOpen ? 'success' : 'warning'}
               />
               {salary ? <StatusBadge label={salary} tone="success" /> : null}
-              {job.employmentType ? <StatusBadge label={job.employmentType} /> : null}
+              {job.employmentType ? (
+                <StatusBadge label={employmentTypeLabel(job.employmentType)} />
+              ) : null}
               {job.isRemote ? <StatusBadge icon="globe" label="Remote OK" tone="info" /> : null}
               {job.category?.name ? <StatusBadge label={job.category.name} tone="primary" /> : null}
             </XStack>
@@ -266,7 +269,7 @@ export function JobDetailsScreen() {
               <Heading variant="h4">Manage your posting</Heading>
               <XStack flexWrap="wrap" gap="$x3">
                 <AppButton
-                  icon="settings"
+                  icon="pencil"
                   label="Edit"
                   onPress={() => router.push(`/jobs/post?jobId=${job.id}` as Href)}
                   variant="secondary"

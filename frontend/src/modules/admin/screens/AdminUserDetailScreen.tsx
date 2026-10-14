@@ -105,7 +105,7 @@ export default function AdminUserDetailScreen({ userId }: { userId: string }) {
           <Avatar name={user.name === '—' ? user.email : user.name} size="lg" />
           <YStack flex={1} gap="$x1" minWidth={0}>
             <AppText numberOfLines={1} variant="bodyStrong">
-              {user.name}
+              {user.name && user.name !== '—' ? user.name : 'No display name'}
             </AppText>
             <XStack flexWrap="wrap" gap="$x2">
               <StatusBadge label={memberRoleLabel(user.role)} tone="neutral" />

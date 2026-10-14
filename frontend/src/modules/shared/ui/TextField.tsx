@@ -21,9 +21,10 @@ const TRAILING_SPACE = 52;
 /**
  * Labelled text input with helper and error text wired for screen readers. `multiline` renders Tamagui's `TextArea`:
  * on web its `Input` ignores `multiline` and would draw a single-line `<input>` that cannot wrap or hold newlines.
+ * `accessibilityLabel` is mapped to `aria-label`: Tamagui's web `Input` passes it through as an unknown DOM prop.
  */
 export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
-  { label, helper, error, multiline, leadingIcon, trailing, ...props },
+  { label, helper, error, multiline, leadingIcon, trailing, accessibilityLabel, ...props },
   ref,
 ) {
   const id = useId();
@@ -34,7 +35,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
   const field = (
     <Field
       ref={ref as never}
-      aria-label={label ?? props.placeholder}
+      aria-label={label ?? accessibilityLabel ?? props.placeholder}
       aria-labelledby={label ? `${id}-label` : undefined}
       backgroundColor="$surfaceContainerLow"
       borderColor={error ? '$error' : '$borderColor'}

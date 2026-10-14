@@ -83,7 +83,9 @@ export function CommunityDetailsScreen() {
           title={community.name}
         />
         <XStack alignItems="center" flexWrap="wrap" gap="$x2">
-          {community.category ? <StatusBadge label={community.category} tone="info" /> : null}
+          {community.category ? (
+            <StatusBadge label={categoryLabel(community.category)} tone="info" />
+          ) : null}
           {community.isJoined ? <StatusBadge label="Joined" tone="success" /> : null}
         </XStack>
         {community.description ? <AppText>{community.description}</AppText> : null}
@@ -143,4 +145,10 @@ export function CommunityDetailsScreen() {
       </YStack>
     </Screen>
   );
+}
+
+/** The server stores categories enum-style (`CITY`, `CAMPUS`); show them as words. */
+function categoryLabel(category: string): string {
+  const text = category.replace(/_/g, ' ').toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }

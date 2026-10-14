@@ -35,8 +35,11 @@ export function ReferralsHomeWidget() {
           href={`/referrals/${referral.id}`}
           icon={referral.type === 'offer' ? 'handshake' : 'help'}
           key={referral.id}
-          meta={formatRelative(referral.createdAt)}
-          subtitle={[referral.type === 'offer' ? 'Offering' : 'Requesting', referral.category]
+          subtitle={[
+            referral.type === 'offer' ? 'Offering' : 'Requesting',
+            referral.category,
+            formatRelative(referral.createdAt),
+          ]
             .filter(Boolean)
             .join(' · ')}
           title={referral.title}

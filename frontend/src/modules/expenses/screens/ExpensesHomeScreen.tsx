@@ -190,7 +190,7 @@ export function ExpensesScreen(_props: ExpensesScreenProps) {
         options={[
           { value: 'groups', label: 'Groups', count: groups.length },
           { value: 'balances', label: 'Balances', count: balances.length },
-          { value: 'activity', label: 'Activity', count: recentSettlements.length },
+          { value: 'activity', label: 'Settlements', count: recentSettlements.length },
         ]}
         value={tab}
       />

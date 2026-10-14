@@ -36,7 +36,7 @@ import { Screen } from '@/modules/shared/ui/Screen';
 type PendingMessage = { tempId: string; body: string; createdAt: string; failed: boolean };
 
 const timeOf = (iso: string) =>
-  new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
 const byCreatedAt = (a: Message, b: Message) => Date.parse(a.createdAt) - Date.parse(b.createdAt);
 

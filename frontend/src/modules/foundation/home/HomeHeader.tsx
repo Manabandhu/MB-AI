@@ -164,8 +164,8 @@ export function HomeHeader() {
               }}
               focusable
               gap={4}
-              hitSlop={8}
-              minHeight={28}
+              marginVertical={-8}
+              minHeight={44}
               onPress={openCity}
               {...keyboardPress(openCity)}
               pressStyle={{ opacity: 0.7 }}

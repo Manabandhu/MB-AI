@@ -7,6 +7,7 @@ import type { AdminReport } from '@/modules/admin/api';
 import { listReports } from '@/modules/admin/api';
 import { ReportStatusBadge } from '@/modules/admin/components/AdminBits';
 import { useResolveReportAction } from '@/modules/admin/hooks';
+import { reportCategoryLabel } from '@/modules/safety';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import {
@@ -23,10 +24,14 @@ import {
 
 type Filter = 'open' | 'closed' | 'all';
 
-/** Category label: "harassment" → "Harassment". */
+/** Category label: `user:harassment` → "Member: Harassment or threats", "spam" → "Spam". */
 export function reportTypeLabel(type: string | null | undefined) {
-  const value = (type ?? '').replace(/_/g, ' ').trim();
-  return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Report';
+  const value = (type ?? '').trim();
+  if (!value) return 'Report';
+  const known = reportCategoryLabel(value);
+  if (known !== value) return known;
+  const text = value.replace(/[_:]/g, ' ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 export function ReportCard({

@@ -377,7 +377,7 @@ function OwnerActions({
         {!removed ? (
           <AppButton
             disabled={busy}
-            icon="settings"
+            icon="pencil"
             label="Edit"
             onPress={onEdit}
             variant="secondary"

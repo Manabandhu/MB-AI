@@ -112,3 +112,4 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
   - Realtime copies of your own message drop the matching pending/failed entry (`withoutDeliveredPending`), so Retry cannot post a message the server already saved.
   - `NewChatScreen` throws (and does not navigate) when every participant add fails; there is no endpoint to delete the empty conversation.
   - `ChatFrame` drops the home-indicator inset under the composer while the keyboard is open.
+- Visual QA pass (2026-10-14, offline stack, 390/768/1440 light+dark): message times use `hour: 'numeric'` ("1:59 PM", not "01:59 PM"). The offline stack has no Supabase Realtime, so the conversation screen logs a failed `ws://localhost:9999/realtime` handshake locally; that is expected there.

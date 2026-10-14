@@ -92,7 +92,7 @@ export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
     <Screen onRefresh={onRefresh} refreshing={refreshing}>
       <YStack gap="$x4" width="100%">
         <ScreenHeader
-          back={screenId === 'home' ? false : { fallback: '/immigration' as Href }}
+          back={{ fallback: (screenId === 'home' ? '/home' : '/immigration') as Href }}
           subtitle={copy.subtitle}
           title={copy.title}
         />

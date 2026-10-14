@@ -120,7 +120,7 @@ export function JobsHomeScreen({ screenId = 'home' }: { screenId?: string }) {
     <Screen onRefresh={() => jobsQuery.refetch()} refreshing={jobsQuery.isRefetching}>
       <YStack gap="$x4">
         <ScreenHeader
-          back={screenId === 'search' ? { fallback: '/jobs' as Href } : false}
+          back={{ fallback: (screenId === 'search' ? '/jobs' : '/home') as Href }}
           primaryAction={{
             label: 'Post a job',
             icon: 'plus',

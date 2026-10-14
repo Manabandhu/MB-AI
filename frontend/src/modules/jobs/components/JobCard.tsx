@@ -1,7 +1,7 @@
 import { formatRelative, formatSalaryRange } from '@manabandhu/core';
 import type { Href } from 'expo-router';
 import { XStack } from 'tamagui';
-import type { JobPosting } from '@/modules/jobs/types';
+import { employmentTypeLabel, type JobPosting } from '@/modules/jobs/types';
 import { jobStatusIs } from '@/modules/jobs/utils/jobForm';
 import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
@@ -21,7 +21,9 @@ export function JobCard({ job }: { job: JobPosting }) {
       </AppText>
       <XStack alignItems="center" flexWrap="wrap" gap="$x2">
         {salary ? <StatusBadge label={salary} tone="success" /> : null}
-        {job.employmentType ? <StatusBadge label={job.employmentType} /> : null}
+        {job.employmentType ? (
+          <StatusBadge label={employmentTypeLabel(job.employmentType)} />
+        ) : null}
         {job.isRemote ? <StatusBadge icon="globe" label="Remote OK" tone="info" /> : null}
         {job.category?.name ? <StatusBadge label={job.category.name} tone="primary" /> : null}
         {!jobStatusIs(job, 'open') ? <StatusBadge label="Closed" tone="warning" /> : null}

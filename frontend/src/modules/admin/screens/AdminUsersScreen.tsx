@@ -91,7 +91,7 @@ export default function AdminUsersScreen() {
                 <YStack gap="$x2">
                   <YStack gap={2}>
                     <AppText numberOfLines={1} variant="bodyStrong">
-                      {u.name}
+                      {u.name && u.name !== '—' ? u.name : 'No display name'}
                     </AppText>
                     <AppText numberOfLines={1} tone="muted" variant="caption">
                       {u.email}

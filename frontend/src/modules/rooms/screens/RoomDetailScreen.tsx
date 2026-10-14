@@ -397,7 +397,7 @@ export function RoomDetailScreen() {
           <XStack flex={1} flexWrap="wrap" gap="$x2" justifyContent="flex-end">
             <AppButton
               disabled={ownerMutation.isPending}
-              icon="settings"
+              icon="pencil"
               label="Edit"
               onPress={() => router.push(`/rooms/${roomId}/edit` as Href)}
               variant="secondary"

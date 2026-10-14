@@ -48,7 +48,10 @@ export function SegmentedControl<T extends string>({
             backgroundColor={selected ? '$surface' : 'transparent'}
             borderRadius={10}
             cursor="pointer"
-            flex={1}
+            // Content-sized, then share the spare room: equal thirds/quarters cut "Rooms 0" to "Roo…" on phones.
+            flexBasis="auto"
+            flexGrow={1}
+            flexShrink={1}
             focusVisibleStyle={{
               outlineWidth: 3,
               outlineStyle: 'solid',

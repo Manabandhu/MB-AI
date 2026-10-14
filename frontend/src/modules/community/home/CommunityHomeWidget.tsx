@@ -5,7 +5,7 @@ import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { listPosts } from '../api';
 
-/** Latest community posts. */
+/** Latest community posts. The age leads the subtitle: as trailing meta it squeezed titles to a few letters. */
 export function CommunityHomeWidget() {
   const query = useQuery({
     queryKey: ['community', 'home-widget'],
@@ -35,8 +35,7 @@ export function CommunityHomeWidget() {
           href={`/community/posts/${post.id}`}
           icon="message"
           key={post.id}
-          meta={formatRelative(post.createdAt)}
-          subtitle={post.body}
+          subtitle={`${formatRelative(post.createdAt)} · ${post.body}`}
           title={post.title}
         />
       ))}

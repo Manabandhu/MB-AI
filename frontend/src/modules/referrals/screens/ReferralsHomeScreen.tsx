@@ -107,7 +107,7 @@ export function ReferralsScreen({ screenId = 'home' }: { screenId?: 'home' | 'mi
               <IconButton icon="user" label="My referrals" onPress={() => go('/referrals/mine')} />
             )
           }
-          back={isMine ? { fallback: '/referrals' as Href } : false}
+          back={{ fallback: (isMine ? '/referrals' : '/home') as Href }}
           subtitle={
             isMine
               ? 'Offers and requests you posted'

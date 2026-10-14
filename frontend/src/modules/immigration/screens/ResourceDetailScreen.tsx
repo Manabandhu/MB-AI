@@ -66,7 +66,13 @@ export function ResourceDetailScreen({ resourceId }: ResourceDetailScreenProps) 
           <Heading variant="h3">{resource.title}</Heading>
           <XStack flexWrap="wrap" gap="$x2">
             {resource.resourceType ? (
-              <StatusBadge label={resource.resourceType.toLowerCase()} tone="primary" />
+              <StatusBadge
+                label={
+                  resource.resourceType.charAt(0) +
+                  resource.resourceType.slice(1).toLowerCase().replace(/_/g, ' ')
+                }
+                tone="primary"
+              />
             ) : null}
             {resource.verified ? (
               <StatusBadge icon="verified-user" label="Reviewed by admin" tone="success" />

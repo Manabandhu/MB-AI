@@ -919,7 +919,8 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
               !allPledged ||
               (meta.index === 8 && progressLoading)
             }
-            icon={meta.index === 8 ? (pledgeMissing ? 'shield' : 'home') : 'chevron-right'}
+            icon={meta.index === 8 ? (pledgeMissing ? 'shield' : 'home') : undefined}
+            iconAfter={meta.index === 8 ? undefined : 'chevron-right'}
             label={
               saveStepMutation.isPending || completeMutation.isPending
                 ? 'Saving...'

@@ -1,4 +1,4 @@
-import { Switch } from 'react-native';
+import { Platform, Switch } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
@@ -51,17 +51,32 @@ export function SettingRow({ icon, title, description, value, disabled, onChange
           </AppText>
         ) : null}
       </YStack>
-      <Switch
-        accessibilityElementsHidden
-        disabled={disabled}
-        importantForAccessibility="no-hide-descendants"
-        onValueChange={onChange}
-        thumbColor={palette.surface}
-        // react-native-web colours the "on" thumb separately.
-        {...({ activeThumbColor: palette.surface } as object)}
-        trackColor={{ false: palette.border, true: palette.primary }}
-        value={value}
-      />
+      {Platform.OS === 'web' ? (
+        // On web the row is the only control: react-native-web's Switch renders an unlabelled <input> that would be
+        // a second, nameless Tab stop. Draw the same track and thumb without it.
+        <XStack
+          aria-hidden
+          backgroundColor={value ? palette.primary : palette.border}
+          borderRadius={999}
+          height={20}
+          justifyContent={value ? 'flex-end' : 'flex-start'}
+          padding={2}
+          pointerEvents="none"
+          width={40}
+        >
+          <YStack backgroundColor={palette.surface} borderRadius={999} height={16} width={16} />
+        </XStack>
+      ) : (
+        <Switch
+          accessibilityElementsHidden
+          disabled={disabled}
+          importantForAccessibility="no-hide-descendants"
+          onValueChange={onChange}
+          thumbColor={palette.surface}
+          trackColor={{ false: palette.border, true: palette.primary }}
+          value={value}
+        />
+      )}
     </XStack>
   );
 }
