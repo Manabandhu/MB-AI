@@ -175,3 +175,4 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 - Paged responses (2026-10-12): `GET /api/v1/rides/offers` returns a `PagedModel` (`{ content, page }`, no `last`). `listRideOffersPage` normalizes it with `toPage`; `RidePage.total` is always a number and `hasMore` is `!page.last`.
 - Member labels (2026-10-12): `memberLabel` uses the first 6 characters of the user id (was 4) so two riders rarely share a label until profiles exist.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['carpool', 'ride share', 'airport', 'pickup', 'commute', 'drive', 'travel']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+- Frontend types match the backend records (2026-10-14 contract audit): immigration resources carry `mine` (no owner id), ride chat responses carry `message`, automation executions carry `acceptedAt`.

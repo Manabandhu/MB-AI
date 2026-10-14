@@ -25,10 +25,10 @@ export type ImmigrationNews = {
   createdAt: string;
 };
 
-/** Mirrors backend `ImmigrationResource`. */
+/** Mirrors backend `ImmigrationResourceView` (no owner id; `mine` marks the caller's own resources). */
 export type ImmigrationResource = {
   id: string;
-  ownerId?: string | null;
+  mine?: boolean;
   title: string;
   description?: string | null;
   category?: string | null;

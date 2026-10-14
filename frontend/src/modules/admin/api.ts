@@ -16,7 +16,7 @@ export type AutomationExecution = {
   status: string;
   environment: string;
   ref: string;
-  requestedAt: string;
+  acceptedAt: string;
 };
 
 export type AdminUser = {

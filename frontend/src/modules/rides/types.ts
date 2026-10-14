@@ -135,5 +135,5 @@ export type RideChatResponse = {
   conversationId: string;
   rideId?: string;
   chatExpiresAt?: string | null;
-  notice?: string | null;
+  message?: string | null;
 };
