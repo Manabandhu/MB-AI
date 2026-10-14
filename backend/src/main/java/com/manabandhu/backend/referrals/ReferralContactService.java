@@ -59,7 +59,8 @@ public class ReferralContactService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot contact yourself about your own referral");
         }
         if (!open) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "This referral is closed");
+            // Only an admin reaches here; answer like everyone else so the contract stays one rule.
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Referral not found");
         }
         var text = message == null ? "" : message.trim();
         if (text.length() < 20) {
