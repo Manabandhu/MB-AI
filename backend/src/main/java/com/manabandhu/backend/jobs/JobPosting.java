@@ -1,6 +1,5 @@
 package com.manabandhu.backend.jobs;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -62,6 +61,10 @@ public class JobPosting {
     @Column(name = "updated_at", nullable = false)
     Instant updatedAt;
 
+    /** Viewer flag set by {@link #viewedBy}; owner ids are never serialized because job reads are public. */
+    @jakarta.persistence.Transient
+    Boolean mine;
+
     protected JobPosting() {}
 
     JobPosting(UUID ownerId, JobCategory category, String title, String company, String location, String description,
@@ -84,7 +87,16 @@ public class JobPosting {
     }
 
     public UUID getId() { return id; }
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public UUID getOwnerId() { return ownerId; }
+    /** True when the viewer owns the posting, false otherwise; null when no viewer was applied. */
+    public Boolean getMine() { return mine; }
+
+    /** Sets {@link #getMine()} for the (optional) viewer and returns this posting. */
+    public JobPosting viewedBy(com.manabandhu.backend.auth.Actor viewer) {
+        this.mine = viewer != null && viewer.is(ownerId);
+        return this;
+    }
     public JobCategory getCategory() { return category; }
     public String getTitle() { return title; }
     public String getCompany() { return company; }

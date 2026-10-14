@@ -35,6 +35,34 @@ if (existsSync(envPath)) {
   }
 }
 
+// Local runs use the hosted Supabase database directly (no local Postgres) and never migrate it: schema changes
+// reach Supabase through the deployed backend's startup migration or the `migrate` workflow, not a developer laptop.
+const projectRef = env.SUPABASE_PROJECT_REF ?? 'lpzaioyurvgdysdfktzc';
+const pooler = env.SUPABASE_POOLER_HOST ?? 'aws-0-us-east-2.pooler.supabase.com';
+// Session-mode pooler (port 5432) keeps prepared statements working for Hibernate.
+env.DATABASE_URL ??= `jdbc:postgresql://${pooler}:5432/postgres?sslmode=require`;
+// The application role owns every table; DATABASE_PASSWORD is that role's password.
+env.DATABASE_USERNAME ??= `manabandhu_app.${projectRef}`;
+env.SPRING_FLYWAY_ENABLED ??= 'false';
+// The admin public-access override is only honoured with the local auth stub; against hosted Supabase the backend
+// ignores it and logs an error, so switch it off here instead.
+if (env.ADMIN_PUBLIC_ACCESS_ENABLED === 'true') {
+  console.log(
+    'ADMIN_PUBLIC_ACCESS_ENABLED=true only works with the local auth stub; using false against Supabase.',
+  );
+  env.ADMIN_PUBLIC_ACCESS_ENABLED = 'false';
+}
+if (!env.DATABASE_PASSWORD || env.DATABASE_PASSWORD.startsWith('replace-with')) {
+  console.error(
+    `Set DATABASE_PASSWORD (Supabase → Project Settings → Database) in ${envPath} or your shell. Never commit it.`,
+  );
+  process.exit(1);
+}
+// Connection details come from the environment and may embed credentials, so they are never printed.
+console.log(
+  `Starting backend against Supabase (migrations ${env.SPRING_FLYWAY_ENABLED === 'true' ? 'on' : 'off'}).`,
+);
+
 const child = spawn('./backend/mvnw', ['-f', 'backend/pom.xml', 'spring-boot:run'], {
   env,
   stdio: 'inherit',

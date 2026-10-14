@@ -3,6 +3,7 @@ import { useWindowDimensions } from 'react-native';
 
 export type WindowClass = 'compact' | 'medium' | 'expanded' | 'wide';
 
+/** Window-size facts every screen should branch on (never on device model). */
 export function useAdaptiveLayout() {
   const { width, height, fontScale } = useWindowDimensions();
   const windowClass: WindowClass =
@@ -37,4 +38,10 @@ export function useAdaptiveLayout() {
     width,
     windowClass,
   } as const;
+}
+
+/** True at the expanded breakpoint (1024pt) and wider: desktop web, landscape tablets, unfolded foldables. */
+export function useIsDesktopLayout() {
+  const { windowClass } = useAdaptiveLayout();
+  return windowClass === 'expanded' || windowClass === 'wide';
 }

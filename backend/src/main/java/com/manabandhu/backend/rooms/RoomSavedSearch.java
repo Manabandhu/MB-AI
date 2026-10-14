@@ -30,7 +30,7 @@ public class RoomSavedSearch {
     @Column(name = "broad_location", length = 200)
     private String broadLocation;
 
-    @Column(name = "room_type", length = 20)
+    @Column(name = "room_type", length = 50)
     private String roomType;
 
     @Column(name = "min_price", precision = 10, scale = 2)

@@ -1,103 +1,101 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { type Href, useRouter } from 'expo-router';
+import { Linking } from 'react-native';
+import { XStack, YStack } from 'tamagui';
 import { getAssistantCitations } from '@/modules/ai-assistant/api';
+import { safeExternalUrl } from '@/modules/ai-assistant/assistantFormat';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { showError } from '@/modules/shared/ui/notify';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 
+const openUrl = async (url: string) => {
+  try {
+    await Linking.openURL(url);
+  } catch (error) {
+    showError('Could not open the link', error);
+  }
+};
+
+/** Sources attached to answers in your latest conversation; each one with a web link opens it. */
 export function AssistantCitationsScreen() {
-  const layout = useAdaptiveLayout();
   const router = useRouter();
   const citations = useQuery({
     queryKey: ['assistant', 'citations'],
     queryFn: getAssistantCitations,
   });
-  const data = citations.data ?? [];
 
-  if (citations.isLoading) {
+  const body = () => {
+    if (citations.isLoading) return <LoadingState count={4} variant="skeleton" />;
+    if (citations.isError) {
+      return (
+        <ErrorState
+          body="Check your connection and try again."
+          onRetry={() => citations.refetch()}
+          retryLabel="Retry"
+          title="Unable to load citations"
+        />
+      );
+    }
+    const data = citations.data ?? [];
+    if (data.length === 0) {
+      return (
+        <EmptyState
+          actionLabel="Open assistant"
+          body="Sources the assistant uses for its answers will appear here."
+          iconName="book"
+          onAction={() => router.push('/assistant' as Href)}
+          title="No citations"
+        />
+      );
+    }
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Assistant" title="Citations" />
-          <LoadingState variant="skeleton" count={4} />
-        </View>
-      </SafeAreaView>
+      <YStack gap="$x3">
+        {data.map((item) => {
+          const url = safeExternalUrl(item.url);
+          return (
+            <Card
+              aria-label={url ? `Open ${item.title}` : undefined}
+              key={item.id}
+              onPress={url ? () => void openUrl(url) : undefined}
+            >
+              <XStack alignItems="center" gap="$x2">
+                <AppIcon name="book" size={20} />
+                <AppText flex={1} variant="bodyStrong">
+                  {item.title}
+                </AppText>
+                {url ? <AppIcon name="arrow-right" size={18} /> : null}
+              </XStack>
+              {item.snippet || item.body ? (
+                <AppText tone="muted" variant="body">
+                  {item.snippet ?? item.body}
+                </AppText>
+              ) : null}
+              {url || item.source ? (
+                <AppText numberOfLines={1} tone="primary" variant="caption">
+                  {item.source ?? url}
+                </AppText>
+              ) : null}
+            </Card>
+          );
+        })}
+      </YStack>
     );
-  }
-
-  if (citations.isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Assistant" title="Citations" />
-          <ErrorState
-            title="Unable to load citations"
-            body="Check your connection and try again."
-            retryLabel="Retry"
-            onRetry={() => citations.refetch()}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader
-            eyebrow="Assistant"
-            title="Citations"
-            subtitle="Sources used for recent answers."
-          />
-          {data.length === 0 ? (
-            <EmptyState
-              title="No citations"
-              body="Citations will appear here after you ask questions."
-              actionLabel="Open assistant"
-              onAction={() => router.push('/assistant')}
-            />
-          ) : (
-            <View style={styles.list}>
-              {data.map((item) => (
-                <View key={item.id} style={styles.card}>
-                  <View style={styles.iconRow}>
-                    <AppIcon color={colors.primary} name="book" size={20} />
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                  </View>
-                  <Text style={styles.cardBody}>{item.body ?? item.snippet ?? ''}</Text>
-                  <Text style={styles.cardMeta}>{item.meta ?? item.source ?? item.url ?? ''}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Screen onRefresh={() => citations.refetch()} refreshing={citations.isRefetching}>
+      <ScreenHeader
+        back={{ fallback: '/assistant' as Href }}
+        subtitle="Sources used for answers in your latest conversation."
+        title="Citations"
+      />
+      {body()}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  iconRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  cardTitle: { color: colors.ink, flex: 1, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  cardBody: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  cardMeta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-});

@@ -4,13 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { AppState, Platform } from 'react-native';
 
+import { createChunkedStorage } from '@/lib/chunkedStorage';
 import { env } from '@/lib/env';
 
-const mobileStorage = {
-  getItem: (key: string) => SecureStore.getItemAsync(key),
-  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
-  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
-};
+// Supabase sessions exceed SecureStore's ~2 KB value limit, so they are stored in chunks.
+export const chunkedSecureStorage = createChunkedStorage(SecureStore);
 
 function ensureStaticRenderWebSocket() {
   const target = globalThis as typeof globalThis & { WebSocket?: typeof WebSocket };
@@ -59,7 +57,7 @@ const webStorage =
 
 export const supabase = createClient(env.supabaseUrl, env.supabasePublishableKey, {
   auth: {
-    storage: Platform.OS === 'web' ? webStorage : mobileStorage,
+    storage: Platform.OS === 'web' ? webStorage : chunkedSecureStorage,
     autoRefreshToken: true,
     detectSessionInUrl: Platform.OS === 'web',
     persistSession: true,

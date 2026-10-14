@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Glyph only (white arches + saffron dot) on transparent, centred in the Android adaptive-icon safe zone. -->
+  <g transform="translate(512 512) scale(0.64) translate(-512 -524)">
+    <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="96">
+      <path d="M276 756V530a118 118 0 0 1 236 0v226"/>
+      <path d="M512 756V530a118 118 0 0 1 236 0v226"/>
+    </g>
+    <circle cx="512" cy="292" r="62" fill="#ff7e33"/>
+  </g>
+</svg>

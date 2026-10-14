@@ -1,16 +1,24 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { type Href, router, Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import '../../global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaListener } from 'react-native-safe-area-context';
 import { Uniwind } from 'uniwind';
+import '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
-import { GluestackUIProvider } from '@/modules/shared/ui/gluestack/gluestack-ui-provider';
+import { persistOptions, queryPersister } from '@/lib/queryPersistence';
+import { useTermsGate } from '@/modules/auth/useTermsGate';
+import { useOpenPushTaps } from '@/modules/notifications/push';
+import { ConfirmProvider } from '@/modules/shared/ui/ConfirmSheet';
+import { AppThemeProvider } from '@/theme/ThemeProvider';
 
 export default function RootLayout() {
+  useOpenPushTaps(useCallback((route: string) => router.push(route as Href), []));
+  // Any signed-in account without a recorded Terms acceptance is sent to /accept-terms from every protected route.
+  useTermsGate();
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -19,6 +27,21 @@ export default function RootLayout() {
         },
       }),
   );
+
+  // Cached queries hold one member's data; drop them whenever the signed-in account changes or signs out.
+  useEffect(() => {
+    let previousUserId = useAuthStore.getState().user?.id ?? null;
+    return useAuthStore.subscribe((state) => {
+      const userId = state.user?.id ?? null;
+      if (userId !== previousUserId) {
+        if (previousUserId !== null) {
+          queryClient.clear();
+          Promise.resolve(queryPersister.removeClient()).catch(() => undefined);
+        }
+        previousUserId = userId;
+      }
+    });
+  }, [queryClient]);
 
   useEffect(() => {
     ExpoSplashScreen.hideAsync().catch(() => undefined);
@@ -35,12 +58,13 @@ export default function RootLayout() {
       }}
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <GluestackUIProvider mode="light">
-          <QueryClientProvider client={queryClient}>
-            <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }} />
-          </QueryClientProvider>
-        </GluestackUIProvider>
+        <AppThemeProvider>
+          <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+            <ConfirmProvider>
+              <Stack screenOptions={{ headerShown: false }} />
+            </ConfirmProvider>
+          </PersistQueryClientProvider>
+        </AppThemeProvider>
       </GestureHandlerRootView>
     </SafeAreaListener>
   );

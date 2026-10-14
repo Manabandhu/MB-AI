@@ -40,16 +40,13 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 
 ## API Surface
 
-- `getImmigrationScreen(screenId)` -> `GET /api/v1/immigration/screens/{screenId}`
-- `getResources(query?)` -> `GET /api/v1/immigration/resources?q={query}`
-- `getGuides()` -> `GET /api/v1/immigration/guides`
-- `getChecklists()` -> `GET /api/v1/immigration/checklists`
-- `getFaq(query?)` -> `GET /api/v1/immigration/faq?q={query}`
-- `getQuestions()` -> `GET /api/v1/immigration/questions`
-- `getUscis()` -> `GET /api/v1/immigration/uscis`
-- `getNews()` -> `GET /api/v1/immigration/news`
-- `getSaved()` -> `GET /api/v1/immigration/saved`
-- `getResourceDetail(resourceId)` -> `GET /api/v1/immigration/resources/{resourceId}`
+- `listImmigrationGuides(category?)` -> `GET /api/v1/immigration/guides`
+- `listImmigrationNews()` -> `GET /api/v1/immigration/news` (USCIS view filters by source/category/url)
+- `listImmigrationResources(category?)` -> `GET /api/v1/immigration/resources`
+- `getImmigrationResource(id)` -> `GET /api/v1/immigration/resources/{id}`
+- `listImmigrationChecklists(category?)` -> `GET /api/v1/immigration/checklists` (JWT)
+- `listImmigrationFaq(category?)` -> `GET /api/v1/immigration/faq`
+- External links open through `utils/openUrl.ts` (http/https only, failures shown with notify).
 
 ## Demo Fixtures
 
@@ -106,4 +103,16 @@ Owns curated resources, guides, checklists, FAQ, community Q&A, USCIS links, new
 - Fallback cleanup: deleted `immigrationFallbacks.ts` and removed inline fallbacks from `ImmigrationScreen`, `ResourcesScreen`, `GuidesScreen`, `ChecklistsScreen`, `FaqScreen`, `QuestionsScreen`, `UscisScreen`, `ImmigrationNewsScreen`, and `SavedResourcesScreen` in favor of live backend endpoints, loading states, and error/empty states; added resilient `DEFAULT_IMMIGRATION_DATA` fallback to `ImmigrationScreen` to avoid mobile network blockages; updated detail route with `useLocalSearchParams`.
 - Immigration Guidance Hub overhaul: replaced generic `FeatureScreen` placeholder in `ImmigrationHomeScreen.tsx` with dedicated Immigration & Visa Guidance Hub featuring live USCIS Visa Bulletin ticker (EB-2/EB-3 priority date cutoff tracker), category filter tabs (All, F-1 OPT/CPT, H-1B Cap, STEM Extension, Green Card), comprehensive guide cards with ratings and review counts, and verified immigration attorney consultation inquiry modal. Matching Stitch screen: `1eba8c2fb8b345578ba7af251f166ff8`.
 - Repo-Wide Code Review & Defect Remediation: Audited resource detail dynamic route parameter handling (`/immigration/resources/[resourceId]`), added `hitSlop` on back buttons, and verified loading and error lifecycle states.
-
+- Security & correctness hardening (2026-10): Community-submitted resources can no longer self-mark as verified (admins only). Added public `GET /api/v1/immigration/resources/{id}` for `ResourceDetailScreen`. Removed unrouted `QuestionsScreen`, `UscisScreen` and `SavedResourcesScreen`, which called endpoints that never existed, and the unreachable `ImmigrationGraphqlController`.
+- Screen metrics are computed from the database (2026-10): `ImmigrationContentService` counts resources, verified resources, distinct categories, guides, checklists (plus the caller's own and completed when signed in), FAQ items, published FAQ items, `uscis.gov` resource links and news (total and published in the last 7 days); community Q&A and saved screens show no metrics.
+- Editorial content (2026-10): guides and resources may have a null `owner_id` (V30) for platform-published content. Guides, official resources (uscis.gov, travel.state.gov, studyinthestates.dhs.gov, ssa.gov, irs.gov, ceac.state.gov, fmjfee.com) and FAQ items live in the database; the app never hard-codes immigration content, dates, or visa bulletin values.
+- Cleanup: removed the unused `index.ts` barrel, unused API exports, and unused backend create-input records.
+- Dates render with `formatDate` from `@manabandhu/core`.
+- Public API: `immigration/index.ts` exports `moduleMeta` (launcher entry).
+- P0 privacy fix (2026-10-10): `SecurityConfig` no longer opens `/api/v1/immigration/**`; only published content is public (`screens/{screenId}`, `resources`, `resources/{resourceId}`, `guides`, `faq`, `news`). `GET /api/v1/immigration/checklists` requires a JWT and returns only the caller's checklists (newest 200, optional `category`) through `ImmigrationChecklistService.findForOwner`; completing a checklist requires ownership. `ChecklistsScreen` shows a sign-in prompt to signed-out visitors. Unknown `resourceType` values on `POST /resources` return 400 (case-insensitive match).
+- Review fix (2026-10-11): `GET /resources` and `/resources/{id}` return `ImmigrationResourceView` (no `ownerId`, adds `mine`). The lists are verified resources plus the caller's own unreviewed submissions (admins see all), newest 200; an unreviewed resource reads as 404 to everyone except its submitter and admins.
+- Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['visa', 'opt', 'stem opt', 'h1b', 'green card', 'uscis', 'f1', 'checklist']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
+- Phase 1 correctness pass (2026-10-14): `ResourceDetailScreen` uses `getImmigrationResource` (was raw `apiFetch`), shows the reviewed/not-reviewed state, opens the link in the browser, and no longer has the fake "Save resource" button (it routed to the "not available" screen). Guides expand to their `content` ("Read guide"). `/immigration/questions` no longer duplicates the FAQ: it sends people to ask in Community or read the FAQ. Every immigration route uses `Screen` + `ScreenHeader` (back on sub-routes) with pull-to-refresh; `Alert.alert` was replaced with notify. `/immigration/saved` stays an honest "not available yet" placeholder that nothing links to.
+- Phase 2 visual rebuild (2026-10-14): `ImmigrationHomeScreen` cards (latest update, guide, news, resource, checklist, FAQ) are `Card` + `AppText` on theme tokens (no static `color.*`); expandable cards set `aria-expanded`, news cards are links when they have a URL, and "Read source" is a ghost `AppButton`.
+- Visual QA pass (2026-10-14, offline stack, 390/768/1440 light+dark): the home screen has a back button (falls back to `/home`), and `ResourceDetailScreen` shows the resource type as a word ("Link") instead of lowercased enum text.
+- Frontend types match the backend records (2026-10-14 contract audit): immigration resources carry `mine` (no owner id), ride chat responses carry `message`, automation executions carry `acceptedAt`.

@@ -1,4 +1,4 @@
-import { color as colors } from '@manabandhu/design-system';
+import { type paletteFor, radius, shadow, space } from '@manabandhu/design-system';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -6,9 +6,13 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polygon, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import Svg, { Polyline as SvgPolyline } from 'react-native-svg';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { useAppearance } from '@/theme/ThemeProvider';
 import { useMapPreferencesStore } from '../stores/mapPreferencesStore';
 import type { Coordinate } from '../utils/geoPolygon';
 import { downsamplePoints } from '../utils/geoPolygon';
+
+type Palette = ReturnType<typeof paletteFor>;
 
 export interface MapMarkerItem {
   id: string;
@@ -67,6 +71,8 @@ export function UniversalMapView({
   onClearPolygon,
 }: UniversalMapViewProps) {
   const mapRef = useRef<MapView>(null);
+  const { palette } = useAppearance();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const preferredProvider = useMapPreferencesStore((s) => s.provider);
 
   // On iOS, Google Maps native SDK is not bundled in Expo Go.
@@ -203,8 +209,8 @@ export function UniversalMapView({
         {drawnPolygon && drawnPolygon.length >= 3 && (
           <Polygon
             coordinates={drawnPolygon}
-            strokeColor={colors.primary}
-            fillColor="rgba(13, 92, 117, 0.22)"
+            strokeColor={palette.primary}
+            fillColor={palette.primaryTint}
             strokeWidth={2.5}
           />
         )}
@@ -225,9 +231,17 @@ export function UniversalMapView({
               tracksViewChanges={Platform.OS !== 'ios'}
             >
               <View style={[styles.markerBubble, isSelected && styles.markerBubbleSelected]}>
-                <Text style={[styles.markerPrice, isSelected && styles.markerPriceSelected]}>
-                  {marker.price ? `$${marker.price}` : '📍'}
-                </Text>
+                {marker.price ? (
+                  <Text style={[styles.markerPrice, isSelected && styles.markerPriceSelected]}>
+                    {`$${marker.price}`}
+                  </Text>
+                ) : (
+                  <AppIcon
+                    color={isSelected ? palette.surfaceContainerLowest : palette.primary}
+                    name="map-pin"
+                    size={16}
+                  />
+                )}
               </View>
               {isSelected && <View style={styles.markerPointer} />}
             </Marker>
@@ -242,8 +256,8 @@ export function UniversalMapView({
             {polylineSvgString ? (
               <SvgPolyline
                 points={polylineSvgString}
-                fill="rgba(13, 92, 117, 0.15)"
-                stroke={colors.primary}
+                fill={palette.primaryTint}
+                stroke={palette.primary}
                 strokeWidth={3}
                 strokeDasharray="6, 4"
                 strokeLinecap="round"
@@ -257,15 +271,19 @@ export function UniversalMapView({
       {/* Floating Drawing Instruction Banner */}
       {isDrawingMode && (
         <View style={styles.instructionBanner}>
-          <Text style={styles.instructionText}>✏️ Draw a loop around your desired search area</Text>
+          <AppIcon color={palette.primary} name="pencil" size={16} />
+          <Text style={styles.instructionText}>Draw a loop around your desired search area</Text>
           <Pressable
+            accessibilityLabel="Cancel drawing"
+            accessibilityRole="button"
             onPress={() => {
               setIsDrawingMode(false);
               setCurrentScreenPoints([]);
             }}
             style={styles.cancelButton}
           >
-            <Text style={styles.cancelButtonText}>✕ Cancel</Text>
+            <AppIcon color={palette.ink} name="close" size={14} />
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </Pressable>
         </View>
       )}
@@ -276,33 +294,41 @@ export function UniversalMapView({
           {drawnPolygon && drawnPolygon.length >= 3 ? (
             <View style={styles.actionButtonGroup}>
               <Pressable
+                accessibilityLabel="Redraw search area"
+                accessibilityRole="button"
                 onPress={() => {
                   setCurrentScreenPoints([]);
                   setIsDrawingMode(true);
                 }}
-                style={styles.redrawButton}
+                style={styles.controlButton}
               >
-                <Text style={styles.redrawButtonText}>✏️ Redraw</Text>
+                <AppIcon color={palette.ink} name="pencil" size={14} />
+                <Text style={styles.controlButtonText}>Redraw</Text>
               </Pressable>
               <Pressable
+                accessibilityLabel="Clear search area"
+                accessibilityRole="button"
                 onPress={() => {
                   onClearPolygon?.();
                 }}
                 style={styles.clearButton}
               >
-                <Text style={styles.clearButtonText}>🗑️ Clear Area</Text>
+                <AppIcon color={palette.surfaceContainerLowest} name="trash" size={14} />
+                <Text style={styles.clearButtonText}>Clear Area</Text>
               </Pressable>
             </View>
           ) : (
             <Pressable
+              accessibilityLabel="Draw a search area"
+              accessibilityRole="button"
               onPress={() => {
                 setCurrentScreenPoints([]);
                 setIsDrawingMode(true);
               }}
-              style={styles.drawTriggerButton}
+              style={styles.controlButton}
             >
-              <Text style={styles.drawTriggerIcon}>✏️</Text>
-              <Text style={styles.drawTriggerText}>Draw Area</Text>
+              <AppIcon color={palette.ink} name="pencil" size={14} />
+              <Text style={styles.controlButtonText}>Draw Area</Text>
             </Pressable>
           )}
         </View>
@@ -313,160 +339,131 @@ export function UniversalMapView({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  markerBubble: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markerBubbleSelected: {
-    backgroundColor: colors.primary,
-    borderColor: '#ffffff',
-    transform: [{ scale: 1.15 }],
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  markerPrice: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  markerPriceSelected: {
-    color: '#ffffff',
-  },
-  markerPointer: {
-    alignSelf: 'center',
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderTopWidth: 6,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: colors.primary,
-    marginTop: -1,
-  },
-  instructionBanner: {
-    position: 'absolute',
-    top: 14,
-    left: 16,
-    right: 16,
-    backgroundColor: 'rgba(15, 23, 42, 0.92)',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  instructionText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 12,
-  },
-  cancelButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  floatingControlsContainer: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    zIndex: 10,
-  },
-  actionButtonGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  drawTriggerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 5,
-    gap: 6,
-  },
-  drawTriggerIcon: {
-    fontSize: 14,
-  },
-  drawTriggerText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  redrawButton: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  redrawButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  clearButton: {
-    backgroundColor: '#ef4444',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  clearButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-});
+/** Map chrome (markers, drawing banner, controls) follows the light/dark palette. */
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    markerBubble: {
+      ...shadow.sm,
+      backgroundColor: p.surface,
+      borderRadius: radius.card,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderWidth: 1.5,
+      borderColor: p.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    markerBubbleSelected: {
+      ...shadow.md,
+      backgroundColor: p.primary,
+      borderColor: p.surface,
+      transform: [{ scale: 1.15 }],
+    },
+    markerPrice: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: p.ink,
+    },
+    markerPriceSelected: {
+      color: p.surfaceContainerLowest,
+    },
+    markerPointer: {
+      alignSelf: 'center',
+      width: 0,
+      height: 0,
+      backgroundColor: 'transparent',
+      borderStyle: 'solid',
+      borderLeftWidth: 5,
+      borderRightWidth: 5,
+      borderTopWidth: 6,
+      borderLeftColor: 'transparent',
+      borderRightColor: 'transparent',
+      borderTopColor: p.primary,
+      marginTop: -1,
+    },
+    instructionBanner: {
+      ...shadow.md,
+      position: 'absolute',
+      top: 14,
+      left: space.x4,
+      right: space.x4,
+      backgroundColor: p.surface,
+      borderColor: p.border,
+      borderWidth: 1,
+      borderRadius: 14,
+      paddingLeft: space.x4,
+      paddingRight: space.x1,
+      paddingVertical: space.x1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x2,
+    },
+    instructionText: {
+      color: p.ink,
+      fontSize: 13,
+      fontWeight: '600',
+      flex: 1,
+    },
+    cancelButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x1,
+      minHeight: 44,
+      backgroundColor: p.surfaceContainerHigh,
+      borderRadius: radius.control,
+      paddingHorizontal: space.x3,
+    },
+    cancelButtonText: {
+      color: p.ink,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    floatingControlsContainer: {
+      position: 'absolute',
+      top: 14,
+      right: 14,
+      zIndex: 10,
+    },
+    actionButtonGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.x2,
+    },
+    controlButton: {
+      ...shadow.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 44,
+      backgroundColor: p.surface,
+      paddingHorizontal: 14,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: p.border,
+    },
+    controlButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: p.ink,
+    },
+    clearButton: {
+      ...shadow.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 44,
+      backgroundColor: p.error,
+      paddingHorizontal: 14,
+      borderRadius: radius.pill,
+    },
+    clearButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: p.surfaceContainerLowest,
+    },
+  });

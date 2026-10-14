@@ -13,21 +13,20 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 
 | Route | Screen Component | Type | States |
 |---|---|---|---|
-| `/sign-in` | `SignInScreen` | auth | normal, error, loading, needs-confirmation |
-| `/sign-up` | `SignUpScreen` | auth | normal, error, loading, needs-confirmation |
-| `/forgot-password` | `ForgotPasswordScreen` | auth | normal, success, error |
-| `/otp-verification` | `OtpVerificationScreen` | auth | normal, error, loading |
-| `/reset-password` | `ResetPasswordScreen` | auth | normal, success, error |
-| `/auth/callback` | `AuthCallbackScreen` | auth | confirming, error |
+| `/sign-in` | `SignInScreen` | auth | normal, field errors, error notice, loading, social busy |
+| `/sign-up` | `SignUpScreen` | auth | normal, field errors, error notice, loading, check-your-email |
+| `/phone-login` | `PhoneLoginScreen` | auth | normal, country sheet, error, loading |
+| `/otp-verification` | `OtpVerificationScreen` | auth | entry, wrong/expired code, resend countdown |
+| `/forgot-password` | `ForgotPasswordScreen` | auth | normal, sent, error |
+| `/reset-password` | `ResetPasswordScreen` | auth | form, updated, link expired |
+| `/auth/callback` | `AuthCallbackScreen` | auth | signing in, error |
+| `/choose-login-method`, `/email-login` | redirect to `/sign-in` | legacy | — |
 
 ## Component Inventory
 
-- `SignInScreen` - email/password sign-in with zod client validation
-- `SignUpScreen` - account creation form with zod client validation
-- `ForgotPasswordScreen` - password reset initiation
-- `OtpVerificationScreen` - OTP entry with countdown
-- `ResetPasswordScreen` - new password form
-- `AuthCallbackScreen` - email confirmation / OAuth callback handler
+- `components/AuthKit.tsx` — `AuthScreen`, `AuthField`, `AuthButton`, `SocialButtons`, `AuthDivider`, `AuthNotice`, `AuthSwitch`
+- `authHelpers.ts` — validation, E.164, friendly errors, redirect parsing (unit tested)
+- `postAuth.ts` — `routeAfterAuth()` (onboarding until complete, then Home)
 
 ## API Surface
 
@@ -84,3 +83,38 @@ Owns Sign In, Sign Up, Forgot Password, phone/email login, OTP verification, res
 - **Enhanced Responsiveness, In-Place Auth & Celebration Animation**: Upgraded `SignInScreen` and `SignUpScreen` with in-place segmented tabs (`[ Email ]` / `[ Phone OTP ]`) eliminating navigation hops. Added inline OTP verification on the same card with countdown timer. Added `AuthSuccessCelebration` animated takeover featuring bouncing glowing badge, pulse rings, trust pill, and animated progress bar before redirecting to `/home`. Enhanced `AuthPageLayout` with adaptive responsive widths for mobile (<600), tablet (600-1023), and desktop split view (>=1024) with keyboard tap handling.
 - **Embedded Country Dropdown, Universal Name Placeholders & Card Size Stabilization**: Replaced full-screen country modal overlays with `InlinePhoneInput` (`frontend/src/modules/auth/components/InlinePhoneInput.tsx`), embedding the country flag and dial code picker directly inside the mobile input container alongside an anchored inline dropdown menu. Universalized full name placeholders to "First and last name" across all forms. Stabilized `formContentBlock` with explicit minimum heights and identical layout balance, preventing vertical card jitter and size fluctuations when toggling between Email and Phone auth tabs.
 - **Zero-Cost Phone OTP Testing & Session Persistence**: Added dedicated testing credentials (`+14695550100` / `123456`) in `authStore.ts` for zero-cost automated and manual phone verification without SMS vendor costs. Exposed `useAuthStore.getState().setSession(session)` for direct session rehydration, securely persisting tokens across native `SecureStore` and browser storage. 1-tap test credential badges are wired into `PhoneLoginScreen` and `OtpVerificationScreen`.
+- Security & correctness hardening (2026-10): Removed the hard-coded test phone login (469-555-0100 / code 123456) that created a fake local session, and the "tap to fill" test buttons. For test logins configure Supabase Auth test phone numbers in the dashboard instead. Backend identity is resolved with `com.manabandhu.backend.auth.Actor` (`Actor.require` returns 401 for anonymous calls; `Actor.from` for optional viewers).
+- No invented social proof (2026-10): sign-up and the success celebration no longer claim member counts ("50,000+") or that a new account is "verified".
+
+- iOS-first rebuild (2026-10): one sign-in screen (Apple, Google, email/password, link to phone) replaces the choose-method and email-login screens; large left-aligned titles, footer CTA pinned above the home indicator, Keychain/one-time-code autofill (`textContentType`, `autoComplete`, `passwordRules`), 17pt inputs so iOS Safari never zooms, plain-language errors (`friendlyAuthError`). Removed the success celebration delay, the "Bank-grade encryption"/"Trusted session"/"Multi-factor" claims, and the unused "remember this device" checkbox. All post-auth navigation goes through `useRedirectIfAuthenticated()` → `routeAfterAuth()`, so new members reach onboarding. Native Apple/Google sign-in uses `expo-web-browser` `openAuthSessionAsync` with `manabandhu://auth/callback` (previously a no-op on iOS). `/reset-password` no longer bounces the recovery session to Home, and reset links carry an explicit `redirectTo`. The root layout clears the React Query cache when the signed-in account changes so one member never sees another's cached data.
+- Cleanup: auth screens load the emblem from `shared/ui/brandAssets.ts` and colours from the design-system `palette` instead of local copies.
+- AuthKit shows the vector `BrandMark` (`shared/ui/BrandLogo.tsx`); `shared/ui/brandAssets.ts` and the PNG emblem were removed.
+- Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.
+- `authStore.updateNickname(nickname)` writes `user_metadata.nickname` through `supabase.auth.updateUser`, the same auth-metadata path sign-up uses for `full_name`. It never touches `isLoading`/`status` and throws on failure so callers can show the error.
+- Session fixes (2026-10-11):
+  - **Reset password:** `ResetPasswordScreen` now checks the `setSession` result. A used or expired link shows "Link expired" with "Request a new link" immediately; previously it only failed after a new password was typed.
+  - **`authStore.signOut`:** it rejects when Supabase refuses, leaving the member signed in, and it is the only place that navigates after signing out (to `/welcome`).
+  - **Sign-out callers:** Settings and Profile go through `signOutWithFeedback()` (`foundation/account/signOut.ts`). It removes this device's push token first (best effort), then shows an alert if sign-out fails. Previously the success path navigated twice and the Profile tab swallowed errors.
+  - **Splash:** the root layout runs the only `checkSession`. `SplashScreen` waits for it to settle and routes once. A slow check never sends a signed-in member to Welcome; after 8 s it offers "Try again". The 2.2 s fallback and the tap-anywhere bounce were removed.
+- Legal and account (2026-10-11):
+  - **Sign-up consent:** sign-up requires the `ConsentCheckbox` (links to `/terms` and `/privacy`) before email or Apple/Google sign-up. Email sign-up stores `terms_version` and `terms_accepted_at` in `user_metadata`. OAuth sign-ups do not record the version yet.
+  - **Re-auth:** `foundation/account/reauth.ts` plus `ReauthSheet` (password, or a one-time code to the member's email or phone) run before deletion and before email/phone changes.
+  - **Contact changes:** use `supabase.auth.updateUser`; the UI says the change waits for confirmation.
+  - **Export and deletion:**
+    - `GET /api/v1/me/export` returns a JSON copy of the caller's rows (`AccountService.OWNED_DATA`, fixed table list, ≤ 1000 rows per table).
+    - `DELETE /api/v1/me` needs a sign-in within 10 minutes, read from the JWT `amr` timestamps (`RecentSignIn`); otherwise 401 `reauth_required`.
+    - Deletion hands owned expense groups to another member, then deletes the Supabase auth user through `SupabaseAdminClient`; rows cascade. V36 makes `room_reports.reviewer_id` `ON DELETE SET NULL` so deletion is never blocked.
+  - **Local stub:** it implements `DELETE/PUT /auth/v1/admin/users/{id}` (service role `local-service-role`) and puts `amr` on its tokens.
+  - **Setup docs:** dashboard setup (redirect URLs, providers, templates, secrets, store URLs) is in `docs/auth/SUPABASE_SETUP.md`.
+- Review fix (2026-10-11): `AccountService.delete` is not transactional. The expense-group ownership transfer commits first (`TransactionOperations`), then Supabase deletes the user; before this fix the cascade waited on our uncommitted row lock until the HTTP call timed out. The deleted member's own expenses and settlements in shared groups are removed with the account, and the Account & data copy says so.
+
+## Consent, phone input, theming (2026-10-13)
+- **Terms consent on every account-creation path.** Apple/Google and phone sign-in from `/sign-in` can create an account without Sign Up, and the backend has no consent hook. Decision: `routeAfterAuth()` (`postAuth.ts`) first checks the session's `user_metadata.terms_version` (`hasAcceptedTerms`). If missing, it records consent remembered from Sign Up's checkbox before an OAuth redirect (`consent.ts`: `rememberPendingConsent` in memory + web `sessionStorage`, `takePendingConsent`, `recordTermsConsent` → `supabase.auth.updateUser({ data: { terms_version, terms_accepted_at } })`); otherwise it routes to `/accept-terms` (`screens/AcceptTermsScreen.tsx`: `ConsentCheckbox`, "Accept and continue", "Sign out instead"). Returning members with consent never see it; accounts from before consent was recorded are asked once (also at app start via Splash). Sign-in screens stay unchanged so existing members are not asked to tick a box on every sign-in. `shouldCreateUser:false` was not used because it would block new members who choose phone or Apple/Google.
+- **Phone input**: `parsePhoneInput(dialCode, typed)` (pure, tested) keeps a leading `+`/`00` country code (pasting `+14695550123` no longer becomes `+1 1…`), drops a trunk `0` or a leading `1` on 11-digit +1 numbers, and validates E.164 length. The field accepts `+`, autocompletes `tel`, and the hint explains the full-number option. The country picker is `components/CountryPickerSheet.tsx` on the shared `BottomSheet` with search (name or dial code) and radio rows.
+- **OTP**: code length comes from `OTP_CODE_LENGTH` (= Supabase `otp_length` 6) everywhere; resend shows a busy state and clears the old notice; "Change number" appears only for SMS ("Use a different email" for email), with a fallback (`/phone-login` or `/sign-in`) when there is no history; a missing OTP context redirects by type.
+- **Passwords**: `PASSWORD_RULES` (built from `MIN_PASSWORD_LENGTH`) is shared by Sign Up and Reset so iOS suggestions always pass `passwordProblem`; Reset validates on blur like Sign Up.
+- **Dark mode**: `AuthKit` styles are built per palette (`useAppearance().palette`), so inputs, notices, buttons (Apple button inverts in dark), dividers and the footer follow the theme; `AuthCallbackScreen`, `SignInScreen`, `OtpVerificationScreen` and `PhoneLoginScreen` no longer use fixed white/light colours.
+- **ConsentCheckbox**: 44pt checkbox target with `aria-checked`/`aria-invalid`, focus ring and Space/Enter on web (`keyboardPress`); the Terms/Privacy links are separately focusable.
+- Review fixes (2026-10-14): the Terms gate also runs app-wide. `auth/useTermsGate.ts` is mounted in `app/_layout.tsx`: any signed-in account without `terms_version` on a protected route (deep link, refresh, new tab) goes to `/accept-terms`. It skips `/accept-terms`, `/terms`, `/privacy`, `/`, `/splash`, `/welcome` and the auth routes, and records remembered Sign Up consent first. `ensureTermsConsent` always consumes remembered consent once a session exists. Sign Up clears it when the OAuth call fails or the native browser is cancelled. `/accept-terms` redirects signed-out visitors to `/welcome`, the same target as `authStore.signOut`. `parsePhoneInput` also strips a country code typed without "+" ("91 98765 43210" with +91), using per-code national lengths, or the 15-digit E.164 maximum for other codes.
+- Phase 2 (2026-10-14): the AuthKit password reveal and the `AuthSwitch` link are 44pt targets. Auth screens keep `StyleSheet` for layout only; every colour comes from the palette.
+- Phone change (Account & data): `updateUser({ phone })` texts a code to the new number; the screen then shows a code field that calls `confirmPhoneChange` (`verifyOtp` type `phone_change`). The number only changes after that step. After account deletion a failed server sign-out still clears the stored session with `signOut({ scope: 'local' })`.

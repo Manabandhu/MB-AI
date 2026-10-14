@@ -53,6 +53,27 @@ export interface SaveStepPayload {
   payload: Record<string, unknown>;
 }
 
+// Signed-out visitors can preview onboarding; their answers stay on this device until they sign in.
+let guestProgress: UserOnboardingProgress = emptyProgress('');
+
+function emptyProgress(userId: string): UserOnboardingProgress {
+  return {
+    userId,
+    currentStep: 'goals',
+    isCompleted: false,
+    selectedReasons: [],
+    secondaryLanguages: [],
+    interestTags: [],
+    notificationPreferences: {},
+    safetyPledgeAccepted: false,
+  };
+}
+
+async function signedInUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user.id ?? null;
+}
+
 export async function getOnboardingConfig(): Promise<OnboardingConfigResponse> {
   try {
     const res = await apiFetch('/api/v1/onboarding/config');
@@ -120,6 +141,8 @@ export async function getOnboardingConfig(): Promise<OnboardingConfigResponse> {
 }
 
 export async function getOnboardingProgress(): Promise<UserOnboardingProgress> {
+  const userId = await signedInUserId();
+  if (!userId) return guestProgress;
   try {
     const res = await apiFetch('/api/v1/onboarding/progress');
     if (res.ok) {
@@ -128,9 +151,6 @@ export async function getOnboardingProgress(): Promise<UserOnboardingProgress> {
   } catch (err) {
     console.warn('Backend /api/v1/onboarding/progress unreachable, falling back to Supabase:', err);
   }
-
-  const { data: authData } = await supabase.auth.getUser();
-  const userId = authData.user?.id || '00000000-0000-0000-0000-000000000001';
 
   const { data, error } = await supabase
     .from('user_onboarding_progress')
@@ -163,19 +183,15 @@ export async function getOnboardingProgress(): Promise<UserOnboardingProgress> {
     };
   }
 
-  return {
-    userId,
-    currentStep: 'goals',
-    isCompleted: false,
-    selectedReasons: [],
-    secondaryLanguages: [],
-    interestTags: [],
-    notificationPreferences: {},
-    safetyPledgeAccepted: false,
-  };
+  return emptyProgress(userId);
 }
 
 export async function saveOnboardingStep(input: SaveStepPayload): Promise<UserOnboardingProgress> {
+  const userId = await signedInUserId();
+  if (!userId) {
+    guestProgress = { ...guestProgress, ...input.payload, currentStep: input.stepKey };
+    return guestProgress;
+  }
   try {
     const res = await apiFetch('/api/v1/onboarding/step', {
       method: 'POST',
@@ -187,9 +203,6 @@ export async function saveOnboardingStep(input: SaveStepPayload): Promise<UserOn
   } catch (err) {
     console.warn('Backend /api/v1/onboarding/step unreachable, saving to Supabase directly:', err);
   }
-
-  const { data: authData } = await supabase.auth.getUser();
-  const userId = authData.user?.id || '00000000-0000-0000-0000-000000000001';
 
   const updateData: Record<string, unknown> = {
     user_id: userId,
@@ -243,6 +256,11 @@ export async function saveOnboardingStep(input: SaveStepPayload): Promise<UserOn
 }
 
 export async function completeOnboarding(): Promise<UserOnboardingProgress> {
+  const userId = await signedInUserId();
+  if (!userId) {
+    guestProgress = { ...guestProgress, isCompleted: true, currentStep: 'complete' };
+    return guestProgress;
+  }
   try {
     const res = await apiFetch('/api/v1/onboarding/complete', { method: 'POST' });
     if (res.ok) {
@@ -254,9 +272,6 @@ export async function completeOnboarding(): Promise<UserOnboardingProgress> {
       err,
     );
   }
-
-  const { data: authData } = await supabase.auth.getUser();
-  const userId = authData.user?.id || '00000000-0000-0000-0000-000000000001';
 
   const { data, error } = await supabase
     .from('user_onboarding_progress')

@@ -1,11 +1,66 @@
-import { color as colors } from '@manabandhu/design-system';
+import type { paletteFor } from '@manabandhu/design-system';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, View } from 'react-native';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { useAppearance } from '@/theme/ThemeProvider';
 import { useMapPreferencesStore } from '../stores/mapPreferencesStore';
 import type { Coordinate } from '../utils/geoPolygon';
 import { downsamplePoints } from '../utils/geoPolygon';
+
+type Palette = ReturnType<typeof paletteFor>;
+
+/** Lucide `map-pin` as inline SVG for HTML map markers (they live outside the React tree). */
+const PIN_SVG =
+  '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>';
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Price pill HTML shared by the Google overlay and the Leaflet divIcon, coloured from the active palette.
+ * Titles and prices are escaped because they come from member listings.
+ */
+function markerPillHtml(
+  m: MapMarkerItem,
+  isSelected: boolean,
+  p: Palette,
+  transform: string,
+  extraCss = '',
+): string {
+  const price = m.price ? escapeHtml(`$${m.price}`) : PIN_SVG;
+  const title = escapeHtml(m.title.length > 18 ? `${m.title.slice(0, 18)}...` : m.title);
+  return `
+    <div style="
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background-color: ${isSelected ? p.primary : p.surface};
+      color: ${isSelected ? p.surfaceContainerLowest : p.ink};
+      border: 1.5px solid ${isSelected ? p.primary : p.border};
+      border-radius: 22px;
+      box-shadow: 0 4px 14px ${p.overlay};
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      transform: ${transform};
+      transition: transform 0.15s ease, background-color 0.15s ease;
+      ${extraCss}
+    ">
+      <span style="display: inline-flex; color: ${isSelected ? p.surfaceContainerLowest : p.primary}; font-weight: 800;">${price}</span>
+      <span style="max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${title}</span>
+    </div>
+  `;
+}
 
 export interface MapMarkerItem {
   id: string;
@@ -150,6 +205,7 @@ export function UniversalMapView({
   onClearPolygon,
 }: UniversalMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { palette } = useAppearance();
   const [mapEngine, setMapEngine] = useState<'google' | 'mapkit' | 'leaflet' | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
@@ -501,34 +557,12 @@ export function UniversalMapView({
           div.style.userSelect = 'none';
           div.style.zIndex = this.isSelected ? '999' : '100';
 
-          const priceDisplay = this.markerItem.price ? `$${this.markerItem.price}` : '📍';
-          const titleSnippet =
-            this.markerItem.title.length > 18
-              ? `${this.markerItem.title.slice(0, 18)}...`
-              : this.markerItem.title;
-
-          div.innerHTML = `
-            <div style="
-              display: inline-flex;
-              align-items: center;
-              gap: 6px;
-              padding: 6px 12px;
-              background-color: ${this.isSelected ? colors.primary : '#FFFFFF'};
-              color: ${this.isSelected ? '#FFFFFF' : '#0F172A'};
-              border: 1.5px solid ${this.isSelected ? colors.primary : '#CBD5E1'};
-              border-radius: 22px;
-              box-shadow: 0 4px 14px rgba(0,0,0,${this.isSelected ? '0.28' : '0.14'});
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              font-size: 12px;
-              font-weight: 700;
-              white-space: nowrap;
-              transform: translate(-50%, -100%) ${this.isSelected ? 'scale(1.12)' : 'scale(1)'};
-              transition: transform 0.15s ease, background-color 0.15s ease;
-            ">
-              <span style="color: ${this.isSelected ? '#FFFFFF' : colors.primary}; font-weight: 800;">${priceDisplay}</span>
-              <span style="max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${titleSnippet}</span>
-            </div>
-          `;
+          div.innerHTML = markerPillHtml(
+            this.markerItem,
+            this.isSelected,
+            palette,
+            `translate(-50%, -100%) ${this.isSelected ? 'scale(1.12)' : 'scale(1)'}`,
+          );
 
           div.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -581,33 +615,13 @@ export function UniversalMapView({
       for (const m of markers) {
         if (!m.latitude || !m.longitude) continue;
         const isSelected = selectedMarkerId === m.id;
-        const priceDisplay = m.price ? `$${m.price}` : '📍';
-        const titleSnippet = m.title.length > 18 ? `${m.title.slice(0, 18)}...` : m.title;
-
-        const html = `
-          <div style="
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background-color: ${isSelected ? colors.primary : '#FFFFFF'};
-            color: ${isSelected ? '#FFFFFF' : '#0F172A'};
-            border: 1.5px solid ${isSelected ? colors.primary : '#CBD5E1'};
-            border-radius: 22px;
-            box-shadow: 0 4px 14px rgba(0,0,0,${isSelected ? '0.28' : '0.14'});
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 12px;
-            font-weight: 700;
-            white-space: nowrap;
-            cursor: pointer;
-            transform: ${isSelected ? 'scale(1.12)' : 'scale(1)'};
-            transition: transform 0.15s ease, background-color 0.15s ease;
-            user-select: none;
-          ">
-            <span style="color: ${isSelected ? '#FFFFFF' : colors.primary}; font-weight: 800;">${priceDisplay}</span>
-            <span style="max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${titleSnippet}</span>
-          </div>
-        `;
+        const html = markerPillHtml(
+          m,
+          isSelected,
+          palette,
+          isSelected ? 'scale(1.12)' : 'scale(1)',
+          'cursor: pointer; user-select: none;',
+        );
 
         const icon = L.divIcon({
           className: 'custom-mb-map-marker',
@@ -644,8 +658,8 @@ export function UniversalMapView({
           const annotation = new mapkit.MarkerAnnotation(coord, {
             title: m.title,
             subtitle: m.subtitle || (m.price ? `$${m.price}/mo` : ''),
-            color: isSelected ? colors.primary : '#0D5C75',
-            glyphText: m.price ? `$${m.price}` : '📍',
+            color: isSelected ? palette.primary : palette.teal,
+            glyphText: m.price ? `$${m.price}` : undefined,
             selected: isSelected,
           });
 
@@ -658,7 +672,7 @@ export function UniversalMapView({
 
       map.addAnnotations(annotations);
     }
-  }, [markers, selectedMarkerId, mapReady, mapEngine, onSelectMarker]);
+  }, [markers, selectedMarkerId, mapReady, mapEngine, onSelectMarker, palette]);
 
   // --------------------------------------------------------------------------
   // 3. Pan to selected marker
@@ -800,10 +814,10 @@ export function UniversalMapView({
         const paths = drawnPolygon.map((p) => ({ lat: p.latitude, lng: p.longitude }));
         const poly = new window.google.maps.Polygon({
           paths,
-          strokeColor: colors.primary,
+          strokeColor: palette.primary,
           strokeOpacity: 0.9,
           strokeWeight: 2.5,
-          fillColor: colors.primary,
+          fillColor: palette.primary,
           fillOpacity: 0.18,
           map: googleMapRef.current,
         });
@@ -825,8 +839,8 @@ export function UniversalMapView({
       if (drawnPolygon && drawnPolygon.length >= 3) {
         const latLngs = drawnPolygon.map((pt) => [pt.latitude, pt.longitude]);
         const poly = L.polygon(latLngs, {
-          color: colors.primary,
-          fillColor: colors.primary,
+          color: palette.primary,
+          fillColor: palette.primary,
           fillOpacity: 0.18,
           weight: 2.5,
           dashArray: '6, 4',
@@ -845,8 +859,8 @@ export function UniversalMapView({
         const points = drawnPolygon.map((pt) => new mapkit.Coordinate(pt.latitude, pt.longitude));
         const styleObj = mapkit.Style
           ? new mapkit.Style({
-              fillColor: 'rgba(13, 92, 117, 0.22)',
-              strokeColor: colors.primary,
+              fillColor: palette.primaryTint,
+              strokeColor: palette.primary,
               lineWidth: 2.5,
             })
           : undefined;
@@ -857,7 +871,7 @@ export function UniversalMapView({
         map.addOverlay(overlay);
       }
     }
-  }, [drawnPolygon, mapReady, mapEngine]);
+  }, [drawnPolygon, mapReady, mapEngine, palette]);
 
   // --------------------------------------------------------------------------
   // 8. Draw to Filter Pointer Handlers
@@ -991,8 +1005,8 @@ export function UniversalMapView({
             {polylineSvgString ? (
               <polyline
                 points={polylineSvgString}
-                fill="rgba(13, 92, 117, 0.15)"
-                stroke={colors.primary}
+                fill={palette.primaryTint}
+                stroke={palette.primary}
                 strokeWidth={3}
                 strokeDasharray="6, 4"
                 strokeLinecap="round"
@@ -1011,43 +1025,39 @@ export function UniversalMapView({
             top: '14px',
             left: '16px',
             right: '16px',
-            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            backgroundColor: palette.surface,
+            border: `1px solid ${palette.border}`,
             borderRadius: '14px',
-            padding: '10px 16px',
+            padding: '4px 4px 4px 16px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            gap: '8px',
             zIndex: 1010,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+            boxShadow: `0 4px 12px ${palette.overlay}`,
           }}
         >
+          <AppIcon color={palette.primary} name="pencil" size={16} />
           <span
             style={{
-              color: '#ffffff',
+              color: palette.ink,
+              flex: 1,
               fontSize: '13px',
               fontWeight: 600,
             }}
           >
-            ✏️ Click & drag to sketch a boundary around your search area
+            Click & drag to sketch a boundary around your search area
           </span>
           <button
+            aria-label="Cancel drawing"
             type="button"
             onClick={() => {
               setIsDrawingMode(false);
               setCurrentScreenPoints([]);
             }}
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '6px 12px',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
+            style={controlStyle(palette, 'neutral')}
           >
-            ✕ Cancel
+            <AppIcon color={palette.ink} name="close" size={14} />
+            Cancel
           </button>
         </div>
       )}
@@ -1067,67 +1077,39 @@ export function UniversalMapView({
           {drawnPolygon && drawnPolygon.length >= 3 ? (
             <>
               <button
+                aria-label="Redraw search area"
                 type="button"
                 onClick={() => {
                   setCurrentScreenPoints([]);
                   setIsDrawingMode(true);
                 }}
-                style={{
-                  backgroundColor: '#ffffff',
-                  padding: '8px 14px',
-                  borderRadius: '20px',
-                  border: '1.5px solid #e2e8f0',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                  color: '#0f172a',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-                }}
+                style={controlStyle(palette, 'surface')}
               >
-                ✏️ Redraw
+                <AppIcon color={palette.ink} name="pencil" size={14} />
+                Redraw
               </button>
               <button
+                aria-label="Clear search area"
                 type="button"
                 onClick={() => onClearPolygon?.()}
-                style={{
-                  backgroundColor: '#ef4444',
-                  padding: '8px 14px',
-                  borderRadius: '20px',
-                  border: 'none',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                }}
+                style={controlStyle(palette, 'danger')}
               >
-                🗑️ Clear Area
+                <AppIcon color={palette.surfaceContainerLowest} name="trash" size={14} />
+                Clear Area
               </button>
             </>
           ) : (
             <button
+              aria-label="Draw a search area"
               type="button"
               onClick={() => {
                 setCurrentScreenPoints([]);
                 setIsDrawingMode(true);
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: '#ffffff',
-                padding: '9px 16px',
-                borderRadius: '22px',
-                border: '1.5px solid #e2e8f0',
-                fontWeight: 700,
-                fontSize: '13px',
-                color: '#0f172a',
-                cursor: 'pointer',
-                boxShadow: '0 3px 8px rgba(0,0,0,0.14)',
-              }}
+              style={controlStyle(palette, 'surface')}
             >
-              <span>✏️</span>
-              <span>Draw Area</span>
+              <AppIcon color={palette.ink} name="pencil" size={14} />
+              Draw Area
             </button>
           )}
         </div>
@@ -1145,3 +1127,23 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
 });
+
+/** 44px map control button (draw, redraw, clear, cancel) coloured from the active palette. */
+function controlStyle(p: Palette, tone: 'surface' | 'neutral' | 'danger'): React.CSSProperties {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    minHeight: '44px',
+    padding: '0 16px',
+    borderRadius: tone === 'neutral' ? '12px' : '22px',
+    border: tone === 'surface' ? `1.5px solid ${p.border}` : 'none',
+    backgroundColor:
+      tone === 'danger' ? p.error : tone === 'neutral' ? p.surfaceContainerHigh : p.surface,
+    color: tone === 'danger' ? p.surfaceContainerLowest : p.ink,
+    fontWeight: 700,
+    fontSize: '13px',
+    cursor: 'pointer',
+    boxShadow: tone === 'neutral' ? 'none' : `0 2px 6px ${p.overlay}`,
+  };
+}

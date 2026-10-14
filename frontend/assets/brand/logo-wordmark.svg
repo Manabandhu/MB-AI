@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 320" role="img" aria-label="ManaBandhu">
+  <defs>
+    <linearGradient id="wm-tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c5cf0"/>
+      <stop offset="0.45" stop-color="#431ebe"/>
+      <stop offset="1" stop-color="#2a0f8a"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(16 16) scale(0.28125)">
+    <rect width="1024" height="1024" rx="232" fill="url(#wm-tile)"/>
+    <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="96">
+      <path d="M276 756V530a118 118 0 0 1 236 0v226"/>
+      <path d="M512 756V530a118 118 0 0 1 236 0v226"/>
+    </g>
+    <circle cx="512" cy="292" r="62" fill="#ff7e33"/>
+  </g>
+  <text x="352" y="208" font-family="Inter, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="150" font-weight="800" letter-spacing="-3" fill="#131b2e">Mana<tspan fill="#431ebe">Bandhu</tspan></text>
+</svg>

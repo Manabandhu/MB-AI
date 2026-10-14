@@ -1,14 +1,8 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
-import { useEffect, useRef } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Platform,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { ActivityIndicator } from 'react-native';
+import { YStack } from 'tamagui';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { SkeletonCard } from '@/modules/shared/ui/Skeleton';
+import { useAppearance } from '@/theme/ThemeProvider';
 
 export type LoadingStateVariant = 'spinner' | 'skeleton';
 
@@ -18,90 +12,28 @@ export type LoadingStateProps = {
   label?: string;
 };
 
+/** Spinner for whole screens; skeleton cards for lists so the layout does not jump when data arrives. */
 export function LoadingState({
   variant = 'spinner',
   count = 3,
-  label = 'Loading...',
+  label = 'Loading…',
 }: LoadingStateProps) {
-  const colorScheme = useColorScheme();
-  const pulseAnim = useRef(new Animated.Value(0.4)).current;
-
-  useEffect(() => {
-    if (variant === 'skeleton') {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 750,
-            useNativeDriver: Platform.OS !== 'web',
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 0.4,
-            duration: 750,
-            useNativeDriver: Platform.OS !== 'web',
-          }),
-        ]),
-      );
-      pulse.start();
-      return () => pulse.stop();
-    }
-  }, [variant, pulseAnim]);
-
-  if (variant === 'spinner') {
+  const { palette } = useAppearance();
+  if (variant === 'skeleton') {
     return (
-      <View style={styles.root}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        {label ? (
-          <Text style={[styles.label, colorScheme === 'dark' && styles.labelDark]}>{label}</Text>
-        ) : null}
-      </View>
+      <YStack aria-label={label} gap="$x3">
+        {Array.from({ length: count }, (_, i) => (
+          <SkeletonCard key={i} />
+        ))}
+      </YStack>
     );
   }
-
   return (
-    <View style={[styles.root, { gap: space.x4 }]}>
-      {Array.from({ length: count }).map((_, index) => (
-        <Animated.View
-          key={index}
-          style={[
-            styles.skeleton,
-            colorScheme === 'dark' && styles.skeletonDark,
-            { opacity: pulseAnim },
-          ]}
-        >
-          <View
-            style={[
-              styles.skeletonLine,
-              { width: index === 0 ? '60%' : index === 1 ? '80%' : '40%' },
-            ]}
-          />
-        </Animated.View>
-      ))}
-    </View>
+    <YStack aria-label={label} role="progressbar" alignItems="center" gap="$x3" padding="$x8">
+      <ActivityIndicator color={palette.primary} size="large" />
+      <AppText tone="muted" variant="caption">
+        {label}
+      </AppText>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x4,
-    padding: space.x6,
-  },
-  label: {
-    color: colors.muted,
-    fontSize: typography.body.fontSize,
-    fontWeight: typography.body.fontWeight,
-  },
-  labelDark: { color: colors.muted },
-  skeleton: {
-    backgroundColor: colors.skeleton,
-    borderRadius: radius.control,
-    height: 16,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  skeletonDark: { backgroundColor: colors.skeleton },
-  skeletonLine: { height: '100%' },
-});

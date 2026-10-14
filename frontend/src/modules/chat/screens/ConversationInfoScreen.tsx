@@ -1,339 +1,201 @@
-import { color } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'react-native';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
 import { getConversation, getParticipants, listMessages } from '@/modules/chat/api';
+import {
+  conversationTitle,
+  conversationTypeLabel,
+  isHttpUrl,
+  participantLabel,
+  roleLabel,
+} from '@/modules/chat/chatFormat';
+import { ReportSheet } from '@/modules/safety';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Avatar } from '@/modules/shared/ui/Avatar';
+import { Card } from '@/modules/shared/ui/Card';
+import { PersonRow } from '@/modules/shared/ui/PersonRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { Section } from '@/modules/shared/ui/Section';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 
+type ReportTarget = { id: string; type: 'user' | 'conversation'; label: string };
+
+/**
+ * Conversation details: type, members, shared photos, and real safety reports (a member or the whole conversation).
+ * Mute and leave are not offered: the backend has no endpoints for them yet.
+ */
 export default function ConversationInfoScreen() {
-  const router = useRouter();
-  const layout = useAdaptiveLayout();
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
-  const [isMuted, setIsMuted] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
-  const {
-    data: conversation,
-    isLoading: loadingConversation,
-    isError: errorConversation,
-    refetch: refetchConversation,
-  } = useQuery({
+  const conversation = useQuery({
     queryKey: ['chat', 'conversation', conversationId],
     queryFn: () => getConversation(conversationId),
     enabled: !!conversationId,
   });
-
-  const {
-    data: participants,
-    isLoading: loadingParticipants,
-    isError: errorParticipants,
-    refetch: refetchParticipants,
-  } = useQuery({
+  const participants = useQuery({
     queryKey: ['chat', 'participants', conversationId],
     queryFn: () => getParticipants(conversationId),
     enabled: !!conversationId,
   });
-
-  const { data: messages } = useQuery({
+  const messages = useQuery({
     queryKey: ['chat', 'messages', conversationId],
     queryFn: () => listMessages(conversationId),
     enabled: !!conversationId,
   });
 
-  const title = conversation?.title ?? 'Conversation';
-  const participantList = participants ?? [];
-
-  // Filter media items from messages
-  const mediaItems = (messages ?? [])
-    .filter((m) => m.messageType === 'IMAGE' && m.body)
-    .map((m) => m.body);
-
-  const handleToggleMute = () => {
-    setIsMuted((prev) => !prev);
-    Alert.alert(
-      isMuted ? 'Notifications Unmuted' : 'Notifications Muted',
-      isMuted
-        ? 'You will now receive notifications for new messages.'
-        : 'You will no longer receive alerts for this conversation.',
-    );
+  const refresh = () => {
+    conversation.refetch();
+    participants.refetch();
+    messages.refetch();
   };
+  const header = (
+    <ScreenHeader back={{ fallback: `/chat/${conversationId}` as Href }} title="Details" />
+  );
 
-  const handleLeaveGroup = () => {
-    Alert.alert('Leave Conversation', 'Are you sure you want to leave this conversation?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Leave',
-        style: 'destructive',
-        onPress: () => {
-          Alert.alert('Left', 'You have left the conversation.');
-          router.push('/chat' as Href);
-        },
-      },
-    ]);
-  };
-
-  const handleReportUser = () => {
-    Alert.alert(
-      'Report User / Chat',
-      'Help us keep ManaBandhu safe. Our safety team reviews all reports within 2 hours.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Submit Report',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('Report Submitted', 'Thank you. We have received your safety report.');
-          },
-        },
-      ],
-    );
-  };
-
-  if (errorConversation || errorParticipants) {
+  if (conversation.isLoading || participants.isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <ErrorState
-          body="Please check your connection and try again."
-          onRetry={() => {
-            refetchConversation();
-            refetchParticipants();
-          }}
-          retryLabel="Retry"
-          title="Unable to load conversation info"
-        />
-      </SafeAreaView>
+      <Screen>
+        {header}
+        <LoadingState label="Loading details…" />
+      </Screen>
     );
   }
 
+  if (conversation.isError || participants.isError) {
+    return (
+      <Screen onRefresh={refresh}>
+        {header}
+        <ErrorState
+          body="Check your connection and try again."
+          onRetry={refresh}
+          retryLabel="Retry"
+          title="Unable to load conversation details"
+        />
+      </Screen>
+    );
+  }
+
+  const title = conversationTitle(conversation.data);
+  const members = participants.data ?? [];
+  const photos = (messages.data ?? [])
+    .filter((m) => String(m.messageType).toUpperCase() === 'IMAGE' && isHttpUrl(m.body))
+    .map((m) => ({ id: m.id, uri: m.body }));
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          {/* Header */}
-          <View style={styles.topNav}>
-            <Pressable
-              accessibilityLabel="Back to chat"
-              accessibilityRole="button"
-              onPress={() => router.back()}
-              style={styles.backBtn}
-            >
-              <AppIcon color={color.ink} name="chevron-left" size={20} />
-            </Pressable>
-            <Text style={styles.topNavTitle}>Details</Text>
-            <View style={{ width: 40 }} />
-          </View>
+    <Screen onRefresh={refresh} refreshing={conversation.isRefetching}>
+      {header}
+      <Card alignItems="center" gap="$x2" padding="$x5">
+        <Avatar name={title} size="lg" />
+        <AppText center role="heading" variant="h3">
+          {title}
+        </AppText>
+        <StatusBadge label={conversationTypeLabel(conversation.data?.type)} tone="primary" />
+      </Card>
 
-          {/* Conversation Summary Card */}
-          <View style={styles.card}>
-            <View style={styles.avatarLarge}>
-              <Text style={styles.avatarLargeText}>{title.slice(0, 2).toUpperCase()}</Text>
-            </View>
-            <Text style={styles.convoTitle}>{title}</Text>
-            <Text style={styles.convoSubtitle}>
-              {conversation?.type === 'RIDE_TEMP'
-                ? '🚗 Temporary Carpool Chat'
-                : conversation?.type === 'ROOM_INQUIRY'
-                  ? '🏠 Room Inquiry Chat'
-                  : '💬 Direct Message'}
-            </Text>
-          </View>
-
-          {/* Members Section */}
-          <SectionHeader subtitle={`${participantList.length} participants`} title="Members" />
-          {loadingConversation || loadingParticipants ? (
-            <LoadingState />
-          ) : participantList.length === 0 ? (
-            <EmptyState
-              actionLabel="Go back"
-              body="This conversation has no active participants."
-              onAction={() => router.back()}
-              title="No participants"
-            />
-          ) : (
-            <View style={styles.memberList}>
-              {participantList.map((p) => (
-                <View key={p.id} style={styles.memberItem}>
-                  <View style={styles.memberAvatar}>
-                    <Text style={styles.memberAvatarText}>
-                      {(p.name || p.userId).slice(0, 2).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>
-                      {p.name || `User (${p.userId.slice(0, 8)})`}
-                    </Text>
-                    <Text style={styles.memberRole}>{p.role}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Shared Media Gallery */}
-          <SectionHeader subtitle={`${mediaItems.length} photos shared`} title="Shared Media" />
-          {mediaItems.length === 0 ? (
-            <View style={styles.emptyMedia}>
-              <AppIcon color="#9ca3af" name="plus" size={32} />
-              <Text style={styles.emptyMediaText}>No photos shared yet in this chat</Text>
-            </View>
-          ) : (
-            <View style={styles.mediaGrid}>
-              {mediaItems.map((uri, idx) => (
-                <Image
-                  key={`${uri}-${idx}`}
-                  resizeMode="cover"
-                  source={{ uri }}
-                  style={styles.mediaThumb}
+      <Section
+        subtitle={`${members.length} ${members.length === 1 ? 'member' : 'members'}`}
+        title="Members"
+      >
+        {members.length === 0 ? (
+          <EmptyState
+            body="Nobody else is in this conversation."
+            compact
+            iconName="community"
+            title="No members"
+          />
+        ) : (
+          <YStack gap="$x2">
+            {members.map((p) => {
+              const isMe = p.userId === currentUserId;
+              const name = participantLabel(p, currentUserId);
+              return (
+                <PersonRow
+                  actions={
+                    isMe ? undefined : (
+                      <AppButton
+                        icon="warning"
+                        label="Report"
+                        onPress={() => setReportTarget({ id: p.userId, type: 'user', label: name })}
+                        size="sm"
+                        variant="ghost"
+                      />
+                    )
+                  }
+                  badge={
+                    String(p.role).toUpperCase() === 'OWNER' ? (
+                      <StatusBadge label={roleLabel(p.role)} tone="info" />
+                    ) : undefined
+                  }
+                  key={p.id}
+                  name={name}
+                  subtitle={`${roleLabel(p.role)} · joined ${new Date(p.joinedAt).toLocaleDateString()}`}
                 />
-              ))}
-            </View>
-          )}
+              );
+            })}
+          </YStack>
+        )}
+      </Section>
 
-          {/* Action Buttons */}
-          <SectionHeader subtitle="Controls and safety" title="Actions" />
-          <View style={styles.actionGroup}>
-            <Pressable
-              accessibilityLabel="Mute notifications"
-              accessibilityRole="button"
-              onPress={handleToggleMute}
-              style={styles.actionBtn}
-            >
-              <AppIcon color={isMuted ? color.primary : '#374151'} name="bell" size={20} />
-              <Text style={styles.actionBtnText}>
-                {isMuted ? 'Unmute Notifications' : 'Mute Notifications'}
-              </Text>
-            </Pressable>
+      <Section
+        subtitle={
+          messages.isError
+            ? 'Photos could not be loaded'
+            : `${photos.length} ${photos.length === 1 ? 'photo' : 'photos'}`
+        }
+        title="Shared photos"
+      >
+        {photos.length === 0 ? (
+          <AppText tone="muted" variant="caption">
+            {messages.isError ? 'Pull to refresh to try again.' : 'No photos in this conversation.'}
+          </AppText>
+        ) : (
+          <XStack flexWrap="wrap" gap="$x2">
+            {photos.map((photo) => (
+              <Image
+                accessibilityLabel="Shared photo"
+                key={photo.id}
+                resizeMode="cover"
+                source={{ uri: photo.uri }}
+                style={{ width: 96, height: 96, borderRadius: 12 }}
+              />
+            ))}
+          </XStack>
+        )}
+      </Section>
 
-            <Pressable
-              accessibilityLabel="Leave group"
-              accessibilityRole="button"
-              onPress={handleLeaveGroup}
-              style={styles.actionBtn}
-            >
-              <AppIcon color="#dc2626" name="chevron-right" size={20} />
-              <Text style={[styles.actionBtnText, { color: '#dc2626' }]}>Leave Conversation</Text>
-            </Pressable>
+      <Section subtitle="Reports go to the ManaBandhu safety team." title="Safety">
+        <AppButton
+          icon="warning"
+          label="Report this conversation"
+          onPress={() =>
+            setReportTarget({
+              id: conversationId,
+              type: 'conversation',
+              label: 'this conversation',
+            })
+          }
+          variant="secondary"
+        />
+        <AppButton icon="shield" label="Safety Center" route="/safety" variant="ghost" />
+      </Section>
 
-            <Pressable
-              accessibilityLabel="Report user"
-              accessibilityRole="button"
-              onPress={handleReportUser}
-              style={styles.actionBtn}
-            >
-              <AppIcon color="#dc2626" name="warning" size={20} />
-              <Text style={[styles.actionBtnText, { color: '#dc2626' }]}>Report User</Text>
-            </Pressable>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <ReportSheet
+        onClose={() => setReportTarget(null)}
+        targetId={reportTarget?.id ?? null}
+        targetLabel={reportTarget?.label ?? ''}
+        targetType={reportTarget?.type ?? 'user'}
+        visible={reportTarget !== null}
+      />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: color.background },
-  page: { flexGrow: 1, padding: 16 },
-  container: { gap: 16, width: '100%', alignSelf: 'center' },
-  topNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  topNavTitle: { fontSize: 16, fontWeight: '700', color: color.ink },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  avatarLarge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(67,30,190,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  avatarLargeText: { fontSize: 24, fontWeight: '700', color: color.primary },
-  convoTitle: { fontSize: 18, fontWeight: '700', color: color.ink, textAlign: 'center' },
-  convoSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 4 },
-  memberList: { gap: 8 },
-  memberItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 12,
-  },
-  memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberAvatarText: { fontSize: 14, fontWeight: '600', color: color.ink },
-  memberInfo: { flex: 1 },
-  memberName: { fontSize: 14, fontWeight: '600', color: color.ink },
-  memberRole: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  mediaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  mediaThumb: {
-    width: 90,
-    height: 90,
-    borderRadius: 10,
-    backgroundColor: '#f3f4f6',
-  },
-  emptyMedia: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
-    gap: 8,
-  },
-  emptyMediaText: { fontSize: 13, color: '#9ca3af' },
-  actionGroup: { gap: 8 },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 12,
-  },
-  actionBtnText: { fontSize: 14, fontWeight: '600', color: color.ink },
-});

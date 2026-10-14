@@ -1,9 +1,15 @@
 import type { Session, User } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { getIdentity } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { parseAuthRedirect } from '@/modules/auth/authHelpers';
+import { routeAfterAuth } from '@/modules/auth/postAuth';
+import { clearSavedRooms } from '@/modules/rooms/savedRoomsStore';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -28,13 +34,24 @@ export interface IdentityResponse {
 
 interface AuthActions {
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name?: string) => Promise<void>;
+  /** Resolves to true when the account still needs its email confirmed before a session exists. */
+  signUp: (
+    email: string,
+    password: string,
+    name?: string,
+    termsVersion?: string,
+  ) => Promise<boolean>;
   signInWithPhone: (phone: string) => Promise<void>;
   signInWithEmailOtp: (email: string) => Promise<void>;
+  /** On native resolves once the in-app browser returns; on web the page navigates to the provider. */
   signInWithOAuth: (provider: 'apple' | 'google') => Promise<void>;
   verifyOtp: (emailOrPhone: string, token: string, type: 'email' | 'sms') => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
+  /** Saves the name we greet the member by (auth user metadata `nickname`). Throws on failure. */
+  updateNickname: (nickname: string) => Promise<void>;
+  /** Saves profile fields (for example `avatar_url`) to the account's metadata; throws on failure. */
+  updateProfile: (fields: Record<string, string>) => Promise<void>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
   loadIdentity: () => Promise<void>;
@@ -125,13 +142,21 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
     }
   },
 
-  signUp: async (email, password, name) => {
+  signUp: async (email, password, name, termsVersion) => {
     set({ isLoading: true, error: null, needsEmailConfirmation: false });
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: name ? { data: { full_name: name } } : undefined,
+        // The accepted terms version is kept on the account as the record of consent.
+        options: {
+          data: {
+            ...(name ? { full_name: name } : {}),
+            ...(termsVersion
+              ? { terms_version: termsVersion, terms_accepted_at: new Date().toISOString() }
+              : {}),
+          },
+        },
       });
       if (error) throw error;
       if (data.session) {
@@ -144,17 +169,17 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
           isLoading: false,
           error: null,
         });
-      } else {
-        set({
-          session: null,
-          user: data.user ?? null,
-          identity: null,
-          status: 'unauthenticated',
-          needsEmailConfirmation: true,
-          isLoading: false,
-        });
-        router.replace('/sign-in');
+        return false;
       }
+      set({
+        session: null,
+        user: data.user ?? null,
+        identity: null,
+        status: 'unauthenticated',
+        needsEmailConfirmation: true,
+        isLoading: false,
+      });
+      return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign up failed';
       set({ error: message, status: 'unauthenticated', isLoading: false });
@@ -165,16 +190,9 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   signInWithPhone: async (phone) => {
     set({ isLoading: true, error: null });
     try {
-      const normalized = phone.replace(/\D/g, '');
-      if (normalized === '14695550100' || normalized === '4695550100') {
-        set({ otpIdentifier: '+14695550100', otpType: 'sms', isLoading: false });
-        router.push('/otp-verification');
-        return;
-      }
       const { error } = await supabase.auth.signInWithOtp({ phone });
       if (error) throw error;
       set({ otpIdentifier: phone, otpType: 'sms', isLoading: false });
-      router.push('/otp-verification');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'SMS sending failed';
       set({ error: message, isLoading: false });
@@ -188,7 +206,6 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) throw error;
       set({ otpIdentifier: email, otpType: 'email', isLoading: false });
-      router.push('/otp-verification');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Magic link sending failed';
       set({ error: message, isLoading: false });
@@ -199,15 +216,42 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   signInWithOAuth: async (provider) => {
     set({ isLoading: true, error: null });
     try {
-      const redirectTo =
-        typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+      if (Platform.OS === 'web') {
+        const redirectTo =
+          typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo },
+        });
+        if (error) throw error;
+        if (data?.url && typeof window !== 'undefined') window.location.href = data.url;
+        set({ isLoading: false });
+        return;
+      }
+      // Native: open the provider in an in-app browser session and bring the tokens back through the app scheme.
+      // The redirect (manabandhu://auth/callback) must be listed in Supabase Auth's allowed redirect URLs.
+      const redirectTo = Linking.createURL('auth/callback');
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo },
+        options: { redirectTo, skipBrowserRedirect: true },
       });
       if (error) throw error;
-      if (data?.url && typeof window !== 'undefined') {
-        window.location.href = data.url;
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type !== 'success') {
+        set({ isLoading: false });
+        return;
+      }
+      const parsed = parseAuthRedirect(result.url);
+      if (parsed.kind === 'error') throw new Error(parsed.message);
+      if (parsed.kind === 'session') {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: parsed.accessToken,
+          refresh_token: parsed.refreshToken,
+        });
+        if (sessionError) throw sessionError;
+      } else if (parsed.kind === 'code') {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(parsed.code);
+        if (exchangeError) throw exchangeError;
       }
       set({ isLoading: false });
     } catch (err) {
@@ -220,38 +264,6 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   verifyOtp: async (emailOrPhone, token, type) => {
     set({ isLoading: true, error: null });
     try {
-      const normalized = emailOrPhone.replace(/\D/g, '');
-      const isTestPhone =
-        (normalized === '14695550100' || normalized === '4695550100') && token.trim() === '123456';
-      if (isTestPhone) {
-        const testUser = {
-          id: '00000000-0000-0000-0000-000000000001',
-          aud: 'authenticated',
-          role: 'authenticated',
-          email: 'test.member@manabandhu.com',
-          phone: '+14695550100',
-          app_metadata: { provider: 'phone', providers: ['phone'] },
-          user_metadata: { full_name: 'Verified Test Member', phone: '+14695550100' },
-          created_at: new Date().toISOString(),
-        } as unknown as User;
-
-        const testSession = {
-          access_token: 'mock-test-phone-access-token',
-          refresh_token: 'mock-test-phone-refresh-token',
-          expires_in: 3600,
-          token_type: 'bearer',
-          user: testUser,
-        } as unknown as Session;
-
-        _get().setSession(testSession);
-        set({
-          otpIdentifier: null,
-          otpType: null,
-          error: null,
-        });
-        return;
-      }
-
       const payload =
         type === 'email'
           ? { email: emailOrPhone, token, type: 'email' as const }
@@ -276,12 +288,18 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
   resetPassword: async (email) => {
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      // The link opens the reset screen on the web or, in the app, through the manabandhu:// scheme.
+      const redirectTo =
+        Platform.OS === 'web' && typeof window !== 'undefined'
+          ? `${window.location.origin}/reset-password`
+          : Linking.createURL('reset-password');
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) throw error;
       set({ isLoading: false });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Reset email sending failed';
       set({ error: message, isLoading: false });
+      throw err;
     }
   },
 
@@ -291,30 +309,47 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, _get) => ({
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       set({ isLoading: false });
-      router.replace('/home');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Password update failed';
       set({ error: message, isLoading: false });
+      throw err;
     }
   },
 
+  updateProfile: async (fields) => {
+    const { data, error } = await supabase.auth.updateUser({ data: fields });
+    if (error) throw error;
+    if (data.user) set({ user: data.user });
+  },
+
+  updateNickname: async (nickname) => {
+    // Does not touch `isLoading`/`status`: a profile edit must never look like a sign-in transition.
+    const { data, error } = await supabase.auth.updateUser({ data: { nickname } });
+    if (error) throw error;
+    if (data.user) set({ user: data.user });
+  },
+
+  /**
+   * Ends the session and is the only place that navigates afterwards (to /welcome), so callers never double-route.
+   * Rejects when Supabase refuses, leaving the member signed in; callers show the error.
+   */
   signOut: async () => {
     set({ isLoading: true, error: null });
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      set({
-        session: null,
-        user: null,
-        identity: null,
-        status: 'unauthenticated',
-        isLoading: false,
-      });
-      router.replace('/sign-in');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sign out failed';
-      set({ error: message, isLoading: false });
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
     }
+    set({
+      session: null,
+      user: null,
+      identity: null,
+      status: 'unauthenticated',
+      isLoading: false,
+    });
+    // Per-user caches must not leak to the next person who signs in on this device.
+    clearSavedRooms();
+    router.replace('/welcome');
   },
 
   loadIdentity: async () => {
@@ -354,12 +389,21 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   }
 });
 
-export function useRedirectIfAuthenticated(redirectTo = '/home') {
+/**
+ * Sends a signed-in member away from sign-in style screens: to onboarding until it is complete, then Home.
+ * Every auth screen relies on this after a successful sign-in, so navigation happens in one place.
+ */
+export function useRedirectIfAuthenticated() {
   const { status, isLoading } = useAuthStore();
   const shouldRedirect = status === 'authenticated' && !isLoading;
+  const redirected = useRef(false);
   useEffect(() => {
-    if (shouldRedirect) router.replace(redirectTo as never);
-  }, [shouldRedirect, redirectTo]);
+    if (shouldRedirect && !redirected.current) {
+      redirected.current = true;
+      void routeAfterAuth();
+    }
+    if (!shouldRedirect) redirected.current = false;
+  }, [shouldRedirect]);
   return { isChecked: !isLoading, shouldRedirect };
 }
 

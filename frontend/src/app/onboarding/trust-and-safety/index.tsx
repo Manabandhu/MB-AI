@@ -1,5 +1,5 @@
-import { StitchOnboardingScreen } from '@/modules/foundation/screens/StitchOnboardingScreen';
+import { OnboardingScreen } from '@/modules/foundation/screens/OnboardingScreen';
 
 export default function OnboardingTrustAndSafetyRoute() {
-  return <StitchOnboardingScreen kind="trust-and-safety" />;
+  return <OnboardingScreen kind="trust-and-safety" />;
 }

@@ -1,71 +1,61 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
-import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { YStack } from 'tamagui';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { useAppearance } from '@/theme/ThemeProvider';
 
 export type ErrorStateProps = {
   title: string;
   body: string;
-  retryLabel: string;
-  onRetry: () => void;
-  icon?: React.ReactNode;
+  retryLabel?: string;
+  onRetry?: () => void;
+  icon?: ReactNode;
+  compact?: boolean;
+  /** Icon on the action button. Defaults to `refresh`; pass another (or `null`) when the action navigates. */
+  actionIcon?: AppIconName | null;
 };
 
-export function ErrorState({ title, body, retryLabel, onRetry, icon }: ErrorStateProps) {
-  const colorScheme = useColorScheme();
-
+/** Shown when a request failed. Offers a retry (or another way forward) and never pretends the request succeeded. */
+export function ErrorState({
+  title,
+  body,
+  retryLabel = 'Try again',
+  onRetry,
+  icon,
+  compact,
+  actionIcon = 'refresh',
+}: ErrorStateProps) {
+  const { palette } = useAppearance();
   return (
-    <View style={[styles.root, colorScheme === 'dark' && styles.rootDark]}>
-      <View style={styles.icon}>{icon}</View>
-      <Text style={[styles.title, colorScheme === 'dark' && styles.titleDark]}>{title}</Text>
-      <Text style={[styles.body, colorScheme === 'dark' && styles.bodyDark]}>{body}</Text>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel={retryLabel}
-        onPress={onRetry}
-        style={[styles.button, colorScheme === 'dark' && styles.buttonDark]}
-      >
-        <Text style={[styles.buttonText, colorScheme === 'dark' && styles.buttonTextDark]}>
-          {retryLabel}
-        </Text>
-      </TouchableOpacity>
-    </View>
+    <YStack aria-live="polite" alignItems="center" gap="$x3" padding={compact ? '$x4' : '$x8'}>
+      {icon ?? (
+        <YStack
+          alignItems="center"
+          backgroundColor="$warmTint"
+          borderRadius="$pill"
+          height={compact ? 48 : 72}
+          justifyContent="center"
+          width={compact ? 48 : 72}
+        >
+          <AppIcon color={palette.warm} name="warning" size={compact ? 22 : 32} />
+        </YStack>
+      )}
+      <AppText center variant={compact ? 'bodyStrong' : 'h3'}>
+        {title}
+      </AppText>
+      <AppText center maxWidth={420} tone="muted">
+        {body}
+      </AppText>
+      {onRetry ? (
+        <AppButton
+          icon={actionIcon ?? undefined}
+          label={retryLabel}
+          onPress={onRetry}
+          size={compact ? 'sm' : 'md'}
+          variant="secondary"
+        />
+      ) : null}
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    alignItems: 'center',
-    gap: space.x4,
-    padding: space.x6,
-  },
-  rootDark: {},
-  icon: { marginBottom: space.x3 },
-  title: {
-    color: colors.ink,
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
-    lineHeight: typography.h3.lineHeight,
-    textAlign: 'center',
-  },
-  titleDark: { color: colors.ink },
-  body: {
-    color: colors.muted,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    textAlign: 'center',
-  },
-  bodyDark: { color: colors.muted },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.control,
-    paddingHorizontal: space.x6,
-    paddingVertical: space.x3,
-    marginTop: space.x2,
-  },
-  buttonDark: { backgroundColor: colors.primary },
-  buttonText: {
-    color: colors.surface,
-    fontSize: typography.bodyStrong.fontSize,
-    fontWeight: typography.bodyStrong.fontWeight,
-  },
-  buttonTextDark: { color: colors.surface },
-});

@@ -1,157 +1,180 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Banner } from '@/modules/shared/components/Banner';
+import { Linking } from 'react-native';
+import { XStack, YStack } from 'tamagui';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { showError } from '@/modules/shared/ui/notify';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { TextField } from '@/modules/shared/ui/TextField';
 import { getNearby } from '@/modules/utilities/api';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import {
+  formatDistance,
+  mapsSearchUrl,
+  matchesSearch,
+  telLink,
+} from '@/modules/utilities/utilitiesFormat';
 
+const open = async (url: string, what: string) => {
+  try {
+    await Linking.openURL(url);
+  } catch (error) {
+    showError(`Could not open ${what}`, error);
+  }
+};
+
+/** Places from the community directory, searchable and filterable by category, with call and directions links. */
 export function NearbyScreen() {
-  const layout = useAdaptiveLayout();
   const nearby = useQuery({ queryKey: ['utilities', 'nearby'], queryFn: getNearby });
-  const data = nearby.data ?? [];
-  const [permissionGranted, setPermissionGranted] = useState(true);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState<string | null>(null);
+  const data = nearby.data ?? [];
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return data;
-    const term = search.toLowerCase();
-    return data.filter(
-      (item) => item.title.toLowerCase().includes(term) || item.body.toLowerCase().includes(term),
-    );
-  }, [data, search]);
+  const categories = useMemo(
+    () => [...new Set(data.map((p) => p.category).filter(Boolean))].sort(),
+    [data],
+  );
+  const filtered = useMemo(
+    () =>
+      data.filter(
+        (p) =>
+          (!category || p.category.toLowerCase() === category.toLowerCase()) &&
+          matchesSearch(search, [p.name, p.category, p.address]),
+      ),
+    [data, search, category],
+  );
 
-  if (nearby.isLoading) {
+  const body = () => {
+    if (nearby.isLoading) return <LoadingState count={4} variant="skeleton" />;
+    if (nearby.isError) {
+      return (
+        <ErrorState
+          body="Check your connection and try again."
+          onRetry={() => nearby.refetch()}
+          retryLabel="Retry"
+          title="Unable to load nearby places"
+        />
+      );
+    }
+    if (data.length === 0) {
+      return (
+        <EmptyState
+          body="No places have been added to the directory yet."
+          iconName="map"
+          title="No places listed"
+        />
+      );
+    }
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Utilities" title="Nearby" />
-          <LoadingState variant="skeleton" count={4} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (nearby.isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Utilities" title="Nearby" />
-          <ErrorState
-            title="Unable to load nearby places"
-            body="Check your connection and try again."
-            retryLabel="Retry"
-            onRetry={() => nearby.refetch()}
+      <YStack gap="$x3">
+        <TextField
+          aria-label="Search nearby places"
+          leadingIcon="search"
+          onChangeText={setSearch}
+          placeholder="Search by name, type, or address"
+          trailing={
+            search ? (
+              <IconButton
+                icon="close"
+                label="Clear search"
+                onPress={() => setSearch('')}
+                variant="plain"
+              />
+            ) : undefined
+          }
+          value={search}
+        />
+        {categories.length > 1 ? (
+          <FilterChipRow label="Category" role="radiogroup">
+            <Chip label="All" onPress={() => setCategory(null)} radio selected={!category} />
+            {categories.map((c) => (
+              <Chip
+                key={c}
+                label={c}
+                onPress={() => setCategory(c)}
+                radio
+                selected={category === c}
+              />
+            ))}
+          </FilterChipRow>
+        ) : null}
+        {filtered.length === 0 ? (
+          <EmptyState
+            actionLabel="Clear filters"
+            body="No places match that search."
+            compact
+            onAction={() => {
+              setSearch('');
+              setCategory(null);
+            }}
+            title="No matches"
           />
-        </View>
-      </SafeAreaView>
+        ) : (
+          filtered.map((place) => {
+            const distance = formatDistance(place.distanceKm);
+            const tel = telLink(place.phone);
+            return (
+              <Card key={place.id}>
+                <XStack alignItems="flex-start" gap="$x2">
+                  <YStack flex={1} gap={2}>
+                    <AppText variant="bodyStrong">{place.name}</AppText>
+                    <AppText tone="muted" variant="caption">
+                      {[
+                        place.category,
+                        distance,
+                        place.rating ? `${place.rating.toFixed(1)}★` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </AppText>
+                  </YStack>
+                </XStack>
+                <AppText tone="muted" variant="body">
+                  {place.address}
+                </AppText>
+                <XStack flexWrap="wrap" gap="$x2">
+                  <AppButton
+                    icon="map-pin"
+                    label="Directions"
+                    onPress={() => void open(mapsSearchUrl(place.address || place.name), 'maps')}
+                    size="sm"
+                    variant="secondary"
+                  />
+                  {tel ? (
+                    <AppButton
+                      icon="phone"
+                      label="Call"
+                      onPress={() => void open(tel, 'the phone app')}
+                      size="sm"
+                      variant="ghost"
+                    />
+                  ) : null}
+                </XStack>
+              </Card>
+            );
+          })
+        )}
+      </YStack>
     );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Utilities" title="Nearby" subtitle="Find services around you." />
-          {!permissionGranted ? (
-            <Banner
-              title="Location access needed"
-              body="Enable location to show nearby services and distances."
-              variant="warning"
-            />
-          ) : null}
-          <View style={styles.searchRow}>
-            <View style={styles.searchBox}>
-              <AppIcon color={colors.muted} name="search" size={18} />
-              <Text
-                style={styles.searchPlaceholder}
-                onPress={() => setSearch(search === 'Search nearby...' ? '' : 'Search nearby...')}
-              >
-                {search || 'Search nearby...'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Filter"
-              style={styles.filterButton}
-              onPress={() => setPermissionGranted((v) => !v)}
-            >
-              <AppIcon color={colors.primary} name="map" size={18} />
-            </TouchableOpacity>
-          </View>
-          {filtered.length === 0 ? (
-            <EmptyState
-              title="No places found"
-              body="Try a different search or enable location."
-              actionLabel="Clear search"
-              onAction={() => setSearch('')}
-            />
-          ) : (
-            <View style={styles.list}>
-              {filtered.map((item) => (
-                <View key={item.id} style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <AppIcon color={colors.primary} name="map" size={20} />
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                    <Text style={styles.distance}>{item.distance}</Text>
-                  </View>
-                  <Text style={styles.cardBody}>{item.body}</Text>
-                  <Text style={styles.cardMeta}>{item.meta}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Screen onRefresh={() => nearby.refetch()} refreshing={nearby.isRefetching}>
+      <ScreenHeader
+        back={{ fallback: '/utilities' as Href }}
+        subtitle="Services listed in the community directory."
+        title="Nearby"
+      />
+      {body()}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  searchRow: { flexDirection: 'row', gap: space.x3 },
-  searchBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    gap: space.x2,
-    paddingHorizontal: space.x3,
-    paddingVertical: space.x3,
-  },
-  searchPlaceholder: { color: colors.muted, flex: 1, fontSize: 15 },
-  filterButton: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    justifyContent: 'center',
-    padding: space.x3,
-  },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  cardTitle: { color: colors.ink, flex: 1, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  distance: { color: colors.primary, fontSize: 13, fontWeight: '700' },
-  cardBody: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  cardMeta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-});

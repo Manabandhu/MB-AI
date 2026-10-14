@@ -3,6 +3,7 @@ package com.manabandhu.backend.referrals;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.manabandhu.backend.auth.Actor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,8 +12,18 @@ public class ReferralOfferService {
 
     private final ReferralOfferRepository repository;
 
-    ReferralOfferService(ReferralOfferRepository repository) {
+    private final ReferralService referralService;
+
+    ReferralOfferService(ReferralOfferRepository repository, ReferralService referralService) {
         this.repository = repository;
+        this.referralService = referralService;
+    }
+
+    /** The details of a referral the caller may see ({@link ReferralService#requireVisible}); 404 otherwise. */
+    @Transactional(readOnly = true)
+    public Optional<ReferralOffer> findForViewer(Actor actor, UUID referralId) {
+        referralService.requireVisible(actor, referralId);
+        return findByReferralId(referralId);
     }
 
     @Transactional(readOnly = true)

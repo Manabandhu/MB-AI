@@ -13,23 +13,45 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.auth.Actor;
+
 @Service
 public class RideOfferService {
 
-    private final RideOfferRepository repository;
+    static final java.util.Set<String> OFFER_STATUSES =
+            java.util.Set.of("draft", "active", "in_progress", "completed", "cancelled");
 
-    RideOfferService(RideOfferRepository repository) {
+    static final int LIST_CAP = 200;
+
+    private final RideOfferRepository repository;
+    private final RideAccess access;
+    private final RideMembership membership;
+    private final com.manabandhu.backend.chat.ConversationParticipantService chatParticipants;
+
+    RideOfferService(RideOfferRepository repository, RideAccess access, RideMembership membership,
+                     com.manabandhu.backend.chat.ConversationParticipantService chatParticipants) {
         this.repository = repository;
+        this.access = access;
+        this.membership = membership;
+        this.chatParticipants = chatParticipants;
     }
 
     @Transactional(readOnly = true)
-    public List<RideOffer> findAll() {
-        return repository.findByStatusOrderByDepartureAtAsc("active");
+    public List<RideOffer> findAllById(List<UUID> ids) {
+        return repository.findAllById(ids);
+    }
+
+    /** Fails with 403 unless the caller is the driver, a passenger, or an admin. */
+    @Transactional(readOnly = true)
+    public void requireRideMember(Actor actor, RideOffer offer) {
+        access.requireMember(actor, offer);
     }
 
     @Transactional(readOnly = true)
     public List<RideOffer> findAllForAdmin() {
-        return repository.findAll();
+        return repository.findAll(org.springframework.data.domain.PageRequest.of(0, 500,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")))
+                .getContent();
     }
 
     @Transactional(readOnly = true)
@@ -37,14 +59,18 @@ public class RideOfferService {
         return repository.findById(id);
     }
 
+    /** The driver's newest offers, capped. */
     @Transactional(readOnly = true)
     public List<RideOffer> findByDriver(UUID driverId) {
-        return repository.findByDriverIdOrderByCreatedAtDesc(driverId);
+        return repository.findByDriverIdOrderByCreatedAtDesc(driverId,
+                org.springframework.data.domain.PageRequest.of(0, LIST_CAP));
     }
 
+    /** Finished, cancelled, or departed rides the user drove or rode on. */
     @Transactional(readOnly = true)
-    public List<RideOffer> findDriverHistory(UUID driverId) {
-        return repository.findByDriverIdOrderByDepartureAtDesc(driverId);
+    public List<RideOffer> findHistory(UUID userId) {
+        return repository.findHistoryFor(userId, Instant.now(),
+                org.springframework.data.domain.PageRequest.of(0, LIST_CAP));
     }
 
     @Transactional(readOnly = true)
@@ -61,7 +87,7 @@ public class RideOfferService {
     @Transactional
     public RideOffer create(UUID driverId, CreateRideOfferInput input) {
         var offer = new RideOffer(driverId, input.originArea(), input.destinationArea(), input.departureAt(),
-                input.seatsTotal(), input.seatsTotal(), input.contribution(), "ACTIVE");
+                input.seatsTotal(), input.seatsTotal(), input.contribution(), "active");
         if (input.originLat() != null) offer.setOriginLat(input.originLat());
         if (input.originLng() != null) offer.setOriginLng(input.originLng());
         if (input.destinationLat() != null) offer.setDestinationLat(input.destinationLat());
@@ -79,25 +105,27 @@ public class RideOfferService {
         return repository.save(offer);
     }
 
+    /** Clones one of the driver's rides with a new future departure; admins cannot create rides for others. */
     @Transactional
-    public RideOffer reactivate(UUID originalRideId, UUID driverId, Instant newDepartureAt) {
+    public RideOffer reactivate(Actor actor, UUID originalRideId, Instant newDepartureAt) {
         var original = repository.findById(originalRideId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Original ride offer not found"));
-        if (!original.getDriverId().equals(driverId)) {
+        if (!actor.is(original.getDriverId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only re-activate your own rides");
         }
-
-        Instant departure = newDepartureAt != null ? newDepartureAt : Instant.now().plus(Duration.ofDays(1));
-
+        if (newDepartureAt == null || !newDepartureAt.isAfter(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a departure time in the future");
+        }
+        var driverId = actor.id();
         var clone = new RideOffer(
                 driverId,
                 original.getOriginArea(),
                 original.getDestinationArea(),
-                departure,
+                newDepartureAt,
                 original.getSeatsTotal(),
                 original.getSeatsTotal(),
                 original.getContribution(),
-                "ACTIVE"
+                "active"
         );
         clone.setOriginLat(original.getOriginLat());
         clone.setOriginLng(original.getOriginLng());
@@ -117,16 +145,40 @@ public class RideOfferService {
         return repository.save(clone);
     }
 
+    /** draft → active|cancelled; active → in_progress|completed|cancelled; in_progress → completed|cancelled. */
+    private static final java.util.Map<String, java.util.Set<String>> TRANSITIONS = java.util.Map.of(
+            "draft", java.util.Set.of("active", "cancelled"),
+            "active", java.util.Set.of("in_progress", "completed", "cancelled"),
+            "in_progress", java.util.Set.of("completed", "cancelled"),
+            "completed", java.util.Set.of(),
+            "cancelled", java.util.Set.of());
+
+    /**
+     * The driver (or an admin) moves the ride through its lifecycle. Cancelling releases every rider's seat, removes
+     * them from the ride and its chat, and notifies them. Completing starts the two-hour chat expiry.
+     */
     @Transactional
-    public RideOffer updateStatus(UUID id, UUID actorId, boolean isAdmin, String status) {
-        var offer = repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
-        if (!offer.getDriverId().equals(actorId) && !isAdmin) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to update this ride");
+    public RideOffer updateStatus(Actor actor, UUID id, String status) {
+        // Statuses are stored lowercase to match the ride_offers_status_valid constraint.
+        var normalized = status == null ? "" : status.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!OFFER_STATUSES.contains(normalized)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Status must be one of draft, active, in_progress, completed, cancelled");
         }
-        String upper = status.toUpperCase();
-        offer.setStatus(upper);
-        if ("COMPLETED".equals(upper)) {
+        var offer = lock(id);
+        access.requireDriver(actor, offer);
+        var current = offer.getStatus() == null ? "active" : offer.getStatus().toLowerCase(java.util.Locale.ROOT);
+        if (current.equals(normalized)) {
+            return offer;
+        }
+        if (!TRANSITIONS.getOrDefault(current, java.util.Set.of()).contains(normalized)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A " + current + " ride cannot become " + normalized);
+        }
+        if ("cancelled".equals(normalized)) {
+            membership.releaseEveryone(offer, actor.id(), "cancelled");
+        }
+        offer.setStatus(normalized);
+        if ("completed".equals(normalized)) {
             Instant now = Instant.now();
             offer.setCompletedAt(now);
             offer.setChatExpiresAt(now.plus(Duration.ofHours(2)));
@@ -135,12 +187,32 @@ public class RideOfferService {
         return repository.save(offer);
     }
 
+    /** Driver edits. Seat counts can never drop below the seats riders already hold. */
     @Transactional
-    public RideOffer update(UUID id, UpdateRideOfferInput input) {
-        var offer = repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
-        if (input.originArea() != null) offer.setOriginArea(input.originArea());
-        if (input.destinationArea() != null) offer.setDestinationArea(input.destinationArea());
+    public RideOffer update(Actor actor, UUID id, UpdateRideOfferInput input) {
+        var offer = lock(id);
+        access.requireDriver(actor, offer);
+        var current = offer.getStatus() == null ? "" : offer.getStatus().toLowerCase(java.util.Locale.ROOT);
+        if ("completed".equals(current) || "cancelled".equals(current)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A " + current + " ride cannot be edited");
+        }
+        if (input.seatsTotal() != null || input.seatsAvailable() != null) {
+            var held = membership.heldSeats(id);
+            var total = input.seatsTotal() != null ? input.seatsTotal() : offer.getSeatsTotal();
+            if (total < held) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Riders already hold " + held + " seats; the ride needs at least that many");
+            }
+            var available = input.seatsAvailable() != null ? input.seatsAvailable() : total - held;
+            if (available > total - held) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "At most " + (total - held) + " seats can be open");
+            }
+            offer.setSeatsTotal(total);
+            offer.setSeatsAvailable(available);
+        }
+        if (input.originArea() != null) offer.setOriginArea(input.originArea().trim());
+        if (input.destinationArea() != null) offer.setDestinationArea(input.destinationArea().trim());
         if (input.originLat() != null) offer.setOriginLat(input.originLat());
         if (input.originLng() != null) offer.setOriginLng(input.originLng());
         if (input.destinationLat() != null) offer.setDestinationLat(input.destinationLat());
@@ -156,40 +228,53 @@ public class RideOfferService {
         if (input.luggageCapacity() != null) offer.setLuggageCapacity(input.luggageCapacity());
         if (input.genderPreference() != null) offer.setGenderPreference(input.genderPreference());
         if (input.departureAt() != null) offer.setDepartureAt(input.departureAt());
-        if (input.seatsTotal() != null) offer.setSeatsTotal(input.seatsTotal());
-        if (input.seatsAvailable() != null) offer.setSeatsAvailable(input.seatsAvailable());
-        if (input.contribution() != null) offer.setContribution(input.contribution());
-        if (input.status() != null) offer.setStatus(input.status());
-        if (input.completedAt() != null) offer.setCompletedAt(input.completedAt());
-        if (input.conversationId() != null) offer.setConversationId(input.conversationId());
-        if (input.chatExpiresAt() != null) offer.setChatExpiresAt(input.chatExpiresAt());
+        if (input.contribution() != null) offer.setContribution(input.contribution().trim());
         offer.setUpdatedAt(Instant.now());
         return repository.save(offer);
     }
 
+    /** Opens or blocks seats; never below zero and never more than the seats riders are not holding. */
     @Transactional
-    public RideOffer adjustSeats(UUID rideId, int seatsToAdd) {
-        var offer = repository.findById(rideId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
-        offer.setSeatsAvailable(Math.max(0, offer.getSeatsAvailable() + seatsToAdd));
+    public RideOffer adjustSeats(Actor actor, UUID rideId, int seatsToAdd) {
+        var offer = lock(rideId);
+        access.requireDriver(actor, offer);
+        var free = offer.getSeatsTotal() - membership.heldSeats(rideId);
+        offer.setSeatsAvailable(Math.min(free, Math.max(0, offer.getSeatsAvailable() + seatsToAdd)));
         offer.setUpdatedAt(Instant.now());
         return repository.save(offer);
     }
 
+    /** Deleting a ride first releases and notifies its riders, as cancelling does. */
     @Transactional
-    public void delete(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found");
+    public void delete(Actor actor, UUID id) {
+        var offer = lock(id);
+        access.requireDriver(actor, offer);
+        membership.releaseEveryone(offer, actor.id(), "removed");
+        if (offer.getConversationId() != null) {
+            chatParticipants.leave(offer.getConversationId(), offer.getDriverId());
         }
-        repository.deleteById(id);
+        repository.delete(offer);
     }
 
-    @Transactional
-    public void attachConversation(UUID rideId, UUID conversationId, Instant expiresAt) {
-        var offer = repository.findById(rideId)
+    private RideOffer lock(UUID id) {
+        return repository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+    }
+
+    /**
+     * The ride's chat, created at most once. The offer row stays locked while {@code provision} runs, so a
+     * concurrent call waits, sees the attached conversation and reuses it instead of creating a second chat.
+     */
+    @Transactional
+    public UUID attachConversation(UUID rideId, java.util.function.Function<RideOffer, UUID> provision) {
+        var offer = repository.findByIdForUpdate(rideId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
+        if (offer.getConversationId() != null) {
+            return offer.getConversationId();
+        }
+        var conversationId = provision.apply(offer);
         offer.setConversationId(conversationId);
-        offer.setChatExpiresAt(expiresAt);
         repository.save(offer);
+        return conversationId;
     }
 }

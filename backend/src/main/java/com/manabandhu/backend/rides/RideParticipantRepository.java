@@ -12,5 +12,7 @@ interface RideParticipantRepository extends JpaRepository<RideParticipant, UUID>
 
     boolean existsByRideIdAndUserId(UUID rideId, UUID userId);
 
+    void deleteByRideIdAndUserId(UUID rideId, UUID userId);
+
     void deleteByUserId(UUID userId);
 }

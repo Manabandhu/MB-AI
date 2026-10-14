@@ -1,30 +1,39 @@
 package com.manabandhu.backend.rooms;
 
 import java.math.BigDecimal;
+import java.util.List;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
+/** Partial update: {@code null} leaves a field unchanged; {@code amenities} replaces the whole set when present. */
 public record UpdateRoomListingInput(
-        @Size(max = 200) String title,
+        @Size(max = 200) @Pattern(regexp = RoomInputRules.NOT_BLANK) String title,
         @Size(max = 4000) String description,
-        BigDecimal price,
-        @Size(max = 50) String roomType,
+        @Positive @Digits(integer = 8, fraction = 2) BigDecimal price,
+        @Size(max = 50) @Pattern(regexp = RoomInputRules.NOT_BLANK) String roomType,
         @Size(max = 200) String broadLocation,
         @Size(max = 4000) String exactAddress,
-        BigDecimal latitude,
-        BigDecimal longitude,
+        @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal latitude,
+        @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal longitude,
         @Size(max = 20) String status,
-        String dietaryPreference,
-        String genderPreference,
-        String bathroomType,
+        @Pattern(regexp = RoomInputRules.DIET) String dietaryPreference,
+        @Pattern(regexp = RoomInputRules.GENDER) String genderPreference,
+        @Pattern(regexp = RoomInputRules.BATHROOM) String bathroomType,
         Boolean utilitiesIncluded,
-        BigDecimal estUtilityMonthly,
-        BigDecimal securityDeposit,
-        String leaseTerm,
-        Boolean isVerifiedHost,
+        @PositiveOrZero @Digits(integer = 8, fraction = 2) BigDecimal estUtilityMonthly,
+        @PositiveOrZero @Digits(integer = 8, fraction = 2) BigDecimal securityDeposit,
+        @Pattern(regexp = RoomInputRules.LEASE) String leaseTerm,
         Boolean universityShuttleAccessible,
-        String stateCode,
-        String county) {
+        @Size(max = 50) String stateCode,
+        @Size(max = 100) String county,
+        @Size(max = 30) List<@NotBlank @Size(max = 80) String> amenities) {
 
     public UpdateRoomListingInput(String title, String description, BigDecimal price, String roomType,
                                   String broadLocation, String exactAddress, BigDecimal latitude, BigDecimal longitude, String status) {

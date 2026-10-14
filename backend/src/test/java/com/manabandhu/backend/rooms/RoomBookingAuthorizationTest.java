@@ -66,9 +66,9 @@ class RoomBookingAuthorizationTest {
         var listing = new RoomListing(ownerId, "Room", null, BigDecimal.valueOf(800),
                 "private", "active", "Irving", null, null, null);
         var booking = new RoomBooking(listingId, requesterId, "pending", "Hi");
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
-        assertThatThrownBy(() -> bookingService.updateStatus(bookingId, otherUserId, false, "accepted"))
+        assertThatThrownBy(() -> bookingService.updateStatus(new com.manabandhu.backend.auth.Actor(otherUserId, false, false), bookingId, "accepted"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
     }
@@ -81,7 +81,7 @@ class RoomBookingAuthorizationTest {
         var listing = new RoomListing(ownerId, "Room", null, BigDecimal.valueOf(800),
                 "private", "active", "Irving", null, null, null);
         when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
-        assertThatThrownBy(() -> bookingService.findByListingId(listingId, strangerId, false))
+        assertThatThrownBy(() -> bookingService.findByListingId(new com.manabandhu.backend.auth.Actor(strangerId, false, false), listingId))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
     }
@@ -101,7 +101,7 @@ class RoomBookingAuthorizationTest {
         var ownerId = UUID.randomUUID();
         var listing = new RoomListing(ownerId, "Room", null, BigDecimal.valueOf(800),
                 "private", "active", "Irving", "123 Main St", null, null);
-        var response = RoomListingResponse.from(listing, List.of(), List.of(), false);
+        var response = RoomListingResponse.from(listing, List.of(), List.of(), false, false, null);
         assertThat(response.savedByViewer()).isFalse();
     }
 }

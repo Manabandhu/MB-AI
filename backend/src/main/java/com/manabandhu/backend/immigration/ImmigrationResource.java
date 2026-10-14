@@ -17,7 +17,7 @@ public class ImmigrationResource {
     @Id
     private UUID id;
 
-    @Column(name = "owner_id", nullable = false, updatable = false)
+    @Column(name = "owner_id", updatable = false)
     private UUID ownerId;
 
     @Column(nullable = false, length = 200)

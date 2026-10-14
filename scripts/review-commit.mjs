@@ -1,12 +1,7 @@
-import { execFileSync } from 'node:child_process';
+import { gitLines } from './lib/files.mjs';
 import { requiredSkillChanges } from './module-skill-rules.mjs';
 
-const staged = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
-  encoding: 'utf8',
-})
-  .trim()
-  .split('\n')
-  .filter(Boolean);
+const staged = gitLines(['diff', '--cached', '--name-only', '--diff-filter=ACMR']);
 
 const missing = requiredSkillChanges(staged);
 if (missing.length) {

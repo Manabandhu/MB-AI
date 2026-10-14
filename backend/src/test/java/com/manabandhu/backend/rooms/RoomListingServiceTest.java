@@ -58,7 +58,7 @@ class RoomListingServiceTest {
                 "private", "draft", "Irving", null, null, null);
         when(repository.findById(listingId)).thenReturn(Optional.of(listing));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        var result = service.update(listingId, ownerId, false, input);
+        var result = service.update(new com.manabandhu.backend.auth.Actor(ownerId, false, false), listingId, input);
         assertThat(result.getPrice()).isEqualByComparingTo(BigDecimal.valueOf(900));
         assertThat(result.getStatus()).isEqualTo("active");
     }
@@ -73,7 +73,7 @@ class RoomListingServiceTest {
         var listing = new RoomListing(ownerId, "Old", null, BigDecimal.valueOf(850),
                 "private", "draft", "Irving", null, null, null);
         when(repository.findById(listingId)).thenReturn(Optional.of(listing));
-        assertThatThrownBy(() -> service.update(listingId, otherUserId, false, input))
+        assertThatThrownBy(() -> service.update(new com.manabandhu.backend.auth.Actor(otherUserId, false, false), listingId, input))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
     }
@@ -88,7 +88,7 @@ class RoomListingServiceTest {
                 "private", "active", "Irving", null, null, null);
         when(repository.findById(listingId)).thenReturn(Optional.of(listing));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        var result = service.update(listingId, adminId, true, input);
+        var result = service.update(new com.manabandhu.backend.auth.Actor(adminId, true, false), listingId, input);
         assertThat(result.getStatus()).isEqualTo("rejected");
     }
 
@@ -97,7 +97,7 @@ class RoomListingServiceTest {
         var input = new UpdateRoomListingInput(null, null, null, null, null, null, null, null, "active");
         var listingId = UUID.randomUUID();
         when(repository.findById(listingId)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.update(listingId, UUID.randomUUID(), false, input))
+        assertThatThrownBy(() -> service.update(new com.manabandhu.backend.auth.Actor(UUID.randomUUID(), false, false), listingId, input))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
@@ -109,7 +109,7 @@ class RoomListingServiceTest {
         var listing = new RoomListing(ownerId, "Old", null, BigDecimal.valueOf(850),
                 "private", "draft", "Irving", null, null, null);
         when(repository.findById(id)).thenReturn(Optional.of(listing));
-        assertThatThrownBy(() -> service.delete(id, otherUserId, false))
+        assertThatThrownBy(() -> service.delete(new com.manabandhu.backend.auth.Actor(otherUserId, false, false), id))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
     }
@@ -138,9 +138,12 @@ class RoomListingServiceTest {
         var ownerId = UUID.randomUUID();
         var listing = new RoomListing(ownerId, "Sunny room", "Description", BigDecimal.valueOf(850),
                 "private", "active", "Irving", "123 Main St", BigDecimal.valueOf(32.8), BigDecimal.valueOf(-96.9));
-        var response = RoomListingResponse.from(listing, List.of("wifi"), List.of("quiet"), false);
+        var response = RoomListingResponse.from(listing, List.of("wifi"), List.of("quiet"), false, false, null);
         assertThat(response.savedByViewer()).isFalse();
-        assertThat(response).hasToString(response.toString());
+        assertThat(response.toString()).doesNotContain("123 Main St").doesNotContain(ownerId.toString());
+        // Coordinates are rounded to about a kilometre.
+        assertThat(response.latitude()).isEqualByComparingTo("32.80");
+        assertThat(response.latitude().scale()).isEqualTo(2);
     }
 
     @Test
@@ -148,7 +151,7 @@ class RoomListingServiceTest {
         var ownerId = UUID.randomUUID();
         var listing = new RoomListing(ownerId, "Sunny room", "Description", BigDecimal.valueOf(850),
                 "private", "active", "Irving", "123 Main St", BigDecimal.valueOf(32.8), BigDecimal.valueOf(-96.9));
-        var response = OwnerRoomListingResponse.from(listing, List.of("wifi"), List.of("quiet"));
+        var response = OwnerRoomListingResponse.from(listing, List.of("wifi"), List.of("quiet"), null);
         org.assertj.core.api.Assertions.assertThat(
                 response.toString().contains("123 Main St")).isTrue();
     }

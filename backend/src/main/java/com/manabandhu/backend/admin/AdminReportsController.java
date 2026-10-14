@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.manabandhu.backend.safety.SafetyReport;
 import com.manabandhu.backend.safety.SafetyReportService;
 
 @RestController
@@ -19,10 +18,12 @@ public class AdminReportsController {
 
     private final SafetyReportService reportService;
     private final AdminAccessPolicy accessPolicy;
+    private final AdminAuditService audit;
 
-    AdminReportsController(SafetyReportService reportService, AdminAccessPolicy accessPolicy) {
+    AdminReportsController(SafetyReportService reportService, AdminAccessPolicy accessPolicy, AdminAuditService audit) {
         this.reportService = reportService;
         this.accessPolicy = accessPolicy;
+        this.audit = audit;
     }
 
     record AdminReportProjection(
@@ -38,7 +39,7 @@ public class AdminReportsController {
     @GetMapping
     List<AdminReportProjection> reports(Authentication authentication) {
         accessPolicy.require(authentication);
-        return reportService.findAllForAdmin().stream()
+        return reportService.findAllForAdmin(com.manabandhu.backend.auth.Actor.require(authentication)).stream()
                 .map(r -> new AdminReportProjection(
                         r.getId(),
                         r.getCategory(),
@@ -54,7 +55,8 @@ public class AdminReportsController {
     @PostMapping("/{id}/resolve")
     AdminReportProjection resolve(Authentication authentication, @PathVariable UUID id) {
         accessPolicy.require(authentication);
-        var r = reportService.resolve(id);
+        var r = reportService.resolve(com.manabandhu.backend.auth.Actor.require(authentication), id);
+        audit.record(accessPolicy.actorId(authentication), "report.resolve", "SAFETY_REPORT", id.toString());
         return new AdminReportProjection(
                 r.getId(),
                 r.getCategory(),

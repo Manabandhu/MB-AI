@@ -1,5 +1,5 @@
 import { useRequireAuth } from '@/lib/authStore';
-import { RoomMyListingsScreen } from '@/modules/rooms/screens/RoomListScreens';
+import { RoomMyListingsScreen } from '@/modules/rooms/screens/RoomMyListingsScreen';
 
 export default function RoomsMyListingsRoute() {
   useRequireAuth('/sign-in');

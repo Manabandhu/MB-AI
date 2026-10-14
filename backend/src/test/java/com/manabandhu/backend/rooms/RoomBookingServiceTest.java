@@ -53,10 +53,10 @@ class RoomBookingServiceTest {
         var listing = new RoomListing(ownerId, "Room", null, BigDecimal.valueOf(800),
                 "private", "active", "Irving", null, null, null);
         var booking = new RoomBooking(listingId, requesterId, "pending", null);
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
         when(bookingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        var result = service.updateStatus(bookingId, ownerId, false, "accepted");
+        var result = service.updateStatus(new com.manabandhu.backend.auth.Actor(ownerId, false, false), bookingId, "accepted");
         assertThat(result.getStatus()).isEqualTo("accepted");
     }
 }

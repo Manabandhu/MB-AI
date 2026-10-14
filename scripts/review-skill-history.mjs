@@ -1,9 +1,5 @@
-import { execFileSync } from 'node:child_process';
+import { git } from './lib/files.mjs';
 import { requiredSkillChanges } from './module-skill-rules.mjs';
-
-function git(args) {
-  return execFileSync('git', args, { encoding: 'utf8' }).trim();
-}
 
 const base = process.env.SKILL_BASE_REF?.trim();
 const range = base ? `${base}..HEAD` : '-50';

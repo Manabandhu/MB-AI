@@ -1,6 +1,7 @@
 type CommunityPost {
   id: ID!
-  ownerId: ID!
+  "Not exposed; always null."
+  ownerId: ID
   title: String!
   body: String!
   createdAt: String!
@@ -8,7 +9,8 @@ type CommunityPost {
 
 type Community {
   id: ID!
-  ownerId: ID!
+  # Null for seeded hubs that have no individual owner.
+  ownerId: ID
   name: String!
   description: String
   createdAt: String!
@@ -17,7 +19,8 @@ type Community {
 type PostComment {
   id: ID!
   postId: ID!
-  authorId: ID!
+  "Not exposed; always null."
+  authorId: ID
   body: String!
   createdAt: String!
 }
@@ -25,22 +28,29 @@ type PostComment {
 type PostReaction {
   id: ID!
   postId: ID!
-  userId: ID!
+  "Not exposed; always null."
+  userId: ID
   type: String!
   createdAt: String!
 }
 
 type RoomListing {
   id: ID!
-  ownerId: ID!
+  "Only returned to the owner and admins."
+  ownerId: ID
+  "True when the signed-in caller owns the listing."
+  isOwner: Boolean!
   title: String!
   description: String
   price: String!
   roomType: String!
   status: String!
-  broadLocation: String!
+  broadLocation: String
+  "Only returned to the owner and admins."
   exactAddress: String
+  "Rounded to two decimals unless the caller is the owner or an admin."
   latitude: String
+  "Rounded to two decimals unless the caller is the owner or an admin."
   longitude: String
   createdAt: String!
   updatedAt: String!
@@ -57,7 +67,10 @@ type RoomBooking {
 
 type RideOffer {
   id: ID!
-  driverId: ID!
+  "Only returned to the ride's driver, passengers, and admins."
+  driverId: ID
+  "True when the signed-in caller drives this ride."
+  isDriver: Boolean!
   originArea: String!
   destinationArea: String!
   departureAt: String!
@@ -90,8 +103,10 @@ type RideParticipant {
 type RideRating {
   id: ID!
   rideId: ID!
-  raterId: ID!
-  rateeId: ID!
+  "Not exposed; always null."
+  raterId: ID
+  "Not exposed; always null."
+  rateeId: ID
   rating: Int!
   comment: String
   createdAt: String!
@@ -99,7 +114,10 @@ type RideRating {
 
 type Event {
   id: ID!
-  organizerId: ID!
+  "Not exposed; always null. Use mine."
+  organizerId: ID
+  "True when the signed-in caller organizes this event."
+  mine: Boolean!
   title: String!
   description: String
   location: String!
@@ -199,6 +217,7 @@ type Query {
   communityPosts: [CommunityPost!]!
   communities: [Community!]!
   postComments(postId: ID!): [PostComment!]!
+  "Newest 200 reactions."
   postReactions(postId: ID!): [PostReaction!]!
   roomListings: [RoomListing!]!
   roomListing(id: ID!): RoomListing!

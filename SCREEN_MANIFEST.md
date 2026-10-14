@@ -44,10 +44,10 @@ Each screen entry includes:
 ### Onboarding Photo
 - Route: `/onboarding/profile-photo` (step 2)
 - Module: foundation
-- Purpose: Add profile photo
+- Purpose: Add profile photo (picked from the library, uploaded to the avatars bucket, saved as `avatar_url`)
 - Type: form
-- States: normal
-- Components: FormScreen, Avatar, AppButton, ProgressBar
+- States: normal | uploading (progress %) | upload error | permission denied
+- Components: FormScreen, Avatar, AppButton, ProgressBar, useImageUpload
 - Navigation: next to `/onboarding/what-brings-you-here`
 
 ### Onboarding Reason
@@ -89,7 +89,7 @@ Each screen entry includes:
 ### Onboarding Notifications
 - Route: `/onboarding/notifications`
 - Module: foundation
-- Purpose: Notification preferences
+- Purpose: Notification preferences (saved to notification settings; OS push prompt after choosing alerts)
 - Type: form
 - States: normal | permission
 - Components: FormScreen, CheckboxGroup, AppButton, ProgressBar, Banner
@@ -183,11 +183,11 @@ Each screen entry includes:
 ### Sign Up
 - Route: `/sign-up`
 - Module: auth
-- Purpose: Create new account
+- Purpose: Create new account (email or Apple/Google); a required consent checkbox links to `/terms` and `/privacy` and the accepted terms version is stored on the account
 - Type: auth
-- States: normal | error | loading
-- Components: ScreenShell, FormScreen, Input, AppButton, Text, Link
-- Navigation: to `/home` on success, to `/sign-in`
+- States: normal | error | loading | consent missing | confirmation sent
+- Components: AuthScreen, AuthField, ConsentCheckbox, SocialButtons, AuthButton
+- Navigation: to onboarding on success, to `/sign-in`, `/terms`, `/privacy`
 
 ### Forgot Password
 - Route: `/forgot-password`
@@ -225,6 +225,15 @@ Each screen entry includes:
 - Components: ScreenShell, FormScreen, Input, AppButton, Text, Link, CountdownTimer
 - Navigation: to `/home` on success
 
+### Accept Terms
+- Route: `/accept-terms`
+- Module: auth
+- Purpose: Record Terms/Privacy consent once for accounts created through Apple/Google or phone sign-in
+- Type: auth
+- States: normal | consent error | saving | error
+- Components: AuthScreen, ConsentCheckbox, AuthButton
+- Navigation: onboarding or `/home` after accepting; "Sign out instead" to `/welcome`
+
 ### Reset Password
 - Route: `/reset-password`
 - Module: auth
@@ -250,11 +259,29 @@ Each screen entry includes:
 ### Inbox
 - Route: `/notifications`
 - Module: notifications
-- Purpose: View in-app notifications
+- Purpose: View in-app notifications (server-paged), mark one or all read, swipe to mark read on phones
 - Type: list
-- States: loading | empty | error | offline
-- Components: ScreenShell, SectionHeader, ListScreen, FeedItem, Banner, AppButton
-- Navigation: push to related screen
+- States: loading | empty | error (retry) | refreshing (pull-to-refresh)
+- Components: Screen, NotificationRow, AppButton, EmptyState, ErrorState
+- Navigation: push to `/notifications/[id]`; Settings button to `/notifications/settings`
+
+### Notification Detail
+- Route: `/notifications/[id]`
+- Module: notifications
+- Purpose: One notification; opening it marks it read
+- Type: detail
+- States: loading | error (not found / not yours)
+- Components: Screen, Card, Chip, AppButton
+- Navigation: "Open" to the notification's in-app route; back to inbox
+
+### Notification Settings
+- Route: `/notifications/settings`
+- Module: notifications
+- Purpose: All-notifications pause, in-app and push channels, eight categories, quiet hours
+- Type: settings
+- States: loading | error (retry) | save error (switch restored) | push permission denied/unsupported
+- Components: Screen, Section, Card, SettingRow, PushSection, QuietHoursSection
+- Navigation: requires sign-in
 
 ---
 
@@ -263,11 +290,11 @@ Each screen entry includes:
 ### Rooms Home
 - Route: `/rooms`
 - Module: rooms
-- Purpose: Discover available rooms
+- Purpose: Discover available rooms (list/map toggle, city picker, quick filters, filter sheet with sort)
 - Type: catalog
-- States: loading | empty | error
-- Components: CatalogScreen, SearchBar, FilterBar, Card, MapPreview, AppButton
-- Navigation: push to `/rooms/search`, `/rooms/map`, `/rooms/filters`, `/rooms/saved`
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: RoomsScreen, ScreenHeader, RoomCard, RoomFilterSheet, CityPickerSheet, RoomsMap
+- Navigation: push to `/rooms/[roomId]`, `/rooms/create-listing` ("Post a room"), `/rooms/my-listings` and `/rooms/saved` (signed-out people go to sign-in)
 
 ### Rooms Search
 - Route: `/rooms/search`
@@ -275,71 +302,80 @@ Each screen entry includes:
 - Purpose: Search and filter rooms
 - Type: list
 - States: loading | empty | error
-- Components: ScreenShell, SearchBar, FilterBar, ListScreen, Card, MapPreview
-- Navigation: push to `/rooms/[roomId]`, `/rooms/map`, `/rooms/filters`
+- Components: RoomsScreen
+- Navigation: push to `/rooms/[roomId]`
 
 ### Rooms Map
 - Route: `/rooms/map`
 - Module: rooms
-- Purpose: View rooms on map
+- Purpose: View rooms on a map and filter by a drawn area
 - Type: map
-- States: loading | empty | error | permission
-- Components: ScreenShell, MapView, MapPin, Card, FilterBar, SearchBar
-- Navigation: push to `/rooms/[roomId]`, `/rooms/search`
+- States: loading | empty ("no map location") | error (retry)
+- Components: RoomsScreen, RoomsMap
+- Navigation: push to `/rooms/[roomId]`; "Show list" appears when some rooms have no map position; after drawing an area the button reads "Show n rooms in this area"
 
 ### Rooms Filters
 - Route: `/rooms/filters`
 - Module: rooms
-- Purpose: Apply search filters
+- Purpose: Filter by rent, room type, amenities (catalog codes), diet and gender (listing fields)
 - Type: filter
 - States: normal
-- Components: ScreenShell, FilterBar, RangeSlider, CheckboxGroup, AppButton
-- Navigation: apply to `/rooms/search`
+- Components: RoomsScreen (filter sheet open)
+- Navigation: closing replaces the screen with `/rooms` (filters persist for the session)
 
 ### Rooms Saved
 - Route: `/rooms/saved`
 - Module: rooms
-- Purpose: View saved rooms
+- Purpose: The member's saved rooms from `GET /favorites`
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: Screen, RoomCard, ResponsiveGrid, EmptyState, ErrorState
 - Navigation: push to `/rooms/[roomId]`
 
 ### Rooms My Listings
 - Route: `/rooms/my-listings`
 - Module: rooms
-- Purpose: Manage own room listings
+- Purpose: Manage own listings (Active, Drafts, Rented tabs; publish, pause, mark rented, relist, archive, delete)
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton, SwipeAction
-- Navigation: push to `/rooms/[roomId]/edit`, `/rooms/create-listing`
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: Screen, SegmentedControl, OwnerItemCard, StatusBadge, ResponsiveGrid, useConfirm
+- Navigation: push to `/rooms/[roomId]`, `/rooms/[roomId]/edit`, `/rooms/create-listing`
 
 ### Rooms Create Listing
 - Route: `/rooms/create-listing`
 - Module: rooms
-- Purpose: Create new room listing
+- Purpose: Create a listing with photos and amenities; "Publish now" (primary) or "Save draft"
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, TextArea, ImageUpload, CheckboxGroup, AppButton
-- Navigation: to `/rooms/my-listings` on success
+- States: normal | error | loading | upload progress
+- Components: RoomForm (TextField, Chip, Card, AppButton, useImageUpload)
+- Navigation: replace with `/rooms/my-listings?notice=…`
 
 ### Room Details
 - Route: `/rooms/[roomId]`
 - Module: rooms
-- Purpose: View room details
+- Purpose: Listing detail with real photos, amenities, pricing, and approximate area
 - Type: detail
-- States: loading | error
-- Components: DetailScreen, ImageGallery, MapPreview, AppButton, SectionHeader, ListScreen
-- Navigation: push to `/rooms/[roomId]/edit`, `/rooms/saved`
+- States: loading | not found | error (retry)
+- Components: Screen, ActionBar, StatusBadge, Card, Chip, BottomSheet (report, owner overflow)
+- Navigation: owner → `/rooms/[roomId]/edit`; others → `/rooms/[roomId]/inquiry` or `/chat/[conversationId]`
 
 ### Edit Listing
 - Route: `/rooms/[roomId]/edit`
 - Module: rooms
-- Purpose: Edit room listing
+- Purpose: Edit a listing, its photos and amenities
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, TextArea, ImageUpload, AppButton
-- Navigation: back to `/rooms/[roomId]`, `/rooms/my-listings`
+- States: normal | error | not found | loading
+- Components: RoomForm
+- Navigation: replace with `/rooms/my-listings?notice=…`
+
+### Room Inquiry
+- Route: `/rooms/[roomId]/inquiry`
+- Module: rooms
+- Purpose: Send move-in date, stay length and an introduction to the host
+- Type: form
+- States: normal | validation error | error | loading
+- Components: Screen, TextField, Chip, DateTimeField, EmptyState, AppButton
+- Navigation: replace with `/chat/[conversationId]`
 
 ---
 
@@ -348,130 +384,104 @@ Each screen entry includes:
 ### Rides Home
 - Route: `/rides`
 - Module: rides
-- Purpose: Discover available rides
+- Purpose: Upcoming rides: header (back; My rides, Saved, History; primary Offer a ride), From/To with swap, one filter chip row (When ▾, Women only, No tolls, Recurring, Luggage, Sort ▾), List/Map segments (side by side on dual pane), 50 per page with Load more
 - Type: catalog
-- States: loading | empty | error
-- Components: CatalogScreen, SearchBar, FilterBar, Card, AppButton
-- Navigation: push to `/rides/search`, `/rides/map`, `/rides/filters`, `/rides/offer`
+- States: loading | empty (Offer a ride CTA, Clear filters) | error (retry) | refreshing | more pages ("Showing the first N of M")
+- Components: RidesScreen, ScreenHeader, RideLocationPicker, FilterChipRow, Chip, BottomSheet, SegmentedControl, ResponsiveGrid, RideCard, UniversalMapView, EmptyState, ErrorState
+- Navigation: push to `/rides/[rideId]`, `/rides/offer`, `/rides/mine`, `/rides/saved`, `/rides/history`
 
 ### Rides Search
 - Route: `/rides/search`
 - Module: rides
-- Purpose: Search and filter rides
+- Purpose: Same screen as home; `?from=&to=` prefill the server-side origin/destination filters (debounced 300 ms, 50 per page). Global search and `/rides/request` link here.
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SearchBar, FilterBar, ListScreen, Card
-- Navigation: push to `/rides/[rideId]`, `/rides/map`, `/rides/filters`
+- States: loading | empty | error | refreshing
+- Components: RidesScreen
+- Navigation: push to `/rides/[rideId]`
 
 ### Rides Map
 - Route: `/rides/map`
 - Module: rides
-- Purpose: View rides on map
+- Purpose: Rides home opened on the map view; pins are approximate pickup areas; draw an area to filter
 - Type: map
-- States: loading | empty | error | permission
-- Components: ScreenShell, MapView, MapPin, Card, FilterBar, SearchBar
-- Navigation: push to `/rides/[rideId]`, `/rides/search`
+- States: loading | empty | error
+- Components: RidesScreen, UniversalMapView
+- Navigation: push to `/rides/[rideId]`
 
 ### Rides Filters
 - Route: `/rides/filters`
 - Module: rides
-- Purpose: Apply ride filters
+- Purpose: Rides home with the When/Sort sheet open
 - Type: filter
 - States: normal
-- Components: ScreenShell, FilterBar, RangeSlider, CheckboxGroup, AppButton
-- Navigation: apply to `/rides/search`
+- Components: RidesScreen, BottomSheet, Chip
+- Navigation: results update in place
 
 ### Offer Ride
 - Route: `/rides/offer`
 - Module: rides
-- Purpose: Offer a new ride
+- Purpose: Driver posts a ride: earlier-route template chips, places with suggestions, real route facts only, departure date/time, seats stepper 1–8 and price with inline errors, preferences (tolls, luggage, who can book), sticky Publish bar that scrolls to the first error
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, DateTimePicker, MapPicker, CheckboxGroup, AppButton
-- Navigation: to `/rides` on success
-
-### Request Ride
-- Route: `/rides/request`
-- Module: rides
-- Purpose: Request a ride
-- Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, DateTimePicker, AppButton
-- Navigation: to `/rides` on success
+- States: normal | validation error | submitting | success | error alert
+- Components: RideOfferScreen, RideFormScreen, RideLocationPicker, DeparturePicker, NumberStepper, Chip, TextField, ActionBar, InlineNotice
+- Navigation: success links to `/rides/[rideId]/manage`, `/rides/[rideId]` and `/rides/mine`
 
 ### Saved Rides
 - Route: `/rides/saved`
 - Module: rides
-- Purpose: View saved rides
+- Purpose: Bookmarked and joined rides; cards open the ride, the heart removes the bookmark
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
+- States: loading | empty | error (retry) | refreshing
+- Components: RideSavedScreen, RideCard, ScreenHeader
 - Navigation: push to `/rides/[rideId]`
 
 ### My Rides
 - Route: `/rides/mine`
 - Module: rides
-- Purpose: Manage own rides
+- Purpose: Upcoming only. Tabs Driving (n) (cards open Manage; Repeat trip inline; ride page, requests, riders in More) and Riding (n) (`?tab=riding`; Open chat inline, Cancel booking in More; cancelled bookings collapsed). History in the header.
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton, SwipeAction
-- Navigation: push to `/rides/[rideId]/manage`, `/rides/[rideId]/seat-requests`
+- States: loading | empty | error (retry) | refreshing | notice
+- Components: RideMyListingsScreen, OwnerItemCard, StatusBadge, RepeatTripSheet, SegmentedControl, InlineNotice
+- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/manage`, `/rides/offer`, `/rides/history`, `/chat/[id]`
 
 ### Ride History
 - Route: `/rides/history`
 - Module: rides
-- Purpose: View past rides
+- Purpose: Completed, cancelled or departed rides you drove or rode on; Rate leads on completed rides; drivers repeat a trip
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
-- Navigation: push to `/rides/[rideId]/rate`
+- States: loading | empty | error (retry) | refreshing | notice
+- Components: RideHistoryScreen, OwnerItemCard, StatusBadge, RepeatTripSheet
+- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/rate`, `/rides/[rideId]/manage`
 
 ### Ride Details
 - Route: `/rides/[rideId]`
 - Module: rides
-- Purpose: View ride details
+- Purpose: Price and seats first, then the seat panel (Book a seat with a seat stepper; Your booking with Open chat and Cancel; Your seat request with Withdraw; You drive; or the reason booking is closed), route facts, women-only note, who is on the ride (members), safety advice linking to `/safety`. Sticky action bar: Book N seats / Manage ride / Open chat / Rate driver. Two columns at expanded width.
 - Type: detail
-- States: loading | error
-- Components: DetailScreen, MapPreview, Timeline, AppButton, SectionHeader
-- Navigation: push to `/rides/[rideId]/manage`, `/rides/[rideId]/seat-requests`
+- States: loading | not found | error (retry) | booked | blocked reason
+- Components: RideDetailScreen, ScreenHeader, ActionBar, NumberStepper, PersonRow, StatusBadge, Chip (tag), InlineNotice
+- Navigation: push to `/rides/[rideId]/manage`, `/rides/[rideId]/rate`, `/safety`, `/chat/[id]`
 
 ### Manage Ride
 - Route: `/rides/[rideId]/manage`
 - Module: rides
-- Purpose: Manage ride settings and status
-- Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, Select, AppButton, Modal
-- Navigation: back to `/rides/[rideId]`
-
-### Seat Requests
-- Route: `/rides/[rideId]/seat-requests`
-- Module: rides
-- Purpose: Review and manage seat requests
-- Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton, SwipeAction
-- Navigation: push to user profile
-
-### Participants
-- Route: `/rides/[rideId]/participants`
-- Module: rides
-- Purpose: View ride participants
-- Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Avatar, Card, AppButton
-- Navigation: push to user profile
+- Purpose: Driver hub with tabs Overview (status actions, total-seats stepper (only the total is sent; the server derives open seats), price, Repeat trip, Danger zone with Cancel and Delete explained), Requests (n pending; accept/decline) and Riders (bookings with cancel, cancelled collapsed; who is on the ride). Header Chat, View, Share. `?tab=requests|riders`; non-drivers are sent to the ride page.
+- Type: hub
+- States: loading (skeleton) | not found | error (retry) | saving | notice
+- Components: RideManageScreen, ScreenHeader, SegmentedControl, NumberStepper, PersonRow, StatusBadge, RepeatTripSheet, InlineNotice
+- Navigation: push to `/rides/[rideId]`, `/rides/[rideId]/rate`, `/chat/[id]`; replace to `/rides/mine` after delete
 
 ### Rate Ride
 - Route: `/rides/[rideId]/rate`
 - Module: rides
-- Purpose: Rate ride experience
+- Purpose: One 1–5 rating after the ride is completed; passengers rate the driver, the driver picks a rider
 - Type: form
-- States: normal | success
-- Components: FormScreen, StarRating, TextArea, AppButton
-- Navigation: to `/rides/history` on success
+- States: loading | not found | error (retry) | not completed | submitting | sent
+- Components: RideRateScreen, ScreenHeader, RatingInput, Chip, TextField
+- Navigation: to `/rides/history` when sent
 
----
+Redirect-only routes (not screens): `/rides/request` → `/rides/search`, `/rides/[rideId]/seat-requests` →
+`/rides/[rideId]/manage?tab=requests`, `/rides/[rideId]/participants` → `/rides/[rideId]/manage?tab=riders`.
 
 ## Community
 
@@ -589,7 +599,16 @@ Each screen entry includes:
 - Type: admin
 - States: loading | empty | error
 - Components: ScreenShell, SearchBar, FilterBar, ListScreen, Avatar, AppButton, Modal, SwipeAction
-- Navigation: push to user detail
+- Navigation: push to user detail; Suspend / Reactivate asks first (suspend is red)
+
+### User Details
+- Route: `/admin/users/[userId]`
+- Module: admin
+- Purpose: One member account (`GET /api/v1/admin/users/{id}`) with suspend / reactivate
+- Type: admin
+- States: loading | error | not authorized
+- Components: Screen, ScreenHeader, Card, StatusBadge, AppButton, ConfirmSheet
+- Navigation: back to `/admin/users`
 
 ### Reports
 - Route: `/admin/reports`
@@ -598,7 +617,16 @@ Each screen entry includes:
 - Type: admin
 - States: loading | empty | error
 - Components: ScreenShell, FilterBar, ListScreen, Card, AppButton, Modal
-- Navigation: push to report detail
+- Navigation: push to report detail; Resolve asks first (red) and only the row being resolved shows progress
+
+### Report Details
+- Route: `/admin/reports/[reportId]`
+- Module: admin
+- Purpose: One safety report (category, details, reporter, target) with resolve
+- Type: admin
+- States: loading | error | not found | not authorized
+- Components: Screen, ScreenHeader, Card, StatusBadge, AppButton, ConfirmSheet
+- Navigation: back to `/admin/reports`
 
 ### Rooms Moderation
 - Route: `/admin/rooms`
@@ -929,56 +957,74 @@ Each screen entry includes:
 ### Marketplace Home
 - Route: `/marketplace`
 - Module: marketplace
-- Purpose: Buy and sell items
+- Purpose: Browse listings with server-side search, category, condition, price ceiling and "show reserved & sold"
 - Type: catalog
-- States: loading | empty | error
-- Components: CatalogScreen, SearchBar, FilterBar, Card, AppButton
-- Navigation: push to `/marketplace/search`, `/marketplace/[listingId]`, `/marketplace/sell`
+- States: loading (skeleton) | empty (no listings / no matches) | error (retry) | load more | pull-to-refresh
+- Components: MarketplaceHomeScreen, Screen, TextField, Chip, ResponsiveGrid, ListingCard, BottomSheet (categories)
+- Navigation: push to `/marketplace/[listingId]`, `/marketplace/sell`, `/marketplace/mine`, `/marketplace/saved` (sign-in when signed out)
 
 ### Marketplace Search
 - Route: `/marketplace/search`
 - Module: marketplace
-- Purpose: Search listings
-- Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SearchBar, FilterBar, ListScreen, Card
+- Purpose: Same as home with the search field focused
+- Type: catalog
+- States: loading | empty | error (retry)
+- Components: MarketplaceHomeScreen (`screenId="search"`)
 - Navigation: push to `/marketplace/[listingId]`
 
 ### Categories
 - Route: `/marketplace/categories`
 - Module: marketplace
-- Purpose: Browse categories
-- Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
-- Navigation: push to `/marketplace/search`
+- Purpose: Same as home with the category picker open
+- Type: catalog
+- States: loading | empty | error (retry)
+- Components: MarketplaceHomeScreen (`screenId="categories"`), BottomSheet
+- Navigation: push to `/marketplace/[listingId]`
 
 ### Listing Details
 - Route: `/marketplace/[listingId]`
 - Module: marketplace
-- Purpose: View listing details
+- Purpose: Listing with photos, status badge, details, safety tips; buyers save, chat with the seller or report; owners mark reserved/sold, relist, edit or delete
 - Type: detail
-- States: loading | error
-- Components: DetailScreen, ImageGallery, AppButton, SectionHeader, ListScreen
-- Navigation: push to `/marketplace/sell`, `/marketplace/saved`
+- States: loading | not found | error (retry) | photos error (retry)
+- Components: ListingDetailsScreen, Screen, Card, Chip, IconButton, SaveToggle, ReportListingSheet (BottomSheet)
+- Navigation: buyer → `/chat/[conversationId]`; owner → `/marketplace/[listingId]/edit`, `/marketplace/mine` after delete
+
+### Edit Listing
+- Route: `/marketplace/[listingId]/edit`
+- Module: marketplace
+- Purpose: Owner edits details and photos
+- Type: form
+- States: loading | not found | not owner | error | upload progress
+- Components: EditListingScreen, ListingForm
+- Navigation: replace with `/marketplace/[listingId]` on save
 
 ### Sell Item
 - Route: `/marketplace/sell`
 - Module: marketplace
-- Purpose: Create new listing
+- Purpose: Create a listing with up to 10 photos (attached after create; a failed attach keeps the created listing for retry)
 - Type: form
-- States: normal | error | success | loading
-- Components: FormScreen, Input, TextArea, ImageUpload, Select, AppButton
-- Navigation: to `/marketplace` on success
+- States: normal | field errors | server error | upload progress | success
+- Components: SellItemScreen, ListingForm (TextField, Chip, SegmentedControl, useImageUpload)
+- Navigation: success → `/marketplace/[listingId]`, `/marketplace/mine`, or reset for another item
 
 ### Saved Items
 - Route: `/marketplace/saved`
 - Module: marketplace
-- Purpose: View saved listings
+- Purpose: The signed-in member's saved listings (`GET /favorites/listings`)
 - Type: list
-- States: loading | empty | error
-- Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: MarketplaceHomeScreen (`screenId="saved"`), ListingCard
 - Navigation: push to `/marketplace/[listingId]`
+
+### My Listings
+- Route: `/marketplace/mine`
+- Module: marketplace
+- Purpose: The seller's listings in every status (For sale / Sold / All) with mark reserved, mark sold, relist, edit and delete
+- Type: list
+- States: loading | empty | error (retry) | pull-to-refresh
+- Components: MyListingsScreen, SegmentedControl, Card, AppButton
+- Navigation: push to `/marketplace/[listingId]`, `/marketplace/[listingId]/edit`, `/marketplace/sell`
 
 ---
 
@@ -1139,3 +1185,34 @@ Each screen entry includes:
 - States: loading | empty | error
 - Components: ScreenShell, SectionHeader, ListScreen, Card, AppButton
 - Navigation: back to `/assistant`
+
+---
+
+## Account & legal
+
+### Account & Data
+- Route: `/settings/account`
+- Module: foundation
+- Purpose: Change email or phone, download a JSON copy of your data, delete the account
+- Type: settings
+- States: normal | busy | notice (change pending confirmation) | error | re-auth sheet | delete confirm sheet
+- Components: Screen, Section, Card, TextField, AppButton, ListRow, BottomSheet, ReauthSheet
+- Navigation: requires sign-in; links to `/terms` and `/privacy`; after deletion goes to `/welcome`
+
+### Terms of Service
+- Route: `/terms`
+- Module: foundation
+- Purpose: Terms (versioned; sign-up records the accepted version)
+- Type: document
+- States: normal
+- Components: Screen, Card, AppText, IconButton
+- Navigation: public; back
+
+### Privacy Policy
+- Route: `/privacy`
+- Module: foundation
+- Purpose: What is collected, processors, choices (export and delete)
+- Type: document
+- States: normal
+- Components: Screen, Card, AppText, IconButton
+- Navigation: public; back

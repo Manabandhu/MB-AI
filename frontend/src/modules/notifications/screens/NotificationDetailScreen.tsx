@@ -1,101 +1,110 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { getNotificationDetail } from '@/modules/notifications/api';
+import { formatDate } from '@manabandhu/core';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef } from 'react';
+import { XStack, YStack } from 'tamagui';
+import {
+  getNotificationDetail,
+  markNotificationRead,
+  notificationKeys,
+} from '@/modules/notifications/api';
+import { notificationVisual } from '@/modules/notifications/components/notificationVisuals';
+import { routeForPushData } from '@/modules/notifications/pushRoutes';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { Screen } from '@/modules/shared/ui/Screen';
 
+/** One notification. Opening it (from the inbox or a push) marks it read; "Open" goes to the related screen. */
 export function NotificationDetailScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
-
-  const {
-    data: notification,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['notifications', 'detail', id],
-    queryFn: () => getNotificationDetail(id!),
-    enabled: !!id,
-    retry: false,
+  const detail = useQuery({
+    queryKey: notificationKeys.detail(id ?? ''),
+    queryFn: () => getNotificationDetail(id ?? ''),
+    enabled: Boolean(id),
   });
 
-  if (isLoading) {
-    return <LoadingState label="Loading notification..." />;
-  }
+  const markRead = useMutation({
+    mutationFn: markNotificationRead,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(notificationKeys.detail(updated.id), updated);
+      queryClient.invalidateQueries({ queryKey: notificationKeys.inbox });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.unread });
+    },
+  });
+  const notification = detail.data;
+  const { mutate } = markRead;
+  // Marks read once per opened notification (the inbox only navigates here), so there is a single request.
+  const markedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!notification || notification.read || markedRef.current === notification.id) return;
+    markedRef.current = notification.id;
+    mutate(notification.id);
+  }, [notification, mutate]);
 
-  if (error || !notification) {
+  if (detail.isLoading) {
     return (
-      <ErrorState
-        title="Notification not found"
-        body="Unable to load this notification. It may have been deleted or expired."
-        retryLabel="Back to inbox"
-        onRetry={() => router.push('/notifications')}
-      />
+      <Screen>
+        <BackButton fallback="/notifications" />
+        <LoadingState label="Loading notification..." />
+      </Screen>
     );
   }
 
+  if (detail.isError || !notification) {
+    return (
+      <Screen>
+        <BackButton fallback="/notifications" />
+        <ErrorState
+          title="Notification not available"
+          body="It may have been removed, or it belongs to another account."
+          retryLabel="Back to inbox"
+          onRetry={() => router.replace('/notifications' as Href)}
+        />
+      </Screen>
+    );
+  }
+
+  const visual = notificationVisual(notification.meta);
+  // Only in-app paths are followed, never external or protocol-relative URLs.
+  const target = notification.route ? routeForPushData({ route: notification.route }) : null;
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.container}>
-          <Text style={styles.eyebrow}>Notification</Text>
-          <Text style={styles.title}>{notification.title}</Text>
-          <Text style={styles.subtitle}>{notification.meta}</Text>
-          <View style={styles.card}>
-            <Text style={styles.cardBody}>{notification.body}</Text>
-            <View style={styles.badgeRow}>
-              <Text style={notification.read ? styles.readBadge : styles.unreadBadge}>
-                {notification.read ? 'Read' : 'New'}
-              </Text>
-            </View>
-          </View>
+    <Screen>
+      <YStack gap="$x5">
+        <BackButton fallback="/notifications" />
+        <YStack gap="$x2">
+          <XStack gap="$x2">
+            <Chip label={visual.label} variant="tag" />
+          </XStack>
+          <AppText role="heading" variant="h2">
+            {notification.title}
+          </AppText>
+          {notification.createdAt ? (
+            <AppText tone="muted" variant="caption">
+              {formatDate(notification.createdAt, 'long')}
+            </AppText>
+          ) : null}
+        </YStack>
+        <Card padding="$x4">
+          <AppText variant="body">{notification.body}</AppText>
+        </Card>
+        <YStack gap="$x3">
+          {target ? (
+            <AppButton
+              iconAfter="arrow-right"
+              label="Open"
+              onPress={() => router.push(target as Href)}
+            />
+          ) : null}
           <AppButton label="Back to inbox" route="/notifications" variant="secondary" />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </YStack>
+      </YStack>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, maxWidth: 640, width: '100%' },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
-  title: { color: colors.ink, fontSize: 28, fontWeight: '800', lineHeight: 34 },
-  subtitle: { color: colors.muted, fontSize: 16, lineHeight: 25 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x3,
-    padding: space.x4,
-  },
-  cardBody: { color: colors.ink, fontSize: 15, lineHeight: 22 },
-  badgeRow: { flexDirection: 'row', marginTop: space.x2 },
-  unreadBadge: {
-    backgroundColor: '#FEE2E2',
-    color: '#DC2626',
-    fontSize: 12,
-    fontWeight: '700',
-    paddingHorizontal: space.x2,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-  },
-  readBadge: {
-    backgroundColor: '#F3F4F6',
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '600',
-    paddingHorizontal: space.x2,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-  },
-});

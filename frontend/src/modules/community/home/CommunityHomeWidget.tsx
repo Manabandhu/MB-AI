@@ -1,0 +1,44 @@
+import { formatRelative } from '@manabandhu/core';
+import { useQuery } from '@tanstack/react-query';
+import { persistMeta } from '@/lib/queryPersistence';
+import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
+import { ListRow } from '@/modules/shared/ui/ListRow';
+import { listPosts } from '../api';
+
+/** Latest community posts. The age leads the subtitle: as trailing meta it squeezed titles to a few letters. */
+export function CommunityHomeWidget() {
+  const query = useQuery({
+    queryKey: ['community', 'home-widget'],
+    queryFn: () => listPosts(),
+    staleTime: 60_000,
+    meta: persistMeta,
+  });
+  const posts = (query.data ?? []).slice(0, 3);
+  return (
+    <WidgetFrame
+      empty={{
+        title: 'No posts yet',
+        body: 'Ask a question or share a tip with people nearby.',
+        actionLabel: 'Create a post',
+        actionHref: '/community/create-post',
+      }}
+      icon="community"
+      isEmpty={posts.length === 0}
+      isError={query.isError}
+      isLoading={query.isLoading}
+      onRetry={() => query.refetch()}
+      seeAll={{ href: '/community' }}
+      title="From the community"
+    >
+      {posts.map((post) => (
+        <ListRow
+          href={`/community/posts/${post.id}`}
+          icon="message"
+          key={post.id}
+          subtitle={`${formatRelative(post.createdAt)} · ${post.body}`}
+          title={post.title}
+        />
+      ))}
+    </WidgetFrame>
+  );
+}

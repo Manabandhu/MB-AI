@@ -1,5 +1,5 @@
-import { StitchOnboardingScreen } from '@/modules/foundation/screens/StitchOnboardingScreen';
+import { OnboardingScreen } from '@/modules/foundation/screens/OnboardingScreen';
 
 export default function OnboardingLanguagesRoute() {
-  return <StitchOnboardingScreen kind="languages" />;
+  return <OnboardingScreen kind="languages" />;
 }

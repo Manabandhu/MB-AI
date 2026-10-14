@@ -1,24 +1,21 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
+import { type RawPage, toPage } from '@/lib/springPage';
 import type {
-  CreateBookingInput,
   CreateRoomListingInput,
-  CreateSavedSearchInput,
   OwnerRoomListing,
   RoomAmenityItem,
-  RoomAnalytics,
-  RoomBooking,
   RoomImage,
   RoomInquiryInput,
   RoomInquiryResponse,
   RoomListing,
-  RoomReport,
-  SavedSearch,
+  RoomReportInput,
   UpdateRoomListingInput,
 } from './types';
 
-export async function getRoomsScreen(screenId: string): Promise<CatalogScreenContent> {
-  return parseJsonOrThrow(await apiFetch(`/api/v1/rooms/screens/${screenId}`), 'Rooms screen');
+/** Throws an error carrying the server detail when a call without a JSON body failed. */
+async function expectOk(response: Response, label: string): Promise<void> {
+  if (response.ok) return;
+  await parseJsonOrThrow(response, label);
 }
 
 export async function getRoomAmenities(): Promise<RoomAmenityItem[]> {
@@ -58,21 +55,22 @@ export async function listRoomListings(
   if (params.lng != null) query.set('lng', String(params.lng));
   if (params.radiusMiles != null) query.set('radiusMiles', String(params.radiusMiles));
   const suffix = query.toString() ? `?${query.toString()}` : '';
-  const data = await parseJsonOrThrow<{ content?: RoomListing[] } | RoomListing[]>(
+  const data = await parseJsonOrThrow<RawPage<RoomListing>>(
     await apiFetch(`/api/v1/rooms/listings${suffix}`),
     'List room listings',
   );
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.content)) return data.content;
-  return [];
+  return toPage(data).content;
 }
 
 export async function getRoomDetail(roomId: string): Promise<RoomListing> {
-  return parseJsonOrThrow(await apiFetch(`/api/v1/rooms/${roomId}`), 'Room detail');
+  return parseJsonOrThrow(await apiFetch(`/api/v1/rooms/listings/${roomId}`), 'Room detail');
 }
 
 export async function getRoomForOwner(roomId: string): Promise<OwnerRoomListing> {
-  return parseJsonOrThrow(await apiFetch(`/api/v1/rooms/${roomId}/owner`), 'Room owner detail');
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/rooms/listings/${roomId}/owner`),
+    'Room owner detail',
+  );
 }
 
 export async function createRoomListing(input: CreateRoomListingInput): Promise<OwnerRoomListing> {
@@ -87,105 +85,73 @@ export async function updateRoomListing(
   input: UpdateRoomListingInput,
 ): Promise<OwnerRoomListing> {
   return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/${roomId}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    await apiFetch(`/api/v1/rooms/listings/${roomId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
     'Update room listing',
   );
 }
 
+/** draft | paused | rented → active. */
 export async function publishRoomListing(roomId: string): Promise<OwnerRoomListing> {
   return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/${roomId}/publish`, { method: 'PATCH' }),
+    await apiFetch(`/api/v1/rooms/listings/${roomId}/publish`, { method: 'PATCH' }),
     'Publish room listing',
   );
 }
 
 export async function pauseRoomListing(roomId: string): Promise<OwnerRoomListing> {
   return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/${roomId}/pause`, { method: 'PATCH' }),
+    await apiFetch(`/api/v1/rooms/listings/${roomId}/pause`, { method: 'PATCH' }),
     'Pause room listing',
   );
 }
 
 export async function archiveRoomListing(roomId: string): Promise<OwnerRoomListing> {
   return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/${roomId}/archive`, { method: 'PATCH' }),
+    await apiFetch(`/api/v1/rooms/listings/${roomId}/archive`, { method: 'PATCH' }),
     'Archive room listing',
   );
 }
 
-export async function deleteRoomListing(roomId: string): Promise<void> {
-  const response = await apiFetch(`/api/v1/rooms/${roomId}`, { method: 'DELETE' });
-  if (!response.ok) throw new Error(`Delete room listing failed: ${response.status}`);
+/** active | paused → rented. */
+export async function markRoomRented(roomId: string): Promise<OwnerRoomListing> {
+  return updateRoomListing(roomId, { status: 'rented' });
 }
 
+export async function deleteRoomListing(roomId: string): Promise<void> {
+  await expectOk(
+    await apiFetch(`/api/v1/rooms/listings/${roomId}`, { method: 'DELETE' }),
+    'Delete room listing',
+  );
+}
+
+/** Owner's listings, newest first (at most 200). */
 export async function getMyListings(): Promise<OwnerRoomListing[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/rooms/my-listings'), 'My listings');
 }
 
+/** The caller's saved rooms (at most 200). Auth failures throw; they are never turned into an empty list. */
 export async function getFavorites(): Promise<RoomListing[]> {
-  const response = await apiFetch('/api/v1/rooms/favorites');
-  if (response.status === 401 || response.status === 403) {
-    return [];
-  }
-  return parseJsonOrThrow(response, 'Room favorites');
+  return parseJsonOrThrow(await apiFetch('/api/v1/rooms/favorites'), 'Saved rooms');
 }
 
-export async function saveRoom(roomId: string): Promise<RoomListing | null> {
-  const response = await apiFetch(`/api/v1/rooms/listings/${roomId}/favorite`, { method: 'POST' });
-  if (response.status === 401 || response.status === 403) {
-    return null;
-  }
-  return parseJsonOrThrow(response, 'Save room');
+export async function saveRoom(roomId: string): Promise<void> {
+  await expectOk(
+    await apiFetch(`/api/v1/rooms/listings/${roomId}/favorite`, { method: 'POST' }),
+    'Save room',
+  );
 }
 
 export async function unsaveRoom(roomId: string): Promise<void> {
-  const response = await apiFetch(`/api/v1/rooms/listings/${roomId}/favorite`, {
-    method: 'DELETE',
-  });
-  if (!response.ok && response.status !== 401 && response.status !== 403) {
-    throw new Error(`Unsave room failed: ${response.status}`);
-  }
-}
-
-export async function getRoomImages(listingId: string): Promise<RoomImage[]> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/images`),
-    'Room images',
+  await expectOk(
+    await apiFetch(`/api/v1/rooms/listings/${roomId}/favorite`, { method: 'DELETE' }),
+    'Unsave room',
   );
 }
 
-export async function addRoomImage(
-  listingId: string,
-  url: string,
-  sortOrder: number = 0,
-): Promise<RoomImage> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/images`, {
-      method: 'POST',
-      body: JSON.stringify({ url, sortOrder }),
-    }),
-    'Add room image',
-  );
-}
-
-export async function deleteRoomImage(imageId: string): Promise<void> {
-  const response = await apiFetch(`/api/v1/rooms/images/${imageId}`, { method: 'DELETE' });
-  if (!response.ok) throw new Error(`Delete room image failed: ${response.status}`);
-}
-
-export async function createBooking(
-  listingId: string,
-  input: CreateBookingInput,
-): Promise<RoomBooking> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/bookings`, {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
-    'Create booking',
-  );
-}
-
+/** Repeat inquiries for the same room return the existing conversation. */
 export async function inquireRoom(
   roomId: string,
   input: RoomInquiryInput,
@@ -199,44 +165,42 @@ export async function inquireRoom(
   );
 }
 
-export async function getSavedSearches(): Promise<SavedSearch[]> {
-  return parseJsonOrThrow(await apiFetch('/api/v1/rooms/saved-searches'), 'Saved searches');
+/** Photos in display order. Public for active/paused listings; the owner sees any status. */
+export async function listRoomImages(roomId: string): Promise<RoomImage[]> {
+  const images = await parseJsonOrThrow<RoomImage[]>(
+    await apiFetch(`/api/v1/rooms/listings/${roomId}/images`),
+    'Room photos',
+  );
+  return [...images].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
-export async function createSavedSearch(input: CreateSavedSearchInput): Promise<SavedSearch> {
+/** Attaches an uploaded photo (a `rooms` bucket URL from `useImageUpload('rooms')`). Owner only, max 20. */
+export async function addRoomImage(
+  roomId: string,
+  input: { url: string; sortOrder: number },
+): Promise<RoomImage> {
   return parseJsonOrThrow(
-    await apiFetch('/api/v1/rooms/saved-searches', {
+    await apiFetch(`/api/v1/rooms/listings/${roomId}/images`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-    'Create saved search',
+    'Attach room photo',
   );
 }
 
-export async function deleteSavedSearch(searchId: string): Promise<void> {
-  const response = await apiFetch(`/api/v1/rooms/saved-searches/${searchId}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error(`Delete saved search failed: ${response.status}`);
+export async function deleteRoomImage(imageId: string): Promise<void> {
+  await expectOk(
+    await apiFetch(`/api/v1/rooms/images/${imageId}`, { method: 'DELETE' }),
+    'Remove room photo',
+  );
 }
 
-export async function reportRoom(
-  listingId: string,
-  reason: string,
-  description?: string,
-): Promise<RoomReport> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/report`, {
+export async function reportRoom(roomId: string, input: RoomReportInput): Promise<void> {
+  await expectOk(
+    await apiFetch(`/api/v1/rooms/listings/${roomId}/report`, {
       method: 'POST',
-      body: JSON.stringify({ reason, description }),
+      body: JSON.stringify(input),
     }),
-    'Report room',
-  );
-}
-
-export async function getRoomAnalytics(listingId: string): Promise<RoomAnalytics> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/rooms/listings/${listingId}/analytics`),
-    'Room analytics',
+    'Report listing',
   );
 }

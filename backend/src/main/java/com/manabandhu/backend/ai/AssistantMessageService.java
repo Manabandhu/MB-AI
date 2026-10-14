@@ -1,11 +1,12 @@
 package com.manabandhu.backend.ai;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AssistantMessageService {
@@ -23,11 +24,6 @@ public class AssistantMessageService {
         return repository.findByConversationIdOrderByCreatedAtAsc(conversationId);
     }
 
-    @Transactional(readOnly = true)
-    public List<AssistantMessage> listRecent() {
-        return repository.findTop20ByOrderByCreatedAtDesc();
-    }
-
     @Transactional
     public AssistantMessage send(UUID conversationId, AssistantMessage.MessageRole role, String content) {
         var message = repository.save(new AssistantMessage(conversationId, role, content));
@@ -35,18 +31,9 @@ public class AssistantMessageService {
         return message;
     }
 
-    @Transactional
-    public AssistantMessage sendRecent(String content) {
-        var recent = repository.findTop1ByOrderByCreatedAtDesc();
-        var conversationId = recent != null ? recent.getConversationId() : null;
-        if (conversationId == null) {
-            var conv = conversationService.create(null, "Assistant chat");
-            conversationId = conv.getId();
-        }
-        var userMessage = repository.save(new AssistantMessage(conversationId, AssistantMessage.MessageRole.USER, content));
-        // Generate a simple assistant reply based on the user's content
-        var reply = "You said: \"" + content + "\". I'm the ManaBandhu assistant. Ask me about rooms, rides, community, or safety.";
-        var assistantMessage = repository.save(new AssistantMessage(conversationId, AssistantMessage.MessageRole.ASSISTANT, reply));
-        return assistantMessage;
+    @Transactional(readOnly = true)
+    public AssistantMessage requireMessage(UUID id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Message not found"));
     }
 }

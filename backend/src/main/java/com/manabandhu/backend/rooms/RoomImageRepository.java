@@ -9,4 +9,8 @@ interface RoomImageRepository extends JpaRepository<RoomImage, UUID> {
     List<RoomImage> findByListingIdOrderBySortOrderAsc(UUID listingId);
 
     void deleteByListingId(UUID listingId);
+
+    long countByListingId(UUID listingId);
+
+    List<RoomImage> findByListingIdInOrderBySortOrderAscCreatedAtAsc(java.util.Collection<UUID> listingIds);
 }

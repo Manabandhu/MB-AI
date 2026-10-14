@@ -9,4 +9,6 @@ interface RideRatingRepository extends JpaRepository<RideRating, UUID> {
     List<RideRating> findByRideIdOrderByCreatedAtDesc(UUID rideId);
 
     List<RideRating> findByRateeIdOrderByCreatedAtDesc(UUID rateeId);
+
+    boolean existsByRideIdAndRaterIdAndRateeId(UUID rideId, UUID raterId, UUID rateeId);
 }

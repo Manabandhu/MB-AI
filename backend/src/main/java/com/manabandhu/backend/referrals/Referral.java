@@ -18,7 +18,7 @@ public class Referral {
     @Column(name = "owner_id", nullable = false, updatable = false)
     private UUID ownerId;
 
-    @Column(name = "recipient_id", nullable = false)
+    @Column(name = "recipient_id")
     private UUID recipientId;
 
     @Column(nullable = false, length = 10)

@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface PackageTrackingRepository extends JpaRepository<PackageTracking, UUID> {
     List<PackageTracking> findByOwnerIdOrderByLastUpdateDesc(UUID ownerId);
+
+    long countByOwnerId(UUID ownerId);
 }

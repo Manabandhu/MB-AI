@@ -7,4 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface TrustedContactRepository extends JpaRepository<TrustedContact, UUID> {
     List<TrustedContact> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
+    long countByOwnerId(UUID ownerId);
 }

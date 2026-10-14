@@ -6,6 +6,10 @@ on:
       reason: { description: Operator reason, required: true, type: string }
       actor_id: { description: Requesting user, required: true, type: string }
       execution_id: { description: Audit correlation ID, required: true, type: string }
+# Least privilege: these jobs only read the repository; providers authenticate with environment secrets.
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: ubuntu-latest

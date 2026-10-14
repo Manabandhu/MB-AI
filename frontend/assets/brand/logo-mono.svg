@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Single-colour glyph for Android themed icons and notification icons. -->
+  <g transform="translate(512 512) scale(0.64) translate(-512 -524)">
+    <g fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="96">
+      <path d="M276 756V530a118 118 0 0 1 236 0v226"/>
+      <path d="M512 756V530a118 118 0 0 1 236 0v226"/>
+    </g>
+    <circle cx="512" cy="292" r="62" fill="#000000"/>
+  </g>
+</svg>

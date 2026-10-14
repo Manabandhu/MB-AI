@@ -1,229 +1,116 @@
-import { color, space } from '@manabandhu/design-system';
+import { space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { type CountryItem, supportedCountries } from '@/modules/auth/authConstants';
-import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout';
-import { AuthSuccessCelebration } from '@/modules/auth/components/AuthSuccessCelebration';
-import { InlinePhoneInput } from '@/modules/auth/components/InlinePhoneInput';
-import { AppButton } from '@/modules/shared/ui/AppButton';
+import { friendlyAuthError, OTP_CODE_LENGTH, parsePhoneInput } from '@/modules/auth/authHelpers';
+import {
+  AuthButton,
+  AuthField,
+  AuthNotice,
+  AuthScreen,
+  AuthSwitch,
+} from '@/modules/auth/components/AuthKit';
+import { CountryPickerSheet } from '@/modules/auth/components/CountryPickerSheet';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { useAppearance } from '@/theme/ThemeProvider';
 
 export function PhoneLoginScreen() {
-  const [selectedCountry, setSelectedCountry] = useState<CountryItem>(supportedCountries[0]);
-  const [phoneDigits, setPhoneDigits] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [showCelebration, setShowCelebration] = useState(false);
+  const signInWithPhone = useAuthStore((s) => s.signInWithPhone);
+  const { palette } = useAppearance();
+  const [country, setCountry] = useState<CountryItem>(supportedCountries[0]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [digits, setDigits] = useState('');
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const status = useAuthStore((s) => s.status);
-  const user = useAuthStore((s) => s.user);
-  const storeError = useAuthStore((s) => s.error);
-
-  useEffect(() => {
-    if (status === 'authenticated' && !localError && !storeError && user) {
-      setShowCelebration(true);
-    } else {
-      setShowCelebration(false);
-    }
-  }, [status, localError, storeError, user]);
-
-  async function handleSendCode() {
-    const trimmed = phoneDigits.trim();
-    if (!trimmed) {
-      setLocalError('Please enter your mobile phone number.');
+  const submit = async () => {
+    const parsed = parsePhoneInput(country.code, digits);
+    if (!parsed.ok) {
+      setFieldError(parsed.error);
       return;
     }
-    setLoading(true);
-    setLocalError(null);
+    setFieldError(null);
+    setFormError(null);
+    setSubmitting(true);
     try {
-      const fullPhone = `${selectedCountry.code}${trimmed.replace(/\D/g, '')}`;
-      await useAuthStore.getState().signInWithPhone(fullPhone);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to send verification code';
-      setLocalError(msg);
+      await signInWithPhone(parsed.e164);
+      router.push('/otp-verification');
+    } catch (error) {
+      setFormError(friendlyAuthError(error));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  }
-
-  const error = localError || storeError;
+  };
 
   return (
-    <AuthPageLayout
-      title="Phone Sign In"
-      subtitle="Enter your mobile number to receive a 6-digit verification code"
-      badgeText="Fast & Secure Mobile Login"
-      backHref="/sign-in"
+    <AuthScreen
+      title="Sign in with your phone"
+      subtitle={`We'll text you a ${OTP_CODE_LENGTH}-digit code. Message and data rates may apply.`}
+      footer={
+        <>
+          <AuthButton label="Send code" loading={submitting} onPress={submit} />
+          <AuthSwitch
+            prompt="Prefer email?"
+            action="Sign in with email"
+            onPress={() => router.replace('/sign-in')}
+          />
+        </>
+      }
     >
-      {showCelebration ? (
-        <AuthSuccessCelebration
-          userName={user?.user_metadata?.full_name ?? user?.email ?? 'Member'}
-          title="Welcome Back! 🎉"
-          subtitle="Your verified session is ready. Redirecting you home..."
-          onComplete={() => router.replace('/home')}
-        />
-      ) : null}
-
-      {/* Mobile Phone Number Input with Embedded Country Dropdown */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>MOBILE PHONE NUMBER</Text>
-        <InlinePhoneInput
-          selectedCountry={selectedCountry}
-          onSelectCountry={setSelectedCountry}
-          phoneDigits={phoneDigits}
-          onChangePhoneDigits={(val) => {
-            setPhoneDigits(val);
-            if (error) setLocalError(null);
-          }}
-        />
-        <Text style={styles.helperText}>
-          We will send an SMS with a one-time verification code. Standard carrier rates may apply.
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            setSelectedCountry(supportedCountries[0]);
-            setPhoneDigits('4695550100');
-            if (error) setLocalError(null);
-          }}
-          style={styles.testBadge}
-        >
-          <Text style={styles.testBadgeText}>🧪 Test Phone: +1 (469) 555-0100 (Tap to fill)</Text>
-        </Pressable>
-      </View>
-
-      {/* Inline Error Banner with exact AppIcon */}
-      {error ? (
-        <View style={styles.errorBanner}>
-          <AppIcon name="warning" size={16} color="#ba1a1a" />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
-
-      {/* Send Code CTA using Gluestack AppButton */}
-      <AppButton
-        label={loading ? 'Sending Verification Code…' : 'Send Code →'}
-        onPress={handleSendCode}
-        loading={loading}
+      {formError ? <AuthNotice>{formError}</AuthNotice> : null}
+      <AuthField
+        label="Mobile number"
+        value={digits}
+        onChangeText={(value) => {
+          // Keep a leading + so a pasted international number (+1 469…) is not prefixed twice.
+          setDigits(value.replace(/[^\d\s()+.-]/g, ''));
+          if (fieldError) setFieldError(null);
+        }}
+        error={fieldError}
+        hint="Or enter the full number with its country code, like +1 469 555 0123"
+        placeholder="(555) 000-0000"
+        keyboardType="phone-pad"
+        autoComplete="tel"
+        textContentType="telephoneNumber"
+        returnKeyType="send"
+        onSubmitEditing={submit}
+        leading={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Country code ${country.name} ${country.code}. Change`}
+            onPress={() => setPickerOpen(true)}
+            style={[styles.countryButton, { borderRightColor: palette.border }]}
+          >
+            <Text style={styles.flag}>{country.flag}</Text>
+            <Text style={[styles.dial, { color: palette.ink }]}>{country.code}</Text>
+            <AppIcon name="chevron-down" size={14} color={palette.muted} />
+          </Pressable>
+        }
       />
 
-      {/* Alternative Auth Switch (Email & Password) */}
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or switch to</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
-      <Pressable
-        onPress={() => router.push('/email-login')}
-        style={styles.altButton}
-        accessibilityRole="button"
-      >
-        <AppIcon name="mail" size={16} color={color.primary} />
-        <Text style={styles.altButtonText}>Continue with Email & Password</Text>
-      </Pressable>
-
-      {/* Return to Sign In */}
-      <Pressable
-        onPress={() => router.push('/sign-in')}
-        style={styles.backLink}
-        accessibilityRole="link"
-      >
-        <Text style={styles.backLinkText}>Return to main Sign In options</Text>
-      </Pressable>
-    </AuthPageLayout>
+      <CountryPickerSheet
+        onClose={() => setPickerOpen(false)}
+        onSelect={setCountry}
+        selected={country}
+        visible={pickerOpen}
+      />
+    </AuthScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  inputGroup: {
-    gap: space.x2,
-  },
-  inputLabel: {
-    color: color.ink,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  helperText: {
-    color: color.muted,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  testBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    borderColor: 'rgba(67, 30, 190, 0.25)',
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 4,
-  },
-  testBadgeText: {
-    color: color.primary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  errorBanner: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(186, 26, 26, 0.08)',
-    borderColor: 'rgba(186, 26, 26, 0.25)',
-    borderRadius: 12,
-    borderWidth: 1,
+  countryButton: {
     flexDirection: 'row',
-    gap: space.x2,
-    padding: space.x3,
-  },
-  errorText: {
-    color: '#ba1a1a',
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  dividerRow: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: space.x3,
-    marginVertical: space.x1,
+    gap: 4,
+    minHeight: 44,
+    paddingRight: space.x2,
+    marginRight: space.x1,
+    borderRightWidth: StyleSheet.hairlineWidth,
   },
-  dividerLine: {
-    backgroundColor: color.border,
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    color: color.muted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  altButton: {
-    alignItems: 'center',
-    backgroundColor: color.surface,
-    borderColor: color.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: space.x2,
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  altButtonText: {
-    color: color.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  backLink: {
-    alignSelf: 'center',
-    marginTop: space.x1,
-    paddingVertical: space.x1,
-  },
-  backLinkText: {
-    color: color.primary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  flag: { fontSize: 20 },
+  dial: { fontSize: 17, fontWeight: '600' },
 });

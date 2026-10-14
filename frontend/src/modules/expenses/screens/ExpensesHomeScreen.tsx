@@ -1,1134 +1,312 @@
-import { radius, space } from '@manabandhu/design-system';
+import { formatDate, formatMoney } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { getExpensesScreen } from '@/modules/expenses/api';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
-import { FeatureScreen } from '@/modules/shared/components/FeatureScreen';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import {
+  type ExpenseGroupType,
+  listBalances,
+  listExpenseGroups,
+  listSettlements,
+  memberLabel,
+} from '@/modules/expenses/api';
+import { netByCurrency, settlementStatus, sumByCurrency } from '@/modules/expenses/expenseMath';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { ScreenShell } from '@/modules/shared/components/ScreenShell';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
+
+// Every number on this screen is derived from the signed-in user's groups, balances, and settlements as returned by
+// the backend. Amounts in different currencies are never added together.
 
 type ExpensesScreenProps = {
-  screenId: keyof typeof expenseRoutes;
+  /** Kept for the route entry; the home screen is the only mode. */
+  screenId?: 'home';
 };
 
-type TabType = 'groups' | 'balances' | 'activity';
+type Tab = 'groups' | 'balances' | 'activity';
 
-export function ExpensesScreen({ screenId }: ExpensesScreenProps) {
-  const router = useRouter();
-  const layout = useAdaptiveLayout();
-  const [activeTab, setActiveTab] = useState<TabType>('groups');
-  const [settleModalVisible, setSettleModalVisible] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<{
-    name: string;
-    amount: string;
-    note: string;
-  } | null>(null);
+const RECENT_ACTIVITY_LIMIT = 10;
 
-  const screen = useQuery({
-    queryKey: ['expenses', 'screen', screenId],
-    queryFn: () => getExpensesScreen(screenId),
-    retry: false,
-  });
+const GROUP_STYLE: Record<ExpenseGroupType, { icon: AppIconName; label: string }> = {
+  APARTMENT: { icon: 'home', label: 'Apartment' },
+  TRIP: { icon: 'map', label: 'Trip' },
+  CARPOOL: { icon: 'car', label: 'Carpool' },
+  EVENT: { icon: 'community', label: 'Event' },
+};
 
-  if (screen.isLoading) {
-    return (
-      <ScreenShell>
-        <LoadingState />
-      </ScreenShell>
-    );
-  }
-
-  // If screenId is not 'home', use FeatureScreen for sub-pages
-  if (screenId !== 'home') {
-    const data = screen.data ?? DEFAULT_EXPENSES_DATA[screenId] ?? DEFAULT_EXPENSES_DATA.home;
-    return (
-      <FeatureScreen
-        actions={expenseActions[screenId]}
-        cards={data.items}
-        currentRoute={expenseRoutes[screenId]}
-        eyebrow={data.eyebrow}
-        metrics={data.metrics}
-        subtitle={data.subtitle}
-        title={data.title}
-      />
-    );
-  }
-
-  const handleOpenSettle = (person: { name: string; amount: string; note: string }) => {
-    setSelectedPerson(person);
-    setSettleModalVisible(true);
-  };
-
-  const handleConfirmZelle = () => {
-    Alert.alert(
-      'Zelle Settlement',
-      `Payment of ${selectedPerson?.amount ?? '$45.00'} marked as settled.`,
-    );
-    setSettleModalVisible(false);
-  };
-
-  return (
-    <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.scrollContent}>
-        <View style={[s.container, { maxWidth: layout.maxContentWidth }]}>
-          {/* Header */}
-          <View style={s.headerRow}>
-            <View style={s.headerLeft}>
-              <View style={s.badgePill}>
-                <Text style={s.badgePillText}>SHARED EXPENSES & SPLITS</Text>
-              </View>
-              <Text style={s.headerTitle}>Flatmate & Trip Splits</Text>
-              <Text style={s.headerSubtitle}>
-                Zero-math, transparent cost splitting with direct Zelle settlements.
-              </Text>
-            </View>
-            <Pressable
-              style={s.addBtn}
-              onPress={() => router.push('/expenses/add')}
-              accessibilityRole="button"
-              accessibilityLabel="Add new expense"
-            >
-              <AppIcon name="plus" size={18} color="#fff" />
-              <Text style={s.addBtnText}>Add Bill</Text>
-            </Pressable>
-          </View>
-
-          {/* Hero Net Balance Card */}
-          <View style={s.heroCard}>
-            <View style={s.heroTop}>
-              <Text style={s.heroLabel}>TOTAL NET BALANCE</Text>
-              <View style={s.heroStatusTag}>
-                <Text style={s.heroStatusText}>Active across 4 groups</Text>
-              </View>
-            </View>
-
-            <View style={s.heroAmountRow}>
-              <Text style={s.heroSign}>+</Text>
-              <Text style={s.heroAmount}>$75.00</Text>
-              <Text style={s.heroNetLabel}>Net Owed to You</Text>
-            </View>
-
-            {/* Split breakdown row */}
-            <View style={s.breakdownRow}>
-              <View style={s.breakdownCardGreen}>
-                <View style={s.breakdownHeader}>
-                  <AppIcon name="check" size={14} color="#15803d" />
-                  <Text style={s.breakdownTitleGreen}>You are owed</Text>
-                </View>
-                <Text style={s.breakdownAmountGreen}>$120.00</Text>
-                <Text style={s.breakdownSub}>Patel Brothers groceries & carpool</Text>
-              </View>
-
-              <View style={s.breakdownCardOrange}>
-                <View style={s.breakdownHeader}>
-                  <AppIcon name="wallet" size={14} color="#b45309" />
-                  <Text style={s.breakdownTitleOrange}>You owe</Text>
-                </View>
-                <Text style={s.breakdownAmountOrange}>$45.00</Text>
-                <Text style={s.breakdownSub}>Gas on I-35 to Priya M.</Text>
-              </View>
-            </View>
-
-            {/* Quick Hero Actions */}
-            <View style={s.heroActionsRow}>
-              <Pressable style={s.heroActionPrimary} onPress={() => router.push('/expenses/add')}>
-                <AppIcon name="plus" size={16} color="#431ebe" />
-                <Text style={s.heroActionPrimaryText}>Add Expense</Text>
-              </Pressable>
-
-              <Pressable
-                style={s.heroActionSecondary}
-                onPress={() =>
-                  handleOpenSettle({
-                    name: 'Priya M.',
-                    amount: '$45.00',
-                    note: 'I-35 Carpool Fuel',
-                  })
-                }
-              >
-                <AppIcon name="wallet" size={16} color="#fff" />
-                <Text style={s.heroActionSecondaryText}>Settle via Zelle</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Segmented Filter Tabs */}
-          <View style={s.tabBar}>
-            <Pressable
-              style={[s.tabItem, activeTab === 'groups' && s.tabItemActive]}
-              onPress={() => setActiveTab('groups')}
-            >
-              <Text style={[s.tabText, activeTab === 'groups' && s.tabTextActive]}>
-                Active Groups (4)
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[s.tabItem, activeTab === 'balances' && s.tabItemActive]}
-              onPress={() => setActiveTab('balances')}
-            >
-              <Text style={[s.tabText, activeTab === 'balances' && s.tabTextActive]}>
-                Who Owes Whom
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[s.tabItem, activeTab === 'activity' && s.tabItemActive]}
-              onPress={() => setActiveTab('activity')}
-            >
-              <Text style={[s.tabText, activeTab === 'activity' && s.tabTextActive]}>
-                Recent Activity
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Tab 1: Active Groups */}
-          {activeTab === 'groups' && (
-            <View style={s.groupsList}>
-              {/* Group 1 */}
-              <View style={s.groupCard}>
-                <View style={s.groupHeader}>
-                  <View style={s.groupIconWrap}>
-                    <AppIcon name="home" size={20} color="#431ebe" />
-                  </View>
-                  <View style={s.groupInfo}>
-                    <Text style={s.groupTitle}>Domain 2B2B Flatmates</Text>
-                    <Text style={s.groupMeta}>Austin, TX • 4 flatmates • Monthly utilities</Text>
-                  </View>
-                  <View style={s.groupBadgeOwed}>
-                    <Text style={s.groupBadgeOwedText}>+$35.00</Text>
-                  </View>
-                </View>
-
-                <View style={s.groupDetailsBox}>
-                  <Text style={s.groupDetailsText}>
-                    📦 Latest: Patel Brothers Groceries ($164.20) • Paid by You
-                  </Text>
-                  <Text style={s.groupTagsText}>⚡ Water, Gas, Spectrum 1Gbps Internet</Text>
-                </View>
-
-                <View style={s.groupFooter}>
-                  <Pressable
-                    style={s.groupActionBtn}
-                    onPress={() => router.push('/expenses/groups')}
-                  >
-                    <Text style={s.groupActionBtnText}>View Group Bills</Text>
-                  </Pressable>
-                  <Pressable
-                    style={s.groupSettleBtn}
-                    onPress={() =>
-                      handleOpenSettle({
-                        name: 'Ravi Teja',
-                        amount: '$35.00',
-                        note: 'Grocery split',
-                      })
-                    }
-                  >
-                    <Text style={s.groupSettleBtnText}>Request Zelle</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Group 2 */}
-              <View style={s.groupCard}>
-                <View style={s.groupHeader}>
-                  <View style={[s.groupIconWrap, { backgroundColor: '#e6f4f4' }]}>
-                    <AppIcon name="car" size={20} color="#00696b" />
-                  </View>
-                  <View style={s.groupInfo}>
-                    <Text style={s.groupTitle}>Dallas Diwali Roadtrip</Text>
-                    <Text style={s.groupMeta}>Austin ⇄ Dallas • 3 members • Carpool</Text>
-                  </View>
-                  <View style={s.groupBadgeSettled}>
-                    <Text style={s.groupBadgeSettledText}>All Settled ✓</Text>
-                  </View>
-                </View>
-
-                <View style={s.groupDetailsBox}>
-                  <Text style={s.groupDetailsText}>
-                    🛣️ TxTag Tolls ($18.40) & Buc-ee's Snacks ($32.10)
-                  </Text>
-                  <Text style={s.groupTagsText}>Zero balance • All members cleared via Zelle</Text>
-                </View>
-
-                <View style={s.groupFooter}>
-                  <Pressable
-                    style={s.groupActionBtn}
-                    onPress={() => router.push('/expenses/groups')}
-                  >
-                    <Text style={s.groupActionBtnText}>View Receipts</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Group 3 */}
-              <View style={s.groupCard}>
-                <View style={s.groupHeader}>
-                  <View style={[s.groupIconWrap, { backgroundColor: '#fff7ed' }]}>
-                    <AppIcon name="community" size={20} color="#ff7e33" />
-                  </View>
-                  <View style={s.groupInfo}>
-                    <Text style={s.groupTitle}>Sunday Cricket Turf & Chai</Text>
-                    <Text style={s.groupMeta}>Round Rock Sports Complex • 6 players</Text>
-                  </View>
-                  <View style={s.groupBadgeOwe}>
-                    <Text style={s.groupBadgeOweText}>You owe $15.00</Text>
-                  </View>
-                </View>
-
-                <View style={s.groupDetailsBox}>
-                  <Text style={s.groupDetailsText}>
-                    🏏 Turf 2-Hour Booking & Irani Chai / Samosas ($90.00)
-                  </Text>
-                  <Text style={s.groupTagsText}>Paid by Rajesh K. • 4 of 6 paid</Text>
-                </View>
-
-                <View style={s.groupFooter}>
-                  <Pressable
-                    style={s.groupActionBtn}
-                    onPress={() => router.push('/expenses/groups')}
-                  >
-                    <Text style={s.groupActionBtnText}>Details</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[s.groupSettleBtn, { backgroundColor: '#ff7e33' }]}
-                    onPress={() =>
-                      handleOpenSettle({
-                        name: 'Rajesh K.',
-                        amount: '$15.00',
-                        note: 'Cricket turf & samosa split',
-                      })
-                    }
-                  >
-                    <Text style={s.groupSettleBtnText}>Pay $15 via Zelle</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Tab 2: Who Owes Whom */}
-          {activeTab === 'balances' && (
-            <View style={s.groupsList}>
-              <View style={s.balanceItemCard}>
-                <View style={s.balanceAvatar}>
-                  <Text style={s.balanceAvatarText}>RT</Text>
-                </View>
-                <View style={s.balanceDetails}>
-                  <Text style={s.balanceName}>Ravi Teja</Text>
-                  <Text style={s.balanceReason}>Domain 2B2B Grocery Split</Text>
-                </View>
-                <View style={s.balanceRightCol}>
-                  <Text style={s.balanceOwedGreen}>+$75.00</Text>
-                  <Pressable
-                    style={s.balanceRemindBtn}
-                    onPress={() => Alert.alert('Reminded', 'Zelle reminder sent to Ravi Teja.')}
-                  >
-                    <Text style={s.balanceRemindText}>Send Reminder</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              <View style={s.balanceItemCard}>
-                <View
-                  style={[s.balanceAvatar, { backgroundColor: '#fff7ed', borderColor: '#ff7e33' }]}
-                >
-                  <Text style={[s.balanceAvatarText, { color: '#ff7e33' }]}>PM</Text>
-                </View>
-                <View style={s.balanceDetails}>
-                  <Text style={s.balanceName}>Priya M.</Text>
-                  <Text style={s.balanceReason}>I-35 Gas & Tolls</Text>
-                </View>
-                <View style={s.balanceRightCol}>
-                  <Text style={s.balanceOweOrange}>You owe $45.00</Text>
-                  <Pressable
-                    style={s.balancePayBtn}
-                    onPress={() =>
-                      handleOpenSettle({
-                        name: 'Priya M.',
-                        amount: '$45.00',
-                        note: 'I-35 Carpool Fuel',
-                      })
-                    }
-                  >
-                    <Text style={s.balancePayText}>Pay via Zelle</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Tab 3: Recent Activity */}
-          {activeTab === 'activity' && (
-            <View style={s.groupsList}>
-              <View style={s.activityRow}>
-                <View style={s.activityDot} />
-                <View style={s.activityBody}>
-                  <Text style={s.activityTitle}>
-                    Karthik V. added Spectrum 1Gbps WiFi bill ($70.00)
-                  </Text>
-                  <Text style={s.activityMeta}>Domain 2B2B Flatmates • 2 hours ago</Text>
-                </View>
-              </View>
-              <View style={s.activityRow}>
-                <View style={[s.activityDot, { backgroundColor: '#10b981' }]} />
-                <View style={s.activityBody}>
-                  <Text style={s.activityTitle}>Priya M. settled $45.00 via Zelle</Text>
-                  <Text style={s.activityMeta}>Dallas Diwali Roadtrip • Yesterday at 6:42 PM</Text>
-                </View>
-              </View>
-              <View style={s.activityRow}>
-                <View style={s.activityDot} />
-                <View style={s.activityBody}>
-                  <Text style={s.activityTitle}>
-                    Suresh R. recorded Patel Brothers Grocery ($164.20)
-                  </Text>
-                  <Text style={s.activityMeta}>Domain 2B2B Flatmates • 3 days ago</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Quick Footer Links */}
-          <View style={s.footerNav}>
-            <AppButton
-              label="View All Expense Groups"
-              route="/expenses/groups"
-              variant="secondary"
-            />
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Settle via Zelle Modal */}
-      <Modal visible={settleModalVisible} transparent animationType="slide">
-        <View style={s.modalBackdrop}>
-          <View style={s.modalCard}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Settle Up via Zelle</Text>
-              <Pressable onPress={() => setSettleModalVisible(false)}>
-                <AppIcon name="logout" size={20} color="#625f6e" />
-              </Pressable>
-            </View>
-
-            <View style={s.modalRecipientBox}>
-              <Text style={s.modalRecipientLabel}>PAYING TO</Text>
-              <Text style={s.modalRecipientName}>{selectedPerson?.name ?? 'Community Member'}</Text>
-              <Text style={s.modalRecipientSub}>{selectedPerson?.note ?? 'Shared Expense'}</Text>
-              <Text style={s.modalAmount}>{selectedPerson?.amount ?? '$45.00'}</Text>
-            </View>
-
-            <View style={s.zelleTipsBox}>
-              <Text style={s.zelleTipHeader}>✓ Direct Bank Transfer Instructions</Text>
-              <Text style={s.zelleTipText}>
-                Open your bank app (Chase, BoA, Wells Fargo) and transfer directly to the member's
-                verified community phone/email.
-              </Text>
-            </View>
-
-            <Pressable style={s.modalConfirmBtn} onPress={handleConfirmZelle}>
-              <Text style={s.modalConfirmText}>I Have Sent This via Zelle ✓</Text>
-            </Pressable>
-
-            <Pressable style={s.modalCancelBtn} onPress={() => setSettleModalVisible(false)}>
-              <Text style={s.modalCancelText}>Cancel</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
-  );
+/** "$12.00 · ₹500.00", or a zero in `fallbackCurrency` when there is nothing. */
+function formatTotals(totals: Map<string, number>, fallbackCurrency: string) {
+  const entries = [...totals.entries()].filter(([, amount]) => Math.abs(amount) >= 0.005);
+  if (entries.length === 0) return formatMoney(0, fallbackCurrency, { absolute: true });
+  return entries
+    .map(([currency, amount]) => formatMoney(amount, currency, { absolute: true }))
+    .join(' · ');
 }
 
-const DEFAULT_EXPENSES_DATA: Record<string, CatalogScreenContent> = {
-  home: {
-    title: 'Split expenses with trust',
-    subtitle: 'Track shared expenses, balances, and settlements across groups and trips.',
-    eyebrow: 'Expenses',
-    metrics: [
-      { label: 'Active groups', value: '4' },
-      { label: 'Outstanding', value: '$186.50' },
-    ],
-    items: [
-      {
-        id: 'groups',
-        title: 'Your groups',
-        body: 'Open groups you belong to with live balances.',
-        meta: 'Groups',
-        route: '/expenses/groups',
-      },
-      {
-        id: 'balances',
-        title: 'Who owes whom',
-        body: 'See net balances and settlement suggestions.',
-        meta: 'Balances',
-        route: '/expenses/balances',
-      },
-    ],
-  },
-  groups: {
-    title: 'Your expense groups',
-    subtitle: 'Flatmates, road trips, and shared groceries in Austin.',
-    eyebrow: 'Expense Groups',
-    metrics: [
-      { label: 'Total groups', value: '3' },
-      { label: 'Settled', value: '12' },
-    ],
-    items: [
-      {
-        id: 'apt-402',
-        title: 'Apt 402 Utilities',
-        body: 'Austin TX · 4 flatmates · Water, Gas & Internet',
-        meta: 'Monthly',
-        route: '/expenses/groups',
-      },
-      {
-        id: 'dallas-trip',
-        title: 'Dallas Diwali Roadtrip',
-        body: 'Carpool & Gas split · 3 members',
-        meta: 'Recent',
-        route: '/expenses/groups',
-      },
-    ],
-  },
-  balances: {
-    title: 'Balances & Settlements',
-    subtitle: 'Track who owes whom with automatic net-settlement calculation.',
-    eyebrow: 'Net Balances',
-    metrics: [
-      { label: 'You owe', value: '$45.00' },
-      { label: 'You are owed', value: '$120.00' },
-    ],
-    items: [
-      {
-        id: 'b1',
-        title: 'Ravi Teja owes you $75.00',
-        body: 'Groceries at Patel Brothers',
-        meta: 'Pending',
-        route: '/expenses/settlements',
-      },
-      {
-        id: 'b2',
-        title: 'You owe Priya $45.00',
-        body: 'Gas on I-35 carpool',
-        meta: 'Due',
-        route: '/expenses/settlements',
-      },
-    ],
-  },
-  settlements: {
-    title: 'Past Settlements',
-    subtitle: 'History of completed transfers via Zelle and Venmo.',
-    eyebrow: 'Settlements',
-    metrics: [
-      { label: 'Total settled', value: '$1,420' },
-      { label: 'This month', value: '$240' },
-    ],
-    items: [
-      {
-        id: 's1',
-        title: 'Settled $120.00 with Suresh',
-        body: 'Paid via Zelle · Oct 2',
-        meta: 'Completed',
-        route: '/expenses/balances',
-      },
-    ],
-  },
-  add: {
-    title: 'Add New Expense',
-    subtitle: 'Record a receipt, split by percentages or equal shares.',
-    eyebrow: 'New Expense',
-    metrics: [],
-    items: [
-      {
-        id: 'quick-split',
-        title: 'Equal Split',
-        body: 'Divide total equally among group members.',
-        meta: 'Standard',
-        route: '/expenses/groups',
-      },
-    ],
-  },
-};
+export function ExpensesScreen(_props: ExpensesScreenProps) {
+  const router = useRouter();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const [tab, setTab] = useState<Tab>('groups');
 
-const expenseRoutes = {
-  home: '/expenses',
-  groups: '/expenses/groups',
-  balances: '/expenses/balances',
-  settlements: '/expenses/settlements',
-  add: '/expenses/add',
-} as const;
+  const groupsQuery = useQuery({ queryKey: ['expenses', 'groups'], queryFn: listExpenseGroups });
+  const balancesQuery = useQuery({ queryKey: ['expenses', 'balances'], queryFn: listBalances });
+  const settlementsQuery = useQuery({
+    queryKey: ['expenses', 'settlements'],
+    queryFn: listSettlements,
+  });
+  const refetchAll = () => {
+    groupsQuery.refetch();
+    balancesQuery.refetch();
+    settlementsQuery.refetch();
+  };
+  const refreshing =
+    groupsQuery.isRefetching || balancesQuery.isRefetching || settlementsQuery.isRefetching;
 
-const expenseActions = {
-  home: [
-    { label: 'Groups', route: '/expenses/groups' },
-    { label: 'Add expense', route: '/expenses/add' },
-    { label: 'Balances', route: '/expenses/balances' },
-    { label: 'Settlements', route: '/expenses/settlements' },
-  ],
-  groups: [
-    { label: 'Add expense', route: '/expenses/add' },
-    { label: 'Balances', route: '/expenses/balances' },
-  ],
-  balances: [
-    { label: 'Settlements', route: '/expenses/settlements' },
-    { label: 'Groups', route: '/expenses/groups' },
-  ],
-  settlements: [
-    { label: 'Balances', route: '/expenses/balances' },
-    { label: 'Groups', route: '/expenses/groups' },
-  ],
-  add: [
-    { label: 'Groups', route: '/expenses/groups' },
-    { label: 'Home', route: '/expenses' },
-  ],
-} as const;
+  const header = (
+    <ScreenHeader
+      back={{ fallback: '/' as Href }}
+      primaryAction={{ label: 'Add expense', icon: 'plus', route: '/expenses/add' as Href }}
+      subtitle="Split rent, bills, trips, and carpools."
+      title="Shared expenses"
+    />
+  );
 
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#faf8ff' },
-  scrollContent: { padding: space.x4, flexGrow: 1 },
-  container: { width: '100%', alignSelf: 'center', gap: space.x4 },
+  if (groupsQuery.isLoading || balancesQuery.isLoading || settlementsQuery.isLoading) {
+    return (
+      <Screen>
+        {header}
+        <LoadingState label="Loading your expenses…" />
+      </Screen>
+    );
+  }
 
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerLeft: { flex: 1, gap: 4 },
-  badgePill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  badgePillText: {
-    color: '#431ebe',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#131b2e',
-    letterSpacing: -0.4,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#625f6e',
-    lineHeight: 18,
-  },
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#431ebe',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-  },
-  addBtnText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  if (
+    groupsQuery.error ||
+    balancesQuery.error ||
+    settlementsQuery.error ||
+    !groupsQuery.data ||
+    !balancesQuery.data ||
+    !settlementsQuery.data
+  ) {
+    return (
+      <Screen onRefresh={refetchAll} refreshing={refreshing}>
+        {header}
+        <ErrorState
+          body="There was a problem loading your groups and balances."
+          onRetry={refetchAll}
+          retryLabel="Retry"
+          title="Unable to load expenses"
+        />
+      </Screen>
+    );
+  }
 
-  heroCard: {
-    backgroundColor: '#431ebe',
-    borderRadius: 20,
-    padding: space.x4,
-    gap: space.x3,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  heroTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heroLabel: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-  },
-  heroStatusTag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
-  heroStatusText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  heroAmountRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  heroSign: {
-    color: '#34d399',
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  heroAmount: {
-    color: '#ffffff',
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-  heroNetLabel: {
-    color: '#34d399',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
+  const groups = groupsQuery.data;
+  const balances = balancesQuery.data;
+  const groupsById = new Map(groups.map((g) => [g.id, g]));
+  const fallbackCurrency = groups[0]?.currency ?? 'USD';
+  const name = (userId: string) => memberLabel(userId, currentUserId);
 
-  breakdownRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  breakdownCardGreen: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 12,
-    gap: 2,
-  },
-  breakdownHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  breakdownTitleGreen: {
-    color: '#15803d',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  breakdownAmountGreen: {
-    color: '#15803d',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  breakdownCardOrange: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 12,
-    gap: 2,
-  },
-  breakdownTitleOrange: {
-    color: '#b45309',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  breakdownAmountOrange: {
-    color: '#b45309',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  breakdownSub: {
-    color: '#625f6e',
-    fontSize: 10,
-    marginTop: 2,
-  },
+  const owedToYou = balances.filter((b) => b.toUserId === currentUserId);
+  const youOwe = balances.filter((b) => b.fromUserId === currentUserId);
+  const net = netByCurrency(balances, currentUserId);
+  const recentSettlements = [...settlementsQuery.data]
+    .sort((a, b) => Date.parse(b.settledAt ?? b.createdAt) - Date.parse(a.settledAt ?? a.createdAt))
+    .slice(0, RECENT_ACTIVITY_LIMIT);
 
-  heroActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingTop: 4,
-  },
-  heroActionPrimary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#ffffff',
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  heroActionPrimaryText: {
-    color: '#431ebe',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  heroActionSecondary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  heroActionSecondaryText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
+  if (groups.length === 0) {
+    return (
+      <Screen onRefresh={refetchAll} refreshing={refreshing}>
+        {header}
+        <EmptyState
+          actionLabel="Create a group"
+          body="Create a group for your flat, trip, or carpool, then add bills to see who owes whom."
+          iconName="wallet"
+          onAction={() => router.push('/expenses/groups' as Href)}
+          title="No expense groups yet"
+        />
+      </Screen>
+    );
+  }
 
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#f1f3f9',
-    padding: 4,
-    borderRadius: radius.pill,
-  },
-  tabItem: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: radius.pill,
-  },
-  tabItemActive: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#625f6e',
-  },
-  tabTextActive: {
-    color: '#431ebe',
-    fontWeight: '800',
-  },
+  const groupNet = (groupId: string) =>
+    netByCurrency(
+      balances.filter((b) => b.groupId === groupId),
+      currentUserId,
+    );
 
-  groupsList: {
-    gap: 12,
-  },
-  groupCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#eaedff',
-    gap: 12,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  groupIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#e6e8ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  groupInfo: {
-    flex: 1,
-  },
-  groupTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#131b2e',
-  },
-  groupMeta: {
-    fontSize: 11,
-    color: '#625f6e',
-    marginTop: 2,
-  },
-  groupBadgeOwed: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  groupBadgeOwedText: {
-    color: '#15803d',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  groupBadgeSettled: {
-    backgroundColor: '#e0f2fe',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  groupBadgeSettledText: {
-    color: '#0369a1',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  groupBadgeOwe: {
-    backgroundColor: '#ffedd5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  groupBadgeOweText: {
-    color: '#c2410c',
-    fontSize: 11,
-    fontWeight: '800',
-  },
+  return (
+    <Screen onRefresh={refetchAll} refreshing={refreshing}>
+      {header}
 
-  groupDetailsBox: {
-    backgroundColor: '#faf8ff',
-    padding: 10,
-    borderRadius: 10,
-    gap: 4,
-  },
-  groupDetailsText: {
-    fontSize: 12,
-    color: '#131b2e',
-    fontWeight: '600',
-  },
-  groupTagsText: {
-    fontSize: 11,
-    color: '#625f6e',
-  },
+      <Card gap="$x3" variant="tinted">
+        <AppText tone="muted" variant="overline">
+          Your balance
+        </AppText>
+        {net.size === 0 ? (
+          <AppText variant="h3">All settled up</AppText>
+        ) : (
+          <YStack gap="$x1">
+            {[...net.entries()].map(([currency, amount]) => (
+              <AppText key={currency} tone={amount > 0 ? 'success' : 'warm'} variant="h3">
+                {amount > 0 ? 'You are owed ' : 'You owe '}
+                {formatMoney(amount, currency, { absolute: true })}
+              </AppText>
+            ))}
+          </YStack>
+        )}
+        <XStack flexWrap="wrap" gap="$x4">
+          <YStack gap={2}>
+            <AppText tone="muted" variant="caption">
+              Owed to you
+            </AppText>
+            <AppText variant="bodyStrong">
+              {formatTotals(sumByCurrency(owedToYou), fallbackCurrency)}
+            </AppText>
+          </YStack>
+          <YStack gap={2}>
+            <AppText tone="muted" variant="caption">
+              You owe
+            </AppText>
+            <AppText variant="bodyStrong">
+              {formatTotals(sumByCurrency(youOwe), fallbackCurrency)}
+            </AppText>
+          </YStack>
+        </XStack>
+      </Card>
 
-  groupFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  groupActionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#eaedff',
-  },
-  groupActionBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#625f6e',
-  },
-  groupSettleBtn: {
-    backgroundColor: '#431ebe',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  groupSettleBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
+      <SegmentedControl
+        label="Expenses view"
+        onChange={(v) => setTab(v as Tab)}
+        options={[
+          { value: 'groups', label: 'Groups', count: groups.length },
+          { value: 'balances', label: 'Balances', count: balances.length },
+          { value: 'activity', label: 'Settlements', count: recentSettlements.length },
+        ]}
+        value={tab}
+      />
 
-  balanceItemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#eaedff',
-    gap: 12,
-  },
-  balanceAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#e6e8ff',
-    borderWidth: 1.5,
-    borderColor: '#431ebe',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  balanceAvatarText: {
-    color: '#431ebe',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  balanceDetails: {
-    flex: 1,
-  },
-  balanceName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#131b2e',
-  },
-  balanceReason: {
-    fontSize: 12,
-    color: '#625f6e',
-    marginTop: 2,
-  },
-  balanceRightCol: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  balanceOwedGreen: {
-    color: '#15803d',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  balanceRemindBtn: {
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  balanceRemindText: {
-    color: '#431ebe',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  balanceOweOrange: {
-    color: '#c2410c',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  balancePayBtn: {
-    backgroundColor: '#ff7e33',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  balancePayText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
+      {tab === 'groups' ? (
+        <YStack gap="$x3">
+          {groups.map((group) => {
+            const style = GROUP_STYLE[group.groupType] ?? GROUP_STYLE.APARTMENT;
+            const groupBalance = [...groupNet(group.id).entries()];
+            return (
+              <Card
+                aria-label={`Open ${group.name}`}
+                href={`/expenses/groups/${group.id}` as Href}
+                key={group.id}
+              >
+                <XStack alignItems="center" gap="$x3">
+                  <AppIcon name={style.icon} size={22} />
+                  <YStack flex={1} gap={2} minWidth={0}>
+                    <AppText variant="bodyStrong">{group.name}</AppText>
+                    <AppText tone="muted" variant="caption">
+                      {style.label} · {group.memberCount}{' '}
+                      {group.memberCount === 1 ? 'member' : 'members'} ·{' '}
+                      {formatMoney(group.totalExpenses, group.currency)} spent
+                    </AppText>
+                  </YStack>
+                  <AppIcon name="chevron-right" size={18} />
+                </XStack>
+                {groupBalance.length === 0 ? (
+                  <StatusBadge
+                    label={group.totalExpenses > 0 ? 'Settled' : 'No bills yet'}
+                    tone={group.totalExpenses > 0 ? 'success' : 'neutral'}
+                  />
+                ) : (
+                  groupBalance.map(([currency, amount]) => (
+                    <StatusBadge
+                      key={currency}
+                      label={`${amount > 0 ? 'You are owed' : 'You owe'} ${formatMoney(amount, currency, { absolute: true })}`}
+                      tone={amount > 0 ? 'success' : 'warning'}
+                    />
+                  ))
+                )}
+              </Card>
+            );
+          })}
+          <AppButton label="Manage groups" route="/expenses/groups" variant="secondary" />
+        </YStack>
+      ) : null}
 
-  activityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#ffffff',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#eaedff',
-  },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#431ebe',
-  },
-  activityBody: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#131b2e',
-  },
-  activityMeta: {
-    fontSize: 11,
-    color: '#625f6e',
-    marginTop: 2,
-  },
+      {tab === 'balances' ? (
+        balances.length === 0 ? (
+          <EmptyState
+            actionLabel="Add expense"
+            body="You don't owe anyone and no one owes you right now."
+            iconName="check"
+            onAction={() => router.push('/expenses/add' as Href)}
+            title="All settled up"
+          />
+        ) : (
+          <YStack gap="$x3">
+            {balances.map((b) => {
+              const owedToMe = b.toUserId === currentUserId;
+              const other = owedToMe ? b.fromUserId : b.toUserId;
+              return (
+                <Card key={`${b.groupId}-${b.fromUserId}-${b.toUserId}`}>
+                  <XStack alignItems="center" gap="$x3">
+                    <YStack flex={1} gap={2}>
+                      <AppText variant="bodyStrong">
+                        {owedToMe ? `${name(other)} owes you` : `You owe ${name(other)}`}
+                      </AppText>
+                      <AppText tone="muted" variant="caption">
+                        {b.groupName}
+                      </AppText>
+                    </YStack>
+                    <AppText tone={owedToMe ? 'success' : 'warm'} variant="bodyStrong">
+                      {formatMoney(b.amount, b.currency, { absolute: true })}
+                    </AppText>
+                  </XStack>
+                </Card>
+              );
+            })}
+            <AppButton icon="wallet" label="Settle up" route="/expenses/balances" />
+          </YStack>
+        )
+      ) : null}
 
-  footerNav: {
-    paddingTop: space.x2,
-  },
-
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: space.x4,
-  },
-  modalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
-    width: '100%',
-    maxWidth: 400,
-    gap: 16,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#131b2e',
-  },
-  modalRecipientBox: {
-    backgroundColor: '#faf8ff',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    gap: 4,
-  },
-  modalRecipientLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#625f6e',
-    letterSpacing: 0.5,
-  },
-  modalRecipientName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#431ebe',
-  },
-  modalRecipientSub: {
-    fontSize: 12,
-    color: '#625f6e',
-  },
-  modalAmount: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#131b2e',
-    marginTop: 6,
-  },
-  zelleTipsBox: {
-    backgroundColor: 'rgba(0, 105, 107, 0.08)',
-    borderRadius: 10,
-    padding: 12,
-    gap: 4,
-  },
-  zelleTipHeader: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#00696b',
-  },
-  zelleTipText: {
-    fontSize: 11,
-    color: '#00696b',
-    lineHeight: 16,
-  },
-  modalConfirmBtn: {
-    backgroundColor: '#431ebe',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalConfirmText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  modalCancelBtn: {
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  modalCancelText: {
-    color: '#625f6e',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});
+      {tab === 'activity' ? (
+        recentSettlements.length === 0 ? (
+          <EmptyState
+            actionLabel="View balances"
+            body="Payments you record between group members will appear here."
+            iconName="clock"
+            onAction={() => router.push('/expenses/balances' as Href)}
+            title="No settlements yet"
+          />
+        ) : (
+          <YStack gap="$x3">
+            {recentSettlements.map((s) => {
+              const status = settlementStatus(s.status);
+              return (
+                <Card key={s.id}>
+                  <StatusBadge label={status.label} tone={status.tone} />
+                  <AppText variant="bodyStrong">
+                    {name(s.fromUserId)} paid {name(s.toUserId)}{' '}
+                    {formatMoney(s.amount, s.currency, { absolute: true })}
+                  </AppText>
+                  <AppText tone="muted" variant="caption">
+                    {groupsById.get(s.groupId)?.name ?? 'Expense group'} ·{' '}
+                    {formatDate(s.settledAt ?? s.createdAt, 'short')}
+                  </AppText>
+                </Card>
+              );
+            })}
+            <AppButton label="All settlements" route="/expenses/settlements" variant="secondary" />
+          </YStack>
+        )
+      ) : null}
+    </Screen>
+  );
+}

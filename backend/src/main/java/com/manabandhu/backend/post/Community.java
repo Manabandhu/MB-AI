@@ -27,6 +27,24 @@ public class Community {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(length = 150, insertable = false, updatable = false)
+    private String slug;
+
+    @Column(length = 50, insertable = false, updatable = false)
+    private String category;
+
+    @Column(name = "metro_area", length = 100, insertable = false, updatable = false)
+    private String metroArea;
+
+    @Column(name = "member_count", insertable = false, updatable = false)
+    private Integer memberCount;
+
+    @Column(name = "avatar_url", insertable = false, updatable = false)
+    private String avatarUrl;
+
+    @Column(name = "cover_url", insertable = false, updatable = false)
+    private String coverUrl;
+
     protected Community() {}
 
     Community(UUID ownerId, String name, String description) {
@@ -42,4 +60,10 @@ public class Community {
     public String getName() { return name; }
     public String getDescription() { return description; }
     public Instant getCreatedAt() { return createdAt; }
+    public String getSlug() { return slug; }
+    public String getCategory() { return category; }
+    public String getMetroArea() { return metroArea; }
+    public int getMemberCount() { return memberCount == null ? 0 : memberCount; }
+    public String getAvatarUrl() { return avatarUrl; }
+    public String getCoverUrl() { return coverUrl; }
 }

@@ -8,5 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface ListingCategoryRepository extends JpaRepository<ListingCategory, UUID> {
     List<ListingCategory> findAllByOrderByNameAsc();
 
+    List<ListingCategory> findTop12ByOrderByNameAsc();
+
     boolean existsBySlug(String slug);
 }

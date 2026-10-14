@@ -8,12 +8,18 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.PathVariable;
 
+import com.manabandhu.backend.auth.Actor;
+
+/**
+ * Assistant conversations are private to their owner. Replies are a placeholder until the
+ * ai-orchestrator service is connected; see {@code services/ai-orchestrator/MODULE.md}.
+ */
 @RestController
 @RequestMapping("/api/v1/assistant")
 public class AssistantController {
@@ -28,93 +34,58 @@ public class AssistantController {
         this.citationService = citationService;
     }
 
+    /** Messages of the caller's most recent conversation. */
     @GetMapping("/messages")
     List<AssistantMessage> messages(Authentication authentication) {
-        if (authentication != null && authentication.getName() != null) {
-            var userId = UUID.fromString(authentication.getName());
-            var userConversations = conversationService.findByUser(userId);
-            if (!userConversations.isEmpty()) {
-                return messageService.findByConversation(userConversations.get(0).getId());
-            }
-            return List.of();
-        }
-        return messageService.listRecent();
+        var userId = Actor.require(authentication).id();
+        var conversations = conversationService.findByUser(userId);
+        return conversations.isEmpty() ? List.of() : messageService.findByConversation(conversations.get(0).getId());
     }
 
     @PostMapping("/messages")
     ResponseEntity<AssistantMessage> sendMessage(Authentication authentication, @Valid @RequestBody SendAssistantMessageInput input) {
-        if (authentication != null && authentication.getName() != null) {
-            var userId = UUID.fromString(authentication.getName());
-            var userConversations = conversationService.findByUser(userId);
-            UUID convId;
-            if (!userConversations.isEmpty()) {
-                convId = userConversations.get(0).getId();
-            } else {
-                var conv = conversationService.create(userId, "Assistant chat");
-                convId = conv.getId();
-            }
-            messageService.send(convId, AssistantMessage.MessageRole.USER, input.content());
-            var reply = "You said: \"" + input.content() + "\". I'm the ManaBandhu assistant. Ask me about rooms, rides, community, or safety.";
-            var assistantMessage = messageService.send(convId, AssistantMessage.MessageRole.ASSISTANT, reply);
-            return ResponseEntity.created(URI.create("/api/v1/assistant/messages/" + assistantMessage.getId())).body(assistantMessage);
-        }
-        var message = messageService.sendRecent(input.content());
-        return ResponseEntity.created(URI.create("/api/v1/assistant/messages/" + message.getId())).body(message);
+        var userId = Actor.require(authentication).id();
+        var conversationId = conversationService.latestOrCreate(userId).getId();
+        messageService.send(conversationId, AssistantMessage.MessageRole.USER, input.content());
+        var reply = "Thanks for your question. The ManaBandhu assistant is not connected to an AI model yet, "
+                + "so it cannot answer right now. Browse Rooms, Rides, Community, or Safety in the meantime.";
+        var assistantMessage = messageService.send(conversationId, AssistantMessage.MessageRole.ASSISTANT, reply);
+        return ResponseEntity.created(URI.create("/api/v1/assistant/messages/" + assistantMessage.getId())).body(assistantMessage);
     }
 
     @GetMapping("/history")
     List<AssistantConversation> history(Authentication authentication) {
-        if (authentication != null && authentication.getName() != null) {
-            return conversationService.findByUser(actorId(authentication));
-        }
-        return conversationService.listRecent();
+        return conversationService.findByUser(Actor.require(authentication).id());
     }
 
+    /** Citations attached to messages in the caller's most recent conversation. */
     @GetMapping("/citations")
-    List<AssistantCitation> citations() {
-        return citationService.listRecent();
+    List<AssistantCitation> citations(Authentication authentication) {
+        var messageIds = messages(authentication).stream().map(AssistantMessage::getId).toList();
+        return citationService.findByMessages(messageIds);
     }
 
     @GetMapping("/conversations")
     List<AssistantConversation> conversations(Authentication authentication) {
-        return conversationService.findByUser(UUID.fromString(authentication.getName()));
+        return conversationService.findByUser(Actor.require(authentication).id());
     }
 
     @PostMapping("/conversations")
-    ResponseEntity<AssistantConversation> createConversation(Authentication authentication, @RequestBody CreateConversationRequest request) {
-        var conversation = conversationService.create(UUID.fromString(authentication.getName()), request.title());
+    ResponseEntity<AssistantConversation> createConversation(Authentication authentication, @Valid @RequestBody CreateConversationRequest request) {
+        var conversation = conversationService.create(Actor.require(authentication).id(), request.title());
         return ResponseEntity.created(URI.create("/api/v1/assistant/conversations/" + conversation.getId())).body(conversation);
     }
 
     @GetMapping("/conversations/{id}/messages")
-    ResponseEntity<List<AssistantMessage>> messagesByConversation(Authentication authentication, @PathVariable UUID id) {
-        var conversation = conversationService.findById(id).orElse(null);
-        if (conversation == null) {
-            return ResponseEntity.notFound().build();
-        }
-        if (conversation.getUserId() != null && !conversation.getUserId().equals(actorId(authentication)) && !isAdmin(authentication)) {
-            return ResponseEntity.status(403).build();
-        }
-        return ResponseEntity.ok(messageService.findByConversation(id));
-    }
-
-    private UUID actorId(Authentication authentication) {
-        return UUID.fromString(authentication.getName());
-    }
-
-    private boolean isAdmin(Authentication authentication) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+    List<AssistantMessage> messagesByConversation(Authentication authentication, @PathVariable UUID id) {
+        conversationService.requireOwned(Actor.require(authentication), id);
+        return messageService.findByConversation(id);
     }
 
     @GetMapping("/messages/{id}/citations")
-    List<AssistantCitation> citationsByMessage(@PathVariable UUID id) {
+    List<AssistantCitation> citationsByMessage(Authentication authentication, @PathVariable UUID id) {
+        var message = messageService.requireMessage(id);
+        conversationService.requireOwned(Actor.require(authentication), message.getConversationId());
         return citationService.findByMessage(id);
-    }
-
-    @PostMapping("/messages/{id}/citations")
-    ResponseEntity<AssistantCitation> createCitation(@PathVariable UUID id, @Valid @RequestBody CreateAssistantCitationInput input) {
-        var citation = citationService.create(id, input.title(), input.url(), input.snippet());
-        return ResponseEntity.created(URI.create("/api/v1/assistant/messages/" + id + "/citations/" + citation.getId())).body(citation);
     }
 }

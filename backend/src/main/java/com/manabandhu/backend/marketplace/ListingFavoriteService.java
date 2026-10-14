@@ -3,6 +3,7 @@ package com.manabandhu.backend.marketplace;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,16 +22,34 @@ public class ListingFavoriteService {
 
     @Transactional(readOnly = true)
     public List<ListingFavorite> findByUserId(UUID userId) {
-        return repository.findByUserIdOrderByCreatedAtDesc(userId);
+        return repository.findByUserIdOrderByCreatedAtDesc(userId).stream().limit(MarketplaceRules.LIST_CAP).toList();
     }
 
+    /** The saved listings themselves that are still public, newest save first. */
+    @Transactional(readOnly = true)
+    public List<Listing> savedListings(UUID userId) {
+        return listingRepository.findSavedBy(userId, PageRequest.of(0, MarketplaceRules.LIST_CAP));
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Set<UUID> savedAmong(UUID userId, java.util.Collection<UUID> listingIds) {
+        if (userId == null || listingIds.isEmpty()) return java.util.Set.of();
+        return repository.findByUserIdAndListingIdIn(userId, listingIds).stream()
+                .map(ListingFavorite::getListingId).collect(java.util.stream.Collectors.toSet());
+    }
+
+    /** Saving is idempotent; you cannot save your own listing or one that is no longer active. */
     @Transactional
     public ListingFavorite favorite(UUID userId, UUID listingId) {
-        if (!listingRepository.existsById(listingId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found");
+        var listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found"));
+        if (listing.getOwnerId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot save your own listing");
         }
-        if (repository.existsByListingIdAndUserId(listingId, userId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Already favorited");
+        var existing = repository.findByUserIdAndListingIdIn(userId, List.of(listingId));
+        if (!existing.isEmpty()) return existing.getFirst();
+        if (!"active".equals(listing.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only active listings can be saved");
         }
         return repository.save(new ListingFavorite(listingId, userId));
     }

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/immigration")
@@ -37,20 +38,37 @@ public class ImmigrationController {
     }
 
     @GetMapping("/screens/{screenId}")
-    CatalogScreenContent screen(@PathVariable String screenId) {
-        return contentService.screen(screenId);
+    CatalogScreenContent screen(Authentication authentication, @PathVariable String screenId) {
+        return contentService.screen(screenId, Actor.from(authentication));
     }
 
     @GetMapping("/resources")
-    List<ImmigrationResource> resources(@RequestParam(required = false) String category) {
-        return category != null ? resourceService.findByCategory(category) : resourceService.findAll();
+    List<ImmigrationResourceView> resources(Authentication authentication, @RequestParam(required = false) String category) {
+        return resourceService.listVisible(Actor.from(authentication), category);
     }
 
     @PostMapping("/resources")
     ResponseEntity<ImmigrationResource> createResource(Authentication authentication, @Valid @RequestBody CreateImmigrationResourceInput input) {
-        var type = ImmigrationResource.ResourceType.valueOf(input.resourceType());
-        var resource = resourceService.create(UUID.fromString(authentication.getName()), input.title(), input.description(), input.category(), input.url(), type, input.tags(), input.verified());
+        var type = resourceType(input.resourceType());
+        var actor = Actor.require(authentication);
+        // Only admins can mark a resource as verified; community submissions start unverified.
+        var verified = actor.admin() && input.verified();
+        var resource = resourceService.create(actor.id(), input.title(), input.description(), input.category(), input.url(), type, input.tags(), verified);
         return ResponseEntity.created(URI.create("/api/v1/immigration/resources/" + resource.getId())).body(resource);
+    }
+
+    private static ImmigrationResource.ResourceType resourceType(String value) {
+        try {
+            return ImmigrationResource.ResourceType.valueOf(value.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Unknown resource type");
+        }
+    }
+
+    @GetMapping("/resources/{resourceId}")
+    ImmigrationResourceView resource(Authentication authentication, @PathVariable UUID resourceId) {
+        return resourceService.viewFor(Actor.from(authentication), resourceId);
     }
 
     @GetMapping("/guides")
@@ -59,8 +77,8 @@ public class ImmigrationController {
     }
 
     @GetMapping("/checklists")
-    List<ImmigrationChecklist> checklists(@RequestParam(required = false) String category) {
-        return category != null ? checklistService.findByCategory(category) : checklistService.findAll();
+    List<ImmigrationChecklist> checklists(Authentication authentication, @RequestParam(required = false) String category) {
+        return checklistService.findForOwner(Actor.require(authentication), category);
     }
 
     @GetMapping("/faq")

@@ -1,10 +1,2 @@
-export { ChecklistsScreen } from './screens/ChecklistsScreen';
-export { FaqScreen } from './screens/FaqScreen';
-export { GuidesScreen } from './screens/GuidesScreen';
-export { ImmigrationScreen } from './screens/ImmigrationHomeScreen';
-export { ImmigrationNewsScreen } from './screens/ImmigrationNewsScreen';
-export { QuestionsScreen } from './screens/QuestionsScreen';
-export { ResourceDetailScreen } from './screens/ResourceDetailScreen';
-export { ResourcesScreen } from './screens/ResourcesScreen';
-export { SavedResourcesScreen } from './screens/SavedResourcesScreen';
-export { UscisScreen } from './screens/UscisScreen';
+// Public API of the immigration module. Other modules and the app shell import only from here.
+export { moduleMeta } from './module';

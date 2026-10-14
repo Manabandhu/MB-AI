@@ -11,3 +11,4 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - `frontend/src/modules/events/screens/CreateEventScreen.tsx` - Create new event form.
 - `frontend/src/modules/events/screens/SavedEventsScreen.tsx` - Saved events list.
 - `frontend/src/modules/events/screens/MyEventsScreen.tsx` - Manage own events.
+- Phase 1 (2026-10-14): see `.codex/skills/manabandhu-events/SKILL.md` for the current API surface, removed fake features, and known gaps.

@@ -23,6 +23,17 @@ spring:
   flyway:
     baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
     baseline-version: ${FLYWAY_BASELINE_VERSION:0}
+    # The hosted database has a V29 applied outside this repository (load-test seed). Tolerate applied
+    # migrations that have no local file instead of refusing to start; new migrations continue from V30.
+    ignore-migration-patterns: "*:missing"
+  data:
+    web:
+      pageable:
+        # Bound every paged endpoint so a client cannot request an unbounded page.
+        max-page-size: 500
+        # Serialize Page<T> responses as Spring Data's stable PagedModel DTO:
+        # { "content": [...], "page": { "size", "number", "totalElements", "totalPages" } }.
+        serialization-mode: via-dto
   graphql:
     graphiql:
       enabled: ${GRAPHIQL_ENABLED:false}
@@ -47,10 +58,21 @@ management:
         enabled: true
 
 app:
+  notifications:
+    push:
+      # Expo push delivery. Off by default so local runs and tests never call exp.host; set true where deployed.
+      enabled: ${PUSH_NOTIFICATIONS_ENABLED:false}
+      # Optional: required only when "enhanced push security" is on in the Expo project.
+      expo-access-token: ${EXPO_ACCESS_TOKEN:}
   admin:
     public-access-enabled: ${ADMIN_PUBLIC_ACCESS_ENABLED:false}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:19006}
+    # Local-network development origins. Set CORS_ALLOWED_ORIGIN_PATTERNS to an empty value in production.
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:[*],http://127.0.0.1:[*],http://192.168.*:[*],http://10.*:[*],http://172.16.*:[*],http://*.local:[*],exp://*}
+  maps:
+    # Google web-service key (Directions, Places, Geocoding). Server-side only; never ship it in the app.
+    google-server-key: ${GOOGLE_MAPS_SERVER_KEY:}
   automation:
     github:
       repository: ${AUTOMATION_GITHUB_REPOSITORY:}

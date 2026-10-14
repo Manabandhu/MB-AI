@@ -3,6 +3,8 @@ package com.manabandhu.backend.foundation;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
+
+import com.manabandhu.backend.auth.Actor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -15,8 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/onboarding")
 public class OnboardingController {
-
-    private static final UUID DEMO_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     private final OnboardingService onboardingService;
 
@@ -57,21 +57,7 @@ public class OnboardingController {
         return ResponseEntity.ok(onboardingService.completeOnboarding(userId));
     }
 
-    private UUID resolveUserId(Jwt jwt, Authentication authentication) {
-        if (jwt != null && jwt.getSubject() != null) {
-            try {
-                return UUID.fromString(jwt.getSubject());
-            } catch (IllegalArgumentException ignored) {
-                // fall through
-            }
-        }
-        if (authentication != null && authentication.getPrincipal() instanceof Jwt authJwt && authJwt.getSubject() != null) {
-            try {
-                return UUID.fromString(authJwt.getSubject());
-            } catch (IllegalArgumentException ignored) {
-                // fall through
-            }
-        }
-        return DEMO_USER_ID;
+    private static UUID resolveUserId(Jwt jwt, Authentication authentication) {
+        return Actor.require(authentication).id();
     }
 }

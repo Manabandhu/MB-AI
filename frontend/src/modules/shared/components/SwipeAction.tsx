@@ -1,56 +1,45 @@
-import { color as colors, space } from '@manabandhu/design-system';
-import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { XStack, YStack } from 'tamagui';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 
 export type SwipeActionProps = {
+  /** `color` is a theme token or palette value (e.g. `'$error'`, `palette.error`). */
   leftAction?: { label: string; color: string; onPress: () => void };
   rightAction?: { label: string; color: string; onPress: () => void };
   children: React.ReactNode;
 };
 
-export function SwipeAction({ leftAction, rightAction, children }: SwipeActionProps) {
-  const colorScheme = useColorScheme();
-
+function SideAction({ label, color, onPress }: NonNullable<SwipeActionProps['leftAction']>) {
   return (
-    <View style={[styles.root, colorScheme === 'dark' && styles.rootDark]}>
-      {leftAction ? (
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel={leftAction.label}
-          onPress={leftAction.onPress}
-          style={[styles.action, { backgroundColor: leftAction.color }]}
-        >
-          <Text style={styles.actionText}>{leftAction.label}</Text>
-        </TouchableOpacity>
-      ) : null}
-      <View style={styles.content}>{children}</View>
-      {rightAction ? (
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel={rightAction.label}
-          onPress={rightAction.onPress}
-          style={[styles.action, { backgroundColor: rightAction.color }]}
-        >
-          <Text style={styles.actionText}>{rightAction.label}</Text>
-        </TouchableOpacity>
-      ) : null}
-    </View>
+    <YStack
+      alignItems="center"
+      aria-label={label}
+      backgroundColor={color as never}
+      cursor="pointer"
+      focusVisibleStyle={{ outlineColor: '$outlineColor', outlineStyle: 'solid', outlineWidth: 3 }}
+      justifyContent="center"
+      minHeight={44}
+      minWidth={80}
+      onPress={onPress}
+      paddingHorizontal="$x5"
+      pressStyle={{ opacity: 0.85 }}
+      role="button"
+      {...keyboardPress(onPress, true)}
+    >
+      <AppText tone="onPrimary" variant="label">
+        {label}
+      </AppText>
+    </YStack>
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  rootDark: {},
-  content: {
-    flex: 1,
-  },
-  action: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: space.x5,
-    minWidth: 80,
-  },
-  actionText: { color: colors.surface, fontSize: 13, fontWeight: '700' },
-});
+/** Row with optional leading/trailing action buttons around the content. */
+export function SwipeAction({ leftAction, rightAction, children }: SwipeActionProps) {
+  return (
+    <XStack overflow="hidden">
+      {leftAction ? <SideAction {...leftAction} /> : null}
+      <YStack flex={1}>{children}</YStack>
+      {rightAction ? <SideAction {...rightAction} /> : null}
+    </XStack>
+  );
+}

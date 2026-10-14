@@ -2,6 +2,6 @@ import { useRedirectIfAuthenticated } from '@/lib/authStore';
 import { ForgotPasswordScreen } from '@/modules/auth/screens/ForgotPasswordScreen';
 
 export default function ForgotPasswordRoute() {
-  useRedirectIfAuthenticated('/home');
+  useRedirectIfAuthenticated();
   return <ForgotPasswordScreen />;
 }
