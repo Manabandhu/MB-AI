@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Platform, Share } from 'react-native';
 import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
+import { supabase } from '@/lib/supabase';
 import { unregisterThisDevice } from '@/modules/notifications/push';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
@@ -15,7 +16,7 @@ import { Section } from '@/modules/shared/ui/Section';
 import { TextField } from '@/modules/shared/ui/TextField';
 import { deleteMyAccount, exportMyData, ReauthRequiredError } from './accountApi';
 import { ReauthSheet } from './ReauthSheet';
-import { requestContactChange } from './reauth';
+import { confirmPhoneChange, requestContactChange } from './reauth';
 
 type Pending =
   | { kind: 'delete' }
@@ -48,9 +49,11 @@ export function AccountDataScreen() {
   const [confirmText, setConfirmText] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [phoneToConfirm, setPhoneToConfirm] = useState<string | null>(null);
+  const [phoneCode, setPhoneCode] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<'export' | 'delete' | 'contact' | null>(null);
+  const [busy, setBusy] = useState<'export' | 'delete' | 'contact' | 'phone-code' | null>(null);
 
   const exportData = async () => {
     setBusy('export');
@@ -70,7 +73,9 @@ export function AccountDataScreen() {
     try {
       await useAuthStore.getState().signOut();
     } catch {
-      // The account no longer exists, so the server may refuse the sign-out; clear the session locally.
+      // The account no longer exists, so the server may refuse the sign-out; clear the stored session locally
+      // too, otherwise the next launch would restore the deleted account's session.
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
       useAuthStore.setState({
         session: null,
         user: null,
@@ -107,13 +112,35 @@ export function AccountDataScreen() {
       );
       setNotice(
         action.kind === 'email'
-          ? `Check ${action.value} and confirm the change. Your current email works until then.`
-          : `We sent a code to ${action.value}. Your number changes once it is confirmed.`,
+          ? `Confirm the change from the links sent to ${action.value} and to your current email. Your current email works until then.`
+          : `We sent a code to ${action.value}. Enter it below to finish the change.`,
       );
+      if (action.kind === 'phone') {
+        setPhoneToConfirm(action.value);
+        setPhoneCode('');
+      }
       setNewEmail('');
       setNewPhone('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start the change.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const confirmPhone = async () => {
+    if (!phoneToConfirm) return;
+    setBusy('phone-code');
+    setError(null);
+    try {
+      await confirmPhoneChange(phoneToConfirm, phoneCode.trim());
+      setNotice(`Your phone number is now ${phoneToConfirm}.`);
+      setPhoneToConfirm(null);
+      setPhoneCode('');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'That code did not work. Check it and try again.',
+      );
     } finally {
       setBusy(null);
     }
@@ -181,6 +208,25 @@ export function AccountDataScreen() {
                 size="sm"
                 variant="secondary"
               />
+              {phoneToConfirm ? (
+                <YStack gap="$x2">
+                  <TextField
+                    autoComplete="one-time-code"
+                    helper={`Code sent to ${phoneToConfirm}`}
+                    keyboardType="number-pad"
+                    label="Confirmation code"
+                    onChangeText={setPhoneCode}
+                    value={phoneCode}
+                  />
+                  <AppButton
+                    disabled={!/^\d{4,10}$/.test(phoneCode.trim())}
+                    label="Confirm new number"
+                    loading={busy === 'phone-code'}
+                    onPress={confirmPhone}
+                    size="sm"
+                  />
+                </YStack>
+              ) : null}
             </YStack>
           </Card>
         </Section>

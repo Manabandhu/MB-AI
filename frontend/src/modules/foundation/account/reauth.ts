@@ -44,3 +44,9 @@ export async function requestContactChange(change: {
   const { error } = await supabase.auth.updateUser(change);
   if (error) throw error;
 }
+
+/** Confirms a phone change with the code Supabase texted to the new number; the change only applies after this. */
+export async function confirmPhoneChange(phone: string, code: string): Promise<void> {
+  const { error } = await supabase.auth.verifyOtp({ phone, token: code, type: 'phone_change' });
+  if (error) throw error;
+}
