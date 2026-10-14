@@ -17,6 +17,7 @@ import {
   withDay,
 } from '@/modules/shared/ui/fieldMath';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 /** Day chips shown inline before "Pick a date…". */
@@ -315,6 +316,10 @@ export function DateTimeField({
                             setPickerOpen(false);
                           }
                     }
+                    {...keyboardPress(() => {
+                      pickDay(day);
+                      setPickerOpen(false);
+                    }, !disabled)}
                     opacity={disabled ? 0.35 : 1}
                     role="button"
                   >

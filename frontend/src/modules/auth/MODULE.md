@@ -46,3 +46,9 @@ client (chunked SecureStore sessions on native).
   `manabandhu://auth/callback`, `manabandhu://reset-password`.
 - Providers: Apple and Google enabled with their client IDs; Phone with an SMS provider (e.g. Twilio).
 - Locally, `scripts/local-dev/auth.mjs serve` stands in for these endpoints (codes are written to `.local-dev/jwks.log`).
+
+## Terms consent (2026-10-13)
+
+Every signed-in account must have `user_metadata.terms_version`. Email sign-up writes it; Apple/Google sign-up records
+the consent ticked before the redirect (`consent.ts`); any other account (Apple/Google or phone from Sign In, older
+accounts) is sent once to `/accept-terms` by `routeAfterAuth()`. `/accept-terms` → `screens/AcceptTermsScreen.tsx`.

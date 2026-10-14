@@ -1,11 +1,13 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import type { TextInput } from 'react-native';
+import { Platform, type TextInput } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
+import { supabase } from '@/lib/supabase';
 import {
   friendlyAuthError,
   isValidEmail,
   MIN_PASSWORD_LENGTH,
+  PASSWORD_RULES,
   passwordProblem,
 } from '@/modules/auth/authHelpers';
 import {
@@ -18,6 +20,7 @@ import {
   SocialButtons,
 } from '@/modules/auth/components/AuthKit';
 import { ConsentCheckbox } from '@/modules/auth/components/ConsentCheckbox';
+import { rememberPendingConsent, takePendingConsent } from '@/modules/auth/consent';
 import { TERMS_VERSION } from '@/modules/foundation/legal/content';
 
 type FieldErrors = { name?: string; email?: string; password?: string };
@@ -70,9 +73,18 @@ export function SignUpScreen() {
       return;
     }
     setSocialBusy(provider);
+    // Recorded on the account once the provider returns (routeAfterAuth), since OAuth sign-up has no metadata field.
+    rememberPendingConsent();
     try {
       await signInWithOAuth(provider);
+      // On native the call returns once the in-app browser closes; no session means it was cancelled. (On the web
+      // the page is navigating to the provider, so the remembered consent must survive.)
+      if (Platform.OS !== 'web') {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) takePendingConsent();
+      }
     } catch (error) {
+      takePendingConsent();
       setFormError(friendlyAuthError(error));
     } finally {
       setSocialBusy(null);
@@ -189,7 +201,7 @@ export function SignUpScreen() {
         autoCorrect={false}
         autoComplete="new-password"
         textContentType="newPassword"
-        passwordRules="minlength: 8; required: lower, upper; required: digit;"
+        passwordRules={PASSWORD_RULES}
         returnKeyType="go"
         onSubmitEditing={submit}
       />

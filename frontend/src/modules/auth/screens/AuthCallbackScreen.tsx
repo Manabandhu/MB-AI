@@ -1,4 +1,4 @@
-import { color, space } from '@manabandhu/design-system';
+import { space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -6,6 +6,7 @@ import { useRedirectIfAuthenticated } from '@/lib/authStore';
 import { supabase } from '@/lib/supabase';
 import { friendlyAuthError, parseAuthRedirect } from '@/modules/auth/authHelpers';
 import { AuthButton, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
+import { useAppearance } from '@/theme/ThemeProvider';
 
 /**
  * Landing page for web OAuth and email-confirmation links. Tokens in the fragment are picked up by the Supabase
@@ -13,6 +14,7 @@ import { AuthButton, AuthNotice, AuthScreen } from '@/modules/auth/components/Au
  */
 export function AuthCallbackScreen() {
   useRedirectIfAuthenticated();
+  const { palette } = useAppearance();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,9 +53,12 @@ export function AuthCallbackScreen() {
   }
 
   return (
-    <View style={styles.center} accessibilityLiveRegion="polite">
-      <ActivityIndicator size="large" color={color.primary} />
-      <Text style={styles.text}>Signing you in…</Text>
+    <View
+      style={[styles.center, { backgroundColor: palette.surface }]}
+      accessibilityLiveRegion="polite"
+    >
+      <ActivityIndicator size="large" color={palette.primary} />
+      <Text style={[styles.text, { color: palette.muted }]}>Signing you in…</Text>
     </View>
   );
 }
@@ -64,7 +69,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.x4,
-    backgroundColor: color.surface,
   },
-  text: { color: color.muted, fontSize: 17 },
+  text: { fontSize: 17 },
 });

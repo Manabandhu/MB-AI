@@ -1,79 +1,95 @@
-import { breakpoint, palette } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
-import type { Href } from 'expo-router';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { XStack, YStack } from 'tamagui';
 import type { Event } from '@/modules/events/api';
 import { listEvents } from '@/modules/events/api';
+import { rankSearchResults, type SearchFields } from '@/modules/foundation/search/rankSearch';
 import { listJobPostings } from '@/modules/jobs/api';
 import type { JobPosting } from '@/modules/jobs/types';
 import { listMarketplaceListings } from '@/modules/marketplace/api';
 import type { MarketplaceListing } from '@/modules/marketplace/types';
+import { formatListingPrice } from '@/modules/marketplace/utils/format';
 import { rideSearchHref } from '@/modules/rides';
 import { listRoomListings } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
-import { ListRow } from '@/modules/shared/ui/ListRow';
+import {
+  type AppIconName,
+  AppText,
+  BackButton,
+  Card,
+  Chip,
+  FilterChipRow,
+  IconButton,
+  ListRow,
+  Screen,
+  Section,
+  SkeletonCard,
+  TextField,
+} from '@/modules/shared/ui';
+import { useAdaptiveLayout } from '@/platform/adaptive';
 
-const C = {
-  primary: '#E05638', // Warm Saffron
-  secondary: '#0D5C75', // Deep Gulf Teal
-  bg: '#FFFDF9', // Soft warm ivory
-  cardBg: '#FFFFFF',
-  border: '#E8DEC8',
-  ink: '#151D21',
-  inkMuted: '#6B7280',
-  tealBg: '#E0F2FE',
-  saffronBg: '#FEE2E2',
-  goldBg: palette.goldBg,
+type CategoryId = 'all' | 'rooms' | 'rides' | 'jobs' | 'events' | 'market';
+
+const CATEGORIES: { id: CategoryId; label: string; icon?: AppIconName }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'rooms', label: 'Rooms', icon: 'bed' },
+  { id: 'rides', label: 'Rides', icon: 'car' },
+  { id: 'jobs', label: 'Jobs', icon: 'briefcase' },
+  { id: 'events', label: 'Events', icon: 'event' },
+  { id: 'market', label: 'Market', icon: 'marketplace' },
+];
+
+const QUICK_LINKS: { label: string; icon: AppIconName; route: string }[] = [
+  { label: 'Rooms', icon: 'home', route: '/rooms' },
+  { label: 'Rides', icon: 'car', route: '/rides' },
+  { label: 'Jobs', icon: 'briefcase', route: '/jobs' },
+  { label: 'Events', icon: 'calendar', route: '/events' },
+  { label: 'Marketplace', icon: 'marketplace', route: '/marketplace' },
+  { label: 'Safety Center', icon: 'shield', route: '/safety' },
+];
+
+type Result = {
+  id: string;
+  title: string;
+  subtitle: string;
+  route: string;
+  icon: AppIconName;
+  kind: string;
+  fields: SearchFields;
 };
 
-const CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'rooms', label: 'Rooms 🏠' },
-  { id: 'rides', label: 'Rides 🚗' },
-  { id: 'jobs', label: 'Jobs 💼' },
-  { id: 'events', label: 'Events 🎉' },
-  { id: 'market', label: 'Market 🛍️' },
-];
+type Source = {
+  id: Exclude<CategoryId, 'all' | 'rides'>;
+  label: string;
+  isLoading: boolean;
+  isError: boolean;
+  refetch: () => void;
+  results: Result[];
+};
 
-const POPULAR_SEARCHES = [
-  { label: 'UT Austin shared room', category: 'rooms', route: '/rooms' },
-  {
-    label: 'Austin to Dallas carpool',
-    category: 'rides',
-    route: '/rides/search?from=Austin&to=Dallas',
-  },
-  { label: 'Diwali & Ugadi Mela', category: 'events', route: '/events' },
-  { label: 'Pre-loved mixer grinder', category: 'market', route: '/marketplace' },
-  { label: 'Tech employee referrals', category: 'jobs', route: '/jobs' },
-];
+function eventDate(e: Event) {
+  if (!e.startAt) return '';
+  const date = new Date(e.startAt);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString();
+}
 
+/**
+ * Searches rooms, events, marketplace, and jobs (the lists each module already serves) and links to ride search.
+ * Each source loads and fails on its own: a failing list shows its own retry while the others still show results.
+ * Results are ranked title > location > secondary text > description.
+ */
 export function SearchScreen() {
-  const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isCompact = width < breakpoint.narrow; // Narrow fold cover screen
-  const isDesktop = width >= breakpoint.medium; // Tablet / unfolded fold / desktop
-
+  const { windowClass } = useAdaptiveLayout();
   // `/search?q=…` (e.g. from Explore's empty state) starts with that query filled in.
   const params = useLocalSearchParams<{ q?: string | string[] }>();
   const initialQuery = Array.isArray(params.q) ? (params.q[0] ?? '') : (params.q ?? '');
   const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
+  const query = searchQuery.trim();
 
-  // Errors are surfaced below instead of being treated as "no results".
   const roomsQuery = useQuery<RoomListing[]>({
     queryKey: ['rooms', 'search-pool'],
     queryFn: () => listRoomListings(),
@@ -91,506 +107,202 @@ export function SearchScreen() {
     queryFn: () => listJobPostings(),
   });
 
-  const rooms = roomsQuery.data;
-  const events = eventsQuery.data;
-  const market = marketQuery.data;
-  const jobs = jobsQuery.data;
-  const searchQueries = [roomsQuery, eventsQuery, marketQuery, jobsQuery];
-  const searchFailed = searchQueries.some((q) => q.isError);
-  const searchLoading = searchQueries.some((q) => q.isLoading);
+  const sources: Source[] = (() => {
+    const rooms: Result[] = (roomsQuery.data ?? []).map((r) => ({
+      id: `room-${r.id}`,
+      title: r.title,
+      subtitle: [r.broadLocation, `${formatListingPrice(r.price)}/mo`].filter(Boolean).join(' · '),
+      route: `/rooms/${r.id}`,
+      icon: 'bed',
+      kind: 'Room',
+      fields: { title: r.title, location: r.broadLocation, description: r.description },
+    }));
+    const events: Result[] = (eventsQuery.data ?? []).map((e) => ({
+      id: `event-${e.id}`,
+      title: e.title,
+      subtitle: [e.location, eventDate(e)].filter(Boolean).join(' · '),
+      route: `/events/${e.id}`,
+      icon: 'event',
+      kind: 'Event',
+      fields: { title: e.title, location: e.location, description: e.description },
+    }));
+    const market: Result[] = (marketQuery.data ?? []).map((m) => ({
+      id: `market-${m.id}`,
+      title: m.title,
+      subtitle: [m.location, formatListingPrice(m.price, m.currency)].filter(Boolean).join(' · '),
+      route: `/marketplace/${m.id}`,
+      icon: 'marketplace',
+      kind: 'Marketplace',
+      fields: { title: m.title, location: m.location, description: m.description },
+    }));
+    const jobs: Result[] = (jobsQuery.data ?? []).map((j) => ({
+      id: `job-${j.id}`,
+      title: j.title,
+      subtitle: [j.company, j.location].filter(Boolean).join(' · '),
+      route: `/jobs/${j.id}`,
+      icon: 'briefcase',
+      kind: 'Job',
+      fields: {
+        title: j.title,
+        location: j.location,
+        secondary: j.company,
+        description: j.description,
+      },
+    }));
+    const from = (
+      q: typeof roomsQuery | typeof eventsQuery | typeof marketQuery | typeof jobsQuery,
+    ) => ({
+      isLoading: q.isLoading,
+      isError: q.isError,
+      refetch: () => void q.refetch(),
+    });
+    return [
+      { id: 'rooms', label: 'Rooms', results: rooms, ...from(roomsQuery) },
+      { id: 'events', label: 'Events', results: events, ...from(eventsQuery) },
+      { id: 'market', label: 'Marketplace', results: market, ...from(marketQuery) },
+      { id: 'jobs', label: 'Jobs', results: jobs, ...from(jobsQuery) },
+    ];
+  })();
 
-  const searchResults = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return [];
+  const activeSources = sources.filter(
+    (source) => activeCategory === 'all' || activeCategory === source.id,
+  );
+  const results = query
+    ? rankSearchResults(
+        query,
+        activeSources.flatMap((source) => source.results),
+        (r) => r.fields,
+      )
+    : [];
+  const failed = activeSources.filter((source) => source.isError);
+  const loading = activeSources.filter((source) => source.isLoading);
+  const showRides = query.length > 0 && (activeCategory === 'all' || activeCategory === 'rides');
 
-    const results: {
-      id: string;
-      title: string;
-      subtitle: string;
-      category: string;
-      route: string;
-      badge: string;
-    }[] = [];
+  const header = (
+    <YStack
+      alignSelf="center"
+      gap="$x2"
+      maxWidth={880}
+      paddingHorizontal={windowClass === 'compact' ? 16 : 24}
+      paddingTop="$x2"
+      width="100%"
+    >
+      <XStack alignItems="center" gap="$x2">
+        <BackButton fallback="/explore" />
+        <YStack flex={1}>
+          <TextField
+            autoCorrect={false}
+            autoFocus
+            leadingIcon="search"
+            onChangeText={setSearchQuery}
+            placeholder="Search rooms, rides, jobs, events…"
+            returnKeyType="search"
+            trailing={
+              searchQuery.length > 0 ? (
+                <IconButton
+                  icon="close"
+                  label="Clear search"
+                  onPress={() => setSearchQuery('')}
+                  variant="plain"
+                />
+              ) : undefined
+            }
+            value={searchQuery}
+          />
+        </YStack>
+      </XStack>
+      <FilterChipRow label="Search in" role="radiogroup">
+        {CATEGORIES.map((cat) => (
+          <Chip
+            icon={cat.icon}
+            key={cat.id}
+            label={cat.label}
+            onPress={() => setActiveCategory(cat.id)}
+            radio
+            selected={activeCategory === cat.id}
+          />
+        ))}
+      </FilterChipRow>
+    </YStack>
+  );
 
-    if (activeCategory === 'all' || activeCategory === 'rooms') {
-      (rooms ?? []).forEach((r: RoomListing) => {
-        const loc = r.broadLocation ?? '';
-        if (r.title.toLowerCase().includes(q) || loc.toLowerCase().includes(q)) {
-          results.push({
-            id: `room-${r.id}`,
-            title: r.title,
-            subtitle: [loc, `$${r.price}/mo`].filter(Boolean).join(' · '),
-            category: 'Rooms',
-            route: `/rooms/${r.id}`,
-            badge: '🏠 Room',
-          });
-        }
-      });
-    }
-
-    if (activeCategory === 'all' || activeCategory === 'events') {
-      (events ?? []).forEach((e: Event) => {
-        if (e.title.toLowerCase().includes(q) || (e.location ?? '').toLowerCase().includes(q)) {
-          results.push({
-            id: `event-${e.id}`,
-            title: e.title,
-            subtitle: [
-              e.location,
-              e.startAt || e.date
-                ? new Date((e.startAt ?? e.date) as string).toLocaleDateString()
-                : '',
-            ]
-              .filter(Boolean)
-              .join(' · '),
-            category: 'Events',
-            route: `/events/${e.id}`,
-            badge: '🎉 Event',
-          });
-        }
-      });
-    }
-
-    if (activeCategory === 'all' || activeCategory === 'market') {
-      (market ?? []).forEach((m: MarketplaceListing) => {
-        if (m.title.toLowerCase().includes(q) || (m.location ?? '').toLowerCase().includes(q)) {
-          results.push({
-            id: `market-${m.id}`,
-            title: m.title,
-            subtitle: [m.location, `$${m.price}`].filter(Boolean).join(' · '),
-            category: 'Market',
-            route: `/marketplace/${m.id}`,
-            badge: '🛍️ Market',
-          });
-        }
-      });
-    }
-
-    if (activeCategory === 'all' || activeCategory === 'jobs') {
-      (jobs ?? []).forEach((j: JobPosting) => {
-        if (j.title.toLowerCase().includes(q) || (j.company ?? '').toLowerCase().includes(q)) {
-          results.push({
-            id: `job-${j.id}`,
-            title: j.title,
-            subtitle: [j.company, j.location].filter(Boolean).join(' · '),
-            category: 'Jobs',
-            route: `/jobs/${j.id}`,
-            badge: '💼 Job',
-          });
-        }
-      });
-    }
-
-    return results;
-  }, [searchQuery, activeCategory, rooms, events, market, jobs]);
+  if (!query) {
+    return (
+      <Screen header={header}>
+        <Section title="Jump to">
+          <YStack gap="$x2">
+            {QUICK_LINKS.map((link) => (
+              <ListRow href={link.route} icon={link.icon} key={link.route} title={link.label} />
+            ))}
+          </YStack>
+        </Section>
+      </Screen>
+    );
+  }
 
   return (
-    <SafeAreaView style={s.safe}>
-      <View style={[s.container, isDesktop && s.containerDesktop]}>
-        {/* Search Header Bar */}
-        <View style={s.searchBarRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            onPress={() => router.back()}
-            style={s.backBtn}
-          >
-            <AppIcon name="chevron-left" size={20} color={C.ink} />
-          </Pressable>
-          <View style={s.searchInputWrap}>
-            <AppIcon name="search" size={18} color={C.inkMuted} />
-            <TextInput
-              style={[s.input, isCompact && s.inputCompact]}
-              placeholder="Search rooms, rides, jobs, events..."
-              placeholderTextColor={C.inkMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus={true}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-                <Text style={s.clearText}>✕</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
+    <Screen header={header}>
+      {showRides ? (
+        // Rides are searched by route on the rides screen, so this is a suggestion, not a result.
+        <ListRow
+          href={rideSearchHref(searchQuery)}
+          icon="car"
+          subtitle="Search upcoming carpools for this route"
+          title={`Rides: ${query}`}
+          tone="teal"
+        />
+      ) : null}
 
-        {/* Category Pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.categoryBarScroll}
-          contentContainerStyle={s.categoryBar}
-        >
-          {CATEGORIES.map((cat) => {
-            const active = activeCategory === cat.id;
-            return (
-              <Pressable
-                key={cat.id}
-                onPress={() => setActiveCategory(cat.id)}
-                style={[s.catChip, active && s.catChipActive]}
-              >
-                <Text style={[s.catChipText, active && s.catChipTextActive]}>{cat.label}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+      {failed.map((source) => (
+        <Card key={source.id} variant="filled">
+          <ErrorState
+            body="Results from other sections are still shown."
+            compact
+            onRetry={source.refetch}
+            title={`${source.label} couldn't be searched`}
+          />
+        </Card>
+      ))}
 
-        {/* Search Results or Suggestions */}
-        <ScrollView
-          style={s.contentScroll}
-          contentContainerStyle={s.contentContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Rides are searched by route on the rides screen, so this is a suggestion, not a result. */}
-          {searchQuery.trim().length > 0 &&
-          (activeCategory === 'all' || activeCategory === 'rides') ? (
-            <View style={s.ridesSuggestion}>
+      {results.length > 0 ? (
+        <Section title={`${results.length} ${results.length === 1 ? 'result' : 'results'}`}>
+          <YStack gap="$x2">
+            {results.map((item) => (
               <ListRow
-                href={rideSearchHref(searchQuery)}
-                icon="car"
-                subtitle="Search upcoming carpools for this route"
-                title={`Rides: ${searchQuery.trim()}`}
-                tone="teal"
+                href={item.route}
+                icon={item.icon}
+                key={item.id}
+                meta={item.kind}
+                subtitle={item.subtitle}
+                title={item.title}
               />
-            </View>
-          ) : null}
-          {searchQuery.trim().length > 0 && searchFailed ? (
-            <ErrorState
-              title="Search is unavailable"
-              body="Some listings could not be loaded, so results would be incomplete."
-              retryLabel="Retry"
-              onRetry={() => {
-                for (const q of searchQueries) if (q.isError) q.refetch();
-              }}
-            />
-          ) : searchQuery.trim().length > 0 && searchLoading ? (
-            <LoadingState label="Searching..." />
-          ) : searchQuery.trim().length > 0 ? (
-            searchResults.length > 0 ? (
-              <View style={s.resultsList}>
-                <Text style={s.sectionHeader}>
-                  {searchResults.length} {searchResults.length === 1 ? 'Result' : 'Results'} found
-                </Text>
-                {searchResults.map((item) => (
-                  <Pressable
-                    key={item.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={item.title}
-                    onPress={() => router.push(item.route as Href)}
-                    style={s.resultCard}
-                  >
-                    <View style={s.resultBody}>
-                      <View style={s.resultBadgeRow}>
-                        <Text style={s.resultBadge}>{item.badge}</Text>
-                      </View>
-                      <Text style={s.resultTitle} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                      <Text style={s.resultSub} numberOfLines={1}>
-                        {item.subtitle}
-                      </Text>
-                    </View>
-                    <AppIcon name="chevron-right" size={16} color={C.secondary} />
-                  </Pressable>
-                ))}
-              </View>
-            ) : (
-              <View style={s.emptyState}>
-                <Text style={s.emptyEmoji}>🔍</Text>
-                <Text style={s.emptyTitle}>No results for "{searchQuery}"</Text>
-                <Text style={s.emptySub}>
-                  Try searching with broader terms or check another category.
-                </Text>
-              </View>
-            )
-          ) : (
-            <View style={s.suggestionsBox}>
-              <Text style={s.sectionHeader}>Try searching for</Text>
-              <View style={s.popularGrid}>
-                {POPULAR_SEARCHES.map((item) => (
-                  <Pressable
-                    key={item.label}
-                    onPress={() => {
-                      setSearchQuery(item.label);
-                      setActiveCategory(item.category);
-                    }}
-                    style={s.popularChip}
-                  >
-                    <AppIcon name="search" size={13} color={C.secondary} />
-                    <Text style={s.popularChipText}>{item.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
+            ))}
+          </YStack>
+        </Section>
+      ) : null}
 
-              <Text style={[s.sectionHeader, { marginTop: 24 }]}>Quick Jump</Text>
-              <View style={s.quickGrid}>
-                {[
-                  {
-                    label: 'Explore Rooms',
-                    icon: 'home',
-                    route: '/rooms',
-                    bg: '#e8e4fb',
-                    color: palette.primary,
-                  },
-                  {
-                    label: 'Carpool Rides',
-                    icon: 'car',
-                    route: '/rides',
-                    bg: '#d9f5f5',
-                    color: palette.teal,
-                  },
-                  {
-                    label: 'Tech Jobs',
-                    icon: 'briefcase',
-                    route: '/jobs',
-                    bg: '#fff0e6',
-                    color: palette.warm,
-                  },
-                  {
-                    label: 'Festivals & Mela',
-                    icon: 'calendar',
-                    route: '/events',
-                    bg: '#fff4e0',
-                    color: '#c97a00',
-                  },
-                  {
-                    label: 'Marketplace',
-                    icon: 'marketplace',
-                    route: '/marketplace',
-                    bg: '#e2f9ef',
-                    color: '#1a8a5c',
-                  },
-                  {
-                    label: 'Safety & SOS',
-                    icon: 'shield',
-                    route: '/safety',
-                    bg: '#ffeaea',
-                    color: palette.error,
-                  },
-                ].map((q) => (
-                  <Pressable
-                    key={q.label}
-                    onPress={() => router.push(q.route as Href)}
-                    style={[s.quickCard, { backgroundColor: q.bg }]}
-                  >
-                    <AppIcon name={q.icon as AppIconName} size={20} color={q.color} />
-                    <Text style={[s.quickCardText, { color: q.color }]}>{q.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          )}
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+      {loading.length > 0 ? (
+        <YStack aria-label={`Searching ${loading.map((s) => s.label).join(', ')}`} gap="$x2">
+          <AppText tone="muted" variant="caption">
+            Still searching {loading.map((s) => s.label.toLowerCase()).join(', ')}…
+          </AppText>
+          <SkeletonCard lines={2} />
+        </YStack>
+      ) : null}
+
+      {results.length === 0 && loading.length === 0 && failed.length < activeSources.length ? (
+        <EmptyState
+          body={
+            activeCategory === 'all'
+              ? 'Try broader words, a city name, or check the spelling.'
+              : 'Try broader words, or search all sections.'
+          }
+          iconName="search"
+          onAction={activeCategory === 'all' ? undefined : () => setActiveCategory('all')}
+          actionLabel={activeCategory === 'all' ? undefined : 'Search everything'}
+          title={`No results for "${query}"`}
+        />
+      ) : null}
+    </Screen>
   );
 }
-
-const s = StyleSheet.create({
-  ridesSuggestion: { marginBottom: 12 },
-  safe: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  container: {
-    flex: 1,
-    width: '100%',
-  },
-  containerDesktop: {
-    maxWidth: 960,
-    alignSelf: 'center',
-  },
-  searchBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 10,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchInputWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: C.ink,
-    height: '100%',
-  },
-  inputCompact: {
-    fontSize: 12,
-  },
-  clearText: {
-    fontSize: 14,
-    color: C.inkMuted,
-    fontWeight: '700',
-  },
-  categoryBarScroll: {
-    flexGrow: 0,
-    marginBottom: 8,
-  },
-  categoryBar: {
-    paddingHorizontal: 16,
-    gap: 8,
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  catChip: {
-    backgroundColor: C.cardBg,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  catChipActive: {
-    backgroundColor: C.secondary,
-    borderColor: C.secondary,
-  },
-  catChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.ink,
-  },
-  catChipTextActive: {
-    color: '#FFF',
-  },
-  contentScroll: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-  },
-  sectionHeader: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.inkMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  resultsList: {
-    gap: 10,
-  },
-  resultCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: C.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    shadowColor: '#2B3338',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  resultBody: {
-    flex: 1,
-    gap: 2,
-    marginRight: 10,
-  },
-  resultBadgeRow: {
-    marginBottom: 2,
-  },
-  resultBadge: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.secondary,
-  },
-  resultTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  resultSub: {
-    fontSize: 13,
-    color: C.inkMuted,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    gap: 8,
-  },
-  emptyEmoji: {
-    fontSize: 40,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: C.inkMuted,
-    textAlign: 'center',
-    maxWidth: 280,
-  },
-  suggestionsBox: {
-    paddingTop: 8,
-  },
-  popularGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  popularChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  popularChipText: {
-    fontSize: 13,
-    color: C.ink,
-    fontWeight: '500',
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  quickCard: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 14,
-    padding: 14,
-  },
-  quickCardText: {
-    fontSize: 13,
-    fontWeight: '700',
-    flex: 1,
-  },
-});

@@ -6,6 +6,7 @@ import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { SkeletonCard } from '@/modules/shared/ui/Skeleton';
 import { useAppearance } from '@/theme/ThemeProvider';
 
@@ -57,7 +58,14 @@ export function WidgetFrame({
           alignItems="center"
           cursor="pointer"
           minHeight="$touch"
+          focusVisibleStyle={{
+            outlineWidth: 3,
+            outlineStyle: 'solid',
+            outlineColor: '$outlineColor',
+          }}
+          focusable
           onPress={() => router.push(seeAll.href as never)}
+          {...keyboardPress(() => router.push(seeAll.href as never), true, 'link')}
           paddingLeft="$x2"
         >
           <AppText tone="primary" variant="label">

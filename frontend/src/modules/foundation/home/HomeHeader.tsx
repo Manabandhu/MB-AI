@@ -13,6 +13,7 @@ import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
 import { GradientSurface } from '@/modules/shared/ui/GradientSurface';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useFormFactor } from '@/platform/formFactor';
 import { greetingName } from './greetingName';
 
@@ -30,6 +31,11 @@ function greetingKey(hour: number) {
   if (hour < 12) return 'greeting.morning' as const;
   if (hour < 17) return 'greeting.afternoon' as const;
   return 'greeting.evening' as const;
+}
+
+/** Sun through the afternoon, moon in the evening and night (replaces the old waving-hand emoji). */
+function greetingIcon(hour: number) {
+  return hour >= 5 && hour < 17 ? ('sun' as const) : ('moon' as const);
 }
 
 const onBrand = brand.color.onPrimary;
@@ -54,12 +60,16 @@ function HeaderIcon({
       backgroundColor={glass}
       borderRadius="$pill"
       cursor="pointer"
-      height={40}
+      focusVisibleStyle={{ outlineWidth: 3, outlineStyle: 'solid', outlineColor: '$outlineColor' }}
+      focusable
+      height="$touch"
       justifyContent="center"
       onPress={onPress}
+      {...keyboardPress(onPress)}
+      position="relative"
       pressStyle={{ opacity: 0.7 }}
       role="button"
-      width={40}
+      width="$touch"
     >
       <AppIcon color={onBrand} name={icon} size={19} />
       {badge ? <UnreadNotificationDot /> : null}
@@ -91,7 +101,10 @@ export function HomeHeader() {
     }, []),
   );
 
-  const greeting = t(greetingKey(new Date().getHours()));
+  const hour = new Date().getHours();
+  const greeting = t(greetingKey(hour));
+  const openProfile = () => router.push('/profile');
+  const openCity = () => setLocationOpen(true);
   return (
     <GradientSurface corners="bottom" padding={0} radius={24}>
       {focused ? <StatusBar style="light" /> : null}
@@ -107,9 +120,21 @@ export function HomeHeader() {
         <XStack alignItems="center" gap="$x3">
           {phoneChrome ? (
             <YStack
+              alignItems="center"
               aria-label={t('shell.openProfile')}
+              borderRadius="$pill"
               cursor="pointer"
-              onPress={() => router.push('/profile')}
+              focusVisibleStyle={{
+                outlineWidth: 3,
+                outlineStyle: 'solid',
+                outlineColor: '$outlineColor',
+              }}
+              focusable
+              justifyContent="center"
+              minHeight="$touch"
+              minWidth="$touch"
+              onPress={openProfile}
+              {...keyboardPress(openProfile)}
               role="button"
             >
               <Avatar
@@ -120,18 +145,29 @@ export function HomeHeader() {
             </YStack>
           ) : null}
           <YStack flex={1} gap={2}>
-            <AppText color={onBrand} numberOfLines={1} role="heading" variant="h4">
-              {name ? `${greeting}, ${name} 👋` : `${greeting} 👋`}
-            </AppText>
+            <XStack alignItems="center" gap="$x2">
+              <AppIcon color={onBrand} name={greetingIcon(hour)} size={18} />
+              <AppText color={onBrand} flex={1} numberOfLines={1} role="heading" variant="h4">
+                {name ? `${greeting}, ${name}` : greeting}
+              </AppText>
+            </XStack>
             <XStack
               alignItems="center"
               alignSelf="flex-start"
               aria-label={`${location.name}. ${t('home.changeCity')}`}
+              borderRadius="$control"
               cursor="pointer"
+              focusVisibleStyle={{
+                outlineWidth: 3,
+                outlineStyle: 'solid',
+                outlineColor: '$outlineColor',
+              }}
+              focusable
               gap={4}
               hitSlop={8}
               minHeight={28}
-              onPress={() => setLocationOpen(true)}
+              onPress={openCity}
+              {...keyboardPress(openCity)}
               pressStyle={{ opacity: 0.7 }}
               role="button"
             >

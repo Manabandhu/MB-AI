@@ -31,6 +31,7 @@ export const screenCatalog = [
       screen('auth', 'forgot-password', 'Forgot Password', '/forgot-password'),
       screen('auth', 'reset-password', 'Reset Password', '/reset-password'),
       screen('auth', 'callback', 'Sign-in Callback', '/auth/callback'),
+      screen('auth', 'accept-terms', 'Accept Terms', '/accept-terms'),
       screen('foundation', 'onboarding', 'Onboarding', '/onboarding'),
       screen(
         'foundation',
@@ -232,7 +233,9 @@ export const screenCatalog = [
     screens: [
       screen('admin', 'dashboard', 'Dashboard', '/admin'),
       screen('admin', 'users', 'Users'),
+      screen('admin', 'users/detail', 'User Details', '/admin/users/[userId]'),
       screen('admin', 'reports', 'Reports'),
+      screen('admin', 'reports/detail', 'Report Details', '/admin/reports/[reportId]'),
       screen('admin', 'rooms', 'Rooms Moderation'),
       screen('admin', 'rides', 'Rides Moderation'),
       screen('admin', 'community', 'Community Moderation'),

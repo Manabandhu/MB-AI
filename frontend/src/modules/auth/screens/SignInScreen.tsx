@@ -1,4 +1,3 @@
-import { color } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, type TextInput, View } from 'react-native';
@@ -13,8 +12,10 @@ import {
   AuthSwitch,
   SocialButtons,
 } from '@/modules/auth/components/AuthKit';
+import { useAppearance } from '@/theme/ThemeProvider';
 
 export function SignInScreen() {
+  const { palette } = useAppearance();
   const signIn = useAuthStore((s) => s.signIn);
   const signInWithOAuth = useAuthStore((s) => s.signInWithOAuth);
   const passwordRef = useRef<TextInput>(null);
@@ -125,7 +126,7 @@ export function SignInScreen() {
           onPress={() => router.push('/forgot-password')}
           style={styles.forgot}
         >
-          <Text style={styles.forgotText}>Forgot password?</Text>
+          <Text style={[styles.forgotText, { color: palette.primary }]}>Forgot password?</Text>
         </Pressable>
       </View>
       <AuthButton
@@ -139,5 +140,5 @@ export function SignInScreen() {
 
 const styles = StyleSheet.create({
   forgot: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
-  forgotText: { color: color.primary, fontSize: 15, fontWeight: '600' },
+  forgotText: { fontSize: 15, fontWeight: '600' },
 });

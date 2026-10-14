@@ -7,6 +7,7 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Card } from '@/modules/shared/ui/Card';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 const THUMB_SIZE = 72;
@@ -166,6 +167,10 @@ export function OwnerItemCard({
                     setMenuOpen(false);
                     item.onPress();
                   }}
+                  {...keyboardPress(() => {
+                    setMenuOpen(false);
+                    item.onPress();
+                  })}
                   paddingHorizontal="$x2"
                   pressStyle={{ backgroundColor: '$surfaceContainer' }}
                   role="button"

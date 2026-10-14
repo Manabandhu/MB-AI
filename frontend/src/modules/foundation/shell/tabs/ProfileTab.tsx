@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
-import { signOutWithFeedback } from '@/modules/foundation/account/signOut';
+import { confirmSignOut } from '@/modules/foundation/account/signOut';
 import { NicknameSheet } from '@/modules/foundation/home/NicknameSheet';
 import { AppearanceSettings } from '@/modules/foundation/settings/AppearanceSettings';
 import { AppButton } from '@/modules/shared/ui/AppButton';
@@ -13,6 +13,7 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { ListRow } from '@/modules/shared/ui/ListRow';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
@@ -51,6 +52,7 @@ export function ProfileTab() {
   const nickname =
     typeof user?.user_metadata?.nickname === 'string' ? user.user_metadata.nickname : null;
   const [nicknameOpen, setNicknameOpen] = useState(false);
+  const openNickname = () => setNicknameOpen(true);
 
   return (
     <Screen>
@@ -72,10 +74,18 @@ export function ProfileTab() {
               alignItems="center"
               alignSelf="flex-start"
               aria-label={t('nickname.row')}
+              borderRadius="$control"
               cursor="pointer"
+              focusVisibleStyle={{
+                outlineWidth: 3,
+                outlineStyle: 'solid',
+                outlineColor: '$outlineColor',
+              }}
+              focusable
               gap="$x1"
-              minHeight={32}
-              onPress={() => setNicknameOpen(true)}
+              minHeight="$touch"
+              onPress={openNickname}
+              {...keyboardPress(openNickname)}
               role="button"
             >
               <AppText tone="muted" variant="caption">
@@ -125,7 +135,7 @@ export function ProfileTab() {
       <AppButton
         icon="logout"
         label={t('profile.signOut')}
-        onPress={() => signOutWithFeedback()}
+        onPress={() => void confirmSignOut()}
         variant="ghost"
       />
       <NicknameSheet onClose={() => setNicknameOpen(false)} visible={nicknameOpen} />

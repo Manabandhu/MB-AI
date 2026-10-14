@@ -1,256 +1,299 @@
-import { color as colors } from '@manabandhu/design-system';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
+import type { Href } from 'expo-router';
+import { useState } from 'react';
+import { XStack, YStack } from 'tamagui';
 import {
   type AutomationOperation,
   executeAutomation,
   listAutomationOperations,
 } from '@/modules/admin/api';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import {
+  AppButton,
+  AppText,
+  Card,
+  CheckboxRow,
+  ResponsiveGrid,
+  Screen,
+  ScreenHeader,
+  Section,
+  SegmentedControl,
+  SkeletonCard,
+  StatusBadge,
+  type StatusTone,
+  TextField,
+  useConfirm,
+} from '@/modules/shared/ui';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 
+type Environment = 'development' | 'staging' | 'production';
+
+const ENVIRONMENTS = [
+  { value: 'development', label: 'Development' },
+  { value: 'staging', label: 'Staging' },
+  { value: 'production', label: 'Production' },
+] as const;
+
+/** Mirrors `ExecuteAutomationRequest`: the server rejects anything else. */
+const REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+const MIN_REASON = 10;
+const MAX_REASON = 500;
+
+const riskTone: Record<AutomationOperation['risk'], StatusTone> = {
+  low: 'neutral',
+  medium: 'info',
+  high: 'warning',
+  critical: 'danger',
+};
+
+function OperationOption({
+  operation,
+  selected,
+  onSelect,
+}: {
+  operation: AutomationOperation;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <YStack
+      aria-checked={selected}
+      aria-label={`${operation.label}, ${operation.risk} risk${operation.configured ? '' : ', needs configuration'}`}
+      backgroundColor={selected ? '$primaryTint' : '$surface'}
+      borderColor={selected ? '$primary' : '$borderColor'}
+      borderRadius="$card"
+      borderWidth={selected ? 2 : 1}
+      cursor="pointer"
+      focusVisibleStyle={{ outlineWidth: 3, outlineStyle: 'solid', outlineColor: '$outlineColor' }}
+      focusable
+      gap="$x1"
+      minHeight="$touch"
+      onPress={onSelect}
+      {...keyboardPress(onSelect)}
+      padding="$x3"
+      role="radio"
+    >
+      <XStack alignItems="center" flexWrap="wrap" gap="$x2" justifyContent="space-between">
+        <AppText flex={1} variant="bodyStrong">
+          {operation.label}
+        </AppText>
+        <StatusBadge label={`${operation.risk} risk`} tone={riskTone[operation.risk]} />
+      </XStack>
+      <AppText tone="muted" variant="caption">
+        {operation.description}
+      </AppText>
+      {operation.configured ? null : (
+        <AppText tone="danger" variant="caption">
+          Needs configuration on the backend before it can run.
+        </AppText>
+      )}
+    </YStack>
+  );
+}
+
+/**
+ * Super-admin control plane: pick an allow-listed automation, an environment, a git ref, and a reason, then
+ * dispatch. Risky operations need the confirmation box ticked; production always asks once more.
+ */
 export default function AdminAutomationsScreen() {
-  const layout = useAdaptiveLayout();
+  const confirm = useConfirm();
   const operations = useQuery({
     queryKey: ['admin', 'automations'],
     queryFn: listAutomationOperations,
     retry: false,
   });
-  const [selectedId, setSelectedId] = useState('quality-review');
-  const [environment, setEnvironment] = useState('staging');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [environment, setEnvironment] = useState<Environment>('staging');
   const [ref, setRef] = useState('main');
-  const [reason, setReason] = useState(
-    'Run an operator-approved automation from the control plane.',
-  );
+  const [reason, setReason] = useState('');
   const [confirmed, setConfirmed] = useState(false);
-  const selected = useMemo(
-    () => operations.data?.find((operation) => operation.id === selectedId),
-    [operations.data, selectedId],
-  );
+  const selected = operations.data?.find((operation) => operation.id === selectedId);
   const execution = useMutation({
-    mutationFn: () => executeAutomation(selectedId, { environment, ref, reason, confirmed }),
+    mutationFn: (input: { id: string; environment: Environment; ref: string; reason: string }) =>
+      executeAutomation(input.id, {
+        environment: input.environment,
+        ref: input.ref,
+        reason: input.reason,
+        confirmed,
+      }),
   });
 
+  const resetRequest = () => {
+    setConfirmed(false);
+    execution.reset();
+  };
+
+  const trimmedRef = ref.trim();
+  const trimmedReason = reason.trim();
+  const refProblem = REF_PATTERN.test(trimmedRef)
+    ? null
+    : 'Use a branch, tag, or commit (letters, digits, . _ / -).';
+  const reasonProblem =
+    trimmedReason.length < MIN_REASON ? `Explain why in at least ${MIN_REASON} characters.` : null;
+  const needsConfirmation = Boolean(selected?.requiresConfirmation);
+  const blocker = !selected
+    ? 'Choose an automation first.'
+    : !selected.configured
+      ? 'This automation is not configured on the backend yet.'
+      : refProblem
+        ? refProblem
+        : reasonProblem
+          ? reasonProblem
+          : needsConfirmation && !confirmed
+            ? 'Tick the confirmation box to continue.'
+            : null;
+
+  const run = async () => {
+    if (!selected || blocker) return;
+    if (environment === 'production') {
+      const ok = await confirm({
+        title: `Run "${selected.label}" in production?`,
+        body: `This dispatches against production from ${trimmedRef}. Production runs still wait for reviewer approval in GitHub, and the request is recorded in the audit log.`,
+        confirmLabel: 'Run in production',
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    execution.mutate({ id: selected.id, environment, ref: trimmedRef, reason: trimmedReason });
+  };
+
+  const header = (
+    <ScreenHeader
+      back={{ fallback: '/admin' as Href }}
+      subtitle="Dispatch audited workflows. Infrastructure credentials stay on the backend and in CI."
+      title="Automations"
+    />
+  );
+
+  if (operations.isLoading) {
+    return (
+      <Screen>
+        {header}
+        <SkeletonCard lines={3} />
+        <SkeletonCard lines={3} />
+      </Screen>
+    );
+  }
+
+  if (operations.isError) {
+    return (
+      <Screen>
+        {header}
+        <ErrorState
+          body="The control plane needs the super admin role and a running backend."
+          onRetry={() => void operations.refetch()}
+          title="Automations unavailable"
+        />
+      </Screen>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.eyebrow}>Super Admin</Text>
-              <Text style={styles.title}>Operations control plane</Text>
-              <Text style={styles.body}>
-                Dispatch audited workflows. Infrastructure credentials remain on the backend and CI.
-              </Text>
-            </View>
-            <Link href="/admin" style={styles.link}>
-              Admin console
-            </Link>
-          </View>
+    <Screen>
+      {header}
+      <ResponsiveGrid columns={{ compact: 1, medium: 1, expanded: 2, wide: 2 }}>
+        <Section title="Automation">
+          <YStack aria-label="Automation" gap="$x2" role="radiogroup">
+            {(operations.data ?? []).map((operation) => (
+              <OperationOption
+                key={operation.id}
+                onSelect={() => {
+                  setSelectedId(operation.id);
+                  resetRequest();
+                }}
+                operation={operation}
+                selected={selectedId === operation.id}
+              />
+            ))}
+            {operations.data?.length === 0 ? (
+              <AppText tone="muted">No automations are available.</AppText>
+            ) : null}
+          </YStack>
+        </Section>
 
-          {operations.isError ? (
-            <View style={styles.errorPanel}>
-              <Text style={styles.errorText}>
-                Control plane unavailable. It requires the Super Admin role and a running backend.
-              </Text>
-            </View>
-          ) : (
-            <View style={[styles.grid, layout.windowClass !== 'compact' && styles.gridExpanded]}>
-              <View style={styles.panel}>
-                <Text style={styles.sectionTitle}>Automations</Text>
-                {operations.data?.map((operation) => (
-                  <OperationCard
-                    key={operation.id}
-                    operation={operation}
-                    selected={selectedId === operation.id}
-                    onPress={() => {
-                      setSelectedId(operation.id);
-                      setConfirmed(false);
-                      execution.reset();
-                    }}
-                  />
-                ))}
-              </View>
-
-              <View style={styles.panel}>
-                <Text style={styles.sectionTitle}>Execution request</Text>
-                <Text style={styles.label}>Environment</Text>
-                <View style={styles.segmented}>
-                  {['development', 'staging', 'production'].map((value) => (
-                    <Pressable
-                      key={value}
-                      onPress={() => setEnvironment(value)}
-                      style={[styles.segment, environment === value && styles.segmentSelected]}
-                    >
-                      <Text
-                        style={
-                          environment === value ? styles.segmentTextSelected : styles.segmentText
-                        }
-                      >
-                        {value}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <Text style={styles.label}>Git ref</Text>
-                <TextInput
-                  value={ref}
-                  onChangeText={setRef}
-                  style={styles.input}
-                  autoCapitalize="none"
+        <Section title="Request">
+          <Card>
+            <YStack gap="$x3">
+              <AppText variant="label">Environment</AppText>
+              <SegmentedControl
+                label="Environment"
+                onChange={(value) => {
+                  setEnvironment(value);
+                  resetRequest();
+                }}
+                options={ENVIRONMENTS}
+                value={environment}
+              />
+              {environment === 'production' ? (
+                <AppText role="note" tone="danger" variant="caption">
+                  Production: you will be asked to confirm again before anything is dispatched.
+                </AppText>
+              ) : null}
+              <TextField
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={trimmedRef && refProblem ? refProblem : null}
+                label="Git ref"
+                onChangeText={(value) => {
+                  setRef(value);
+                  execution.reset();
+                }}
+                value={ref}
+              />
+              <TextField
+                helper={`Why this run is needed (${MIN_REASON}–${MAX_REASON} characters). Stored in the audit log.`}
+                label="Reason"
+                maxLength={MAX_REASON}
+                multiline
+                onChangeText={(value) => {
+                  setReason(value);
+                  execution.reset();
+                }}
+                placeholder="e.g. Redeploy staging after the config fix in #123"
+                value={reason}
+              />
+              {needsConfirmation && selected ? (
+                <CheckboxRow
+                  checked={confirmed}
+                  description={`Environment: ${environment}. Ref: ${trimmedRef || '—'}.`}
+                  label={`I understand this ${selected.risk}-risk operation`}
+                  onChange={setConfirmed}
                 />
-                <Text style={styles.label}>Reason</Text>
-                <TextInput
-                  value={reason}
-                  onChangeText={setReason}
-                  style={[styles.input, styles.reasonInput]}
-                  multiline
-                  maxLength={500}
-                />
-                {selected?.requiresConfirmation && (
-                  <Pressable
-                    style={styles.confirmRow}
-                    onPress={() => setConfirmed((value) => !value)}
-                  >
-                    <View style={[styles.checkbox, confirmed && styles.checkboxSelected]} />
-                    <Text style={styles.confirmText}>
-                      I understand this {selected.risk}-risk operation.
-                    </Text>
-                  </Pressable>
-                )}
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={
-                    !selected?.configured || execution.isPending || reason.trim().length < 10
-                  }
-                  onPress={() => execution.mutate()}
-                  style={({ pressed }) => [
-                    styles.runButton,
-                    (!selected?.configured || execution.isPending) && styles.disabled,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={styles.runButtonText}>
-                    {execution.isPending ? 'Dispatching…' : 'Run selected automation'}
-                  </Text>
-                </Pressable>
-                {!selected?.configured && (
-                  <Text style={styles.hint}>GitHub dispatch is not configured.</Text>
-                )}
-                {execution.isError && (
-                  <Text style={styles.errorText}>{execution.error.message}</Text>
-                )}
-                {execution.data && (
-                  <View style={styles.successPanel}>
-                    <Text style={styles.successTitle}>Accepted</Text>
-                    <Text style={styles.resultText}>Execution {execution.data.executionId}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+              ) : null}
+              <AppButton
+                disabled={Boolean(blocker) || execution.isPending}
+                fullWidth
+                icon="zap"
+                label={execution.isPending ? 'Dispatching…' : 'Run automation'}
+                loading={execution.isPending}
+                onPress={() => void run()}
+                variant={environment === 'production' ? 'danger' : 'primary'}
+              />
+              {blocker && !execution.isPending ? (
+                <AppText tone="muted" variant="caption">
+                  {blocker}
+                </AppText>
+              ) : null}
+              {execution.isError ? (
+                <AppText role="alert" tone="danger" variant="body">
+                  {execution.error instanceof Error
+                    ? execution.error.message
+                    : 'The automation was not dispatched.'}
+                </AppText>
+              ) : null}
+              {execution.data ? (
+                <Card role="status" variant="tinted">
+                  <AppText variant="bodyStrong">Accepted</AppText>
+                  <AppText selectable variant="caption">
+                    Execution {execution.data.executionId} · {execution.data.environment} ·{' '}
+                    {execution.data.ref}
+                  </AppText>
+                </Card>
+              ) : null}
+            </YStack>
+          </Card>
+        </Section>
+      </ResponsiveGrid>
+    </Screen>
   );
 }
-
-function OperationCard({
-  operation,
-  selected,
-  onPress,
-}: {
-  operation: AutomationOperation;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={[styles.operation, selected && styles.operationSelected]}>
-      <View style={styles.operationHeading}>
-        <Text style={styles.operationLabel}>{operation.label}</Text>
-        <Text style={styles.risk}>{operation.risk}</Text>
-      </View>
-      <Text style={styles.operationDescription}>{operation.description}</Text>
-      <Text style={operation.configured ? styles.configured : styles.notConfigured}>
-        {operation.configured ? 'Ready' : 'Needs configuration'}
-      </Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: 24 },
-  container: { alignSelf: 'center', width: '100%', gap: 24 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', gap: 24 },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
-  title: { color: colors.ink, fontSize: 34, fontWeight: '800', marginTop: 8 },
-  body: { color: colors.muted, fontSize: 16, lineHeight: 24, marginTop: 8, maxWidth: 720 },
-  link: { color: colors.primary, fontWeight: '700', padding: 8 },
-  grid: { gap: 20 },
-  gridExpanded: { flexDirection: 'row', alignItems: 'flex-start' },
-  panel: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    flex: 1,
-    gap: 12,
-    padding: 20,
-  },
-  sectionTitle: { color: colors.ink, fontSize: 20, fontWeight: '800', marginBottom: 4 },
-  operation: { borderColor: colors.border, borderRadius: 14, borderWidth: 1, gap: 6, padding: 14 },
-  operationSelected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
-  operationHeading: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  operationLabel: { color: colors.ink, flex: 1, fontSize: 15, fontWeight: '700' },
-  operationDescription: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  risk: { color: colors.teal, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-  configured: { color: colors.success, fontSize: 12, fontWeight: '700' },
-  notConfigured: { color: colors.error, fontSize: 12, fontWeight: '700' },
-  label: { color: colors.ink, fontSize: 13, fontWeight: '700', marginTop: 4 },
-  segmented: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  segment: {
-    borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  segmentSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  segmentText: { color: colors.ink, fontSize: 12 },
-  segmentTextSelected: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  input: {
-    borderColor: colors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 15,
-    minHeight: 46,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  reasonInput: { minHeight: 96, textAlignVertical: 'top' },
-  confirmRow: { alignItems: 'center', flexDirection: 'row', gap: 10, paddingVertical: 6 },
-  checkbox: { borderColor: colors.muted, borderRadius: 4, borderWidth: 2, height: 20, width: 20 },
-  checkboxSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  confirmText: { color: colors.ink, flex: 1, fontSize: 13 },
-  runButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    justifyContent: 'center',
-    minHeight: 50,
-  },
-  runButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  disabled: { opacity: 0.45 },
-  pressed: { opacity: 0.75 },
-  hint: { color: colors.muted, fontSize: 12 },
-  errorPanel: { backgroundColor: '#ffdad6', borderRadius: 16, padding: 18 },
-  errorText: { color: colors.error, fontSize: 13, lineHeight: 20 },
-  successPanel: { backgroundColor: '#d7f8df', borderRadius: 12, gap: 4, padding: 12 },
-  successTitle: { color: colors.success, fontWeight: '800' },
-  resultText: { color: colors.ink, fontSize: 12 },
-});

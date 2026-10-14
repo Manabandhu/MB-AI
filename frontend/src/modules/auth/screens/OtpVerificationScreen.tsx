@@ -1,12 +1,13 @@
-import { color, space } from '@manabandhu/design-system';
+import { space } from '@manabandhu/design-system';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
-import { friendlyAuthError, phoneLastFour } from '@/modules/auth/authHelpers';
+import { friendlyAuthError, OTP_CODE_LENGTH, phoneLastFour } from '@/modules/auth/authHelpers';
 import { AuthButton, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
+import { useAppearance } from '@/theme/ThemeProvider';
 
-const CODE_LENGTH = 6;
+const CODE_LENGTH = OTP_CODE_LENGTH;
 const RESEND_SECONDS = 30;
 
 export function OtpVerificationScreen() {
@@ -15,7 +16,9 @@ export function OtpVerificationScreen() {
   const verifyOtp = useAuthStore((s) => s.verifyOtp);
   const signInWithPhone = useAuthStore((s) => s.signInWithPhone);
   const signInWithEmailOtp = useAuthStore((s) => s.signInWithEmailOtp);
+  const { palette } = useAppearance();
   const inputRef = useRef<TextInput>(null);
+  const [resending, setResending] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -28,7 +31,8 @@ export function OtpVerificationScreen() {
     return () => clearTimeout(timer);
   }, [secondsLeft]);
 
-  if (!identifier || !otpType) return <Redirect href="/phone-login" />;
+  if (!identifier || !otpType)
+    return <Redirect href={otpType === 'email' ? '/sign-in' : '/phone-login'} />;
 
   const verify = async (value = code) => {
     if (value.length !== CODE_LENGTH) {
@@ -50,7 +54,10 @@ export function OtpVerificationScreen() {
   };
 
   const resend = async () => {
+    if (resending) return;
     setError(null);
+    setNotice(null);
+    setResending(true);
     try {
       if (otpType === 'sms') await signInWithPhone(identifier);
       else await signInWithEmailOtp(identifier);
@@ -58,7 +65,16 @@ export function OtpVerificationScreen() {
       setSecondsLeft(RESEND_SECONDS);
     } catch (err) {
       setError(friendlyAuthError(err));
+    } finally {
+      setResending(false);
     }
+  };
+
+  // Where "Change number" / "Use a different email" goes when there is no screen to go back to.
+  const startOver = () => {
+    const fallback = otpType === 'sms' ? '/phone-login' : '/sign-in';
+    if (router.canGoBack()) router.back();
+    else router.replace(fallback);
   };
 
   const destination =
@@ -71,7 +87,12 @@ export function OtpVerificationScreen() {
       footer={
         <>
           <AuthButton label="Verify" loading={verifying} onPress={() => verify()} />
-          <AuthButton variant="link" label="Change number" onPress={() => router.back()} />
+          <AuthButton
+            variant="link"
+            label={otpType === 'sms' ? 'Change number' : 'Use a different email'}
+            disabled={verifying}
+            onPress={startOver}
+          />
         </>
       }
     >
@@ -86,9 +107,14 @@ export function OtpVerificationScreen() {
           return (
             <View
               key={index}
-              style={[styles.box, active && styles.boxActive, error ? styles.boxError : null]}
+              style={[
+                styles.box,
+                { borderColor: palette.border, backgroundColor: palette.surface },
+                active && { borderColor: palette.primary, borderWidth: 2 },
+                error ? { borderColor: palette.error } : null,
+              ]}
             >
-              <Text style={styles.digit}>{code[index] ?? ''}</Text>
+              <Text style={[styles.digit, { color: palette.ink }]}>{code[index] ?? ''}</Text>
             </View>
           );
         })}
@@ -114,9 +140,17 @@ export function OtpVerificationScreen() {
       </Pressable>
       <View style={styles.resendRow}>
         {secondsLeft > 0 ? (
-          <Text style={styles.resendWait}>You can request a new code in {secondsLeft}s</Text>
+          <Text style={[styles.resendWait, { color: palette.muted }]}>
+            You can request a new code in {secondsLeft}s
+          </Text>
         ) : (
-          <AuthButton variant="link" label="Send a new code" onPress={resend} />
+          <AuthButton
+            variant="link"
+            label={resending ? 'Sending…' : 'Send a new code'}
+            loading={resending}
+            disabled={verifying}
+            onPress={resend}
+          />
         )}
       </View>
     </AuthScreen>
@@ -131,14 +165,10 @@ const styles = StyleSheet.create({
     aspectRatio: 0.82,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#d9d5e4',
-    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  boxActive: { borderColor: color.primary, borderWidth: 2 },
-  boxError: { borderColor: color.error },
-  digit: { color: color.ink, fontSize: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  digit: { fontSize: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
   hiddenInput: {
     position: 'absolute',
     width: '100%',
@@ -147,5 +177,5 @@ const styles = StyleSheet.create({
     color: 'transparent',
   },
   resendRow: { alignItems: 'center', minHeight: 44, justifyContent: 'center' },
-  resendWait: { color: color.muted, fontSize: 15 },
+  resendWait: { fontSize: 15 },
 });

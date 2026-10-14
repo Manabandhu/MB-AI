@@ -8,6 +8,7 @@ export { BackButton } from './BackButton';
 export { BottomSheet } from './BottomSheet';
 export { BrandLogo, BrandMark } from './BrandLogo';
 export { Card } from './Card';
+export { CheckboxRow } from './CheckboxRow';
 export { Chip } from './Chip';
 export { ConfirmProvider, ConfirmSheet, useConfirm } from './ConfirmSheet';
 export { DateTimeField } from './DateTimeField';

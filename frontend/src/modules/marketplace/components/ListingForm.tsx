@@ -13,6 +13,7 @@ import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 import { TextField } from '@/modules/shared/ui/TextField';
@@ -635,10 +636,12 @@ function ToggleRow({
       backgroundColor="$surfaceContainerLow"
       borderRadius="$control"
       cursor="pointer"
+      focusVisibleStyle={{ outlineWidth: 3, outlineStyle: 'solid', outlineColor: '$outlineColor' }}
       focusable
       gap="$x3"
       minHeight={52}
       onPress={onToggle}
+      {...keyboardPress(onToggle)}
       padding="$x3"
       role="switch"
     >

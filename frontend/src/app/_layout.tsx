@@ -10,12 +10,15 @@ import { Uniwind } from 'uniwind';
 import '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { persistOptions, queryPersister } from '@/lib/queryPersistence';
+import { useTermsGate } from '@/modules/auth/useTermsGate';
 import { useOpenPushTaps } from '@/modules/notifications/push';
 import { ConfirmProvider } from '@/modules/shared/ui/ConfirmSheet';
 import { AppThemeProvider } from '@/theme/ThemeProvider';
 
 export default function RootLayout() {
   useOpenPushTaps(useCallback((route: string) => router.push(route as Href), []));
+  // Any signed-in account without a recorded Terms acceptance is sent to /accept-terms from every protected route.
+  useTermsGate();
   const [queryClient] = useState(
     () =>
       new QueryClient({

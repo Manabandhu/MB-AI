@@ -216,8 +216,20 @@ export function AccountDataScreen() {
                 else you created. Shared expense groups you own pass to another member. This cannot
                 be undone.
               </AppText>
+              {busy === 'delete' ? (
+                <AppText aria-live="polite" role="status" tone="muted" variant="body">
+                  Deleting your account. This can take a few seconds; keep this screen open.
+                </AppText>
+              ) : null}
+              {error && pending?.kind === 'delete' ? (
+                <AppText role="alert" tone="danger" variant="body">
+                  {error}
+                </AppText>
+              ) : null}
               <AppButton
-                label="Delete my account"
+                disabled={busy !== null && busy !== 'delete'}
+                label={busy === 'delete' ? 'Deleting your account…' : 'Delete my account'}
+                loading={busy === 'delete'}
                 onPress={() => setDeleteOpen(true)}
                 variant="danger"
               />

@@ -58,7 +58,7 @@ export function TopNav(props: BottomTabBarProps) {
           justifyContent="center"
           minHeight="$touch"
           onPress={() => press('home')}
-          {...keyboardPress(() => press('home'))}
+          {...keyboardPress(() => press('home'), true, 'link')}
         >
           <BrandLogo size={36} variant="wordmark" />
         </YStack>

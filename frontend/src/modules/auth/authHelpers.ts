@@ -17,9 +17,83 @@ export function passwordProblem(password: string): string | null {
   return null;
 }
 
+/**
+ * iOS/Safari password-manager rules matching `passwordProblem` (length, a letter, a digit). Sign-up and reset both
+ * use this so the suggested password always passes our own validator.
+ */
+export const PASSWORD_RULES = `minlength: ${MIN_PASSWORD_LENGTH}; required: lower, upper; required: digit; allowed: ascii-printable;`;
+
+/** Length of the one-time codes Supabase Auth sends (`otp_length` in supabase/config.toml). */
+export const OTP_CODE_LENGTH = 6;
+
 /** Builds an E.164 number from a dial code such as "+1" and whatever the user typed. */
 export function toE164(dialCode: string, typed: string): string {
   return `${dialCode}${typed.replace(/\D/g, '')}`;
+}
+
+export type PhoneParse = { ok: true; e164: string } | { ok: false; error: string };
+
+/** National number lengths (without the country code or trunk 0) for the dial codes we offer. */
+const NATIONAL_LENGTH: Record<string, readonly [min: number, max: number]> = {
+  '1': [10, 10],
+  '91': [10, 10],
+  '44': [9, 10],
+  '61': [9, 9],
+  '971': [8, 9],
+  '65': [8, 8],
+  '49': [6, 11],
+  '353': [7, 9],
+};
+
+/** E.164 allows at most 15 digits including the country code. */
+const E164_MAX_DIGITS = 15;
+
+/**
+ * Drops a country code typed without "+" ("91 98765 43210" with +91 selected): when the digits start with the
+ * dial code and are longer than that country's national numbers. Unknown codes use the E.164 maximum instead.
+ */
+function stripTypedCountryCode(code: string, digits: string): string {
+  if (!digits.startsWith(code)) return digits;
+  const rest = digits.slice(code.length);
+  const range = NATIONAL_LENGTH[code];
+  if (range) return digits.length > range[1] && rest.length >= range[0] ? rest : digits;
+  return digits.length + code.length > E164_MAX_DIGITS ? rest : digits;
+}
+
+/**
+ * Turns what the member typed or pasted into an E.164 number. A leading "+" or "00" means the number already has
+ * its country code ("+1 469 555 0123" stays +14695550123 whatever country is selected). Otherwise the selected
+ * dial code is added, after dropping the same code typed without "+" ("91 98765 43210") and a domestic trunk "0"
+ * (UK "07…").
+ */
+export function parsePhoneInput(dialCode: string, typed: string): PhoneParse {
+  const trimmed = typed.trim();
+  const digits = trimmed.replace(/\D/g, '');
+  let e164: string;
+  if (trimmed.startsWith('+')) {
+    e164 = `+${digits}`;
+  } else if (digits.startsWith('00')) {
+    e164 = `+${digits.slice(2)}`;
+  } else {
+    const code = dialCode.replace(/\D/g, '');
+    let national = stripTypedCountryCode(code, digits);
+    if (code !== '1' && national.startsWith('0')) national = national.slice(1);
+    if (national.length < 7 || national.length > 12) {
+      return { ok: false, error: 'Enter your mobile number, or start with + and the country code' };
+    }
+    e164 = toE164(dialCode, national);
+  }
+  const total = e164.length - 1;
+  if (total < 8 || total > E164_MAX_DIGITS) {
+    return { ok: false, error: 'Enter a full number with its country code, like +1 469 555 0123' };
+  }
+  return { ok: true, e164 };
+}
+
+/** True when the account has a recorded acceptance of the Terms (`terms_version` in auth user metadata). */
+export function hasAcceptedTerms(metadata: Record<string, unknown> | null | undefined): boolean {
+  const version = metadata?.terms_version;
+  return typeof version === 'string' && version.length > 0;
 }
 
 /** The last four digits of a phone number, for "ending in 0123" copy. */

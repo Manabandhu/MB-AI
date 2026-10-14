@@ -12,6 +12,7 @@
 ├── /email-login (Email Login)
 ├── /otp-verification (OTP Verification)
 ├── /reset-password (Reset Password)
+├── /accept-terms (Accept Terms once, after sign-in when the account has no recorded consent; sign-in required)
 ├── /choose-login-method (Choose Login Method)
 ├── /home (Home Shell)
 │   ├── /rooms (Rooms Home)
@@ -197,7 +198,9 @@ Splash → Welcome → Sign In/Up → Onboarding → Home
 - List → New Chat → Conversation → Conversation Info
 
 ### Admin
-- Dashboard → Users → Reports → Rooms/Rides/Community/Jobs/Events Moderation → Audit Log
+- Dashboard → Users → User Details (`/admin/users/[userId]`) → Reports → Report Details (`/admin/reports/[reportId]`) →
+  Rooms/Rides/Community/Jobs/Events Moderation → Audit Log → Automations (super admin only)
+- Every admin route shows "Not authorized" unless the signed token carries ADMIN or SUPER_ADMIN (automations: SUPER_ADMIN).
 
 ### Events
 - Home → Search → Details → Create → Saved → My Events

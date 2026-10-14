@@ -1,6 +1,6 @@
-import { color, palette, radius, space } from '@manabandhu/design-system';
+import { type paletteFor, radius, space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
-import { forwardRef, type ReactNode, useState } from 'react';
+import { forwardRef, type ReactNode, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,6 +17,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { BrandMark } from '@/modules/shared/ui/BrandLogo';
+import { useAppearance } from '@/theme/ThemeProvider';
+
+type Palette = ReturnType<typeof paletteFor>;
+
+/** Theme-aware styles for the auth kit (light and dark), rebuilt only when the palette changes. */
+function useAuthStyles() {
+  const { palette } = useAppearance();
+  return useMemo(() => ({ palette, styles: makeStyles(palette) }), [palette]);
+}
 
 /** Width at which the auth flow switches from a full-bleed phone layout to a centered card. */
 const CARD_BREAKPOINT = 600;
@@ -44,6 +53,7 @@ export function AuthScreen({
   children,
   footer,
 }: AuthScreenProps) {
+  const { palette, styles } = useAuthStyles();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const wide = width >= CARD_BREAKPOINT;
@@ -61,7 +71,7 @@ export function AuthScreen({
             onPress={goBack}
             style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           >
-            <AppIcon name="chevron-left" size={22} color={color.ink} />
+            <AppIcon name="chevron-left" size={22} color={palette.ink} />
           </Pressable>
         ) : (
           <View style={styles.backPlaceholder} />
@@ -131,6 +141,7 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
   { label, error, hint, password, leading, style, onFocus, onBlur, ...inputProps },
   ref,
 ) {
+  const { palette, styles } = useAuthStyles();
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   return (
@@ -147,7 +158,7 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
         <TextInput
           ref={ref}
           aria-label={label}
-          placeholderTextColor="#8e8a99"
+          placeholderTextColor={palette.muted}
           secureTextEntry={password ? !revealed : inputProps.secureTextEntry}
           style={[styles.input, style]}
           onFocus={(event) => {
@@ -168,7 +179,7 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
             onPress={() => setRevealed((value) => !value)}
             style={styles.reveal}
           >
-            <AppIcon name={revealed ? 'eye-closed' : 'eye'} size={20} color={color.muted} />
+            <AppIcon name={revealed ? 'eye-closed' : 'eye'} size={20} color={palette.muted} />
           </Pressable>
         ) : null}
       </View>
@@ -200,6 +211,7 @@ export function AuthButton({
   disabled,
   accessibilityHint,
 }: AuthButtonProps) {
+  const { palette, styles } = useAuthStyles();
   const inactive = disabled || loading;
   const textStyle = [
     styles.buttonText,
@@ -227,11 +239,17 @@ export function AuthButton({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' || variant === 'apple' ? '#ffffff' : color.primary}
+          color={
+            variant === 'primary'
+              ? palette.surfaceContainerLowest
+              : variant === 'apple'
+                ? palette.surface
+                : palette.primary
+          }
         />
       ) : (
         <View style={styles.buttonRow}>
-          {variant === 'apple' ? <AppIcon name="apple" size={19} color="#ffffff" /> : null}
+          {variant === 'apple' ? <AppIcon name="apple" size={19} color={palette.surface} /> : null}
           {variant === 'google' ? <AppIcon name="google" size={18} /> : null}
           <Text style={textStyle}>{label}</Text>
         </View>
@@ -250,6 +268,7 @@ export function SocialButtons({
   onGoogle: () => void;
   busy?: 'apple' | 'google' | null;
 }) {
+  const { styles } = useAuthStyles();
   return (
     <View style={styles.stack}>
       <AuthButton
@@ -271,6 +290,7 @@ export function SocialButtons({
 }
 
 export function AuthDivider({ label = 'or' }: { label?: string }) {
+  const { styles } = useAuthStyles();
   return (
     <View style={styles.divider} aria-hidden>
       <View style={styles.dividerLine} />
@@ -287,6 +307,7 @@ export function AuthNotice({
   tone?: 'error' | 'success' | 'info';
   children: ReactNode;
 }) {
+  const { palette, styles } = useAuthStyles();
   return (
     <View
       role="alert"
@@ -300,7 +321,9 @@ export function AuthNotice({
       <AppIcon
         name={tone === 'error' ? 'warning' : tone === 'success' ? 'check' : 'mail'}
         size={18}
-        color={tone === 'error' ? color.error : tone === 'success' ? color.success : color.primary}
+        color={
+          tone === 'error' ? palette.error : tone === 'success' ? palette.success : palette.primary
+        }
       />
       <Text style={styles.noticeText}>{children}</Text>
     </View>
@@ -317,6 +340,7 @@ export function AuthSwitch({
   action: string;
   onPress: () => void;
 }) {
+  const { styles } = useAuthStyles();
   return (
     <View style={styles.switchRow}>
       <Text style={styles.switchPrompt}>{prompt}</Text>
@@ -327,132 +351,128 @@ export function AuthSwitch({
   );
 }
 
-export const authStyles = StyleSheet.create({
-  stack: { gap: space.x3 },
-  legal: { color: color.muted, fontSize: 13, lineHeight: 18, textAlign: 'center' },
-});
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.surface },
-  rootWide: { backgroundColor: color.background },
-  scroll: { flexGrow: 1, paddingHorizontal: space.x6 },
-  scrollWide: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.x6 },
-  card: {
-    width: '100%',
-    maxWidth: 460,
-    backgroundColor: color.surface,
-    borderRadius: radius.panel,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-    paddingHorizontal: space.x8,
-    paddingVertical: space.x8,
-    shadowColor: palette.ink,
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-  },
-  cardFooter: { marginTop: space.x6, gap: space.x3 },
-  topBar: {
-    height: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    marginLeft: -10,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backPlaceholder: { width: 44, height: 44 },
-  cardLogo: { marginBottom: space.x4 },
-  title: {
-    marginTop: space.x4,
-    color: color.ink,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '800',
-    letterSpacing: -0.6,
-  },
-  subtitle: { marginTop: space.x2, color: color.muted, fontSize: 17, lineHeight: 24 },
-  content: { marginTop: space.x6, gap: space.x5 },
-  footer: {
-    paddingHorizontal: space.x6,
-    paddingTop: space.x3,
-    gap: space.x3,
-    backgroundColor: color.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
-  field: { gap: space.x2 },
-  label: { color: color.ink, fontSize: 15, fontWeight: '600' },
-  inputBox: {
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#d9d5e4',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: space.x4,
-    gap: space.x2,
-  },
-  inputBoxFocused: { borderColor: color.primary, borderWidth: 2, paddingHorizontal: space.x4 - 1 },
-  inputBoxError: { borderColor: color.error },
-  // The bordered box already shows focus, so drop the browser's own outline on web.
-  input: {
-    flex: 1,
-    minHeight: 50,
-    color: color.ink,
-    fontSize: 17,
-    ...(Platform.OS === 'web' ? { outlineWidth: 0 } : null),
-  },
-  reveal: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  hint: { color: color.muted, fontSize: 13, lineHeight: 18 },
-  fieldError: { color: color.error, fontSize: 13, lineHeight: 18, fontWeight: '600' },
-  button: {
-    minHeight: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: space.x5,
-  },
-  primary: { backgroundColor: color.primary },
-  secondary: { backgroundColor: color.primarySoft },
-  apple: { backgroundColor: '#000000' },
-  google: { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#d9d5e4' },
-  buttonDisabled: { opacity: 0.45 },
-  pressed: { opacity: 0.75 },
-  buttonRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  buttonText: { fontSize: 17, fontWeight: '600' },
-  buttonTextLight: { color: '#ffffff' },
-  buttonTextDark: { color: color.ink },
-  linkButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  linkText: { color: color.primary, fontSize: 16, fontWeight: '600' },
-  stack: { gap: space.x3 },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: space.x3 },
-  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#d9d5e4' },
-  dividerText: { color: color.muted, fontSize: 14 },
-  notice: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: space.x2,
-    borderRadius: 12,
-    padding: space.x3,
-  },
-  noticeError: { backgroundColor: '#fdecec' },
-  noticeSuccess: { backgroundColor: '#e8f5ec' },
-  noticeInfo: { backgroundColor: color.primarySoft },
-  noticeText: { flex: 1, color: color.ink, fontSize: 15, lineHeight: 21 },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: 44,
-  },
-  switchPrompt: { color: color.muted, fontSize: 15 },
-  switchAction: { color: color.primary, fontSize: 15, fontWeight: '700' },
-});
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: p.surface },
+    rootWide: { backgroundColor: p.background },
+    scroll: { flexGrow: 1, paddingHorizontal: space.x6 },
+    scrollWide: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.x6 },
+    card: {
+      width: '100%',
+      maxWidth: 460,
+      backgroundColor: p.surface,
+      borderRadius: radius.panel,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: p.border,
+      paddingHorizontal: space.x8,
+      paddingVertical: space.x8,
+      shadowColor: p.ink,
+      shadowOpacity: 0.08,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 12 },
+    },
+    cardFooter: { marginTop: space.x6, gap: space.x3 },
+    topBar: {
+      height: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      marginLeft: -10,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backPlaceholder: { width: 44, height: 44 },
+    cardLogo: { marginBottom: space.x4 },
+    title: {
+      marginTop: space.x4,
+      color: p.ink,
+      fontSize: 32,
+      lineHeight: 38,
+      fontWeight: '800',
+      letterSpacing: -0.6,
+    },
+    subtitle: { marginTop: space.x2, color: p.muted, fontSize: 17, lineHeight: 24 },
+    content: { marginTop: space.x6, gap: space.x5 },
+    footer: {
+      paddingHorizontal: space.x6,
+      paddingTop: space.x3,
+      gap: space.x3,
+      backgroundColor: p.surface,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: p.border,
+    },
+    field: { gap: space.x2 },
+    label: { color: p.ink, fontSize: 15, fontWeight: '600' },
+    inputBox: {
+      minHeight: 52,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: p.border,
+      backgroundColor: p.surface,
+      paddingHorizontal: space.x4,
+      gap: space.x2,
+    },
+    inputBoxFocused: { borderColor: p.primary, borderWidth: 2, paddingHorizontal: space.x4 - 1 },
+    inputBoxError: { borderColor: p.error },
+    // The bordered box already shows focus, so drop the browser's own outline on web.
+    input: {
+      flex: 1,
+      minHeight: 50,
+      color: p.ink,
+      fontSize: 17,
+      ...(Platform.OS === 'web' ? { outlineWidth: 0 } : null),
+    },
+    reveal: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+    hint: { color: p.muted, fontSize: 13, lineHeight: 18 },
+    fieldError: { color: p.error, fontSize: 13, lineHeight: 18, fontWeight: '600' },
+    button: {
+      minHeight: 52,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: space.x5,
+    },
+    primary: { backgroundColor: p.primary },
+    secondary: { backgroundColor: p.primarySoft },
+    apple: { backgroundColor: p.ink },
+    google: { backgroundColor: p.surface, borderWidth: 1, borderColor: p.border },
+    buttonDisabled: { opacity: 0.45 },
+    pressed: { opacity: 0.75 },
+    buttonRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
+    buttonText: { fontSize: 17, fontWeight: '600' },
+    buttonTextLight: { color: p.surfaceContainerLowest },
+    buttonTextDark: { color: p.ink },
+    linkButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+    linkText: { color: p.primary, fontSize: 16, fontWeight: '600' },
+    stack: { gap: space.x3 },
+    divider: { flexDirection: 'row', alignItems: 'center', gap: space.x3 },
+    dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: p.border },
+    dividerText: { color: p.muted, fontSize: 14 },
+    notice: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: space.x2,
+      borderRadius: 12,
+      padding: space.x3,
+    },
+    noticeError: { backgroundColor: p.errorBg },
+    noticeSuccess: { backgroundColor: p.successBg },
+    noticeInfo: { backgroundColor: p.primarySoft },
+    noticeText: { flex: 1, color: p.ink, fontSize: 15, lineHeight: 21 },
+    switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 44,
+    },
+    switchPrompt: { color: p.muted, fontSize: 15 },
+    switchAction: { color: p.primary, fontSize: 15, fontWeight: '700' },
+  });

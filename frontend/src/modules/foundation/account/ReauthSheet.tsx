@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
+import { OTP_CODE_LENGTH } from '@/modules/auth/authHelpers';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { TextField } from '@/modules/shared/ui/TextField';
 import { reauthWithPassword, sendReauthCode, verifyReauthCode } from './reauth';
+
+/** Wait before another code can be requested (Supabase rate-limits OTP sends). */
+const RESEND_SECONDS = 30;
 
 type Props = {
   visible: boolean;
@@ -25,6 +29,28 @@ export function ReauthSheet({ visible, purpose, onClose, onConfirmed }: Props) {
   const [codeSent, setCodeSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
+
+  const resend = async () => {
+    setResending(true);
+    setError(null);
+    try {
+      await sendReauthCode({ email, phone });
+      setValue('');
+      setResendIn(RESEND_SECONDS);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send a new code.');
+    } finally {
+      setResending(false);
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -32,6 +58,7 @@ export function ReauthSheet({ visible, purpose, onClose, onConfirmed }: Props) {
       setValue('');
       setCodeSent(false);
       setError(null);
+      setResendIn(0);
     }
   }, [visible, email]);
 
@@ -84,7 +111,7 @@ export function ReauthSheet({ visible, purpose, onClose, onConfirmed }: Props) {
             helper={`We sent a code to ${email ?? phone}.`}
             keyboardType="number-pad"
             label="Code"
-            maxLength={8}
+            maxLength={OTP_CODE_LENGTH}
             onChangeText={setValue}
             onSubmitEditing={confirm}
             value={value}
@@ -109,13 +136,25 @@ export function ReauthSheet({ visible, purpose, onClose, onConfirmed }: Props) {
             onPress={() =>
               run(
                 () => sendReauthCode({ email, phone }),
-                () => setCodeSent(true),
+                () => {
+                  setCodeSent(true);
+                  setResendIn(RESEND_SECONDS);
+                },
               )
             }
           />
         ) : (
           <AppButton disabled={!value} fullWidth label="Confirm" loading={busy} onPress={confirm} />
         )}
+        {mode === 'code' && codeSent ? (
+          <AppButton
+            disabled={busy || resendIn > 0}
+            label={resendIn > 0 ? `Send a new code in ${resendIn}s` : 'Send a new code'}
+            loading={resending}
+            onPress={resend}
+            variant="ghost"
+          />
+        ) : null}
         {email && mode === 'password' ? (
           <AppButton
             label="Use a one-time code instead"

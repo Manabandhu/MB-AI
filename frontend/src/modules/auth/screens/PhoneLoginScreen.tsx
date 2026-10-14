@@ -1,11 +1,10 @@
-import { color, space } from '@manabandhu/design-system';
+import { space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { type CountryItem, supportedCountries } from '@/modules/auth/authConstants';
-import { friendlyAuthError, toE164 } from '@/modules/auth/authHelpers';
+import { friendlyAuthError, OTP_CODE_LENGTH, parsePhoneInput } from '@/modules/auth/authHelpers';
 import {
   AuthButton,
   AuthField,
@@ -13,11 +12,13 @@ import {
   AuthScreen,
   AuthSwitch,
 } from '@/modules/auth/components/AuthKit';
+import { CountryPickerSheet } from '@/modules/auth/components/CountryPickerSheet';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { useAppearance } from '@/theme/ThemeProvider';
 
 export function PhoneLoginScreen() {
   const signInWithPhone = useAuthStore((s) => s.signInWithPhone);
-  const insets = useSafeAreaInsets();
+  const { palette } = useAppearance();
   const [country, setCountry] = useState<CountryItem>(supportedCountries[0]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [digits, setDigits] = useState('');
@@ -26,16 +27,16 @@ export function PhoneLoginScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
-    const number = digits.replace(/\D/g, '');
-    if (number.length < 7 || number.length > 12) {
-      setFieldError('Enter your mobile number without the country code');
+    const parsed = parsePhoneInput(country.code, digits);
+    if (!parsed.ok) {
+      setFieldError(parsed.error);
       return;
     }
     setFieldError(null);
     setFormError(null);
     setSubmitting(true);
     try {
-      await signInWithPhone(toE164(country.code, number));
+      await signInWithPhone(parsed.e164);
       router.push('/otp-verification');
     } catch (error) {
       setFormError(friendlyAuthError(error));
@@ -47,7 +48,7 @@ export function PhoneLoginScreen() {
   return (
     <AuthScreen
       title="Sign in with your phone"
-      subtitle="We'll text you a 6-digit code. Message and data rates may apply."
+      subtitle={`We'll text you a ${OTP_CODE_LENGTH}-digit code. Message and data rates may apply.`}
       footer={
         <>
           <AuthButton label="Send code" loading={submitting} onPress={submit} />
@@ -64,13 +65,15 @@ export function PhoneLoginScreen() {
         label="Mobile number"
         value={digits}
         onChangeText={(value) => {
-          setDigits(value.replace(/[^\d\s()-]/g, ''));
+          // Keep a leading + so a pasted international number (+1 469…) is not prefixed twice.
+          setDigits(value.replace(/[^\d\s()+.-]/g, ''));
           if (fieldError) setFieldError(null);
         }}
         error={fieldError}
+        hint="Or enter the full number with its country code, like +1 469 555 0123"
         placeholder="(555) 000-0000"
         keyboardType="phone-pad"
-        autoComplete="tel-national"
+        autoComplete="tel"
         textContentType="telephoneNumber"
         returnKeyType="send"
         onSubmitEditing={submit}
@@ -79,58 +82,21 @@ export function PhoneLoginScreen() {
             accessibilityRole="button"
             accessibilityLabel={`Country code ${country.name} ${country.code}. Change`}
             onPress={() => setPickerOpen(true)}
-            style={styles.countryButton}
+            style={[styles.countryButton, { borderRightColor: palette.border }]}
           >
             <Text style={styles.flag}>{country.flag}</Text>
-            <Text style={styles.dial}>{country.code}</Text>
-            <AppIcon name="chevron-down" size={14} color={color.muted} />
+            <Text style={[styles.dial, { color: palette.ink }]}>{country.code}</Text>
+            <AppIcon name="chevron-down" size={14} color={palette.muted} />
           </Pressable>
         }
       />
 
-      <Modal
+      <CountryPickerSheet
+        onClose={() => setPickerOpen(false)}
+        onSelect={setCountry}
+        selected={country}
         visible={pickerOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setPickerOpen(false)}
-      >
-        <Pressable
-          accessibilityLabel="Close"
-          style={styles.backdrop}
-          onPress={() => setPickerOpen(false)}
-        />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, space.x4) }]}>
-          <View style={styles.grabber} />
-          <Text accessibilityRole="header" style={styles.sheetTitle}>
-            Country or region
-          </Text>
-          <ScrollView>
-            {supportedCountries.map((item) => {
-              const selected = item.code === country.code && item.name === country.name;
-              return (
-                <Pressable
-                  key={item.code + item.name}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={`${item.name} ${item.code}`}
-                  onPress={() => {
-                    setCountry(item);
-                    setPickerOpen(false);
-                  }}
-                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-                >
-                  <Text style={styles.flag}>{item.flag}</Text>
-                  <Text style={styles.rowName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.rowCode}>{item.code}</Text>
-                  {selected ? <AppIcon name="check" size={18} color={color.primary} /> : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </Modal>
+      />
     </AuthScreen>
   );
 }
@@ -144,43 +110,7 @@ const styles = StyleSheet.create({
     paddingRight: space.x2,
     marginRight: space.x1,
     borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: '#d9d5e4',
   },
   flag: { fontSize: 20 },
-  dial: { color: color.ink, fontSize: 17, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(19,27,46,0.4)' },
-  sheet: {
-    maxHeight: '70%',
-    backgroundColor: color.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: space.x4,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 36,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#d9d5e4',
-    marginTop: space.x2,
-  },
-  sheetTitle: {
-    color: color.ink,
-    fontSize: 17,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginVertical: space.x3,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    minHeight: 52,
-    paddingHorizontal: space.x2,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
-  },
-  rowPressed: { backgroundColor: color.background },
-  rowName: { flex: 1, color: color.ink, fontSize: 17 },
-  rowCode: { color: color.muted, fontSize: 17 },
+  dial: { fontSize: 17, fontWeight: '600' },
 });

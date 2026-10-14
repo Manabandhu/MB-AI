@@ -186,7 +186,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
     error: configError,
     refetch: refetchConfig,
   } = useOnboardingConfig();
-  const { data: progress } = useOnboardingProgress();
+  const { data: progress, isLoading: progressLoading } = useOnboardingProgress();
   const saveStepMutation = useSaveOnboardingStep();
   const completeMutation = useCompleteOnboarding();
 
@@ -221,11 +221,8 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
     room_openings: true,
     chat_messages: true,
   });
-  const [pledgesAccepted, setPledgesAccepted] = useState<Record<string, boolean>>({
-    verified_identity: false,
-    no_scams: false,
-    mutual_respect: false,
-  });
+  // Keyed by the trust step's configured option keys; nothing is hardcoded here.
+  const [pledgesAccepted, setPledgesAccepted] = useState<Record<string, boolean>>({});
 
   // Sync with loaded progress
   useEffect(() => {
@@ -248,15 +245,15 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
         }
         setNotificationPreferences((prev) => ({ ...prev, ...booleanPrefs }));
       }
-      if (progress.safetyPledgeAccepted) {
-        setPledgesAccepted({
-          verified_identity: true,
-          no_scams: true,
-          mutual_respect: true,
-        });
-      }
     }
   }, [progress]);
+
+  // A saved pledge ticks every pledge the server configures for the trust step.
+  useEffect(() => {
+    if (!progress?.safetyPledgeAccepted) return;
+    const options = config?.steps.find((s) => s.stepKey === 'trust_safety')?.options ?? [];
+    setPledgesAccepted(Object.fromEntries(options.map((opt) => [opt.optionKey, true])));
+  }, [progress?.safetyPledgeAccepted, config]);
 
   // Find step config from DB
   const stepConfig = useMemo(() => {
@@ -275,6 +272,10 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
 
     setSaveError(null);
     if (meta.index === 8) {
+      if (pledgeMissing) {
+        router.push(STEP_METAS['trust-and-safety'].route as Href);
+        return;
+      }
       try {
         await completeMutation.mutateAsync();
         router.replace('/home');
@@ -301,8 +302,11 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
     } else if (meta.key === 'notifications') {
       payload = { notificationPreferences };
     } else if (meta.key === 'trust_safety') {
-      const allAccepted = Object.values(pledgesAccepted).every(Boolean);
-      payload = { safetyPledgeAccepted: allAccepted };
+      if (!allPledged) {
+        setSaveError('Agree to each pledge to continue. You can also finish setup later.');
+        return;
+      }
+      payload = { safetyPledgeAccepted: true };
     }
 
     try {
@@ -337,6 +341,17 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
   const handleSkip = () => {
     router.push(meta.nextRoute as Href);
   };
+
+  // Leaves setup without completing it: sign-in keeps bringing the member back here until they finish.
+  const finishLater = () => router.replace('/home');
+
+  const pledgeOptions = stepConfig?.options ?? [];
+  const allPledged =
+    meta.key !== 'trust_safety' ||
+    (pledgeOptions.length > 0 && pledgeOptions.every((opt) => pledgesAccepted[opt.optionKey]));
+  // The last step only completes onboarding once the Trust Code has been agreed and saved. Unknown (progress still
+  // loading or failed to load) counts as missing, so completion never skips the pledge.
+  const pledgeMissing = meta.index === 8 && progress?.safetyPledgeAccepted !== true;
 
   // Loading skeleton state
   if (isConfigLoading && !config) {
@@ -386,7 +401,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
               <Text style={styles.stepBadgeText}>Step {meta.index} of 8</Text>
             </View>
 
-            {meta.index < 8 ? (
+            {meta.index < 7 ? (
               <Pressable
                 accessibilityLabel="Skip this step"
                 accessibilityRole="button"
@@ -780,7 +795,13 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
                   return (
                     <Pressable
                       key={opt.optionKey}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: isChecked }}
+                      accessibilityLabel={
+                        opt.description ? `${opt.label}. ${opt.description}` : opt.label
+                      }
                       onPress={() => {
+                        if (saveError) setSaveError(null);
                         setPledgesAccepted((prev) => ({
                           ...prev,
                           [opt.optionKey]: !isChecked,
@@ -804,7 +825,9 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
 
               {/* Master Accept Button */}
               <Pressable
+                accessibilityRole="button"
                 onPress={() => {
+                  setSaveError(null);
                   const allTrue: Record<string, boolean> = {};
                   stepConfig?.options.forEach((opt) => {
                     allTrue[opt.optionKey] = true;
@@ -887,18 +910,36 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
               {saveError}
             </Text>
           ) : null}
+          {meta.key === 'trust_safety' && !allPledged && !saveError ? (
+            <Text style={styles.pledgeHint}>Agree to each pledge above to continue.</Text>
+          ) : null}
+          {pledgeMissing ? (
+            <Text style={styles.pledgeHint}>
+              Agree to the Community Trust Code to finish setting up.
+            </Text>
+          ) : null}
           <AppButton
-            disabled={saveStepMutation.isPending || completeMutation.isPending}
-            icon={meta.index === 8 ? 'home' : 'chevron-right'}
+            disabled={
+              saveStepMutation.isPending ||
+              completeMutation.isPending ||
+              !allPledged ||
+              (meta.index === 8 && progressLoading)
+            }
+            icon={meta.index === 8 ? (pledgeMissing ? 'shield' : 'home') : 'chevron-right'}
             label={
               saveStepMutation.isPending || completeMutation.isPending
                 ? 'Saving...'
                 : meta.index === 8
-                  ? 'Explore ManaBandhu →'
+                  ? pledgeMissing
+                    ? 'Review the Trust Code'
+                    : 'Explore ManaBandhu'
                   : 'Continue'
             }
             onPress={handleNext}
           />
+          {meta.index < 8 ? (
+            <AppButton label="Finish setup later" onPress={finishLater} variant="ghost" />
+          ) : null}
         </View>
       </View>
     </SafeAreaView>
@@ -1517,6 +1558,11 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 13,
     fontWeight: '700',
+  },
+  pledgeHint: {
+    color: colors.muted,
+    fontSize: 13,
+    textAlign: 'center',
   },
   saveError: { color: palette.error, fontSize: 14, lineHeight: 20, marginBottom: space.x2 },
   bottomBar: {

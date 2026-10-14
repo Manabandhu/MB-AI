@@ -3,6 +3,7 @@ import { useTheme, XStack, YStack } from 'tamagui';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 import type { MarketplaceListing } from '../types';
 import { formatListingPrice } from '../utils/format';
@@ -53,6 +54,7 @@ export function SaveToggle({
       height="$touch"
       justifyContent="center"
       onPress={onPress}
+      {...keyboardPress(onPress)}
       pressStyle={{ opacity: 0.8 }}
       role="switch"
       width="$touch"

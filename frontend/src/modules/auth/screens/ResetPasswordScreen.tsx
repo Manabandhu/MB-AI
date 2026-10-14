@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import {
   friendlyAuthError,
   MIN_PASSWORD_LENGTH,
+  PASSWORD_RULES,
   parseAuthRedirect,
   passwordProblem,
 } from '@/modules/auth/authHelpers';
@@ -108,13 +109,16 @@ export function ResetPasswordScreen() {
           setPassword(value);
           if (errors.password) setErrors((e) => ({ ...e, password: undefined }));
         }}
+        onBlur={() =>
+          password && setErrors((e) => ({ ...e, password: passwordProblem(password) ?? undefined }))
+        }
         error={errors.password}
         hint={`At least ${MIN_PASSWORD_LENGTH} characters with a letter and a number`}
         autoCapitalize="none"
         autoCorrect={false}
         autoComplete="new-password"
         textContentType="newPassword"
-        passwordRules="minlength: 8; required: lower, upper; required: digit;"
+        passwordRules={PASSWORD_RULES}
         returnKeyType="next"
         submitBehavior="submit"
         onSubmitEditing={() => confirmRef.current?.focus()}

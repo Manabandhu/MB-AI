@@ -4,6 +4,7 @@ import { XStack, YStack } from 'tamagui';
 import { useRankedModules, useUserActivityStore } from '@/modules/foundation/userActivityStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 import { useAppearance } from '@/theme/ThemeProvider';
 
@@ -22,6 +23,10 @@ export function QuickAccess() {
   const modules = useRankedModules(perRow * (windowClass === 'compact' ? 2 : 1));
   const recordVisit = useUserActivityStore((s) => s.recordModuleVisit);
   const { palette, reduceMotion } = useAppearance();
+  const open = (module: (typeof modules)[number]) => {
+    recordVisit(module.key);
+    router.push(module.route as Href);
+  };
   return (
     <XStack role="menu" flexWrap="wrap" marginHorizontal={-4} rowGap="$x3">
       {modules.map((module) => (
@@ -29,14 +34,18 @@ export function QuickAccess() {
           aria-label={`${module.label}. ${module.summary}`}
           role="menuitem"
           alignItems="center"
+          borderRadius="$control"
           cursor="pointer"
+          focusVisibleStyle={{
+            outlineWidth: 3,
+            outlineStyle: 'solid',
+            outlineColor: '$outlineColor',
+          }}
           focusable
           gap="$x2"
           key={module.key}
-          onPress={() => {
-            recordVisit(module.key);
-            router.push(module.route as Href);
-          }}
+          onPress={() => open(module)}
+          {...keyboardPress(() => open(module))}
           paddingHorizontal={4}
           pressStyle={reduceMotion ? { opacity: 0.7 } : { scale: 0.92 }}
           transition={reduceMotion ? null : 'quick'}

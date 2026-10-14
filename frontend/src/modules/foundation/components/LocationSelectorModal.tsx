@@ -7,6 +7,7 @@ import { searchAllUSCities } from '@/modules/rooms/utils/locationService';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { TextField } from '@/modules/shared/ui/TextField';
 import { useAppearance } from '@/theme/ThemeProvider';
 
@@ -44,9 +45,12 @@ function CityRow({
       backgroundColor={selected ? '$primaryTint' : 'transparent'}
       borderRadius="$control"
       cursor="pointer"
+      focusVisibleStyle={{ outlineWidth: 3, outlineStyle: 'solid', outlineColor: '$outlineColor' }}
+      focusable
       gap="$x3"
       minHeight={52}
       onPress={onPress}
+      {...keyboardPress(onPress)}
       paddingHorizontal="$x3"
       pressStyle={{ backgroundColor: '$surfaceContainerLow' }}
       role="button"

@@ -225,6 +225,15 @@ Each screen entry includes:
 - Components: ScreenShell, FormScreen, Input, AppButton, Text, Link, CountdownTimer
 - Navigation: to `/home` on success
 
+### Accept Terms
+- Route: `/accept-terms`
+- Module: auth
+- Purpose: Record Terms/Privacy consent once for accounts created through Apple/Google or phone sign-in
+- Type: auth
+- States: normal | consent error | saving | error
+- Components: AuthScreen, ConsentCheckbox, AuthButton
+- Navigation: onboarding or `/home` after accepting; "Sign out instead" to `/welcome`
+
 ### Reset Password
 - Route: `/reset-password`
 - Module: auth
@@ -590,7 +599,16 @@ Redirect-only routes (not screens): `/rides/request` → `/rides/search`, `/ride
 - Type: admin
 - States: loading | empty | error
 - Components: ScreenShell, SearchBar, FilterBar, ListScreen, Avatar, AppButton, Modal, SwipeAction
-- Navigation: push to user detail
+- Navigation: push to user detail; Suspend / Reactivate asks first (suspend is red)
+
+### User Details
+- Route: `/admin/users/[userId]`
+- Module: admin
+- Purpose: One member account (`GET /api/v1/admin/users/{id}`) with suspend / reactivate
+- Type: admin
+- States: loading | error | not authorized
+- Components: Screen, ScreenHeader, Card, StatusBadge, AppButton, ConfirmSheet
+- Navigation: back to `/admin/users`
 
 ### Reports
 - Route: `/admin/reports`
@@ -599,7 +617,16 @@ Redirect-only routes (not screens): `/rides/request` → `/rides/search`, `/ride
 - Type: admin
 - States: loading | empty | error
 - Components: ScreenShell, FilterBar, ListScreen, Card, AppButton, Modal
-- Navigation: push to report detail
+- Navigation: push to report detail; Resolve asks first (red) and only the row being resolved shows progress
+
+### Report Details
+- Route: `/admin/reports/[reportId]`
+- Module: admin
+- Purpose: One safety report (category, details, reporter, target) with resolve
+- Type: admin
+- States: loading | error | not found | not authorized
+- Components: Screen, ScreenHeader, Card, StatusBadge, AppButton, ConfirmSheet
+- Navigation: back to `/admin/reports`
 
 ### Rooms Moderation
 - Route: `/admin/rooms`

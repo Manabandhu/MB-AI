@@ -2,9 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Image, ScrollView, Share } from 'react-native';
+import { Image, ScrollView } from 'react-native';
 import { useTheme, XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
+import { shareLink } from '@/lib/share';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
@@ -35,7 +36,7 @@ import {
   shareMessage,
   statusIs,
 } from '../utils/listingRules';
-import { confirmAction, showError } from '../utils/notify';
+import { confirmAction, showError, showMessage } from '../utils/notify';
 
 const GALLERY_HEIGHT = 300;
 /** The owner's bar can wrap to two rows, so reserve a little more than one bar. */
@@ -140,12 +141,13 @@ export function ListingDetailsScreen() {
 
   const handleShare = async () => {
     try {
-      const url = `manabandhu://marketplace/${listing.id}`;
-      await Share.share({
-        title: listing.title,
-        message: `${shareMessage({ title: listing.title, priceLabel: price, location: listing.location })}\n${url}`,
-        url,
-      });
+      // Web URL when configured (opens the app if installed), not a bare app-scheme link that fails in browsers.
+      const result = await shareLink(
+        `/marketplace/${listing.id}`,
+        shareMessage({ title: listing.title, priceLabel: price, location: listing.location }),
+      );
+      if (result === 'copied')
+        showMessage('Link copied', 'Paste it anywhere to share this listing.');
     } catch (error) {
       showError('Could not share this listing', error);
     }

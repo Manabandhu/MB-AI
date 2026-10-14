@@ -62,7 +62,11 @@ export function Card({ href, onPress, children, ...props }: CardProps) {
       focusable={interactive}
       interactive={interactive}
       onPress={press}
-      {...keyboardPress(press ? () => press(undefined as never) : undefined)}
+      {...keyboardPress(
+        press ? () => press(undefined as never) : undefined,
+        true,
+        href ? 'link' : 'button',
+      )}
       pressStyle={interactive && !reduceMotion ? { scale: 0.98 } : undefined}
       {...props}
     >

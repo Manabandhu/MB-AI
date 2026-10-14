@@ -12,6 +12,7 @@ import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 import { deleteListing, getMyListings, updateListing } from '../api';
@@ -62,6 +63,8 @@ export function MyListingsScreen() {
       queryClient.invalidateQueries({ queryKey: ['marketplace', 'mine'] }),
       queryClient.invalidateQueries({ queryKey: ['marketplace', 'listings'] }),
       queryClient.invalidateQueries({ queryKey: ['marketplace', 'listing', id] }),
+      // Saved lists show other members' copies of this listing (and its status), so refresh them too.
+      queryClient.invalidateQueries({ queryKey: ['marketplace', 'saved'] }),
     ]);
 
   const statusMutation = useMutation({
@@ -84,6 +87,19 @@ export function MyListingsScreen() {
       { destructive: true },
     );
     if (ok) deleteMutation.mutate(listing.id);
+  };
+
+  // Marking sold hides the listing from buyers, so ask first; other status changes are one tap and reversible.
+  const changeStatus = async (listing: MarketplaceListing, status: ListingStatus) => {
+    if (status === 'sold') {
+      const ok = await confirmAction(
+        `Mark "${listing.title}" as sold?`,
+        'Buyers will no longer see it in the marketplace. You can relist it any time.',
+        'Mark sold',
+      );
+      if (!ok) return;
+    }
+    statusMutation.mutate({ id: listing.id, status });
   };
 
   const refresh = async () => {
@@ -163,10 +179,21 @@ export function MyListingsScreen() {
                 <Card gap="$x3" key={listing.id} variant="outlined">
                   <XStack
                     aria-label={`Open ${listing.title}`}
+                    borderRadius="$control"
                     cursor="pointer"
+                    focusVisibleStyle={{
+                      outlineWidth: 3,
+                      outlineStyle: 'solid',
+                      outlineColor: '$outlineColor',
+                    }}
                     focusable
                     gap="$x3"
                     onPress={() => router.push(`/marketplace/${listing.id}` as Href)}
+                    {...keyboardPress(
+                      () => router.push(`/marketplace/${listing.id}` as Href),
+                      true,
+                      'link',
+                    )}
                     role="link"
                   >
                     <YStack borderRadius="$control" height={THUMB} overflow="hidden" width={THUMB}>
@@ -203,9 +230,7 @@ export function MyListingsScreen() {
                         key={action.status}
                         label={action.label}
                         loading={pendingStatus === action.status}
-                        onPress={() =>
-                          statusMutation.mutate({ id: listing.id, status: action.status })
-                        }
+                        onPress={() => void changeStatus(listing, action.status)}
                         variant="secondary"
                       />
                     ))}
