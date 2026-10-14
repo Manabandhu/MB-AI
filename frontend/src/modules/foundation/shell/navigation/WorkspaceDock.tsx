@@ -2,11 +2,13 @@ import { router, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { XStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { useQuickJump } from '@/modules/foundation/launcher/QuickJump';
-import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
 import { useFormFactor } from '@/platform/formFactor';
 
 const TAB_ROUTES = new Set(['/home', '/explore', '/community', '/chat', '/profile']);
@@ -64,27 +66,50 @@ export function WorkspaceDock() {
       paddingTop="$x2"
       paddingBottom={Math.max(insets.bottom, 8)}
     >
-      <AppButton
-        label={t('tabs.home')}
-        icon="home"
-        size="sm"
-        variant="ghost"
-        onPress={() => router.navigate('/home')}
-      />
-      <AppButton
-        label={t('navigation.jump')}
-        icon="compass"
-        size="sm"
-        variant="secondary"
-        onPress={open}
-      />
-      <AppButton
-        label={t('navigation.saved')}
-        icon="heart"
-        size="sm"
-        variant="ghost"
-        onPress={() => router.navigate('/saved')}
-      />
+      {[
+        {
+          label: t('tabs.home'),
+          icon: 'home',
+          href: '/home',
+          onPress: () => router.navigate('/home'),
+        },
+        { label: t('navigation.jump'), icon: 'compass', href: undefined, onPress: open },
+        {
+          label: t('navigation.saved'),
+          icon: 'heart',
+          href: '/saved',
+          onPress: () => router.navigate('/saved'),
+        },
+      ].map((item) => (
+        <Card
+          key={item.icon}
+          href={item.href}
+          onPress={item.onPress}
+          aria-label={item.label}
+          flex={1}
+          minWidth={0}
+          minHeight={64}
+          paddingHorizontal="$x1"
+          paddingVertical="$x2"
+          backgroundColor="transparent"
+          borderRadius="$control"
+        >
+          <YStack alignItems="center" justifyContent="center" gap="$x1">
+            <AppIcon name={item.icon as 'home' | 'compass' | 'heart'} size={20} />
+            <AppText
+              variant="caption"
+              fontSize={12}
+              lineHeight={18}
+              fontWeight="600"
+              textAlign="center"
+              numberOfLines={2}
+              maxWidth="100%"
+            >
+              {item.label}
+            </AppText>
+          </YStack>
+        </Card>
+      ))}
     </XStack>
   );
 }

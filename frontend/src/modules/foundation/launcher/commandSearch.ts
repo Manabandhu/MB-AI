@@ -1,3 +1,6 @@
+import { normalizeSearch } from './exploreFilters.ts';
+import { moduleAliases } from './moduleLabels.ts';
+
 export type Destination = {
   id: string;
   title: string;
@@ -36,12 +39,14 @@ export function navigableDestinations(
 }
 
 export function searchDestinations(items: readonly Destination[], query: string) {
-  const normalize = (value: string) => value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+  const normalize = normalizeSearch;
   const terms = normalize(query).trim().split(/\s+/).filter(Boolean);
   if (!terms.length) return [...items];
   return items
     .filter((item) => {
-      const text = normalize(`${item.title} ${item.module} ${item.route.replaceAll('/', ' ')}`);
+      const text = normalize(
+        `${item.title} ${item.module} ${item.route.replaceAll('/', ' ')} ${moduleAliases(item.module).join(' ')}`,
+      );
       return terms.every((term) => text.includes(term));
     })
     .sort(

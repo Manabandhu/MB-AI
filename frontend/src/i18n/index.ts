@@ -4,12 +4,18 @@ import i18n from 'i18next';
 import { initReactI18next, useTranslation } from 'react-i18next';
 import { en } from './en';
 import { hi } from './hi';
+import { kn } from './kn';
+import { ml } from './ml';
+import { ta } from './ta';
 import { te } from './te';
 
 export const supportedLanguages = [
   { code: 'en', label: 'English' },
   { code: 'te', label: 'తెలుగు' },
   { code: 'hi', label: 'हिन्दी' },
+  { code: 'ta', label: 'தமிழ்' },
+  { code: 'kn', label: 'ಕನ್ನಡ' },
+  { code: 'ml', label: 'മലയാളം' },
 ] as const;
 
 export type LanguageCode = (typeof supportedLanguages)[number]['code'];
@@ -25,7 +31,14 @@ export function resolveLanguage(preference: LanguagePreference): LanguageCode {
 }
 
 i18n.use(initReactI18next).init({
-  resources: { en: { translation: en }, te: { translation: te }, hi: { translation: hi } },
+  resources: {
+    en: { translation: en },
+    te: { translation: te },
+    hi: { translation: hi },
+    ta: { translation: ta },
+    kn: { translation: kn },
+    ml: { translation: ml },
+  },
   lng: deviceLanguage(),
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
@@ -36,6 +49,7 @@ i18n.use(initReactI18next).init({
 export function applyLanguage(preference: LanguagePreference) {
   const language = resolveLanguage(preference);
   if (i18n.language !== language) i18n.changeLanguage(language);
+  if (typeof document !== 'undefined') document.documentElement.lang = language;
   const regional = getLocales().find((l) => l.languageCode === language)?.languageTag;
   setFormatLocale(regional ?? (language === 'en' ? undefined : `${language}-IN`));
 }

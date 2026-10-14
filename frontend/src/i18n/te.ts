@@ -1,6 +1,21 @@
 import type { Strings } from './en';
 
 export const te: Strings = {
+  languagePicker: {
+    title: 'మీ భాషను ఎంచుకోండి',
+    label: 'భాష: {{language}}',
+    note: 'హోమ్ మరియు నావిగేషన్ అనువదించబడ్డాయి. కొన్ని ఫీచర్లు ఇంకా ఆంగ్లంలో ఉన్నాయి.',
+    close: 'పూర్తయింది',
+  },
+  settle: {
+    title: 'కొత్త చోట స్థిరపడుతున్నారా?',
+    body: 'మీకు అవసరమైన సహాయాన్ని మీకు అనుకూలంగా కనుగొనండి.',
+    visa: 'వీసా గైడ్లు మరియు చెక్\u200cలిస్టులు',
+    expenses: 'ఖర్చులు పంచుకోండి',
+    safety: 'భద్రత మరియు సహాయం',
+    signup: 'ప్రారంభించండి',
+    signin: 'నాకు ఇప్పటికే ఖాతా ఉంది',
+  },
   navigation: {
     settings: 'సెట్టింగులు',
     jump: 'వెళ్లండి',
@@ -35,8 +50,8 @@ export const te: Strings = {
   },
   home: {
     helloName: 'నమస్తే, {{name}}.',
-    cityHeadline: 'మీ నగరం.\nమీ మనుషులు.',
-    citySubtitle: 'ఇల్లు, తదుపరి అవకాశం, కొత్త స్నేహితులను కనుగొనండి.',
+    cityHeadline: 'కొత్త చోటు.\nమన అనుబంధం.',
+    citySubtitle: 'గదులు, రైడ్స్, ఉద్యోగ అవకాశాలు, రోజువారీ జీవితంలో తోడుగా ఉండే మనుషులు.',
     intentLabel: 'మీరు ఏమి చేయాలనుకుంటున్నారు?',
     live: 'నివాసం',
     work: 'పని',
@@ -62,7 +77,7 @@ export const te: Strings = {
     hideFeed: 'స్థానిక ఫీడ్ దాచు',
     quickAccess: 'త్వరిత యాక్సెస్',
     communityPulse: 'కమ్యూనిటీ సమాచారం',
-    searchPlaceholder: 'గదులు, రైడ్‌లు, ఉద్యోగాలు, వ్యక్తులను వెతకండి…',
+    searchPlaceholder: 'మీ కమ్యూనిటీలో వెతకండి',
     changeCity: 'నగరం మార్చండి',
     linkCopied: 'లింక్ కాపీ అయింది',
     updated: '{{when}} నవీకరించబడింది',

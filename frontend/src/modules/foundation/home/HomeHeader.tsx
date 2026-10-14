@@ -6,11 +6,11 @@ import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { useLocationStore } from '@/lib/locationStore';
 import { LocationSelectorModal } from '@/modules/foundation/components/LocationSelectorModal';
+import { LanguagePicker } from '@/modules/foundation/settings/LanguagePicker';
 import { UnreadNotificationDot } from '@/modules/foundation/shell/UnreadNotificationDot';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { AppText } from '@/modules/shared/ui/AppText';
-import { EditorialHeading } from '@/modules/shared/ui/EditorialHeading';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { useAdaptiveLayout } from '@/platform/adaptive';
@@ -41,6 +41,7 @@ export function HomeHeader() {
           <AppText flex={1} variant="caption" tone="muted">
             {name ? t('home.helloName', { name }) : t('greeting.welcomeBack')}
           </AppText>
+          <LanguagePicker />
           {phone ? (
             <IconButton
               icon="bell"
@@ -52,14 +53,14 @@ export function HomeHeader() {
           ) : null}
         </XStack>
         <YStack gap="$x3">
-          <EditorialHeading
+          <Heading
             variant="display"
-            fontSize={phone ? 44 : 64}
-            lineHeight={phone ? 48 : 68}
-            letterSpacing={-2}
+            fontSize={phone ? 36 : 52}
+            lineHeight={phone ? 44 : 60}
+            letterSpacing={0}
           >
             {t('home.cityHeadline')}
-          </EditorialHeading>
+          </Heading>
           <AppText tone="muted" variant="body" maxWidth={440}>
             {t('home.citySubtitle')}
           </AppText>

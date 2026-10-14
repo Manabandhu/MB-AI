@@ -4,7 +4,7 @@ import Head from 'expo-router/head';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
 import { XStack, YStack } from 'tamagui';
-import { useT } from '@/i18n';
+import { resolveLanguage, useT } from '@/i18n';
 import {
   countByCategory,
   type ExploreCategory,
@@ -14,6 +14,7 @@ import {
   recentModules,
   resultSummary,
 } from '@/modules/foundation/launcher/exploreFilters';
+import { localizedModules } from '@/modules/foundation/launcher/moduleLabels';
 import { type LauncherModule, launcherModules } from '@/modules/foundation/launcher/moduleRegistry';
 import { useUserActivityStore } from '@/modules/foundation/userActivityStore';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
@@ -31,6 +32,7 @@ import { Screen } from '@/modules/shared/ui/Screen';
 import { Section } from '@/modules/shared/ui/Section';
 import { TextField } from '@/modules/shared/ui/TextField';
 import { useAppearance } from '@/theme/ThemeProvider';
+import { useAppearanceStore } from '@/theme/themePreferenceStore';
 import { TabHeader } from '../TabHeader';
 
 const MODULE_COLUMNS = { compact: 1, medium: 1, expanded: 2, wide: 2 } as const;
@@ -90,6 +92,11 @@ function RecentTile({ module, onOpen }: { module: LauncherModule; onOpen: () => 
  */
 export function ExploreTab() {
   const t = useT();
+  const language = useAppearanceStore((state) => state.language);
+  const modules = useMemo(
+    () => localizedModules(launcherModules, resolveLanguage(language)),
+    [language],
+  );
   const [category, setCategory] = useState<ExploreCategory>('all');
   const [query, setQuery] = useState('');
   const inputRef = useRef<TextInput>(null);
@@ -105,12 +112,15 @@ export function ExploreTab() {
 
   const trimmed = query.trim();
   const browsing = category === 'all' && !trimmed;
-  const counts = useMemo(() => countByCategory(launcherModules, query), [query]);
-  const results = useMemo(() => filterModules(launcherModules, query, category), [query, category]);
-  const sections = useMemo(() => groupByCategory(launcherModules), []);
+  const counts = useMemo(() => countByCategory(modules, query), [modules, query]);
+  const results = useMemo(
+    () => filterModules(modules, query, category),
+    [modules, query, category],
+  );
+  const sections = useMemo(() => groupByCategory(modules), [modules]);
   const recent = useMemo(
-    () => recentModules(launcherModules, recentVisits, RECENT_LIMIT),
-    [recentVisits],
+    () => recentModules(modules, recentVisits, RECENT_LIMIT),
+    [modules, recentVisits],
   );
 
   const open = (module: LauncherModule) => {

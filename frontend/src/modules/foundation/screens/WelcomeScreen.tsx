@@ -1,12 +1,12 @@
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useRedirectIfAuthenticated } from '@/lib/authStore';
+import { LanguagePicker } from '@/modules/foundation/settings/LanguagePicker';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { AppText } from '@/modules/shared/ui/AppText';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { BrandLogo } from '@/modules/shared/ui/BrandLogo';
 import { Card } from '@/modules/shared/ui/Card';
-import { EditorialHeading } from '@/modules/shared/ui/EditorialHeading';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
@@ -18,39 +18,42 @@ export function WelcomeScreen() {
   const phone = windowClass === 'compact';
   return (
     <Screen>
-      <YStack paddingTop="$x4" paddingBottom="$x6">
+      <XStack
+        paddingTop="$x4"
+        paddingBottom="$x6"
+        alignItems="center"
+        justifyContent="space-between"
+        gap="$x3"
+        flexWrap="wrap"
+      >
         <BrandLogo variant="wordmark" size={32} />
-      </YStack>
+        <LanguagePicker />
+      </XStack>
       <XStack flexDirection={phone ? 'column' : 'row'} gap="$x8" paddingVertical="$x8">
         <YStack flex={phone ? undefined : 1} minWidth={0} gap="$x6">
           <AppText variant="overline" tone="muted">
             MANABANDHU
           </AppText>
-          <EditorialHeading
+          <Heading
             variant="display"
-            fontSize={phone ? 48 : 68}
-            lineHeight={phone ? 52 : 74}
-            letterSpacing={-1.6}
+            fontSize={phone ? 38 : 56}
+            lineHeight={phone ? 46 : 64}
+            letterSpacing={0}
           >
             {t('home.cityHeadline')}
-          </EditorialHeading>
+          </Heading>
           <AppText variant="lead" tone="muted" maxWidth={420}>
             {t('home.citySubtitle')}
           </AppText>
           <YStack maxWidth={360} gap="$x3">
             <AppButton
-              label="Get started"
+              label={t('settle.signup')}
               route="/sign-up"
               iconAfter="arrow-right"
               fullWidth
               size="lg"
             />
-            <AppButton
-              label="I already have an account"
-              route="/sign-in"
-              variant="ghost"
-              fullWidth
-            />
+            <AppButton label={t('settle.signin')} route="/sign-in" variant="ghost" fullWidth />
           </YStack>
         </YStack>
         <YStack flex={phone ? undefined : 1} minWidth={0} gap="$x3">

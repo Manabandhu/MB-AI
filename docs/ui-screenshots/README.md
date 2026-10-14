@@ -1,8 +1,8 @@
-# Researched neighborhood UI
+# Community abroad UI
 
-92 fresh screenshots of the new neighborhood design, with an editorial Home, task groups, directory browsing, and desktop sidebar. Phone views are 390px wide; desktop views are 1440px. These cover main screens and selected states using local test data. Empty states reflect that database.
+124 fresh screenshots of the warm paper-and-indigo community design, with visible language choice and newcomer help. Phone views are 390px wide; desktop views are 1440px. These cover main screens and selected states using local test data. Empty states reflect that database.
 
-Click a preview to open the full-size image.
+Click a preview to open the full-size image. [View Tamil, Telugu, Kannada, Malayalam, and Hindi previews](LANGUAGES.md).
 
 ## Home
 
@@ -317,6 +317,14 @@ Click a preview to open the full-size image.
 ### Home Work 390 Light
 
 [![Home Work 390 Light](home-work-390-light.png)](home-work-390-light.png)
+
+### Language Picker 390 Dark
+
+[![Language Picker 390 Dark](language-picker-390-dark.png)](language-picker-390-dark.png)
+
+### Language Picker 390 Light
+
+[![Language Picker 390 Light](language-picker-390-light.png)](language-picker-390-light.png)
 
 ### Launcher Dark
 

@@ -1,5 +1,7 @@
 # Research and the resulting design
 
+This documents the preceding design research. The current audience-focused update is described in [Designing for community abroad](diaspora-design.md).
+
 The previous revisions changed surface treatments while keeping a similar arrangement of cards. This revision changes the information hierarchy, navigation frame, and discovery model.
 
 ## What was inspected

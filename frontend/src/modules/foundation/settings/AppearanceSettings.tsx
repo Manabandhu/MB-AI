@@ -1,18 +1,17 @@
 import { YStack } from 'tamagui';
-import { type LanguagePreference, supportedLanguages, useT } from '@/i18n';
+import { useT } from '@/i18n';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 import { useAppearanceStore } from '@/theme/themePreferenceStore';
+import { LanguagePicker } from './LanguagePicker';
 
 /** Theme, animation level, and language. Saved on this device only. */
 export function AppearanceSettings() {
   const t = useT();
   const theme = useAppearanceStore((s) => s.theme);
   const motion = useAppearanceStore((s) => s.motion);
-  const language = useAppearanceStore((s) => s.language);
   const setTheme = useAppearanceStore((s) => s.setTheme);
   const setMotion = useAppearanceStore((s) => s.setMotion);
-  const setLanguage = useAppearanceStore((s) => s.setLanguage);
   return (
     <YStack gap="$x4">
       <YStack gap="$x2">
@@ -30,15 +29,7 @@ export function AppearanceSettings() {
       </YStack>
       <YStack gap="$x2">
         <AppText variant="label">{t('appearance.language')}</AppText>
-        <SegmentedControl<LanguagePreference>
-          label={t('appearance.language')}
-          onChange={setLanguage}
-          options={[
-            { value: 'system', label: t('appearance.system') },
-            ...supportedLanguages.map((l) => ({ value: l.code, label: l.label })),
-          ]}
-          value={language}
-        />
+        <LanguagePicker />
       </YStack>
       <YStack gap="$x2">
         <AppText variant="label">{t('appearance.animations')}</AppText>

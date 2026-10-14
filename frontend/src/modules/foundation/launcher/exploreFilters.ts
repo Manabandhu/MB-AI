@@ -41,7 +41,7 @@ export function normalizeSearch(text: string): string {
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[-'’.]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/[^\p{L}\p{N}\p{M}\u200c\u200d]+/gu, ' ')
     .trim();
 }
 

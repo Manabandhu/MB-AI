@@ -1,5 +1,20 @@
 /** English strings for the app shell, Home, and settings. Modules add their own namespaces as they migrate. */
 export const en = {
+  languagePicker: {
+    title: 'Choose your language',
+    label: 'Language: {{language}}',
+    note: 'Home and navigation are translated. Some feature screens still use English.',
+    close: 'Done',
+  },
+  settle: {
+    title: 'Getting settled?',
+    body: 'Find the practical help you need, at your own pace.',
+    visa: 'Visa guides & checklists',
+    expenses: 'Share expenses',
+    safety: 'Safety & support',
+    signup: 'Get started',
+    signin: 'I already have an account',
+  },
   navigation: {
     settings: 'Settings',
     jump: 'Jump to',
@@ -40,8 +55,8 @@ export const en = {
   },
   home: {
     helloName: 'Hello, {{name}}.',
-    cityHeadline: 'Your city.\nYour people.',
-    citySubtitle: 'Find a place, make your next move, and feel at home.',
+    cityHeadline: 'A new place.\nA familiar circle.',
+    citySubtitle: 'Rooms, rides, career connections, and people to share everyday life with.',
     intentLabel: 'What would you like to do?',
     live: 'Live',
     work: 'Work',
@@ -67,7 +82,7 @@ export const en = {
     hideFeed: 'Hide local feed',
     quickAccess: 'Quick access',
     communityPulse: 'Community pulse',
-    searchPlaceholder: 'Search rooms, rides, jobs, people…',
+    searchPlaceholder: 'Search your community',
     changeCity: 'Change city',
     linkCopied: 'Link copied',
     updated: 'Updated {{when}}',

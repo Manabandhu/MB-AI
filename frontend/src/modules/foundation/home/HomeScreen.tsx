@@ -6,6 +6,7 @@ import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
@@ -107,6 +108,33 @@ export function HomeScreen() {
             ))}
         </ResponsiveGrid>
       </YStack>
+      <Card gap="$x3" padding="$x5" backgroundColor="$primaryTint">
+        <AppText variant="h3">{t('settle.title')}</AppText>
+        <AppText tone="muted">{t('settle.body')}</AppText>
+        <XStack gap="$x2" flexWrap="wrap">
+          <AppButton
+            label={t('settle.visa')}
+            route="/immigration"
+            icon="globe"
+            variant="secondary"
+            size="sm"
+          />
+          <AppButton
+            label={t('settle.expenses')}
+            route="/expenses"
+            icon="receipt"
+            variant="secondary"
+            size="sm"
+          />
+          <AppButton
+            label={t('settle.safety')}
+            route="/safety"
+            icon="shield"
+            variant="secondary"
+            size="sm"
+          />
+        </XStack>
+      </Card>
       {!dismissed && greetingName(user?.user_metadata) === null ? (
         <NicknameNudge onSet={() => setNicknameOpen(true)} />
       ) : null}

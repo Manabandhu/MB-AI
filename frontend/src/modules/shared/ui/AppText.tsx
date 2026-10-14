@@ -60,5 +60,13 @@ export type AppTextProps = ComponentProps<typeof AppText>;
 
 /** A heading exposed to screen readers as a header. */
 export function Heading({ variant = 'h3', ...props }: AppTextProps) {
-  return <AppText role="heading" variant={variant} {...props} />;
+  const indic = typeof props.children === 'string' && /[\u0900-\u0dff]/u.test(props.children);
+  return (
+    <AppText
+      role="heading"
+      variant={variant}
+      {...props}
+      letterSpacing={indic ? 0 : props.letterSpacing}
+    />
+  );
 }

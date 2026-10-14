@@ -69,6 +69,7 @@ export function BottomTabBar(props: BottomTabBarProps) {
             borderRadius="$card"
             cursor="pointer"
             flex={1}
+            minWidth={0}
             focusable
             focusVisibleStyle={{
               outlineWidth: 3,
@@ -108,7 +109,9 @@ export function BottomTabBar(props: BottomTabBarProps) {
               color={selected ? '$color' : '$colorMuted'}
               fontSize={LABEL_SIZE}
               fontWeight={selected ? '800' : '600'}
-              numberOfLines={1}
+              numberOfLines={2}
+              textAlign="center"
+              maxWidth="100%"
             >
               {label}
             </AppText>

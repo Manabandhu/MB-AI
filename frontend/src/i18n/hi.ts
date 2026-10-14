@@ -1,6 +1,21 @@
 import type { Strings } from './en';
 
 export const hi: Strings = {
+  languagePicker: {
+    title: 'अपनी भाषा चुनें',
+    label: 'भाषा: {{language}}',
+    note: 'होम और नेविगेशन का अनुवाद किया गया है। कुछ फ़ीचर अभी अंग्रेज़ी में हैं।',
+    close: 'हो गया',
+  },
+  settle: {
+    title: 'नई जगह बस रहे हैं?',
+    body: 'अपनी गति से ज़रूरी मदद पाएँ।',
+    visa: 'वीज़ा गाइड और चेकलिस्ट',
+    expenses: 'खर्च बाँटें',
+    safety: 'सुरक्षा और सहायता',
+    signup: 'शुरू करें',
+    signin: 'मेरा पहले से खाता है',
+  },
   navigation: {
     settings: 'सेटिंग्स',
     jump: 'सीधे जाएँ',
@@ -35,8 +50,8 @@ export const hi: Strings = {
   },
   home: {
     helloName: 'नमस्ते, {{name}}।',
-    cityHeadline: 'आपका शहर।\nआपके लोग।',
-    citySubtitle: 'अपना घर, अगला अवसर और नए दोस्त खोजें।',
+    cityHeadline: 'नई जगह।\nअपना साथ।',
+    citySubtitle: 'कमरे, राइड, करियर के अवसर और रोज़मर्रा की ज़िंदगी में साथ देने वाले लोग।',
     intentLabel: 'आप क्या करना चाहते हैं?',
     live: 'रहना',
     work: 'काम',
@@ -62,7 +77,7 @@ export const hi: Strings = {
     hideFeed: 'स्थानीय फ़ीड छिपाएँ',
     quickAccess: 'त्वरित पहुँच',
     communityPulse: 'समुदाय की झलक',
-    searchPlaceholder: 'कमरे, राइड, नौकरियाँ, लोग खोजें…',
+    searchPlaceholder: 'अपने समुदाय में खोजें',
     changeCity: 'शहर बदलें',
     linkCopied: 'लिंक कॉपी हो गया',
     updated: '{{when}} अपडेट हुआ',
