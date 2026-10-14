@@ -18,6 +18,7 @@ import {
   publishRoomListing,
   updateRoomListing,
 } from '@/modules/rooms/api';
+import type { RoomSaveNotice } from '@/modules/rooms/saveNotice';
 import {
   type CreateRoomListingInput,
   type OwnerRoomListing,
@@ -48,6 +49,7 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { TextField } from '@/modules/shared/ui/TextField';
@@ -376,13 +378,13 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
 
     await queryClient.invalidateQueries({ queryKey: ['rooms'] });
     setSaving(null);
-    const notice = wasActive
-      ? 'Changes saved. Your room is visible in search.'
+    const notice: RoomSaveNotice = wasActive
+      ? 'saved-visible'
       : published
-        ? 'Published: your room is visible in search.'
+        ? 'published'
         : mode === 'create'
-          ? 'Saved as draft. Publish it to make it visible.'
-          : 'Changes saved.';
+          ? 'draft'
+          : 'saved';
     router.replace({ pathname: '/rooms/my-listings', params: { notice } } as Href);
   };
 
@@ -482,6 +484,11 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                     aria-label={`Use address ${item.formattedAddress}`}
                     cursor="pointer"
                     focusable
+                    focusVisibleStyle={{
+                      outlineWidth: 3,
+                      outlineStyle: 'solid',
+                      outlineColor: '$outlineColor',
+                    }}
                     gap="$x2"
                     key={`${item.formattedAddress}-${item.lat}-${item.lng}`}
                     minHeight={44}
@@ -490,6 +497,7 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
                     paddingVertical="$x2"
                     pressStyle={{ backgroundColor: '$surfaceContainerLow' }}
                     role="button"
+                    {...keyboardPress(() => handleSelectAddressSuggestion(item))}
                   >
                     <AppIcon color={palette.teal} name="map-pin" size={16} />
                     <AppText flex={1} numberOfLines={2} variant="caption">

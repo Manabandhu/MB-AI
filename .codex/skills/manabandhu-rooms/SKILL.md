@@ -150,6 +150,7 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected` 
 - Color contrast meets WCAG 2.1 AA (at least 4.5:1 ratio)
 - Color is not the only indicator of state
 - Guest `ActionBar` on room detail groups "Quick hello" and "Contact host" in one `XStack`, so on phones both wrap together under the price instead of splitting across rows.
+- Address suggestion rows in `RoomForm` are keyboard-operable on web (`keyboardPress` + focus ring). The My listings save notice travels as a code (`notice=saved-visible|published|draft|saved`, `rooms/saveNotice.ts`); unknown codes render nothing, so a link cannot inject app-styled text.
 
 ## Current Implementation Status
 

@@ -135,6 +135,8 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - `app.json`: `orientation: default`, `ios.supportsTablet`, brand adaptive-icon colour, dark splash, web manifest name/theme colour. `app.config.js` adds iOS associated domains and Android App Links when `APP_LINK_DOMAIN` is set.
 - `metro.config.js` enables Expo production tree shaking (`EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH`, `EXPO_UNSTABLE_TREE_SHAKING`, `experimentalImportSupport`, `inlineRequires`). The web entry bundle went from 7.6 MB to 5.2 MB. Import large libraries by subpath where they offer it.
 - 3D: `three@0.186.1` and `@react-three/fiber@9.8.1` are used on web only through the lazily loaded `shared/ui/hero/BrandScene.web.tsx`; native builds never import them.
+- `/saved` is a protected route (`useRequireAuth('/sign-in')`) like every other personal route.
+
 ## Reach and performance (2026-10)
 - Web document shell: `src/app/+html.tsx` sets title/description, Open Graph and Twitter cards (`/og-image.png`), light/dark `theme-color`, the PWA manifest (`public/manifest.webmanifest`, icons from `pnpm brand:icons`), Apple web-app tags, and a pre-JS background for both schemes. `public/robots.txt` allows `/` and `/welcome` only. No service worker yet: member data must never be served from an offline cache.
 - Web code splitting: `expo-router` plugin `asyncRoutes: { web: true, default: 'development' }`; each route is its own chunk and the 3D scene is a separate lazy chunk. Initial web download is ~5.3 MB (common + entry) versus 7.6 MB in one file before.

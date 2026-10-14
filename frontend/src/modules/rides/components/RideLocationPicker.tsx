@@ -9,6 +9,7 @@ import {
 } from '@/modules/rides/services/googleMapsService';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
+import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { TextField } from '@/modules/shared/ui/TextField';
 
 type Props = {
@@ -130,6 +131,11 @@ export function RideLocationPicker({
               borderBottomWidth={1}
               cursor="pointer"
               focusable
+              focusVisibleStyle={{
+                outlineWidth: 3,
+                outlineStyle: 'solid',
+                outlineColor: '$outlineColor',
+              }}
               gap="$x2"
               hoverStyle={{ backgroundColor: '$surfaceContainerLow' }}
               key={`${item.placeId}-${item.description}`}
@@ -139,6 +145,7 @@ export function RideLocationPicker({
               paddingVertical="$x2"
               pressStyle={{ opacity: 0.8 }}
               role="button"
+              {...keyboardPress(() => handleSelect(item))}
             >
               <AppIcon color={theme.teal?.val} name="map-pin" size={16} />
               <YStack flex={1}>

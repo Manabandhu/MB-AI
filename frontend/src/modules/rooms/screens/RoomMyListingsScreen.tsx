@@ -12,6 +12,7 @@ import {
   pauseRoomListing,
   publishRoomListing,
 } from '@/modules/rooms/api';
+import { roomSaveNoticeText } from '@/modules/rooms/saveNotice';
 import { type OwnerRoomListing, statusIs } from '@/modules/rooms/types';
 import { showError } from '@/modules/rooms/utils/notify';
 import { formatRent } from '@/modules/rooms/utils/roomFormat';
@@ -72,6 +73,7 @@ export function RoomMyListingsScreen() {
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const params = useLocalSearchParams<{ notice?: string }>();
+  const notice = roomSaveNoticeText(params.notice);
   const confirm = useConfirm();
   const [tab, setTab] = useState<ListingTab>('active');
 
@@ -193,9 +195,9 @@ export function RoomMyListingsScreen() {
           subtitle="Publish, pause, and manage the rooms you posted"
           title="My listings"
         />
-        {typeof params.notice === 'string' && params.notice ? (
+        {notice ? (
           <Card aria-live="polite" variant="tinted">
-            <AppText variant="label">{params.notice}</AppText>
+            <AppText variant="label">{notice}</AppText>
           </Card>
         ) : null}
         <SegmentedControl

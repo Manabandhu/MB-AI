@@ -109,6 +109,7 @@ Backend services: `RideOfferService`, `RideRequestService`, `RideParticipantServ
 - Bottom sheets and modals respect safe area insets
 - Color is not the only indicator of state
 - Ride detail: the driver sees no save heart on their own ride; the route card prints distance once (`rideTags(ride, { distance: false })`). Manage → Requests shows the rider's note full-width under the row (`PersonRow detail`) instead of a clipped subtitle. The offer `ActionBar` caption may wrap to two lines.
+- `RideLocationPicker` suggestion rows are keyboard-operable on web (`keyboardPress` + focus ring) so origin/destination coordinates can be picked without a pointer.
 
 ## Current Implementation Status
 
