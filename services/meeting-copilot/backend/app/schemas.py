@@ -113,6 +113,17 @@ class SegmentUpdate(BaseModel):
     speaker_label: str = Field(min_length=1, max_length=20)  # an existing label, or "new"
 
 
+class TranscriptLine(BaseModel):
+    speaker: str = Field(min_length=1, max_length=120)
+    start: float = Field(ge=0)
+    end: float | None = None
+    text: str = Field(max_length=20_000)
+
+
+class TranscriptImport(BaseModel):
+    lines: list[TranscriptLine] = Field(min_length=1, max_length=20_000)
+
+
 class SummaryUpdate(BaseModel):
     data: dict
 
@@ -145,19 +156,24 @@ class ChatRequest(BaseModel):
 
 class Source(BaseModel):
     n: int
-    kind: Literal["transcript", "summary"]
-    meeting_id: str
+    kind: Literal["transcript", "summary", "commitment", "decision", "document"]
+    meeting_id: str | None
     meeting_title: str
-    started_at: datetime
+    started_at: datetime | None
     start: float | None
     end: float | None
     speakers: str
     text: str
+    url: str | None = None
+    score: float | None = None
 
 
 class ChatResponse(BaseModel):
     answer: str
     sources: list[Source]
+    grounded: bool = True  # False when the answer names numbers, dates or people its sources don't contain
+    unsupported: list[str] = Field(default_factory=list)
+    confidence: float = 0.0
 
 
 class SearchHit(BaseModel):

@@ -95,6 +95,9 @@ class FakeDiarizer:
 
 
 _LINE = re.compile(r"^\[(\d+):(\d\d)\]\s*([^:]+):\s*(.*)$")
+_DAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "tomorrow")
+_ENTITIES = {"VPN": "system", "Terraform": "system", "API gateway": "system", "firewall": "system",
+             "network team": "org", "cutover": "project", "load test": "topic"}  # fmt: skip
 
 
 class FakeLLM:
@@ -109,7 +112,7 @@ class FakeLLM:
         if "TASK: condense-notes" in system:
             return "\n".join(user.splitlines()[:40])
         if "TASK: summarize-meeting" in system:
-            return json.dumps(self._summary(user))
+            return json.dumps(self._summary(user, system))
         if "TASK: answer-from-history" in system:
             m = re.search(r"\[S(\d+)\][^\n]*\n(.+)", user)
             if not m:
@@ -118,28 +121,47 @@ class FakeLLM:
         return "ok"
 
     @staticmethod
-    def _summary(transcript: str) -> dict:
+    def _summary(transcript: str, system: str = "") -> dict:
         people: dict[str, list[str]] = {}
-        actions = []
+        actions, decisions, entities = [], [], {}
+        first_line = ""
         for line in transcript.splitlines():
             m = _LINE.match(line.strip())
             if not m:
                 continue
             at = int(m.group(1)) * 60 + int(m.group(2))
             name, text = m.group(3).strip(), m.group(4).strip()
+            first_line = first_line or text
             people.setdefault(name, []).append(text)
-            if "send" in text.lower() or "i'll" in text.lower():
-                actions.append({"owner": name, "text": text, "due": None, "at": at})
+            low = text.lower()
+            if "send" in low or "i'll" in low or "i will" in low:
+                due = next((d for d in _DAYS if d in low), None)
+                actions.append({"owner": name, "text": text, "due": due.title() if due else None, "at": at})
+            if "decide" in low or "decided" in low:
+                decisions.append({"text": text, "owner": name, "at": at})
+            for term, kind in _ENTITIES.items():
+                if term.lower() in low:
+                    entities[term] = kind
+        fields = {}
+        for key, kind in re.findall(r'"(\w+)": (\["|")\.\.\."', system.split('"fields":', 1)[-1]):
+            fields[key] = first_line if kind == '"' else [first_line] if first_line else []
         return {
             "overview": f"Demo summary of a meeting with {len(people)} speaker(s).",
             "people": [
-                {"name": n, "yesterday": [], "today": lines[:2], "blockers": [t for t in lines if "block" in t.lower()]}
+                {
+                    "name": n,
+                    "yesterday": [t for t in lines if t.lower().startswith("yesterday")],
+                    "today": [t for t in lines if not t.lower().startswith("yesterday")][:2],
+                    "blockers": [t for t in lines if "block" in t.lower()],
+                }
                 for n, lines in people.items()
             ],
             "key_points": [{"text": lines[0], "at": None} for lines in people.values()][:5],
-            "decisions": [],
+            "decisions": decisions,
             "action_items": actions,
             "open_questions": [],
+            "entities": [{"kind": k, "name": n} for n, k in entities.items()],
+            "fields": fields,
         }
 
 

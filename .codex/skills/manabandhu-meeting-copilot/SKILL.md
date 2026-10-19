@@ -33,6 +33,13 @@ Source of truth for scope: the "Meeting Copilot — Product & Technical Spec" (O
 - Corrections (fix-a-line, merge, reassigning a voiceprint/platform match) are logged in `speaker_corrections`; `GET /api/metrics/speakers` turns them into accuracy and a suggested threshold. `GET /api/metrics/gates` reports the four roadmap gates; summary hand-edits are counted in `summaries.edit_count`.
 - Naming a speaker links or creates a `people` row; attendees join the directory too.
 
+## Profiles and memory (Phase 4)
+
+- Profiles (`app/pipeline/profiles.py`): standup, 1:1, client call, incident, planning/design review, interview, in-person, phone call, general, plus per-workspace custom profiles (`custom_profiles`: prompt + field list). A profile adds `fields` to the common summary shape; `summaries.data.fields_meta` keeps the labels. `profile="auto"` detects from title/attendees at creation and re-detects from the first two minutes before summarizing; a user override sets `profile_source="user"`.
+- After every summary, `app/pipeline/memory.py` rebuilds that meeting's entities (LLM + glossary terms), decisions and commitment mentions. Commitments match open ones of the same owner by word overlap; standup "yesterday" items close them; open + mentioned in ≥2 meetings over ≥3 days = stuck. `forget_meeting` must run before re-summarizing or deleting a meeting. Ticking an action item and changing a commitment stay in sync.
+- Retrieval (`app/retrieval.py`) filters in SQL first (people, entities, meeting type, dates, "last N calls"), relaxes filters if empty, then vector top-k, reranks (similarity + word overlap + people + recency) and caps context at `RETRIEVAL_MAX_CONTEXT_CHARS`. Commitments, decisions, summaries and documents are citable sources. `app/grounding.py` flags answers whose numbers, dates or names are not in the sources.
+- `POST /api/meetings/{id}/transcript` imports a text transcript (no audio) and runs summarize/memory/index.
+
 ## Invariants
 
 - Every model layer sits behind one interface with an open-source default and a paid drop-in, chosen by one environment variable (`STT_PROVIDER`, `DIARIZER`, `LLM_PROVIDER`, `EMBED_PROVIDER`). `fake` providers keep every code path testable without models.

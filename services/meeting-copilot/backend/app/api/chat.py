@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from ..auth import get_db, require_token
+from ..auth import Principal, current_principal, get_db, require_token
 from ..config import get_settings
 from ..providers import ProviderError, get_embedder, get_llm
 from ..retrieval import answer, search
@@ -11,9 +11,9 @@ router = APIRouter(prefix="/api", dependencies=[Depends(require_token)])
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(body: ChatRequest, db: Session = Depends(get_db)):
+def chat(body: ChatRequest, db: Session = Depends(get_db), principal: Principal = Depends(current_principal)):
     try:
-        return answer(db, get_llm(), get_embedder(), body, get_settings())
+        return answer(db, get_llm(), get_embedder(), body, get_settings(), owner_name=principal.display_name)
     except ProviderError as e:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e)) from e
 

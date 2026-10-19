@@ -8,12 +8,13 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from .api import chat, meetings, metrics, people, workspace
-from .auth import Principal, current_principal
+from .api import chat, meetings, memory, metrics, people, workspace
+from .auth import Principal, current_principal, get_db
 from .config import get_settings
 from .db import get_engine, init_db
-from .pipeline.profiles import PROFILES
+from .pipeline.profiles import all_profiles
 
 log = logging.getLogger("api")
 
@@ -35,6 +36,7 @@ app.include_router(chat.router)
 app.include_router(workspace.router)
 app.include_router(people.router)
 app.include_router(metrics.router)
+app.include_router(memory.router)
 
 
 @app.get("/api/health")
@@ -57,14 +59,14 @@ def auth_config():
 
 
 @app.get("/api/config")
-def config(principal: Principal = Depends(current_principal)):
+def config(principal: Principal = Depends(current_principal), db: Session = Depends(get_db)):
     s = get_settings()
     return {
         "owner_name": principal.display_name,
         "user_id": principal.user_id,
         "workspace_id": principal.workspace_id,
         "role": principal.role,
-        "profiles": [{"key": p.key, "label": p.label} for p in PROFILES.values()],
+        "profiles": [p.as_dict() for p in all_profiles(db).values()],
         "audio_retention_days": s.audio_retention_days,
         "providers": {
             "stt": s.stt_provider,

@@ -68,13 +68,55 @@ class ActionItemOut(_Lenient):
         return _to_seconds(v)
 
 
+class DecisionOut(_Lenient):
+    text: str
+    owner: str | None = None
+    at: float | None = None
+
+    @field_validator("at", mode="before")
+    @classmethod
+    def coerce_at(cls, v):
+        return _to_seconds(v)
+
+
+ENTITY_KINDS = ("project", "system", "org", "topic")
+
+
+class EntityOut(_Lenient):
+    kind: str = "topic"
+    name: str
+
+    @field_validator("kind", mode="before")
+    @classmethod
+    def coerce_kind(cls, v):
+        v = str(v or "topic").lower().strip()
+        return v if v in ENTITY_KINDS else "topic"
+
+
 class MeetingSummary(_Lenient):
     overview: str = ""
     people: list[PersonUpdate] = Field(default_factory=list)
     key_points: list[KeyPoint] = Field(default_factory=list)
-    decisions: list[str] = Field(default_factory=list)
+    decisions: list[DecisionOut] = Field(default_factory=list)
     action_items: list[ActionItemOut] = Field(default_factory=list)
     open_questions: list[str] = Field(default_factory=list)
+    entities: list[EntityOut] = Field(default_factory=list)
+    fields: dict = Field(default_factory=dict)  # profile-specific: {"risks": [...], "draft_adr": "..."}
+
+    @field_validator("decisions", mode="before")
+    @classmethod
+    def coerce_decisions(cls, v):
+        return [{"text": d} if isinstance(d, str) else d for d in (v or [])]
+
+    @field_validator("entities", mode="before")
+    @classmethod
+    def coerce_entities(cls, v):
+        return [{"name": e} if isinstance(e, str) else e for e in (v or [])]
+
+    @field_validator("fields", mode="before")
+    @classmethod
+    def coerce_fields(cls, v):
+        return v if isinstance(v, dict) else {}
 
     @field_validator("key_points", mode="before")
     @classmethod
@@ -91,23 +133,32 @@ SCHEMA_HINT = """{
   "overview": "2-3 sentences",
   "people": [{"name": "...", "yesterday": ["..."], "today": ["..."], "blockers": ["..."]}],
   "key_points": [{"text": "...", "at": "m:ss"}],
-  "decisions": ["..."],
+  "decisions": [{"text": "...", "owner": "name or null", "at": "m:ss"}],
   "action_items": [{"owner": "name or null", "text": "...", "due": "as said, or null", "at": "m:ss"}],
-  "open_questions": ["..."]
+  "open_questions": ["..."],
+  "entities": [{"kind": "project|system|org|topic", "name": "as said"}],
+  "fields": {FIELDS}
 }"""
 
-SUMMARY_SYSTEM = (
-    """TASK: summarize-meeting
+SUMMARY_SYSTEM = """TASK: summarize-meeting
 You turn meeting transcripts into accurate structured notes.
 Rules:
 - Use only what is in the transcript. Never invent names, numbers, dates or commitments.
 - Speaker names come from the transcript labels. Labels like "Speaker 2" are unknown people; keep them as-is.
 - "at" is the [m:ss] timestamp of the line where the item was said.
-- Empty lists are fine. Keep every item to one short line.
+- An action item is anything someone commits to do ("I'll send", "I will fix by Friday"); the owner is who said it.
+- "entities" are the projects, systems, organisations and topics the meeting talks about, spelled as said.
+- Empty lists are fine. Keep every list item to one short line.
 - Return a single JSON object matching this shape, with no prose before or after:
 """
-    + SCHEMA_HINT
-)
+
+
+def schema_for(profile: Profile) -> str:
+    fields = ", ".join(
+        f'"{f.key}": ' + ('"..."' if f.type == "text" else '["..."]') + f"  /* {f.hint} */" for f in profile.fields
+    )
+    return SCHEMA_HINT.replace("{FIELDS}", "{" + fields + "}" if fields else "{}")
+
 
 CONDENSE_SYSTEM = """TASK: condense-notes
 You condense one window of a longer meeting transcript into dense notes for a later summary.
@@ -157,10 +208,17 @@ def _windows(transcript: str, max_chars: int) -> list[str]:
 
 def _header(profile: Profile, title: str, started_at: datetime | None, speakers: list[str]) -> str:
     when = started_at.strftime("%Y-%m-%d %H:%M") if started_at else "unknown"
-    return (
+    out = (
         f"Meeting: {title}\nWhen: {when}\nSpeakers: {', '.join(speakers) or 'unknown'}\n"
         f"Instructions: {profile.instructions}\n"
     )
+    if profile.fields:
+        out += (
+            'Profile fields to fill in "fields":\n'
+            + "\n".join(f"- {f.key} ({f.label}): {f.hint}" for f in profile.fields)
+            + "\n"
+        )
+    return out
 
 
 def summarize_transcript(
@@ -195,11 +253,17 @@ def summarize_transcript(
     messages = [{"role": "user", "content": prompt}]
     last_error: Exception | None = None
     for attempt in range(2):
-        reply = llm.complete(SUMMARY_SYSTEM, messages, max_tokens=4000, json_mode=True)
+        reply = llm.complete(SUMMARY_SYSTEM + schema_for(profile), messages, max_tokens=4000, json_mode=True)
         try:
             summary = MeetingSummary.model_validate(parse_json_object(reply))
             if not profile.per_person:
                 summary.people = []
+            wanted = {f.key: f for f in profile.fields}
+            summary.fields = {
+                k: (v if wanted[k].type == "text" else [str(x) for x in v] if isinstance(v, list) else [str(v)])
+                for k, v in summary.fields.items()
+                if k in wanted and v
+            }
             return summary
         except (ValueError, ValidationError) as e:
             last_error = e

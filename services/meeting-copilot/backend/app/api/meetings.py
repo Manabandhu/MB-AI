@@ -8,12 +8,27 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..auth import Principal, audit, current_principal, get_db, require_token, sign_media, verify_media
 from ..config import get_settings
-from ..db import get_system_db
-from ..models import ActionItem, Meeting, MeetingStatus, Person, Segment, Speaker, SpeakerCorrection, utcnow
+from ..db import SYSTEM, get_system_db, new_session
+from ..models import (
+    ActionItem,
+    Commitment,
+    CommitmentStatus,
+    Meeting,
+    MeetingStatus,
+    Person,
+    Segment,
+    Speaker,
+    SpeakerCorrection,
+    User,
+    utcnow,
+)
 from ..pipeline.export import meeting_json, meeting_markdown
+from ..pipeline.memory import forget_meeting
 from ..pipeline.people import ensure_person
 from ..pipeline.platform import parse_vtt
-from ..pipeline.profiles import PROFILES
+from ..pipeline.process import save_transcript
+from ..pipeline.profiles import AUTO, detect_profile, profile_exists
+from ..pipeline.transcript import OWNER_LABEL, Line, relabel_with_map
 from ..schemas import (
     ActionItemOut,
     ActionItemUpdate,
@@ -29,8 +44,10 @@ from ..schemas import (
     SpeakerOut,
     SpeakerUpdate,
     SummaryUpdate,
+    TranscriptImport,
 )
 from ..storage import get_storage
+from .memory import set_commitment_status
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_token)])
 media_router = APIRouter(prefix="/api")  # signed links, no bearer header (used by <audio src>)
@@ -94,8 +111,8 @@ def _detail(m: Meeting) -> MeetingDetail:
     )
 
 
-def _check_profile(profile: str) -> None:
-    if profile not in PROFILES:
+def _check_profile(db: Session, profile: str) -> None:
+    if not profile_exists(profile, db):
         raise HTTPException(422, f"unknown profile '{profile}'")
 
 
@@ -155,10 +172,15 @@ def list_meetings(
 def create_meeting(
     body: MeetingCreate, db: Session = Depends(get_db), principal: Principal = Depends(current_principal)
 ):
-    _check_profile(body.profile)
+    _check_profile(db, body.profile)
+    profile, profile_source = body.profile, "user"
+    if profile == AUTO:
+        profile, _confidence = detect_profile(body.title, body.attendees, session=db)
+        profile_source = "auto"
     meeting = Meeting(
         title=body.title.strip(),
-        profile=body.profile,
+        profile=profile,
+        profile_source=profile_source,
         started_at=body.started_at or utcnow(),
         attendees=[a.strip() for a in body.attendees if a.strip()],
         channel_layout=body.channel_layout,
@@ -220,7 +242,7 @@ def update_meeting(meeting_id: str, body: MeetingUpdate, db: Session = Depends(g
     if body.title is not None:
         m.title = body.title.strip()
     if body.profile is not None:
-        _check_profile(body.profile)
+        _check_profile(db, body.profile)
         m.profile = body.profile
         m.profile_source = "user"
     if body.attendees is not None:
@@ -244,6 +266,7 @@ def delete_meeting(
         if key:
             storage.delete(key)
     audit(db, principal, "delete", "meeting", meeting_id, request, title=m.title)
+    forget_meeting(db, m)
     db.delete(m)
     db.commit()
 
@@ -289,6 +312,41 @@ def upload_audio(meeting_id: str, file: UploadFile = File(...), db: Session = De
     return _detail(_get(db, meeting_id, detail=True))
 
 
+@router.post("/meetings/{meeting_id}/transcript", response_model=MeetingDetail)
+def import_transcript(
+    meeting_id: str, body: TranscriptImport, db: Session = Depends(get_db),
+    principal: Principal = Depends(current_principal),
+):  # fmt: skip
+    """Bring a meeting in from text alone (e.g. a Teams transcript with no recording).
+
+    Lines spoken by you (your display name) become the "me" speaker; everyone else is labelled by name.
+    The summary, memory and search index are built by the worker as usual.
+    """
+    m = _get(db, meeting_id)
+    _ensure_idle(m)
+    require_consent(m)
+    me = {principal.display_name.lower(), *(a.lower() for a in _aliases(principal))}
+    raw = [
+        Line(ln.start, ln.end if ln.end is not None else ln.start + 2.0,
+             OWNER_LABEL if ln.speaker.strip().lower() in me else ln.speaker.strip(), ln.text.strip())
+        for ln in sorted(body.lines, key=lambda x: x.start)
+        if ln.text.strip()
+    ]  # fmt: skip
+    lines, mapping = relabel_with_map(raw)
+    save_transcript(db, m, lines, get_settings(), platform_names={new: old for old, new in mapping.items()})
+    m.duration_s = max((ln.end for ln in lines), default=0.0)
+    m.status, m.requested_stage, m.stage, m.error = MeetingStatus.QUEUED, "summarize", "waiting for worker", None
+    m.source = "upload"
+    db.commit()
+    return _detail(_get(db, meeting_id, detail=True))
+
+
+def _aliases(principal: Principal) -> list[str]:
+    with new_session(SYSTEM) as s:
+        user = s.get(User, principal.user_id)
+        return list(user.aliases or []) if user else []
+
+
 @router.put("/meetings/{meeting_id}/platform-transcript", response_model=MeetingDetail)
 def upload_platform_transcript(meeting_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """A Teams or Zoom transcript (.vtt). Its speaker names label the audio instead of diarization.
@@ -332,7 +390,11 @@ def _correction(db: Session, meeting_id: str, from_label: str, to_label: str, ki
     """Every fix is logged: it is how speaker accuracy is measured (GET /api/metrics/speakers)."""
     db.add(
         SpeakerCorrection(
-            meeting_id=meeting_id, segment_id=seg, from_label=from_label, to_label=to_label, kind=kind,
+            meeting_id=meeting_id,
+            segment_id=seg,
+            from_label=from_label,
+            to_label=to_label,
+            kind=kind,
             segments_affected=n,
         )  # fmt: skip
     )
@@ -451,6 +513,10 @@ def update_action_item(item_id: int, body: ActionItemUpdate, db: Session = Depen
     if item is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "action item not found")
     item.done = body.done
+    if item.commitment_id:  # ticking it off anywhere closes the commitment everywhere
+        c = db.get(Commitment, item.commitment_id)
+        if c is not None:
+            set_commitment_status(db, c, CommitmentStatus.DONE if body.done else CommitmentStatus.OPEN)
     db.commit()
     return item
 

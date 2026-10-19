@@ -35,9 +35,10 @@ from ..providers import LLM, Diarizer, Embedder, ProviderError, SpeakerEmbedder,
 from ..storage import Storage
 from . import audio
 from .chunking import chunk_lines
+from .memory import update_memory
 from .people import ensure_person, is_generic_name
 from .platform import to_speaker_turns
-from .profiles import get_profile
+from .profiles import detect_profile, get_profile
 from .speakers import Match, identify_by_voiceprint
 from .summarize import summarize_transcript
 from .transcript import (
@@ -217,7 +218,7 @@ def _transcript(session: Session, meeting: Meeting) -> tuple[list[Line], dict[st
 def summarize(session: Session, meeting: Meeting, p: Providers, settings: Settings) -> None:
     lines, names = _transcript(session, meeting)
     _set_stage(session, meeting, "summarizing")
-    profile = get_profile(meeting.profile)
+    profile = get_profile(meeting.profile, session)
     summary = summarize_transcript(
         p.llm,
         format_transcript(lines, names),
@@ -229,10 +230,27 @@ def summarize(session: Session, meeting: Meeting, p: Providers, settings: Settin
     )
     session.execute(delete(Summary).where(Summary.meeting_id == meeting.id))
     session.execute(delete(ActionItem).where(ActionItem.meeting_id == meeting.id))
-    session.add(Summary(meeting_id=meeting.id, profile=profile.key, data=summary.model_dump(), model=p.llm.name))
-    session.add_all(
+    data = summary.model_dump()
+    data["fields_meta"] = [f.as_dict() for f in profile.fields]  # labels survive a deleted custom profile
+    session.add(Summary(meeting_id=meeting.id, profile=profile.key, data=data, model=p.llm.name))
+    items = [
         ActionItem(meeting_id=meeting.id, owner=a.owner, text=a.text, due=a.due, at=a.at) for a in summary.action_items
-    )
+    ]
+    session.add_all(items)
+    session.flush()
+    update_memory(session, meeting, summary, items, lines)
+    session.commit()
+
+
+def redetect_profile(session: Session, meeting: Meeting) -> None:
+    """For meetings created with profile "auto": look again with the first two minutes of transcript."""
+    if meeting.profile_source != "auto":
+        return
+    lines, _names = _transcript(session, meeting)
+    opening = " ".join(ln.text for ln in lines if ln.start < 120)
+    key, confidence = detect_profile(meeting.title, meeting.attendees, opening, session)
+    if confidence > 0 or meeting.profile == "general":
+        meeting.profile = key
     session.commit()
 
 
@@ -274,6 +292,7 @@ def process_meeting(session: Session, meeting: Meeting, storage: Storage, p: Pro
     if stage == "full":
         transcribe_audio(session, meeting, storage, p, settings)
     if stage in ("full", "summarize"):
+        redetect_profile(session, meeting)
         summarize(session, meeting, p, settings)
     index(session, meeting, p)
     meeting.status = MeetingStatus.DONE
