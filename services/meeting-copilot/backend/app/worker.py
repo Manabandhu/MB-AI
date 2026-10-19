@@ -12,7 +12,15 @@ from .config import get_settings
 from .db import SYSTEM, init_db, session_scope, set_scope
 from .models import MeetingStatus
 from .pipeline.process import Providers, claim_next, process_meeting, purge_expired_audio, requeue_interrupted
-from .providers import ProviderError, get_diarizer, get_embedder, get_llm, get_speaker_embedder, get_transcriber
+from .providers import (
+    ProviderError,
+    get_bot,
+    get_diarizer,
+    get_embedder,
+    get_llm,
+    get_speaker_embedder,
+    get_transcriber,
+)
 from .storage import get_storage
 
 log = logging.getLogger("worker")
@@ -59,6 +67,7 @@ def build_providers() -> Providers:
         llm=get_llm(),
         embedder=get_embedder(),
         voiceprints=None if voiceprints.name == "none" else voiceprints,
+        bot=None if get_settings().bot_provider == "none" else get_bot(),
     )
 
 

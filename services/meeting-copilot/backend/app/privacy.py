@@ -77,6 +77,12 @@ def third_party_providers(settings: Settings, *, live: bool = False) -> list[str
     else:
         if settings.stt_provider == "deepgram":
             out.append("STT_PROVIDER=deepgram")
+    if settings.bot_provider == "recall":
+        out.append("BOT_PROVIDER=recall")
+    elif settings.bot_provider in ("attendee", "vexa"):
+        url = settings.attendee_api_url if settings.bot_provider == "attendee" else settings.vexa_api_url
+        if is_remote_url(url):
+            out.append(f"BOT_PROVIDER={settings.bot_provider} at {url}")
     if settings.llm_provider == "bedrock":
         out.append("LLM_PROVIDER=bedrock")
     elif settings.llm_provider == "openai_compat" and is_remote_url(settings.llm_base_url):

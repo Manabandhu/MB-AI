@@ -1,6 +1,7 @@
 """Provider factory. Each layer is picked by one environment variable (see config.py)."""
 
 from ..config import Settings, get_settings
+from .bot import AttendeeBot, FakeBot, MeetingBot, NoBot, RecallBot, VexaBot
 from .diarization import Diarizer, NoDiarizer, PyannoteDiarizer
 from .embeddings import BedrockTitanEmbedder, Embedder, OpenAICompatEmbedder
 from .fakes import FakeDiarizer, FakeEmbedder, FakeLLM, FakeTranscriber
@@ -26,6 +27,7 @@ __all__ = [
     "SpeakerTurn",
     "Transcriber",
     "TranscriptSegment",
+    "get_bot",
     "get_diarizer",
     "get_embedder",
     "get_llm",
@@ -65,6 +67,14 @@ def _build(kind: str, settings: Settings):
             "bedrock": lambda: BedrockTitanEmbedder(settings),
             "fake": lambda: FakeEmbedder(settings.embed_dim),
         }[settings.embed_provider]()
+    if kind == "bot":
+        return {
+            "attendee": lambda: AttendeeBot(settings),
+            "vexa": lambda: VexaBot(settings),
+            "recall": lambda: RecallBot(settings),
+            "fake": FakeBot,
+            "none": NoBot,
+        }[settings.bot_provider]()
     if kind == "live_stt":
         return {
             "sherpa_onnx": lambda: SherpaOnnxStreaming(settings),
@@ -108,6 +118,10 @@ def get_llm() -> LLM:
 
 def get_embedder() -> Embedder:
     return _get("embedder")  # type: ignore[return-value]
+
+
+def get_bot() -> MeetingBot:
+    return _get("bot")  # type: ignore[return-value]
 
 
 def get_live_stt() -> StreamingTranscriber:

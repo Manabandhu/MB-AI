@@ -232,6 +232,15 @@ def authenticate(session: Session, token: str, workspace_id: str | None) -> Prin
     )
 
 
+def principal_for(session: Session, user_id: str, workspace_id: str, via: str) -> Principal:
+    """Act as a meeting's owner for server-side events (bot webhooks, scheduled posts)."""
+    user = session.get(User, user_id)
+    m = session.get(Membership, (workspace_id, user_id))
+    if user is None or m is None:
+        raise PermissionError("the meeting's owner is no longer a member of its workspace")
+    return Principal(user.id, user.display_name, user.email, workspace_id, m.role, via)
+
+
 def current_principal(
     authorization: str | None = Header(default=None),
     x_workspace_id: str | None = Header(default=None),

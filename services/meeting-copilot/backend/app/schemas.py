@@ -94,6 +94,10 @@ class MeetingDetail(MeetingListItem):
     links: list[dict]
     calendar_event_id: str | None
     profile_source: str
+    bot_id: str | None = None
+    bot_status: str | None = None
+    meeting_url: str | None = None
+    platform_labels: bool = False
     processed_at: datetime | None
     has_audio: bool
     audio_deleted_at: datetime | None

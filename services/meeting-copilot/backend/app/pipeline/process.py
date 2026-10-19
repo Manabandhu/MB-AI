@@ -31,7 +31,7 @@ from ..models import (
     utcnow,
 )
 from ..privacy import maybe_redact, third_party_providers
-from ..providers import LLM, Diarizer, Embedder, ProviderError, SpeakerEmbedder, Transcriber
+from ..providers import LLM, Diarizer, Embedder, MeetingBot, ProviderError, SpeakerEmbedder, Transcriber
 from ..storage import Storage
 from . import audio
 from .chunking import chunk_lines
@@ -63,6 +63,7 @@ class Providers:
     llm: LLM
     embedder: Embedder
     voiceprints: SpeakerEmbedder | None = None
+    bot: MeetingBot | None = None
 
 
 def _set_stage(session: Session, meeting: Meeting, stage: str) -> None:
@@ -161,6 +162,9 @@ def save_transcript(
         if label == OWNER_LABEL:
             sp.display_name, sp.is_owner, sp.match_source = owner_name, True, "owner"
             sp.person_id = owner_person.id if owner_person else None
+        elif label in platform_names and platform_names[label].strip().lower() == owner_name.lower():
+            sp.display_name, sp.is_owner, sp.match_source = owner_name, True, "platform"
+            sp.person_id = owner_person.id if owner_person else None
         elif label in platform_names:
             sp.display_name, sp.match_source = platform_names[label][:120], "platform"
             person = ensure_person(session, platform_names[label])
@@ -242,6 +246,37 @@ def summarize(session: Session, meeting: Meeting, p: Providers, settings: Settin
     session.commit()
 
 
+def collect_bot_result(session: Session, meeting: Meeting, storage: Storage, p: Providers, settings: Settings) -> str:
+    """After a bot leaves: its recording and per-participant transcript. Returns the next stage."""
+    if p.bot is None or not meeting.bot_id:
+        raise ProviderError("this meeting's bot result can't be fetched (BOT_PROVIDER is not configured)")
+    _set_stage(session, meeting, "fetching the bot's recording")
+    with tempfile.TemporaryDirectory(prefix="bot-") as tmp_dir:
+        result = p.bot.fetch_result(meeting.bot_id, meeting.meeting_url or "", Path(tmp_dir))
+        turns = [t for t in result.turns if t.get("text") or t.get("end", 0) > t.get("start", 0)]
+        meeting.platform_turns = [{k: t[k] for k in ("start", "end", "speaker")} for t in turns]
+        if result.audio_path is not None:
+            key = f"{meeting.id}/source{result.audio_path.suffix or '.mp4'}"
+            storage.put_file(result.audio_path, key)
+            meeting.audio_key, meeting.audio_deleted_at = key, None
+            meeting.channel_layout = "mono"
+            session.commit()
+            return "full"
+    if not turns:
+        raise ProviderError("the bot returned neither a recording nor a transcript")
+    owner = owner_display_name(session, meeting, settings).lower()
+    raw = [
+        Line(t["start"], t["end"], OWNER_LABEL if t["speaker"].lower() == owner else t["speaker"], t["text"])
+        for t in turns
+        if t.get("text")
+    ]
+    lines, mapping = relabel_with_map(raw)
+    save_transcript(session, meeting, lines, settings, platform_names={v: k for k, v in mapping.items()})
+    meeting.duration_s = max((ln.end for ln in lines), default=0.0)
+    session.commit()
+    return "summarize"
+
+
 def redetect_profile(session: Session, meeting: Meeting) -> None:
     """For meetings created with profile "auto": look again with the first two minutes of transcript."""
     if meeting.profile_source != "auto":
@@ -289,6 +324,8 @@ def process_meeting(session: Session, meeting: Meeting, storage: Storage, p: Pro
                 + ", ".join(remote)
             )
     stage = meeting.requested_stage
+    if stage == "bot":
+        stage = collect_bot_result(session, meeting, storage, p, settings)
     if stage == "full":
         transcribe_audio(session, meeting, storage, p, settings)
     if stage in ("full", "summarize"):
