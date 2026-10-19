@@ -15,6 +15,7 @@ Source of truth for scope: the "Meeting Copilot — Product & Technical Spec" (O
 
 - `backend/` FastAPI API (`app.main`), Postgres-queue worker (`app.worker`), pipeline (`app/pipeline`), providers (`app/providers`), tests against real Postgres + pgvector + ffmpeg.
 - `web/` React 18 + Vite app, served by the API in production. Uses npm with `package-lock.json`, not the root pnpm workspace.
+- `mobile/` Expo SDK 57 / React Native 0.86 phone app (record in person, meetings, ask, commitments, live cards with haptics). npm with `package-lock.json`; `overrides` pin `expo-asset`/`expo-constants` to the SDK's versions. Check with `npm run typecheck` and `CI=1 npx expo export --platform android`.
 - `desktop/` Windows recorder (Python, Tkinter, `soundcard` WASAPI loopback).
 - `infra/terraform/` single-instance AWS deployment (EC2, S3, SSM, IAM), reachable through SSM port forwarding by default.
 - CI: `.github/workflows/meeting-copilot-ci.yml` and `.github/workflows/meeting-copilot-desktop.yml`.

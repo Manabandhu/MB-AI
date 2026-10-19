@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Meeting Copilot",
+    "slug": "meeting-copilot",
+    "version": "0.2.0",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Meeting Copilot records in-person meetings you start, after everyone has agreed to be recorded."
+      }
+    },
+    "android": {
+      "permissions": ["android.permission.RECORD_AUDIO"]
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        { "microphonePermission": "Meeting Copilot records in-person meetings you start, after everyone has agreed to be recorded." }
+      ],
+      "expo-secure-store"
+    ]
+  }
+}
