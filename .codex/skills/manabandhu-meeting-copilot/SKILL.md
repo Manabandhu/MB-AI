@@ -56,6 +56,12 @@ Source of truth for scope: the "Meeting Copilot — Product & Technical Spec" (O
 - Calendar: an ICS/webcal feed (`calendar_ics_url`) → `GET /api/calendar/events` (each occurrence keyed `uid@start`, profile detected, meeting link extracted) → `POST /api/calendar/prepare` creates the meeting (consent still pending) and its brief.
 - `GET /api/rollup` (JSON or Markdown: per-person commitments, blockers, decisions, timesheet), `GET /api/meetings/{id}/digest` (missed-meeting digest), `GET /api/blocker-radar` (blockers recurring across standups, grouped by entity or wording).
 
+## Web app
+
+- Pages: Meetings (+ calendar "Coming up"), meeting detail (speakers ↔ People, fix-speaker per line, voiceprint from a cluster, digest view, Jira, Slack/Teams post, bot, platform transcript, live cards), Live setup/session (`/live`, `/live/:id?capture=meeting|room` or `?view=1`), Ask, Commitments, People (voiceprint enrollment), Insights (standup draft/rehearse, rollup, blocker radar, decisions, gates), Settings (account, tokens, workspaces/members, integrations, glossary, meeting types, docs, audit).
+- `src/api.ts` sends `X-Workspace-Id` for shared workspaces; live sockets carry the token as a query parameter. `src/lib/livecapture.ts` streams 16 kHz PCM16 (stereo in meeting mode). `src/lib/oidc.ts` does authorization code + PKCE and uses the ID token as the bearer.
+- Verify UI changes with `npm run build` and a browser pass against a `fake`-provider stack (`make demo`).
+
 ## Invariants
 
 - Every model layer sits behind one interface with an open-source default and a paid drop-in, chosen by one environment variable (`STT_PROVIDER`, `DIARIZER`, `LLM_PROVIDER`, `EMBED_PROVIDER`). `fake` providers keep every code path testable without models.

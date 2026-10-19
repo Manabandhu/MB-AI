@@ -4,7 +4,7 @@ import { ApiError, api } from "../api";
 import { useConfig } from "../App";
 import { StatusLine, isBusy } from "../components/StatusLine";
 import { dayLabel, duration, timeOfDay } from "../lib/format";
-import type { MeetingListItem } from "../types";
+import type { CalendarEventRow, MeetingListItem } from "../types";
 
 export function MeetingsPage() {
   const [meetings, setMeetings] = useState<MeetingListItem[] | null>(null);
@@ -63,6 +63,7 @@ export function MeetingsPage() {
       </div>
 
       {uploading && <UploadDialog onClose={() => setUploading(false)} />}
+      <Upcoming />
       {error && (
         <p className="error" role="alert">
           {error}
@@ -197,5 +198,56 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
         </div>
       </form>
     </dialog>
+  );
+}
+
+/** Before: the next meetings on your calendar, each with a detected type and a one-click brief. */
+function Upcoming() {
+  const config = useConfig();
+  const navigate = useNavigate();
+  const [events, setEvents] = useState<CalendarEventRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    api
+      .calendar(2)
+      .then((r) => setEvents(r.configured ? r.events : null))
+      .catch((e) => setError(e instanceof ApiError ? e.message : String(e)));
+  }, []);
+  if (error) return <p className="muted small">Calendar: {error}</p>;
+  if (!events || events.length === 0) return null;
+  const label = (key: string) => config?.profiles.find((p) => p.key === key)?.label ?? key;
+  return (
+    <section className="day upcoming">
+      <h2>Coming up</h2>
+      <ul className="meeting-list">
+        {events.slice(0, 6).map((e) => (
+          <li key={e.key}>
+            <div className="meeting-row">
+              <span className="when">{timeOfDay(e.start)}</span>
+              <span className="what">
+                <span className="title">{e.title}</span>
+                <span className="overview">
+                  {label(e.profile)}
+                  {e.attendees.length > 0 && ` · ${e.attendees.length} attendee${e.attendees.length === 1 ? "" : "s"}`}
+                  {e.meeting_url && " · has a meeting link"}
+                </span>
+              </span>
+              <span className="meta">
+                <button
+                  className="button"
+                  onClick={() =>
+                    e.meeting_id
+                      ? navigate(`/meetings/${e.meeting_id}`)
+                      : api.prepareEvent(e.key).then((r) => navigate(`/meetings/${r.meeting_id}`))
+                  }
+                >
+                  {e.meeting_id ? "Open brief" : "Prepare"}
+                </button>
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

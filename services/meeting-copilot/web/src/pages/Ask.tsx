@@ -8,7 +8,22 @@ interface Turn {
   question: string;
   answer?: string;
   sources?: Source[];
+  grounded?: boolean;
+  unsupported?: string[];
   error?: string;
+}
+
+const KIND: Record<Source["kind"], string> = {
+  transcript: "",
+  summary: " (summary)",
+  commitment: " (commitment)",
+  decision: " (decision)",
+  document: " (doc)",
+};
+
+function sourceLabel(s: Source) {
+  const when = s.started_at && s.kind !== "document" ? `, ${fullDate(s.started_at)}` : "";
+  return `${s.meeting_title}${when}${s.start != null ? ` at ${clock(s.start)}` : KIND[s.kind]}`;
 }
 
 const STARTERS = [
@@ -17,7 +32,8 @@ const STARTERS = [
   "What did we decide in the last planning discussion?",
 ];
 
-function sourceLink(s: Source) {
+function sourceLink(s: Source): string | null {
+  if (!s.meeting_id) return s.url ?? null;
   return `/meetings/${s.meeting_id}${s.start != null ? `?t=${Math.floor(s.start)}` : ""}`;
 }
 
@@ -30,13 +46,15 @@ function AnswerText({ text, sources }: { text: string; sources: Source[] }) {
         const m = part.match(/^\[S(\d+)\]$/);
         const src = m ? sources.find((s) => s.n === Number(m[1])) : undefined;
         if (!src) return <Fragment key={i}>{part}</Fragment>;
+        const href = sourceLink(src);
+        if (!href || !src.meeting_id)
+          return (
+            <a key={i} className="cite" href={href ?? undefined} target="_blank" rel="noreferrer" title={sourceLabel(src)}>
+              {src.n}
+            </a>
+          );
         return (
-          <Link
-            key={i}
-            to={sourceLink(src)}
-            className="cite"
-            title={`${src.meeting_title}, ${fullDate(src.started_at)}${src.start != null ? ` at ${clock(src.start)}` : ""}`}
-          >
+          <Link key={i} to={href} className="cite" title={sourceLabel(src)}>
             {src.n}
           </Link>
         );
@@ -71,7 +89,11 @@ export function AskPage() {
     setBusy(true);
     try {
       const res = await api.chat(text, history, since, until);
-      setTurns((ts) => ts.map((t, i) => (i === ts.length - 1 ? { ...t, answer: res.answer, sources: res.sources } : t)));
+      setTurns((ts) =>
+        ts.map((t, i) =>
+          i === ts.length - 1 ? { ...t, answer: res.answer, sources: res.sources, grounded: res.grounded, unsupported: res.unsupported } : t,
+        ),
+      );
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : String(e);
       setTurns((ts) => ts.map((t, i) => (i === ts.length - 1 ? { ...t, error: msg } : t)));
@@ -116,6 +138,11 @@ export function AskPage() {
             {t.answer && (
               <div className="answer">
                 <AnswerText text={t.answer} sources={t.sources ?? []} />
+                {t.grounded === false && (
+                  <p className="tag warn">
+                    Check the sources: this answer mentions {t.unsupported?.join(", ")}, which they don't contain.
+                  </p>
+                )}
                 {t.sources && t.sources.length > 0 && (
                   <details className="sources">
                     <summary>
@@ -124,10 +151,15 @@ export function AskPage() {
                     <ol>
                       {t.sources.map((s) => (
                         <li key={s.n} value={s.n}>
-                          <Link to={sourceLink(s)}>
-                            {s.meeting_title}, {fullDate(s.started_at)}
-                            {s.start != null ? ` at ${clock(s.start)}` : " (summary)"}
-                          </Link>
+                          {sourceLink(s) && s.meeting_id ? (
+                            <Link to={sourceLink(s)!}>{sourceLabel(s)}</Link>
+                          ) : sourceLink(s) ? (
+                            <a href={sourceLink(s)!} target="_blank" rel="noreferrer">
+                              {sourceLabel(s)}
+                            </a>
+                          ) : (
+                            <span>{sourceLabel(s)}</span>
+                          )}
                           <blockquote>{s.text.length > 400 ? `${s.text.slice(0, 400)}…` : s.text}</blockquote>
                         </li>
                       ))}

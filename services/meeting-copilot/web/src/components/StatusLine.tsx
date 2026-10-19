@@ -2,6 +2,7 @@ import type { Status } from "../types";
 
 const LABELS: Record<Status, string> = {
   created: "Waiting for audio",
+  live: "Live now",
   queued: "Waiting for the worker",
   processing: "Processing",
   done: "Ready",
@@ -10,7 +11,7 @@ const LABELS: Record<Status, string> = {
 
 export function StatusLine({ status, stage }: { status: Status; stage: string | null }) {
   if (status === "done") return null;
-  const busy = status === "queued" || status === "processing";
+  const busy = status === "queued" || status === "processing" || status === "live";
   const text = status === "processing" && stage ? stage[0].toUpperCase() + stage.slice(1) : LABELS[status];
   return (
     <span className={`status status-${status}`} role="status">
@@ -21,4 +22,4 @@ export function StatusLine({ status, stage }: { status: Status; stage: string | 
   );
 }
 
-export const isBusy = (s: Status) => s === "queued" || s === "processing";
+export const isBusy = (s: Status) => s === "queued" || s === "processing" || s === "live";
