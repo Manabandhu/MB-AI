@@ -15,8 +15,10 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from ..config import Settings
-from ..models import ActionItem, Chunk, Meeting, MeetingStatus, Segment, Speaker, Summary, utcnow
-from ..providers import LLM, Diarizer, Embedder, Transcriber
+from ..db import SYSTEM, Scope, set_scope
+from ..models import ActionItem, Chunk, Meeting, MeetingStatus, Segment, Speaker, Summary, User, utcnow
+from ..privacy import maybe_redact, third_party_providers
+from ..providers import LLM, Diarizer, Embedder, ProviderError, Transcriber
 from ..storage import Storage
 from . import audio
 from .chunking import chunk_lines
@@ -92,15 +94,36 @@ def transcribe_audio(session: Session, meeting: Meeting, storage: Storage, p: Pr
     if OWNER_LABEL in labels:
         labels.remove(OWNER_LABEL)
         labels.insert(0, OWNER_LABEL)
+    owner_name = owner_display_name(session, meeting, settings)
     for label in labels:
         owner = label == OWNER_LABEL
-        name = settings.owner_name if owner else f"Speaker {label[1:]}"
-        session.add(Speaker(meeting_id=meeting.id, label=label, display_name=name, is_owner=owner))
+        name = owner_name if owner else f"Speaker {label[1:]}"
+        session.add(
+            Speaker(
+                meeting_id=meeting.id,
+                label=label,
+                display_name=name,
+                is_owner=owner,
+                match_source="owner" if owner else None,
+            )
+        )
     session.add_all(
-        Segment(meeting_id=meeting.id, speaker_label=ln.speaker, start=ln.start, end=ln.end, text=ln.text)
+        Segment(
+            meeting_id=meeting.id,
+            speaker_label=ln.speaker,
+            start=ln.start,
+            end=ln.end,
+            text=maybe_redact(ln.text, settings),
+        )
         for ln in lines
     )
     session.commit()
+
+
+def owner_display_name(session: Session, meeting: Meeting, settings: Settings) -> str:
+    """The person who recorded the meeting is the mic channel ("me")."""
+    user = session.get(User, meeting.user_id) if meeting.user_id else None
+    return user.display_name if user else settings.owner_name
 
 
 def _transcript(session: Session, meeting: Meeting) -> tuple[list[Line], dict[str, str]]:
@@ -159,6 +182,13 @@ def process_meeting(session: Session, meeting: Meeting, storage: Storage, p: Pro
     full: audio -> transcript -> summary -> index.  summarize: summary -> index (after renames).
     index: re-embed only (after changing the embedding model).
     """
+    if meeting.local_only:
+        remote = third_party_providers(settings)
+        if remote:
+            raise ProviderError(
+                "this meeting is marked local-only, but these settings would send it to a third party: "
+                + ", ".join(remote)
+            )
     stage = meeting.requested_stage
     if stage == "full":
         transcribe_audio(session, meeting, storage, p, settings)
@@ -173,7 +203,12 @@ def process_meeting(session: Session, meeting: Meeting, storage: Storage, p: Pro
 
 
 def claim_next(session: Session) -> Meeting | None:
-    """Take the oldest queued meeting. SKIP LOCKED makes this safe with several workers."""
+    """Take the oldest queued meeting. SKIP LOCKED makes this safe with several workers.
+
+    Claiming looks across all workspaces (system scope); the session is then narrowed to the
+    meeting's own workspace for processing, so every row written belongs to it.
+    """
+    set_scope(session, SYSTEM)
     meeting = session.scalars(
         select(Meeting)
         .where(Meeting.status == MeetingStatus.QUEUED)
@@ -188,6 +223,7 @@ def claim_next(session: Session) -> Meeting | None:
     meeting.attempts += 1
     meeting.error = None
     session.commit()
+    set_scope(session, Scope(meeting.workspace_id, meeting.user_id))
     return meeting
 
 

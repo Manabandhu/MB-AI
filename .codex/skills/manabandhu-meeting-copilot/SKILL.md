@@ -19,6 +19,13 @@ Source of truth for scope: the "Meeting Copilot — Product & Technical Spec" (O
 - `infra/terraform/` single-instance AWS deployment (EC2, S3, SSM, IAM), reachable through SSM port forwarding by default.
 - CI: `.github/workflows/meeting-copilot-ci.yml` and `.github/workflows/meeting-copilot-desktop.yml`.
 
+## Data, tenancy and auth
+
+- Schema changes go through Alembic (`backend/migrations`). `app.db.init_db()` runs `upgrade head` under a Postgres advisory lock at API and worker start-up, and stamps Phase 1 databases (tables, no `alembic_version`) at `0001` first. Never use `metadata.create_all`. Generate with `alembic -c alembic.ini revision --autogenerate`, then hand-edit backfills; embedding dimensions come from settings, not literals.
+- Every data table mixes in `Tenant` (`workspace_id`, `user_id`) and is listed in `TENANT_TABLES`. Sessions carry a `Scope`: the ORM adds `workspace_id = scope` to every select/update/delete and fills new rows; Postgres RLS (`tenant_isolation` policy, `app.workspace_id` / `app.system` set per transaction) enforces the same. Use `SYSTEM` only for cross-workspace jobs (claiming queued meetings, purging audio, token lookup).
+- Auth (`app/auth.py`): bootstrap `API_TOKEN` owner, hashed personal tokens (`mc_…`), or OIDC JWTs (`OIDC_ISSUER`). `X-Workspace-Id` selects a shared workspace the caller belongs to. Use `get_db` (scoped) in routes, `get_system_db` only for signed links and webhooks.
+- `audit()` records views, exports, audio access and deletes. Consent is enforced server-side: no audio is accepted until `consent_state == "confirmed"`. Transcripts pass through `maybe_redact`. `local_only` meetings fail rather than call a third-party provider.
+
 ## Invariants
 
 - Every model layer sits behind one interface with an open-source default and a paid drop-in, chosen by one environment variable (`STT_PROVIDER`, `DIARIZER`, `LLM_PROVIDER`, `EMBED_PROVIDER`). `fake` providers keep every code path testable without models.

@@ -2,18 +2,20 @@ import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, selectinload
 
-from ..auth import require_token, sign_media, verify_media
+from ..auth import Principal, audit, current_principal, get_db, require_token, sign_media, verify_media
 from ..config import get_settings
-from ..db import get_db
+from ..db import get_system_db
 from ..models import ActionItem, Meeting, MeetingStatus, Segment, Speaker, utcnow
+from ..pipeline.export import meeting_json, meeting_markdown
 from ..pipeline.profiles import PROFILES
 from ..schemas import (
     ActionItemOut,
     ActionItemUpdate,
+    ConsentRequest,
     MeetingCreate,
     MeetingDetail,
     MeetingListItem,
@@ -56,6 +58,7 @@ def _speaker_order(s: Speaker) -> tuple[bool, int, str]:
 def _detail(m: Meeting) -> MeetingDetail:
     return MeetingDetail(
         id=m.id,
+        user_id=m.user_id,
         title=m.title,
         profile=m.profile,
         started_at=m.started_at,
@@ -68,6 +71,14 @@ def _detail(m: Meeting) -> MeetingDetail:
         attendees=m.attendees or [],
         channel_layout=m.channel_layout,
         consent_confirmed=m.consent_confirmed,
+        consent_state=m.consent_state,
+        consent_log=m.consent_log or [],
+        source=m.source,
+        local_only=m.local_only,
+        off_record=m.off_record or [],
+        links=m.links or [],
+        calendar_event_id=m.calendar_event_id,
+        profile_source=m.profile_source,
         processed_at=m.processed_at,
         has_audio=bool(m.playback_key),
         audio_deleted_at=m.audio_deleted_at,
@@ -84,8 +95,26 @@ def _check_profile(profile: str) -> None:
         raise HTTPException(422, f"unknown profile '{profile}'")
 
 
+def record_consent(m: Meeting, method: str, principal: Principal, note: str = "") -> None:
+    """All-party consent is a launch blocker: log how it was given, on the meeting row."""
+    m.consent_confirmed = True
+    m.consent_state = "confirmed"
+    entry = {"method": method, "at": utcnow().isoformat(), "by": principal.display_name}
+    if note:
+        entry["note"] = note
+    m.consent_log = [*(m.consent_log or []), entry]
+
+
+def require_consent(m: Meeting) -> None:
+    if m.consent_state != "confirmed":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "consent has not been confirmed for this meeting; everyone must be told it is being recorded",
+        )
+
+
 def _ensure_idle(m: Meeting) -> None:
-    if m.status in (MeetingStatus.QUEUED, MeetingStatus.PROCESSING):
+    if m.status in (MeetingStatus.QUEUED, MeetingStatus.PROCESSING, MeetingStatus.LIVE):
         raise HTTPException(status.HTTP_409_CONFLICT, "this meeting is being processed; try again when it finishes")
 
 
@@ -103,6 +132,7 @@ def list_meetings(
     return [
         MeetingListItem(
             id=m.id,
+            user_id=m.user_id,
             title=m.title,
             profile=m.profile,
             started_at=m.started_at,
@@ -118,7 +148,9 @@ def list_meetings(
 
 
 @router.post("/meetings", response_model=MeetingDetail, status_code=status.HTTP_201_CREATED)
-def create_meeting(body: MeetingCreate, db: Session = Depends(get_db)):
+def create_meeting(
+    body: MeetingCreate, db: Session = Depends(get_db), principal: Principal = Depends(current_principal)
+):
     _check_profile(body.profile)
     meeting = Meeting(
         title=body.title.strip(),
@@ -126,16 +158,56 @@ def create_meeting(body: MeetingCreate, db: Session = Depends(get_db)):
         started_at=body.started_at or utcnow(),
         attendees=[a.strip() for a in body.attendees if a.strip()],
         channel_layout=body.channel_layout,
-        consent_confirmed=body.consent_confirmed,
+        source=body.source,
+        local_only=body.local_only,
+        links=[link.model_dump() for link in body.links],
+        calendar_event_id=body.calendar_event_id,
+        meeting_url=body.meeting_url,
+        consent_log=[],
     )
+    if body.consent_confirmed:
+        record_consent(meeting, body.consent_method, principal)
     db.add(meeting)
     db.commit()
     return _detail(_get(db, meeting.id, detail=True))
 
 
 @router.get("/meetings/{meeting_id}", response_model=MeetingDetail)
-def get_meeting(meeting_id: str, db: Session = Depends(get_db)):
+def get_meeting(
+    meeting_id: str, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(current_principal)
+):
+    detail = _detail(_get(db, meeting_id, detail=True))
+    audit(db, principal, "view", "meeting", meeting_id, request)
+    db.commit()
+    return detail
+
+
+@router.post("/meetings/{meeting_id}/consent", response_model=MeetingDetail)
+def confirm_consent(
+    meeting_id: str, body: ConsentRequest, db: Session = Depends(get_db),
+    principal: Principal = Depends(current_principal),
+):  # fmt: skip
+    m = _get(db, meeting_id)
+    record_consent(m, body.method, principal, body.note)
+    db.commit()
     return _detail(_get(db, meeting_id, detail=True))
+
+
+@router.get("/meetings/{meeting_id}/export")
+def export_meeting(
+    meeting_id: str, request: Request, format: str = Query("md", pattern="^(md|json)$"),
+    db: Session = Depends(get_db), principal: Principal = Depends(current_principal),
+):  # fmt: skip
+    m = _get(db, meeting_id, detail=True)
+    audit(db, principal, "export", "meeting", meeting_id, request, format=format)
+    db.commit()
+    if format == "json":
+        return meeting_json(m)
+    return PlainTextResponse(
+        meeting_markdown(m),
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="meeting-{m.id[:8]}.md"'},
+    )
 
 
 @router.patch("/meetings/{meeting_id}", response_model=MeetingDetail)
@@ -146,20 +218,28 @@ def update_meeting(meeting_id: str, body: MeetingUpdate, db: Session = Depends(g
     if body.profile is not None:
         _check_profile(body.profile)
         m.profile = body.profile
+        m.profile_source = "user"
     if body.attendees is not None:
         m.attendees = [a.strip() for a in body.attendees if a.strip()]
+    if body.links is not None:
+        m.links = [link.model_dump() for link in body.links]
+    if body.local_only is not None:
+        m.local_only = body.local_only
     db.commit()
     return _detail(_get(db, meeting_id, detail=True))
 
 
 @router.delete("/meetings/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_meeting(meeting_id: str, db: Session = Depends(get_db)):
+def delete_meeting(
+    meeting_id: str, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(current_principal)
+):
     m = _get(db, meeting_id)
     _ensure_idle(m)
     storage = get_storage()
     for key in (m.audio_key, m.playback_key):
         if key:
             storage.delete(key)
+    audit(db, principal, "delete", "meeting", meeting_id, request, title=m.title)
     db.delete(m)
     db.commit()
 
@@ -168,6 +248,7 @@ def delete_meeting(meeting_id: str, db: Session = Depends(get_db)):
 def upload_audio(meeting_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
     m = _get(db, meeting_id)
     _ensure_idle(m)
+    require_consent(m)
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in ALLOWED_AUDIO:
         raise HTTPException(
@@ -273,10 +354,14 @@ def update_action_item(item_id: int, body: ActionItemUpdate, db: Session = Depen
 
 
 @router.get("/meetings/{meeting_id}/audio-url")
-def audio_url(meeting_id: str, request: Request, db: Session = Depends(get_db)):
+def audio_url(
+    meeting_id: str, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(current_principal)
+):
     m = _get(db, meeting_id)
     if not m.playback_key:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no audio for this meeting")
+    audit(db, principal, "listen", "meeting", meeting_id, request)
+    db.commit()
     direct = get_storage().presigned_url(m.playback_key, 3600)
     if direct:
         return {"url": direct}
@@ -285,7 +370,7 @@ def audio_url(meeting_id: str, request: Request, db: Session = Depends(get_db)):
 
 
 @media_router.get("/media/{meeting_id}")
-def media(meeting_id: str, exp: int, sig: str, db: Session = Depends(get_db)):
+def media(meeting_id: str, exp: int, sig: str, db: Session = Depends(get_system_db)):
     if not verify_media(meeting_id, exp, sig):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "link expired or invalid")
     m = _get(db, meeting_id)

@@ -9,7 +9,7 @@ import signal
 import time
 
 from .config import get_settings
-from .db import init_db, session_scope
+from .db import SYSTEM, init_db, session_scope, set_scope
 from .models import MeetingStatus
 from .pipeline.process import Providers, claim_next, process_meeting, purge_expired_audio, requeue_interrupted
 from .providers import ProviderError, get_diarizer, get_embedder, get_llm, get_transcriber
@@ -42,6 +42,8 @@ def run_once(providers: Providers) -> bool:
             log.info("meeting %s done", meeting.id)
         except Exception as e:
             session.rollback()
+            set_scope(session, SYSTEM)
+            meeting = session.merge(meeting)
             meeting.status = MeetingStatus.FAILED
             meeting.error = str(e) if isinstance(e, ProviderError) else f"{type(e).__name__}: {e}"
             session.commit()

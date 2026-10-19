@@ -9,8 +9,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from .api import chat, meetings
-from .auth import require_token
+from .api import chat, meetings, workspace
+from .auth import Principal, current_principal
 from .config import get_settings
 from .db import get_engine, init_db
 from .pipeline.profiles import PROFILES
@@ -22,16 +22,17 @@ log = logging.getLogger("api")
 async def lifespan(app: FastAPI):
     settings = get_settings()
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    if not settings.api_token:
-        log.warning("API_TOKEN is empty: every API call will be refused until it is set")
+    if not settings.api_token and not settings.oidc_enabled:
+        log.warning("neither API_TOKEN nor OIDC_ISSUER is set: every API call will be refused")
     init_db()
     yield
 
 
-app = FastAPI(title="Meeting Copilot", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Meeting Copilot", version="0.2.0", lifespan=lifespan)
 app.include_router(meetings.router)
 app.include_router(meetings.media_router)
 app.include_router(chat.router)
+app.include_router(workspace.router)
 
 
 @app.get("/api/health")
@@ -41,11 +42,26 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/api/config", dependencies=[Depends(require_token)])
-def config():
+@app.get("/api/auth-config")
+def auth_config():
+    """Public: tells the sign-in page whether SSO is available."""
     s = get_settings()
     return {
-        "owner_name": s.owner_name,
+        "token": bool(s.api_token),
+        "oidc": {"issuer": s.oidc_issuer, "client_id": s.oidc_client_id, "scopes": s.oidc_scopes}
+        if s.oidc_enabled and s.oidc_client_id
+        else None,
+    }
+
+
+@app.get("/api/config")
+def config(principal: Principal = Depends(current_principal)):
+    s = get_settings()
+    return {
+        "owner_name": principal.display_name,
+        "user_id": principal.user_id,
+        "workspace_id": principal.workspace_id,
+        "role": principal.role,
         "profiles": [{"key": p.key, "label": p.label} for p in PROFILES.values()],
         "audio_retention_days": s.audio_retention_days,
         "providers": {

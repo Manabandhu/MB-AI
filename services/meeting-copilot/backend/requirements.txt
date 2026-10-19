@@ -11,3 +11,5 @@ httpx>=0.27
 boto3>=1.34
 numpy>=1.26
 soundfile>=0.12
+alembic>=1.13
+pyjwt[crypto]>=2.8

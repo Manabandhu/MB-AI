@@ -32,7 +32,9 @@ os.environ.update(
     }
 )
 
-from app.db import Base, get_engine, init_db  # noqa: E402
+from sqlalchemy import text  # noqa: E402
+
+from app.db import get_engine, init_db  # noqa: E402
 from app.providers import reset_providers  # noqa: E402
 from app.storage import reset_storage  # noqa: E402
 
@@ -42,7 +44,9 @@ AUTH = {"Authorization": "Bearer test-token"}
 @pytest.fixture
 def db():
     engine = get_engine()
-    Base.metadata.drop_all(engine)
+    with engine.begin() as conn:  # start from an empty schema so every migration runs
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
     init_db()
     reset_providers()
     reset_storage()

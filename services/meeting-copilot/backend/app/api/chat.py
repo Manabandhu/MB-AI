@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from ..auth import require_token
+from ..auth import get_db, require_token
 from ..config import get_settings
-from ..db import get_db
 from ..providers import ProviderError, get_embedder, get_llm
 from ..retrieval import answer, search
 from ..schemas import ChatRequest, ChatResponse, SearchHit

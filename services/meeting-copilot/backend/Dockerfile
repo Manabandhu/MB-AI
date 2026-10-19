@@ -23,6 +23,8 @@ WORKDIR /app
 COPY backend/requirements.txt ./
 RUN pip install -r requirements.txt
 COPY backend/app ./app
+COPY backend/migrations ./migrations
+COPY backend/alembic.ini ./
 COPY --from=web /web/dist ./web
 ENV WEB_DIST_DIR=/app/web \
     STORAGE_DIR=/data/audio

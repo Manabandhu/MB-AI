@@ -8,19 +8,37 @@ class ORM(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class Link(BaseModel):
+    title: str = Field(default="", max_length=300)
+    url: str = Field(min_length=1, max_length=1000)
+
+
 class MeetingCreate(BaseModel):
     title: str = Field(min_length=1, max_length=300)
-    profile: str = "standup"
+    profile: str = "standup"  # or "auto": detected from the title, attendees and first minutes
     started_at: datetime | None = None
     attendees: list[str] = Field(default_factory=list)
     channel_layout: Literal["mic_system", "mono"] = "mono"
     consent_confirmed: bool = False
+    consent_method: Literal["tap", "verbal", "bot_notice", "written"] = "tap"
+    source: Literal["upload", "browser", "desktop", "live", "bot", "mobile"] = "upload"
+    local_only: bool = False
+    links: list[Link] = Field(default_factory=list)
+    calendar_event_id: str | None = None
+    meeting_url: str | None = None
 
 
 class MeetingUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=300)
     profile: str | None = None
     attendees: list[str] | None = None
+    links: list[Link] | None = None
+    local_only: bool | None = None
+
+
+class ConsentRequest(BaseModel):
+    method: Literal["tap", "verbal", "bot_notice", "written"] = "tap"
+    note: str = Field(default="", max_length=300)
 
 
 class SpeakerOut(ORM):
@@ -51,6 +69,7 @@ class MeetingListItem(ORM):
     id: str
     title: str
     profile: str
+    user_id: str | None = None
     started_at: datetime
     duration_s: float | None
     status: str
@@ -64,6 +83,14 @@ class MeetingDetail(MeetingListItem):
     attendees: list[str]
     channel_layout: str
     consent_confirmed: bool
+    consent_state: str
+    consent_log: list[dict]
+    source: str
+    local_only: bool
+    off_record: list[list[float]]
+    links: list[dict]
+    calendar_event_id: str | None
+    profile_source: str
     processed_at: datetime | None
     has_audio: bool
     audio_deleted_at: datetime | None
