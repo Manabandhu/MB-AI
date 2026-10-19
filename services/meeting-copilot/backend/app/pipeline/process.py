@@ -331,6 +331,9 @@ def process_meeting(session: Session, meeting: Meeting, storage: Storage, p: Pro
     if stage in ("full", "summarize"):
         redetect_profile(session, meeting)
         summarize(session, meeting, p, settings)
+        from ..services.outputs import after_summary
+
+        after_summary(session, meeting, settings)
     index(session, meeting, p)
     meeting.status = MeetingStatus.DONE
     meeting.stage = None

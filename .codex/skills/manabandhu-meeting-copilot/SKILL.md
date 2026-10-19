@@ -49,6 +49,13 @@ Source of truth for scope: the "Meeting Copilot — Product & Technical Spec" (O
 - Meeting bot (`BOT_PROVIDER`: attendee, vexa, recall, fake, none; `app/providers/bot.py`, `app/api/bot.py`): joining needs confirmed consent (the `BOT_NAME` announces recording, logged as `bot_notice`) and `PUBLIC_BASE_URL`. Webhooks are authenticated by our own HMAC (`?mid=&sig=`); captions feed the live session, and when the bot leaves the worker's `bot` stage fetches the recording and per-participant transcript into `platform_turns` before the full pass.
 - `POST /api/meetings/{id}/transcript` imports a text transcript (no audio) and runs summarize/memory/index.
 
+## Teams and integrations (Phase 5)
+
+- Integration settings live on `workspaces.settings.integrations` over env defaults (`app/integrations/config.py`); secrets are returned masked and a masked value sent back keeps the stored one. Only owners change them (audited).
+- After every summary (`app/services/outputs.py`): action items get Jira drafts (`auto_draft_jira`), and the summary posts to Slack/Teams webhooks once (`auto_post_summaries`, `meetings.posted_at`). Failures are logged, never fail the meeting. Filing a ticket (`POST /api/action-items/{id}/jira`) stores the key on the item and its commitment.
+- Calendar: an ICS/webcal feed (`calendar_ics_url`) → `GET /api/calendar/events` (each occurrence keyed `uid@start`, profile detected, meeting link extracted) → `POST /api/calendar/prepare` creates the meeting (consent still pending) and its brief.
+- `GET /api/rollup` (JSON or Markdown: per-person commitments, blockers, decisions, timesheet), `GET /api/meetings/{id}/digest` (missed-meeting digest), `GET /api/blocker-radar` (blockers recurring across standups, grouped by entity or wording).
+
 ## Invariants
 
 - Every model layer sits behind one interface with an open-source default and a paid drop-in, chosen by one environment variable (`STT_PROVIDER`, `DIARIZER`, `LLM_PROVIDER`, `EMBED_PROVIDER`). `fake` providers keep every code path testable without models.

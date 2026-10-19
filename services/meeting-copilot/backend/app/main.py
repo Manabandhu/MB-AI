@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from .api import bot, chat, live, meetings, memory, metrics, people, workspace
+from .api import bot, chat, insights, integrations, live, meetings, memory, metrics, people, workspace
 from .auth import Principal, current_principal, get_db
 from .config import get_settings
 from .db import get_engine, init_db
@@ -41,6 +41,8 @@ app.include_router(live.router)
 app.include_router(live.ws_router)
 app.include_router(bot.router)
 app.include_router(bot.webhook_router)
+app.include_router(integrations.router)
+app.include_router(insights.router)
 
 
 @app.get("/api/health")
