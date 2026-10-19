@@ -1,0 +1,88 @@
+#!/bin/bash
+# First-boot setup for Meeting Copilot. Log: /var/log/meeting-copilot-setup.log
+set -euo pipefail
+exec > >(tee -a /var/log/meeting-copilot-setup.log) 2>&1
+echo "setup started $(date -Is)"
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y unzip curl ca-certificates
+
+%{ if install_docker ~}
+if ! command -v docker >/dev/null 2>&1; then
+  curl -fsSL https://get.docker.com | sh
+fi
+%{ endif ~}
+
+if ! docker compose version >/dev/null 2>&1; then
+  mkdir -p /usr/local/lib/docker/cli-plugins
+  curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
+    -o /usr/local/lib/docker/cli-plugins/docker-compose
+  chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+fi
+
+if ! command -v aws >/dev/null 2>&1; then
+  snap install aws-cli --classic
+fi
+
+# ---- the deploy script: also used later by redeploy.sh through SSM -----------------------
+cat > /usr/local/bin/meeting-copilot-deploy <<'DEPLOY'
+#!/bin/bash
+# Fetch the app package from S3 and (re)start the stack. Safe to run again at any time;
+# data lives in Docker volumes and S3, and an existing .env is never overwritten.
+set -euo pipefail
+APP=/opt/meeting-copilot
+REGION=${region}
+mkdir -p $APP
+aws s3 cp --region $REGION "s3://${deploy_bucket}/app.zip" /tmp/meeting-copilot.zip
+unzip -oq /tmp/meeting-copilot.zip -d $APP
+rm -f /tmp/meeting-copilot.zip
+cd $APP
+
+param() {
+  aws ssm get-parameter --region $REGION --name "${param_path}/$1" --with-decryption \
+    --query Parameter.Value --output text
+}
+
+if [ ! -f .env ]; then
+  umask 077
+  echo "API_TOKEN=$(param api-token)" > .env
+  echo "POSTGRES_PASSWORD=$(param postgres-password)" >> .env
+  HF=$(param hf-token)
+  if [ "$HF" != "unset" ]; then echo "HF_TOKEN=$HF" >> .env; fi
+  DG=$(param deepgram-api-key)
+  if [ "$DG" != "unset" ]; then echo "DEEPGRAM_API_KEY=$DG" >> .env; fi
+  cat >> .env <<'ENVBLOCK'
+%{ for key, value in env ~}
+${key}=${value}
+%{ endfor ~}
+ENVBLOCK
+fi
+
+FILES="-f docker-compose.yml"
+PROFILES=""
+%{ if gpu ~}
+FILES="$FILES -f docker-compose.gpu.yml"
+PROFILES="--profile local-llm"
+%{ endif ~}
+%{ if public ~}
+PROFILES="$PROFILES --profile tls"
+%{ endif ~}
+
+docker compose $FILES $PROFILES up -d --build --remove-orphans
+
+%{ if gpu ~}
+# Download the default open models into Ollama (first run takes a while).
+for i in $(seq 1 60); do
+  if docker compose $FILES $PROFILES exec -T ollama ollama list >/dev/null 2>&1; then break; fi
+  sleep 5
+done
+docker compose $FILES $PROFILES exec -T ollama ollama pull gpt-oss:20b
+docker compose $FILES $PROFILES exec -T ollama ollama pull nomic-embed-text
+%{ endif ~}
+echo "deploy finished $(date -Is)"
+DEPLOY
+chmod +x /usr/local/bin/meeting-copilot-deploy
+
+/usr/local/bin/meeting-copilot-deploy
+echo "setup finished $(date -Is)"

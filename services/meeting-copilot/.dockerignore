@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.venv
+**/data
+.git
+.env
+infra/terraform/.terraform
+infra/terraform/*.tfstate*
+desktop/build
+desktop/dist

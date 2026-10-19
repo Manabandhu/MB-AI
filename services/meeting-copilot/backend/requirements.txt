@@ -1,0 +1,13 @@
+# API + worker core (no ML). Pinned to minimum versions that were tested.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0.30
+psycopg[binary]>=3.2
+pgvector>=0.3
+pydantic>=2.7
+pydantic-settings>=2.3
+python-multipart>=0.0.9
+httpx>=0.27
+boto3>=1.34
+numpy>=1.26
+soundfile>=0.12

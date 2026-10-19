@@ -1,0 +1,94 @@
+# Meeting Copilot: Postgres + API (with web UI) + worker.
+#   docker compose up -d --build                          paid APIs or a model server elsewhere
+#   docker compose --profile local-llm up -d --build      also run Ollama for the LLM and embeddings
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile local-llm up -d --build
+#   docker compose --profile tls up -d                    HTTPS with automatic certificates (set DOMAIN)
+name: meeting-copilot
+
+# Values here win over .env, and are read from your shell first, so `make demo` can swap models.
+x-app-env: &app-env
+  DATABASE_URL: postgresql+psycopg://copilot:${POSTGRES_PASSWORD:-copilot}@db:5432/copilot
+  STT_PROVIDER: ${STT_PROVIDER:-faster_whisper}
+  DIARIZER: ${DIARIZER:-pyannote}
+  LLM_PROVIDER: ${LLM_PROVIDER:-openai_compat}
+  EMBED_PROVIDER: ${EMBED_PROVIDER:-openai_compat}
+  EMBED_DIM: ${EMBED_DIM:-768}
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: copilot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-copilot}
+      POSTGRES_DB: copilot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U copilot -d copilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: api
+    env_file: .env
+    environment: *app-env
+    volumes:
+      - audio:/data/audio
+    ports:
+      # Bound to this machine only. Use the tls profile or an SSH/SSM tunnel to reach it remotely.
+      - "${API_BIND:-127.0.0.1}:${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: worker
+    env_file: .env
+    environment: *app-env
+    volumes:
+      - audio:/data/audio
+      - models:/models
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["local-llm"]
+    environment:
+      OLLAMA_CONTEXT_LENGTH: "32768"  # the default context is too short for meeting transcripts
+      OLLAMA_KEEP_ALIVE: "24h"
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    profiles: ["tls"]
+    # Set DOMAIN in .env to a name that points at this machine; Caddy gets the certificate.
+    command: caddy reverse-proxy --from ${DOMAIN:-localhost} --to api:8000
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy:/data
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  audio:
+  models:
+  ollama:
+  caddy:

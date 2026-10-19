@@ -1,0 +1,54 @@
+name: Build · Meeting Copilot desktop recorder (Windows)
+
+on:
+  pull_request:
+    paths:
+      - services/meeting-copilot/desktop/**
+      - .github/workflows/meeting-copilot-desktop.yml
+  push:
+    branches: [main]
+    paths:
+      - services/meeting-copilot/desktop/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meeting-copilot-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test and package MeetingRecorder.exe
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: services/meeting-copilot/desktop
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install -r requirements-build.txt pytest
+      - name: Test
+        run: python -m pytest tests -q
+      - name: Check that the Windows audio backend loads
+        run: python -c "import soundcard; print('speakers:', [s.name for s in soundcard.all_speakers()])"
+      - name: Build MeetingRecorder.exe
+        run: >
+          pyinstaller --noconfirm --onefile --windowed --name MeetingRecorder
+          --collect-data soundcard
+          --hidden-import keyring.backends.Windows
+          run_recorder.py
+      - name: Upload MeetingRecorder.exe
+        uses: actions/upload-artifact@v7
+        with:
+          name: MeetingRecorder
+          path: services/meeting-copilot/desktop/dist/MeetingRecorder.exe
+          if-no-files-found: error
+          retention-days: 14

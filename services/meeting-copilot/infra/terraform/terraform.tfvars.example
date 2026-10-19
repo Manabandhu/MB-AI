@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars and edit.
+region         = "us-east-1"
+providers_mode = "open_source" # or "aws_paid"
+owner_name     = "Sai"
+
+# open_source mode: Hugging Face token with access to pyannote/speaker-diarization-community-1
+hf_token = ""
+
+# aws_paid mode:
+# deepgram_api_key = ""
+# bedrock_model_id = ""   # a Claude model or inference profile ID enabled in your account
+
+# Optional public HTTPS. Leave empty to keep the app private behind SSM port forwarding.
+domain_name = ""
+
+audio_retention_days = 30
+glossary             = ""

@@ -39,6 +39,7 @@ export const moduleSkillRules = [
     ['frontend/src/modules/ai-assistant/', 'platform/ai/', 'services/ai-orchestrator/'],
   ],
   ['manabandhu-chat', ['frontend/src/modules/chat/', 'platform/chat/', 'services/chat-realtime/']],
+  ['manabandhu-meeting-copilot', ['services/meeting-copilot/']],
   ['manabandhu-immigration', ['frontend/src/modules/immigration/']],
   ['manabandhu-expenses', ['frontend/src/modules/expenses/']],
   ['manabandhu-events', ['frontend/src/modules/events/']],

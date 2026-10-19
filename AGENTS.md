@@ -11,6 +11,7 @@ Use the narrowest applicable skills:
 - Tokens and components: `manabandhu-design-system`
 - Notifications: `manabandhu-notifications`
 - AI assistant/bot: `manabandhu-ai`
+- Meeting Copilot (recorder, transcripts, meeting memory, live assist): `manabandhu-meeting-copilot`
 - Authentication and sessions: `manabandhu-auth`
 - Community and posts: `manabandhu-community`
 - App shell and core journeys: `manabandhu-foundation`

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ManaBandhu Meeting Copilot"
+  short_description: "Maintain the meeting recorder, memory and live assist"
+  default_prompt: "Use $manabandhu-meeting-copilot to evolve Meeting Copilot safely."
