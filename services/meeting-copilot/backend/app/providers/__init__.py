@@ -7,18 +7,21 @@ from .fakes import FakeDiarizer, FakeEmbedder, FakeLLM, FakeTranscriber
 from .llm import LLM, BedrockLLM, OpenAICompatLLM
 from .stt import DeepgramTranscriber, FasterWhisperTranscriber, Transcriber
 from .types import ProviderError, SpeakerTurn, TranscriptSegment
+from .voiceprint import FakeSpeakerEmbedder, NoEmbedder, SpeakerEmbedder, SpeechBrainEmbedder
 
 __all__ = [
     "Diarizer",
     "Embedder",
     "LLM",
     "ProviderError",
+    "SpeakerEmbedder",
     "SpeakerTurn",
     "Transcriber",
     "TranscriptSegment",
     "get_diarizer",
     "get_embedder",
     "get_llm",
+    "get_speaker_embedder",
     "get_transcriber",
     "override_providers",
     "reset_providers",
@@ -52,6 +55,12 @@ def _build(kind: str, settings: Settings):
             "bedrock": lambda: BedrockTitanEmbedder(settings),
             "fake": lambda: FakeEmbedder(settings.embed_dim),
         }[settings.embed_provider]()
+    if kind == "voiceprint":
+        return {
+            "speechbrain": lambda: SpeechBrainEmbedder(settings),
+            "none": NoEmbedder,
+            "fake": lambda: FakeSpeakerEmbedder(settings.voiceprint_dim),
+        }[settings.voiceprint_provider]()
     raise KeyError(kind)
 
 
@@ -75,6 +84,10 @@ def get_llm() -> LLM:
 
 def get_embedder() -> Embedder:
     return _get("embedder")  # type: ignore[return-value]
+
+
+def get_speaker_embedder() -> SpeakerEmbedder:
+    return _get("voiceprint")  # type: ignore[return-value]
 
 
 def override_providers(**providers) -> None:

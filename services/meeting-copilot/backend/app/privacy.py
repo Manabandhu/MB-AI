@@ -77,8 +77,6 @@ def third_party_providers(settings: Settings, *, live: bool = False) -> list[str
     else:
         if settings.stt_provider == "deepgram":
             out.append("STT_PROVIDER=deepgram")
-        if settings.voiceprint_provider == "pyannoteai":
-            out.append("VOICEPRINT_PROVIDER=pyannoteai")
     if settings.llm_provider == "bedrock":
         out.append("LLM_PROVIDER=bedrock")
     elif settings.llm_provider == "openai_compat" and is_remote_url(settings.llm_base_url):

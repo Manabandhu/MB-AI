@@ -16,15 +16,39 @@ from sqlalchemy.orm import Session
 
 from ..config import Settings
 from ..db import SYSTEM, Scope, set_scope
-from ..models import ActionItem, Chunk, Meeting, MeetingStatus, Segment, Speaker, Summary, User, utcnow
+from ..models import (
+    ActionItem,
+    Chunk,
+    Entity,
+    GlossaryTerm,
+    Meeting,
+    MeetingStatus,
+    Person,
+    Segment,
+    Speaker,
+    Summary,
+    User,
+    utcnow,
+)
 from ..privacy import maybe_redact, third_party_providers
-from ..providers import LLM, Diarizer, Embedder, ProviderError, Transcriber
+from ..providers import LLM, Diarizer, Embedder, ProviderError, SpeakerEmbedder, Transcriber
 from ..storage import Storage
 from . import audio
 from .chunking import chunk_lines
+from .people import ensure_person, is_generic_name
+from .platform import to_speaker_turns
 from .profiles import get_profile
+from .speakers import Match, identify_by_voiceprint
 from .summarize import summarize_transcript
-from .transcript import OWNER_LABEL, Line, assign_speakers, drop_echo, format_transcript, merge_adjacent, relabel
+from .transcript import (
+    OWNER_LABEL,
+    Line,
+    assign_speakers,
+    drop_echo,
+    format_transcript,
+    merge_adjacent,
+    relabel_with_map,
+)
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +61,7 @@ class Providers:
     diarizer: Diarizer
     llm: LLM
     embedder: Embedder
+    voiceprints: SpeakerEmbedder | None = None
 
 
 def _set_stage(session: Session, meeting: Meeting, stage: str) -> None:
@@ -45,8 +70,12 @@ def _set_stage(session: Session, meeting: Meeting, stage: str) -> None:
     log.info("meeting %s: %s", meeting.id, stage)
 
 
-def _diarized_lines(wav: Path, p: Providers, fallback: str, session: Session, meeting: Meeting) -> list[Line]:
-    segments = p.stt.transcribe(wav, diarize=True)
+def _diarized_lines(
+    wav: Path, p: Providers, fallback: str, session: Session, meeting: Meeting, vocabulary: list[str]
+) -> list[Line]:
+    segments = p.stt.transcribe(wav, diarize=True, vocabulary=vocabulary)
+    if meeting.platform_turns:  # bot or Teams labels: who spoke is known, no guessing needed
+        return assign_speakers(segments, to_speaker_turns(meeting.platform_turns), fallback=fallback)
     turns = []
     if segments and not p.stt.returns_speakers:
         _set_stage(session, meeting, "diarizing")
@@ -57,6 +86,8 @@ def _diarized_lines(wav: Path, p: Providers, fallback: str, session: Session, me
 def transcribe_audio(session: Session, meeting: Meeting, storage: Storage, p: Providers, settings: Settings) -> None:
     if not meeting.audio_key:
         raise RuntimeError("this meeting has no audio (it may have been removed by the retention policy)")
+    vocabulary = workspace_vocabulary(session)
+    matches: dict[str, Match] = {}
     with tempfile.TemporaryDirectory(prefix="copilot-") as tmp_dir:
         tmp = Path(tmp_dir)
         src = tmp / ("source" + Path(meeting.audio_key).suffix)
@@ -73,21 +104,49 @@ def transcribe_audio(session: Session, meeting: Meeting, storage: Storage, p: Pr
         storage.put_file(playback, meeting.playback_key)
 
         _set_stage(session, meeting, "transcribing")
+        speaker_wav = norm
         if stereo:
             mic, system = tmp / "mic.wav", tmp / "system.wav"
             audio.split_stereo(norm, mic, system)
+            speaker_wav = system
             mine: list[Line] = []
             if audio.rms_dbfs(mic) > SILENT_DBFS:
-                mine = [Line(s.start, s.end, OWNER_LABEL, s.text) for s in p.stt.transcribe(mic, diarize=False)]
+                mine = [
+                    Line(s.start, s.end, OWNER_LABEL, s.text)
+                    for s in p.stt.transcribe(mic, diarize=False, vocabulary=vocabulary)
+                ]
             others: list[Line] = []
             if audio.rms_dbfs(system) > SILENT_DBFS:
-                others = _diarized_lines(system, p, fallback="others", session=session, meeting=meeting)
+                others = _diarized_lines(system, p, "others", session, meeting, vocabulary)
             lines = drop_echo(mine, others) + others
         else:
-            lines = _diarized_lines(norm, p, fallback="speaker", session=session, meeting=meeting)
+            lines = _diarized_lines(norm, p, "speaker", session, meeting, vocabulary)
 
-        lines = merge_adjacent(relabel(lines))
+        lines, mapping = relabel_with_map(lines)
+        lines = merge_adjacent(lines)
+        platform_names = {new: raw for raw, new in mapping.items()} if meeting.platform_turns else {}
 
+        if not platform_names and p.voiceprints is not None and lines:
+            _set_stage(session, meeting, "recognizing speakers")
+            try:
+                matches = identify_by_voiceprint(session, meeting, p.voiceprints, speaker_wav, lines, settings)
+            except ProviderError as e:  # speaker recognition is best effort; numbered speakers still work
+                log.warning("meeting %s: voiceprint matching skipped: %s", meeting.id, e)
+
+    save_transcript(session, meeting, lines, settings, matches=matches, platform_names=platform_names)
+
+
+def save_transcript(
+    session: Session,
+    meeting: Meeting,
+    lines: list[Line],
+    settings: Settings,
+    *,
+    matches: dict[str, Match] | None = None,
+    platform_names: dict[str, str] | None = None,
+) -> None:
+    """Replace the meeting's speakers and segments. Lines carry final labels ("me", "S1", ...)."""
+    matches, platform_names = matches or {}, platform_names or {}
     session.execute(delete(Segment).where(Segment.meeting_id == meeting.id))
     session.execute(delete(Speaker).where(Speaker.meeting_id == meeting.id))
     labels = list(dict.fromkeys(ln.speaker for ln in lines))
@@ -95,18 +154,21 @@ def transcribe_audio(session: Session, meeting: Meeting, storage: Storage, p: Pr
         labels.remove(OWNER_LABEL)
         labels.insert(0, OWNER_LABEL)
     owner_name = owner_display_name(session, meeting, settings)
+    owner_person = self_person(session, meeting.user_id) if meeting.user_id else None
     for label in labels:
-        owner = label == OWNER_LABEL
-        name = owner_name if owner else f"Speaker {label[1:]}"
-        session.add(
-            Speaker(
-                meeting_id=meeting.id,
-                label=label,
-                display_name=name,
-                is_owner=owner,
-                match_source="owner" if owner else None,
-            )
-        )
+        sp = Speaker(meeting_id=meeting.id, label=label, display_name=f"Speaker {label[1:]}", is_owner=False)
+        if label == OWNER_LABEL:
+            sp.display_name, sp.is_owner, sp.match_source = owner_name, True, "owner"
+            sp.person_id = owner_person.id if owner_person else None
+        elif label in platform_names:
+            sp.display_name, sp.match_source = platform_names[label][:120], "platform"
+            person = ensure_person(session, platform_names[label])
+            sp.person_id = person.id if person else None
+        elif label in matches:
+            m = matches[label]
+            sp.display_name, sp.person_id = m.person.display_name, m.person.id
+            sp.match_source, sp.match_score = "voiceprint", m.score
+        session.add(sp)
     session.add_all(
         Segment(
             meeting_id=meeting.id,
@@ -118,6 +180,25 @@ def transcribe_audio(session: Session, meeting: Meeting, storage: Storage, p: Pr
         for ln in lines
     )
     session.commit()
+
+
+def workspace_vocabulary(session: Session) -> list[str]:
+    """Glossary terms, entity names and people's names: fed to STT as custom vocabulary."""
+    terms = [t for (t,) in session.execute(select(GlossaryTerm.term)).all()]
+    terms += [n for (n,) in session.execute(select(Entity.name).order_by(Entity.id.desc()).limit(60)).all()]
+    terms += [n for (n,) in session.execute(select(Person.display_name).limit(60)).all()]
+    return list(dict.fromkeys(t for t in terms if t and not is_generic_name(t)))[:120]
+
+
+def self_person(session: Session, user_id: str) -> Person:
+    """The Person row that is the given app user, in the session's workspace."""
+    person = session.scalars(select(Person).where(Person.account_user_id == user_id)).first()
+    if person is None:
+        user = session.get(User, user_id)
+        person = Person(display_name=user.display_name, email=user.email, account_user_id=user_id, aliases=[])
+        session.add(person)
+        session.flush()
+    return person
 
 
 def owner_display_name(session: Session, meeting: Meeting, settings: Settings) -> str:

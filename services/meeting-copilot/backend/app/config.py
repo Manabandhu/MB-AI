@@ -4,7 +4,7 @@ Every model layer is switchable with one variable:
   STT_PROVIDER          faster_whisper | deepgram | fake               (post-meeting, accurate)
   LIVE_STT_PROVIDER     sherpa_onnx | faster_whisper | deepgram | fake | none   (during the meeting, fast)
   DIARIZER              pyannote | none | fake
-  VOICEPRINT_PROVIDER   speechbrain | pyannoteai | fake | none
+  VOICEPRINT_PROVIDER   speechbrain | fake | none
   LLM_PROVIDER          openai_compat | bedrock | fake
   EMBED_PROVIDER        openai_compat | bedrock | fake
   BOT_PROVIDER          attendee | vexa | recall | fake | none
@@ -74,9 +74,8 @@ class Settings(BaseSettings):
     pyannote_model: str = "pyannote/speaker-diarization-community-1"
 
     # --- voiceprints (opt-in speaker recognition) ---------------------------------
-    voiceprint_provider: Literal["speechbrain", "pyannoteai", "fake", "none"] = "speechbrain"
+    voiceprint_provider: Literal["speechbrain", "fake", "none"] = "speechbrain"
     speechbrain_model: str = "speechbrain/spkrec-ecapa-voxceleb"
-    pyannoteai_api_key: str = ""
     voiceprint_dim: int = 192  # ECAPA-TDNN embeddings
     # Cosine similarity needed to call a cluster a known person. Model-specific: calibrate it on
     # your own team's audio (GET /api/metrics/speakers) and re-tune when the model changes.

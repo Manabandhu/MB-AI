@@ -26,6 +26,13 @@ Source of truth for scope: the "Meeting Copilot — Product & Technical Spec" (O
 - Auth (`app/auth.py`): bootstrap `API_TOKEN` owner, hashed personal tokens (`mc_…`), or OIDC JWTs (`OIDC_ISSUER`). `X-Workspace-Id` selects a shared workspace the caller belongs to. Use `get_db` (scoped) in routes, `get_system_db` only for signed links and webhooks.
 - `audit()` records views, exports, audio access and deletes. Consent is enforced server-side: no audio is accepted until `consent_state == "confirmed"`. Transcripts pass through `maybe_redact`. `local_only` meetings fail rather than call a third-party provider.
 
+## Speaker identification (Phase 2)
+
+- Signal order: platform labels (`meetings.platform_turns` from a bot or an uploaded Teams/Zoom `.vtt`) > mic channel (`me`) > diarization + voiceprints (`app/pipeline/speakers.py`). Platform turns replace diarization entirely.
+- Voiceprints (`VOICEPRINT_PROVIDER`: `speechbrain` ECAPA-TDNN 192-dim, `fake`, `none`) are opt-in: enrollment requires `consent=true`, stores only the embedding (clips are deleted in a temp dir), sets `people.consent_at`, and is audited. Matching compares cluster centroids only against attendees' voiceprints (all enrolled people when there are no attendees) with one-to-one assignment above `VOICEPRINT_THRESHOLD`; below it the label stays "Speaker N". Only voiceprints from the same embedder model are compared.
+- Corrections (fix-a-line, merge, reassigning a voiceprint/platform match) are logged in `speaker_corrections`; `GET /api/metrics/speakers` turns them into accuracy and a suggested threshold. `GET /api/metrics/gates` reports the four roadmap gates; summary hand-edits are counted in `summaries.edit_count`.
+- Naming a speaker links or creates a `people` row; attendees join the directory too.
+
 ## Invariants
 
 - Every model layer sits behind one interface with an open-source default and a paid drop-in, chosen by one environment variable (`STT_PROVIDER`, `DIARIZER`, `LLM_PROVIDER`, `EMBED_PROVIDER`). `fake` providers keep every code path testable without models.

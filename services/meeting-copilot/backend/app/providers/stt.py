@@ -17,7 +17,11 @@ class Transcriber(Protocol):
     name: str
     returns_speakers: bool  # True when the provider labels speakers itself
 
-    def transcribe(self, wav_path: Path, diarize: bool = False) -> list[TranscriptSegment]: ...
+    def transcribe(
+        self, wav_path: Path, diarize: bool = False, vocabulary: list[str] | None = None
+    ) -> list[TranscriptSegment]:
+        """vocabulary: team terms and names to spell right (workspace glossary + GLOSSARY)."""
+        ...
 
 
 class FasterWhisperTranscriber:
@@ -46,9 +50,11 @@ class FasterWhisperTranscriber:
                 )
         return self._model
 
-    def transcribe(self, wav_path: Path, diarize: bool = False) -> list[TranscriptSegment]:
+    def transcribe(
+        self, wav_path: Path, diarize: bool = False, vocabulary: list[str] | None = None
+    ) -> list[TranscriptSegment]:
         model = self._load()
-        terms = self.settings.glossary_terms
+        terms = list(dict.fromkeys([*self.settings.glossary_terms, *(vocabulary or [])]))[:80]
         initial_prompt = ("Glossary: " + ", ".join(terms) + ".") if terms else None
         segments, _info = model.transcribe(
             str(wav_path),
@@ -82,7 +88,7 @@ class DeepgramTranscriber:
         self.name = f"deepgram:{settings.deepgram_model}"
         self.client = client or httpx.Client(timeout=httpx.Timeout(900.0, connect=20.0))
 
-    def build_params(self, diarize: bool) -> list[tuple[str, str]]:
+    def build_params(self, diarize: bool, vocabulary: list[str] | None = None) -> list[tuple[str, str]]:
         s = self.settings
         params: list[tuple[str, str]] = [
             ("model", s.deepgram_model),
@@ -95,10 +101,13 @@ class DeepgramTranscriber:
             params.append(("language", s.whisper_language))
         # Nova-3 takes "keyterm" prompting; older models take "keywords".
         key = "keyterm" if s.deepgram_model.startswith("nova-3") else "keywords"
-        params += [(key, term) for term in s.glossary_terms]
+        terms = list(dict.fromkeys([*s.glossary_terms, *(vocabulary or [])]))[:100]
+        params += [(key, term) for term in terms]
         return params
 
-    def transcribe(self, wav_path: Path, diarize: bool = False) -> list[TranscriptSegment]:
+    def transcribe(
+        self, wav_path: Path, diarize: bool = False, vocabulary: list[str] | None = None
+    ) -> list[TranscriptSegment]:
         def body():
             with open(wav_path, "rb") as fh:
                 while chunk := fh.read(1 << 20):
@@ -106,7 +115,7 @@ class DeepgramTranscriber:
 
         resp = self.client.post(
             self.url,
-            params=self.build_params(diarize),
+            params=self.build_params(diarize, vocabulary),
             headers={
                 "Authorization": f"Token {self.settings.deepgram_api_key}",
                 "Content-Type": "audio/wav",

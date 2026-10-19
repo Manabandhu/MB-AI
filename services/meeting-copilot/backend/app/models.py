@@ -247,6 +247,8 @@ class Summary(Tenant, Base):
     data: Mapped[dict] = mapped_column(JsonType)
     model: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    edit_count: Mapped[int] = mapped_column(Integer, default=0)  # hand edits since generation
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     meeting: Mapped[Meeting] = relationship(back_populates="summary")
 

@@ -12,7 +12,7 @@ from .config import get_settings
 from .db import SYSTEM, init_db, session_scope, set_scope
 from .models import MeetingStatus
 from .pipeline.process import Providers, claim_next, process_meeting, purge_expired_audio, requeue_interrupted
-from .providers import ProviderError, get_diarizer, get_embedder, get_llm, get_transcriber
+from .providers import ProviderError, get_diarizer, get_embedder, get_llm, get_speaker_embedder, get_transcriber
 from .storage import get_storage
 
 log = logging.getLogger("worker")
@@ -52,7 +52,14 @@ def run_once(providers: Providers) -> bool:
 
 
 def build_providers() -> Providers:
-    return Providers(stt=get_transcriber(), diarizer=get_diarizer(), llm=get_llm(), embedder=get_embedder())
+    voiceprints = get_speaker_embedder()
+    return Providers(
+        stt=get_transcriber(),
+        diarizer=get_diarizer(),
+        llm=get_llm(),
+        embedder=get_embedder(),
+        voiceprints=None if voiceprints.name == "none" else voiceprints,
+    )
 
 
 def main() -> None:  # pragma: no cover - long-running loop

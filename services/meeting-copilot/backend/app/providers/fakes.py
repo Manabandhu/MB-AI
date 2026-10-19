@@ -70,7 +70,9 @@ class FakeTranscriber:
     name = "fake-stt"
     returns_speakers = False
 
-    def transcribe(self, wav_path: Path, diarize: bool = False) -> list[TranscriptSegment]:
+    def transcribe(
+        self, wav_path: Path, diarize: bool = False, vocabulary: list[str] | None = None
+    ) -> list[TranscriptSegment]:
         segs = []
         for i, (start, end, freq) in enumerate(speech_regions(wav_path)):
             # Different "voices" (pitches) start at different demo lines, so echo detection and

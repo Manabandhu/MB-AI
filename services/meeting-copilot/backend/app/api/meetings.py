@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session, selectinload
 from ..auth import Principal, audit, current_principal, get_db, require_token, sign_media, verify_media
 from ..config import get_settings
 from ..db import get_system_db
-from ..models import ActionItem, Meeting, MeetingStatus, Segment, Speaker, utcnow
+from ..models import ActionItem, Meeting, MeetingStatus, Person, Segment, Speaker, SpeakerCorrection, utcnow
 from ..pipeline.export import meeting_json, meeting_markdown
+from ..pipeline.people import ensure_person
+from ..pipeline.platform import parse_vtt
 from ..pipeline.profiles import PROFILES
 from ..schemas import (
     ActionItemOut,
@@ -22,9 +24,11 @@ from ..schemas import (
     MeetingUpdate,
     ReprocessRequest,
     SegmentOut,
+    SegmentUpdate,
     SpeakerMerge,
     SpeakerOut,
     SpeakerUpdate,
+    SummaryUpdate,
 )
 from ..storage import get_storage
 
@@ -285,6 +289,25 @@ def upload_audio(meeting_id: str, file: UploadFile = File(...), db: Session = De
     return _detail(_get(db, meeting_id, detail=True))
 
 
+@router.put("/meetings/{meeting_id}/platform-transcript", response_model=MeetingDetail)
+def upload_platform_transcript(meeting_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """A Teams or Zoom transcript (.vtt). Its speaker names label the audio instead of diarization.
+
+    Re-transcribe the meeting afterwards ("full") to apply it.
+    """
+    m = _get(db, meeting_id)
+    _ensure_idle(m)
+    raw = file.file.read(5 * 1024 * 1024 + 1)
+    if len(raw) > 5 * 1024 * 1024:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "transcript files are limited to 5 MB")
+    turns = parse_vtt(raw.decode("utf-8", errors="replace"))
+    if not turns:
+        raise HTTPException(422, "no speaker-labelled cues found; export the transcript as .vtt with speaker names")
+    m.platform_turns = [{k: t[k] for k in ("start", "end", "speaker")} for t in turns]
+    db.commit()
+    return _detail(_get(db, meeting_id, detail=True))
+
+
 @router.post("/meetings/{meeting_id}/reprocess", response_model=MeetingDetail)
 def reprocess(meeting_id: str, body: ReprocessRequest, db: Session = Depends(get_db)):
     m = _get(db, meeting_id)
@@ -305,12 +328,48 @@ def reprocess(meeting_id: str, body: ReprocessRequest, db: Session = Depends(get
     return _detail(_get(db, meeting_id, detail=True))
 
 
+def _correction(db: Session, meeting_id: str, from_label: str, to_label: str, kind: str, n: int, seg=None) -> None:
+    """Every fix is logged: it is how speaker accuracy is measured (GET /api/metrics/speakers)."""
+    db.add(
+        SpeakerCorrection(
+            meeting_id=meeting_id, segment_id=seg, from_label=from_label, to_label=to_label, kind=kind,
+            segments_affected=n,
+        )  # fmt: skip
+    )
+
+
+def _label_count(db: Session, meeting_id: str, label: str) -> int:
+    return db.scalar(
+        select(func.count())
+        .select_from(Segment)
+        .where(Segment.meeting_id == meeting_id, Segment.speaker_label == label)
+    )
+
+
 @router.patch("/meetings/{meeting_id}/speakers/{label}", response_model=SpeakerOut)
 def rename_speaker(meeting_id: str, label: str, body: SpeakerUpdate, db: Session = Depends(get_db)):
+    """Name a speaker. The name is linked to the people directory (created if new)."""
     speaker = db.scalars(select(Speaker).where(Speaker.meeting_id == meeting_id, Speaker.label == label)).first()
     if speaker is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "speaker not found")
-    speaker.display_name = body.display_name.strip()
+    if body.person_id is None and body.display_name is None:
+        raise HTTPException(422, "give a display_name or a person_id")
+    person = None
+    if body.person_id:
+        person = db.get(Person, body.person_id)
+        if person is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "person not found")
+    elif not speaker.is_owner:
+        person = ensure_person(db, body.display_name.strip())
+    new_person_id = person.id if person else speaker.person_id
+    if speaker.match_source in ("voiceprint", "platform") and new_person_id != speaker.person_id:
+        # The automatic label was wrong: every turn of this speaker was mislabelled.
+        _correction(db, meeting_id, label, label, "person", _label_count(db, meeting_id, label))
+    speaker.display_name = (body.display_name or person.display_name).strip()
+    if person is not None and not speaker.is_owner:
+        if speaker.person_id != person.id or speaker.match_source is None:
+            speaker.match_source = "manual"  # a confirmed voiceprint/platform match keeps its source
+        speaker.person_id = person.id
     db.commit()
     return speaker
 
@@ -325,12 +384,55 @@ def merge_speakers(meeting_id: str, body: SpeakerMerge, db: Session = Depends(ge
     labels = {s.label: s for s in db.scalars(select(Speaker).where(Speaker.meeting_id == meeting_id)).all()}
     if body.from_label not in labels or body.into_label not in labels:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "speaker not found")
+    n = _label_count(db, meeting_id, body.from_label)
     db.execute(
         update(Segment)
         .where(Segment.meeting_id == meeting_id, Segment.speaker_label == body.from_label)
         .values(speaker_label=body.into_label)
     )
+    _correction(db, meeting_id, body.from_label, body.into_label, "merge", n)
     db.delete(labels[body.from_label])
+    db.commit()
+    return _detail(_get(db, meeting_id, detail=True))
+
+
+@router.patch("/meetings/{meeting_id}/segments/{segment_id}", response_model=MeetingDetail)
+def fix_segment_speaker(meeting_id: str, segment_id: int, body: SegmentUpdate, db: Session = Depends(get_db)):
+    """The fix-speaker tap: move one line to another speaker (or to a new one)."""
+    m = _get(db, meeting_id)
+    _ensure_idle(m)
+    seg = db.get(Segment, segment_id)
+    if seg is None or seg.meeting_id != meeting_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "line not found")
+    speakers = {s.label: s for s in db.scalars(select(Speaker).where(Speaker.meeting_id == meeting_id)).all()}
+    target = body.speaker_label
+    if target == "new":
+        nums = [int(lbl[1:]) for lbl in speakers if lbl[1:].isdigit()]
+        target = f"S{max(nums, default=0) + 1}"
+        db.add(Speaker(meeting_id=meeting_id, label=target, display_name=f"Speaker {target[1:]}", is_owner=False))
+    elif target not in speakers:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "speaker not found")
+    if target != seg.speaker_label:
+        _correction(db, meeting_id, seg.speaker_label, target, "line", 1, seg=seg.id)
+        old = seg.speaker_label
+        seg.speaker_label = target
+        db.flush()
+        if old in speakers and not _label_count(db, meeting_id, old) and not speakers[old].is_owner:
+            db.delete(speakers[old])
+    db.commit()
+    return _detail(_get(db, meeting_id, detail=True))
+
+
+@router.patch("/meetings/{meeting_id}/summary", response_model=MeetingDetail)
+def edit_summary(meeting_id: str, body: SummaryUpdate, db: Session = Depends(get_db)):
+    """Hand edits to a summary. Counted: the Phase 1 gate is at most one edit per standup."""
+    m = _get(db, meeting_id, detail=True)
+    if m.summary is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "this meeting has no summary yet")
+    merged = {**m.summary.data, **body.data}
+    m.summary.data = merged
+    m.summary.edit_count = (m.summary.edit_count or 0) + 1
+    m.summary.edited_at = utcnow()
     db.commit()
     return _detail(_get(db, meeting_id, detail=True))
 

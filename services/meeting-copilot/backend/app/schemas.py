@@ -45,6 +45,9 @@ class SpeakerOut(ORM):
     label: str
     display_name: str
     is_owner: bool
+    person_id: str | None = None
+    match_source: str | None = None
+    match_score: float | None = None
 
 
 class SegmentOut(ORM):
@@ -102,7 +105,16 @@ class MeetingDetail(MeetingListItem):
 
 
 class SpeakerUpdate(BaseModel):
-    display_name: str = Field(min_length=1, max_length=120)
+    display_name: str | None = Field(default=None, min_length=1, max_length=120)
+    person_id: str | None = None  # link this speaker to someone in the people directory
+
+
+class SegmentUpdate(BaseModel):
+    speaker_label: str = Field(min_length=1, max_length=20)  # an existing label, or "new"
+
+
+class SummaryUpdate(BaseModel):
+    data: dict
 
 
 class SpeakerMerge(BaseModel):

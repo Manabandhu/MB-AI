@@ -1,3 +1,4 @@
 # Open-source speech models for the worker. Only needed when STT_PROVIDER=faster_whisper or DIARIZER=pyannote.
 faster-whisper>=1.1
 pyannote.audio>=4.0
+speechbrain>=1.0

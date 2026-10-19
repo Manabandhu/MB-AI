@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from .api import chat, meetings, workspace
+from .api import chat, meetings, metrics, people, workspace
 from .auth import Principal, current_principal
 from .config import get_settings
 from .db import get_engine, init_db
@@ -33,6 +33,8 @@ app.include_router(meetings.router)
 app.include_router(meetings.media_router)
 app.include_router(chat.router)
 app.include_router(workspace.router)
+app.include_router(people.router)
+app.include_router(metrics.router)
 
 
 @app.get("/api/health")

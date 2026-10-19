@@ -75,6 +75,13 @@ def assign_speakers(segments: list[TranscriptSegment], turns: list[SpeakerTurn],
 
 def relabel(lines: list[Line], keep: frozenset[str] = frozenset({OWNER_LABEL})) -> list[Line]:
     """Map raw labels (SPEAKER_00, dg1, F4...) to S1, S2... in order of first appearance."""
+    return relabel_with_map(lines, keep)[0]
+
+
+def relabel_with_map(
+    lines: list[Line], keep: frozenset[str] = frozenset({OWNER_LABEL})
+) -> tuple[list[Line], dict[str, str]]:
+    """relabel(), also returning {raw label: new label} (raw labels may be platform names)."""
     mapping: dict[str, str] = {}
     out = []
     for ln in sorted(lines, key=lambda x: x.start):
@@ -84,7 +91,7 @@ def relabel(lines: list[Line], keep: frozenset[str] = frozenset({OWNER_LABEL})) 
         if ln.speaker not in mapping:
             mapping[ln.speaker] = f"S{len(mapping) + 1}"
         out.append(Line(ln.start, ln.end, mapping[ln.speaker], ln.text))
-    return out
+    return out, mapping
 
 
 _TOKEN = re.compile(r"[a-z0-9']+")
