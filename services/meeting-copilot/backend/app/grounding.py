@@ -19,10 +19,12 @@ _IGNORE_NAMES = {
     "Summary", "Action", "Decision", "Commitment", "Based", "According", "There", "Here", "Sure", "Also", "However",
     "Unfortunately", "Nothing", "Nobody", "None", "Last", "Next", "Everyone", "Someone", "If", "When", "Their",
     "Our", "My", "His", "Her", "Its", "These", "Those", "What", "Who", "Why", "How", "After", "Before", "Both",
-    "Not", "Open", "Done", "Note", "Yes", "Okay", "Ok", "Then", "Still",
+    "Open", "Done", "Note", "Okay", "Ok", "Then", "Still",
 }  # fmt: skip
-_CALENDAR = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "january", "february",
-             "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"}  # fmt: skip
+_CALENDAR = {
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "january", "february", "march",
+    "april", "may", "june", "july", "august", "september", "october", "november", "december",
+}  # fmt: skip
 
 
 def specifics(text: str) -> set[str]:

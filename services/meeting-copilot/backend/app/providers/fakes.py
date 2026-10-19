@@ -96,8 +96,15 @@ class FakeDiarizer:
 
 _LINE = re.compile(r"^\[(\d+):(\d\d)\]\s*([^:]+):\s*(.*)$")
 _DAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "tomorrow")
-_ENTITIES = {"VPN": "system", "Terraform": "system", "API gateway": "system", "firewall": "system",
-             "network team": "org", "cutover": "project", "load test": "topic"}  # fmt: skip
+_ENTITIES = {
+    "VPN": "system",
+    "Terraform": "system",
+    "API gateway": "system",
+    "firewall": "system",
+    "network team": "org",
+    "cutover": "project",
+    "load test": "topic",
+}
 
 
 class FakeLLM:
@@ -118,7 +125,39 @@ class FakeLLM:
             if not m:
                 return "I couldn't find that in your meetings."
             return f"From your meetings: {m.group(2).strip()[:200]} [S{m.group(1)}]"
+        if "TASK: live-answer" in system:
+            m = re.search(r"\[S(\d+)\][^\n]*\n(.+)", user)
+            if not m:
+                return "NOT_IN_HISTORY"
+            line = re.sub(r"^[^:]{1,40}:\s*", "", m.group(2).strip())[:160]
+            return f"From your notes: {line} [S{m.group(1)}]\n- {line} [S{m.group(1)}]"
+        if "TASK: rolling-summary" in system:
+            lines = [ln.split(": ", 1)[-1] for ln in user.splitlines() if ln.startswith("[")]
+            return "\n".join(f"- {ln}" for ln in lines[-3:]) or "- Nothing new."
+        if "TASK: translate" in system:
+            lang = re.search(r"into ([\w-]+)", system)
+            return f"[{lang.group(1) if lang else '?'}] {user.strip()}"
+        if "TASK: explain-term" in system:
+            m = re.search(r"\[S(\d+)\][^\n]*\n(.+)", user)
+            return f"{m.group(2).strip()[:160]} [S{m.group(1)}]" if m else "NOT_IN_HISTORY"
+        if "TASK: standup-draft" in system:
+            data = json.loads(user.split("\n", 1)[1]) if "\n" in user else {}
+            return json.dumps(
+                {
+                    "yesterday": [a["text"] for a in data.get("activity", [])][:3] + data.get("done", [])[:2],
+                    "today": data.get("open_commitments", [])[:3],
+                    "blockers": data.get("blockers", [])[:2],
+                }
+            )
+        if "TASK: rehearse" in system:
+            words = user.split()
+            return " ".join(words[:120])
         return "ok"
+
+    def stream(self, system, messages, *, max_tokens=400, temperature=0.2):
+        reply = self.complete(system, messages, max_tokens=max_tokens)
+        for i, word in enumerate(reply.split(" ")):
+            yield word if i == 0 else " " + word
 
     @staticmethod
     def _summary(transcript: str, system: str = "") -> dict:

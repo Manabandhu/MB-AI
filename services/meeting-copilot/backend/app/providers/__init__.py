@@ -4,6 +4,14 @@ from ..config import Settings, get_settings
 from .diarization import Diarizer, NoDiarizer, PyannoteDiarizer
 from .embeddings import BedrockTitanEmbedder, Embedder, OpenAICompatEmbedder
 from .fakes import FakeDiarizer, FakeEmbedder, FakeLLM, FakeTranscriber
+from .live_stt import (
+    DeepgramStreaming,
+    FakeStreamingTranscriber,
+    FasterWhisperStreaming,
+    NoStreamingTranscriber,
+    SherpaOnnxStreaming,
+    StreamingTranscriber,
+)
 from .llm import LLM, BedrockLLM, OpenAICompatLLM
 from .stt import DeepgramTranscriber, FasterWhisperTranscriber, Transcriber
 from .types import ProviderError, SpeakerTurn, TranscriptSegment
@@ -21,6 +29,8 @@ __all__ = [
     "get_diarizer",
     "get_embedder",
     "get_llm",
+    "get_live_llm",
+    "get_live_stt",
     "get_speaker_embedder",
     "get_transcriber",
     "override_providers",
@@ -55,6 +65,20 @@ def _build(kind: str, settings: Settings):
             "bedrock": lambda: BedrockTitanEmbedder(settings),
             "fake": lambda: FakeEmbedder(settings.embed_dim),
         }[settings.embed_provider]()
+    if kind == "live_stt":
+        return {
+            "sherpa_onnx": lambda: SherpaOnnxStreaming(settings),
+            "faster_whisper": lambda: FasterWhisperStreaming(settings),
+            "deepgram": lambda: DeepgramStreaming(settings),
+            "fake": FakeStreamingTranscriber,
+            "none": NoStreamingTranscriber,
+        }[settings.live_stt_provider]()
+    if kind == "live_llm":  # a small fast model for answer cards, when configured
+        if settings.llm_provider == "openai_compat" and settings.live_llm_model:
+            return OpenAICompatLLM(settings.model_copy(update={"llm_model": settings.live_llm_model}))
+        if settings.llm_provider == "bedrock" and settings.bedrock_live_model_id:
+            return BedrockLLM(settings.model_copy(update={"bedrock_model_id": settings.bedrock_live_model_id}))
+        return _get("llm")
     if kind == "voiceprint":
         return {
             "speechbrain": lambda: SpeechBrainEmbedder(settings),
@@ -84,6 +108,14 @@ def get_llm() -> LLM:
 
 def get_embedder() -> Embedder:
     return _get("embedder")  # type: ignore[return-value]
+
+
+def get_live_stt() -> StreamingTranscriber:
+    return _get("live_stt")  # type: ignore[return-value]
+
+
+def get_live_llm() -> LLM:
+    return _get("live_llm")  # type: ignore[return-value]
 
 
 def get_speaker_embedder() -> SpeakerEmbedder:

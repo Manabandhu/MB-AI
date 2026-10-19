@@ -33,6 +33,14 @@ Source of truth for scope: the "Meeting Copilot — Product & Technical Spec" (O
 - Corrections (fix-a-line, merge, reassigning a voiceprint/platform match) are logged in `speaker_corrections`; `GET /api/metrics/speakers` turns them into accuracy and a suggested threshold. `GET /api/metrics/gates` reports the four roadmap gates; summary hand-edits are counted in `summaries.edit_count`.
 - Naming a speaker links or creates a `people` row; attendees join the directory too.
 
+## Live assist (Phase 3)
+
+- Gateway: `WS /api/live/{meeting_id}?token=&role=capture|view&channels=` (`app/api/live.py`). Capture sends 16 kHz PCM16LE (stereo: left you, right the meeting) plus JSON commands; viewers get the same events. Refused without confirmed consent (4403) or a valid token (4401); one capture per meeting (4409). `LIVE_UPSTREAM` proxies sockets to a separate GPU process.
+- `LiveSession` (`app/live/session.py`): streaming STT per channel (`LIVE_STT_PROVIDER`: sherpa_onnx, faster_whisper, deepgram, fake, none), live speaker labels (attendee voiceprints, else "Speaker A/B/C" clusters), captions from bots/platforms, triggers → cards, rolling summary every `LIVE_SUMMARY_EVERY_S`, translation, off-the-record pauses (silence written, gap recorded). On stop the recording (or the captions) goes to the post-meeting pipeline; live text never goes straight to memory.
+- `TriggerDetector`: name/alias (partials prefetch retrieval), question aimed at you within `LIVE_QUESTION_WINDOW_S`, watched keywords, explain-a-term, commitment nudges; cooldowns keep one card per exchange. Your own speech never raises an answer card.
+- `draft_card`: filter-first retrieval scoped to the profile and attendees, prefetched context, streamed tokens (`card_delta`), grounding check; below `LIVE_ANSWER_MIN_SCORE`, NOT_IN_HISTORY or ungrounded specifics → "Not in your history — say you'll follow up." Every card stores `timings_ms` and thumbs feedback (`/api/metrics/live`).
+- The hub is in-process: run the API with one worker. Briefs: `GET /api/meetings/{id}/brief`. Standup: `POST /api/standup/draft` (Jira/GitHub/CI activity + commitments) and `/rehearse`.
+
 ## Profiles and memory (Phase 4)
 
 - Profiles (`app/pipeline/profiles.py`): standup, 1:1, client call, incident, planning/design review, interview, in-person, phone call, general, plus per-workspace custom profiles (`custom_profiles`: prompt + field list). A profile adds `fields` to the common summary shape; `summaries.data.fields_meta` keeps the labels. `profile="auto"` detects from title/attendees at creation and re-detects from the first two minutes before summarizing; a user override sets `profile_source="user"`.
