@@ -52,6 +52,11 @@ if [ ! -f .env ]; then
   if [ "$HF" != "unset" ]; then echo "HF_TOKEN=$HF" >> .env; fi
   DG=$(param deepgram-api-key)
   if [ "$DG" != "unset" ]; then echo "DEEPGRAM_API_KEY=$DG" >> .env; fi
+  echo "SECRET_KEY=$(param secret-key)" >> .env
+%{ if bot_key_env != "" ~}
+  BOT=$(param bot-api-key)
+  if [ "$BOT" != "unset" ]; then echo "${bot_key_env}=$BOT" >> .env; fi
+%{ endif ~}
   cat >> .env <<'ENVBLOCK'
 %{ for key, value in env ~}
 ${key}=${value}
@@ -60,10 +65,10 @@ ENVBLOCK
 fi
 
 FILES="-f docker-compose.yml"
-PROFILES=""
+PROFILES="--profile live"
 %{ if gpu ~}
 FILES="$FILES -f docker-compose.gpu.yml"
-PROFILES="--profile local-llm"
+PROFILES="$PROFILES --profile local-llm"
 %{ endif ~}
 %{ if public ~}
 PROFILES="$PROFILES --profile tls"

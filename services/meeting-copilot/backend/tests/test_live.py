@@ -296,3 +296,27 @@ def test_standup_draft_and_rehearse(client, monkeypatch):
         ws.send_json({"type": "stop"})
         stopped, _ = _recv_until(ws, "stopped")
         assert stopped["status"] == "created"  # nothing was said
+
+
+def test_live_routes_forward_to_the_live_upstream(client, monkeypatch):
+    """With LIVE_UPSTREAM set, live/bot HTTP routes go to the live process; everything else stays here."""
+    import httpx
+
+    from app.config import get_settings
+    from app.live.upstream import LIVE_ROUTES
+
+    assert LIVE_ROUTES.match("/api/meetings/abc/live/ask") and LIVE_ROUTES.match("/api/bot/webhook")
+    assert LIVE_ROUTES.match("/api/meetings/abc/bot") and LIVE_ROUTES.match("/api/live/cards/3/feedback")
+    assert not LIVE_ROUTES.match("/api/meetings/abc") and not LIVE_ROUTES.match("/api/meetings/abc/brief")
+    seen = []
+
+    async def fake_request(self, method, url, **kw):
+        seen.append((method, url, kw["headers"].get("x-copilot-upstream"), kw["params"]))
+        return httpx.Response(202, json={"status": "forwarded"})
+
+    monkeypatch.setattr(get_settings(), "live_upstream", "ws://live:8001")
+    monkeypatch.setattr(httpx.AsyncClient, "request", fake_request)
+    r = client.post("/api/meetings/m1/live/captions?x=1", json={"speaker": "A", "text": "hi"}, headers=AUTH)
+    assert r.status_code == 202 and r.json() == {"status": "forwarded"}
+    assert seen == [("POST", "http://live:8001/api/meetings/m1/live/captions", "1", {"x": "1"})]
+    assert client.get("/api/meetings", headers=AUTH).status_code == 200 and len(seen) == 1

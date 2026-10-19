@@ -50,6 +50,23 @@ resource "aws_ssm_parameter" "deepgram" {
   value = var.deepgram_api_key == "" ? "unset" : var.deepgram_api_key
 }
 
+resource "aws_ssm_parameter" "bot_api_key" {
+  name  = "${local.param_path}/bot-api-key"
+  type  = "SecureString"
+  value = var.bot_api_key == "" ? "unset" : var.bot_api_key
+}
+
+resource "random_password" "secret_key" {
+  length  = 48
+  special = false
+}
+
+resource "aws_ssm_parameter" "secret_key" {
+  name  = "${local.param_path}/secret-key"
+  type  = "SecureString"
+  value = random_password.secret_key.result
+}
+
 # ---------------------------------------------------------------- storage
 
 resource "aws_s3_bucket" "audio" {
@@ -239,6 +256,19 @@ locals {
     EMBED_PROVIDER       = local.gpu ? "openai_compat" : "bedrock"
     EMBED_DIM            = local.gpu ? "768" : "1024"
     BEDROCK_MODEL_ID     = var.bedrock_model_id
+    LIVE_STT_PROVIDER    = local.gpu ? "faster_whisper" : "deepgram"
+    VOICEPRINT_PROVIDER  = "speechbrain"
+    BOT_PROVIDER         = var.bot_provider
+    PUBLIC_BASE_URL      = var.domain_name != "" ? "https://${var.domain_name}" : ""
+    OIDC_ISSUER          = var.oidc_issuer
+    OIDC_CLIENT_ID       = var.oidc_client_id
+    OIDC_ALLOWED_DOMAINS = var.oidc_allowed_domains
+  }
+  bot_key_env = {
+    attendee = "ATTENDEE_API_KEY"
+    vexa     = "VEXA_API_KEY"
+    recall   = "RECALL_API_KEY"
+    none     = ""
   }
 }
 
@@ -269,6 +299,7 @@ resource "aws_instance" "app" {
     gpu            = local.gpu
     public         = local.public
     env            = local.env
+    bot_key_env    = local.bot_key_env[var.bot_provider]
     install_docker = !local.gpu # the Deep Learning AMI already has Docker and the NVIDIA toolkit
   })
 

@@ -14,6 +14,7 @@ from .api import bot, chat, insights, integrations, live, meetings, memory, metr
 from .auth import Principal, current_principal, get_db
 from .config import get_settings
 from .db import get_engine, init_db
+from .live.upstream import LiveUpstreamMiddleware
 from .pipeline.profiles import all_profiles
 
 log = logging.getLogger("api")
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Meeting Copilot", version="0.2.0", lifespan=lifespan)
+app.add_middleware(LiveUpstreamMiddleware)
 app.include_router(meetings.router)
 app.include_router(meetings.media_router)
 app.include_router(chat.router)

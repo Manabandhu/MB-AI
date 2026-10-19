@@ -15,3 +15,12 @@ domain_name = ""
 
 audio_retention_days = 30
 glossary             = ""
+
+# Optional single sign-on (OIDC). Register a public client with redirect URI https://<domain_name>/auth/callback.
+# oidc_issuer          = "https://sso.example.com/realms/team"
+# oidc_client_id       = "meeting-copilot"
+# oidc_allowed_domains = "example.com"
+
+# Optional meeting bot (needs domain_name so the provider's webhooks can reach the app).
+# bot_provider = "attendee"   # none | attendee | vexa | recall
+# bot_api_key  = ""

@@ -94,3 +94,38 @@ variable "snapshot_retention_count" {
   type        = number
   default     = 7
 }
+
+variable "oidc_issuer" {
+  description = "Optional single sign-on: the OIDC issuer URL (Keycloak realm, Cognito user pool, Entra ID tenant...)."
+  type        = string
+  default     = ""
+}
+
+variable "oidc_client_id" {
+  description = "The public web client registered with the OIDC provider (redirect URI https://<domain>/auth/callback)."
+  type        = string
+  default     = ""
+}
+
+variable "oidc_allowed_domains" {
+  description = "Comma-separated email domains allowed to sign in with SSO. Empty allows any."
+  type        = string
+  default     = ""
+}
+
+variable "bot_provider" {
+  description = "Meeting bot for Teams/Zoom/Meet: none, attendee, vexa or recall. Bots need domain_name so webhooks can reach the app."
+  type        = string
+  default     = "none"
+  validation {
+    condition     = contains(["none", "attendee", "vexa", "recall"], var.bot_provider)
+    error_message = "bot_provider must be none, attendee, vexa or recall."
+  }
+}
+
+variable "bot_api_key" {
+  description = "API key for the bot provider (stored in SSM Parameter Store)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

@@ -79,6 +79,8 @@ class ApiClient:
             "attendees": attendees,
             "channel_layout": "mic_system" if stereo else "mono",
             "consent_confirmed": consent,
+            "consent_method": "tap",
+            "source": "desktop",
         }
         try:
             return self._check(self.http.post("/api/meetings", json=body))

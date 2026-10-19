@@ -1,7 +1,7 @@
-# Meeting Copilot: Postgres + API (with web UI) + worker.
-#   docker compose up -d --build                          paid APIs or a model server elsewhere
-#   docker compose --profile local-llm up -d --build      also run Ollama for the LLM and embeddings
-#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile local-llm up -d --build
+# Meeting Copilot: Postgres + API (with web UI) + worker, and a live service for live assist.
+#   docker compose --profile live up -d --build           paid APIs or a model server elsewhere
+#   docker compose --profile live --profile local-llm up -d --build      also run Ollama for the LLM and embeddings
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile live --profile local-llm up -d --build
 #   docker compose --profile tls up -d                    HTTPS with automatic certificates (set DOMAIN)
 name: meeting-copilot
 
@@ -13,6 +13,9 @@ x-app-env: &app-env
   LLM_PROVIDER: ${LLM_PROVIDER:-openai_compat}
   EMBED_PROVIDER: ${EMBED_PROVIDER:-openai_compat}
   EMBED_DIM: ${EMBED_DIM:-768}
+  LIVE_STT_PROVIDER: ${LIVE_STT_PROVIDER:-faster_whisper}
+  VOICEPRINT_PROVIDER: ${VOICEPRINT_PROVIDER:-speechbrain}
+  BOT_PROVIDER: ${BOT_PROVIDER:-none}
 
 services:
   db:
@@ -36,7 +39,11 @@ services:
       dockerfile: backend/Dockerfile
       target: api
     env_file: .env
-    environment: *app-env
+    environment:
+      <<: *app-env
+      # Live sessions run in the live service (it has the speech models); the API forwards to it.
+      # Empty (as in `make demo`) runs live assist inside the API process.
+      LIVE_UPSTREAM: ${LIVE_UPSTREAM-ws://live:8001}
     volumes:
       - audio:/data/audio
     ports:
@@ -54,6 +61,24 @@ services:
       target: worker
     env_file: .env
     environment: *app-env
+    volumes:
+      - audio:/data/audio
+      - models:/models
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  live:
+    # Live assist: streaming STT, speaker matching and answer cards. Same image as the worker.
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: worker
+    profiles: ["live"]
+    env_file: .env
+    environment: *app-env
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]
     volumes:
       - audio:/data/audio
       - models:/models
