@@ -23,7 +23,7 @@ export function passwordProblem(password: string): string | null {
  */
 export const PASSWORD_RULES = `minlength: ${MIN_PASSWORD_LENGTH}; required: lower, upper; required: digit; allowed: ascii-printable;`;
 
-/** Length of the one-time codes Supabase Auth sends (`otp_length` in supabase/config.toml). */
+/** Length of the one-time codes Supabase Auth sends (Supabase dashboard: Auth → Email → OTP length). */
 export const OTP_CODE_LENGTH = 6;
 
 /** Builds an E.164 number from a dial code such as "+1" and whatever the user typed. */

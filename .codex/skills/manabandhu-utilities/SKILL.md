@@ -60,7 +60,7 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - Providers are behind typed adapters with timeouts, retries, and caching
 - Location is requested only when needed
 - External links are labeled with source and freshness
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Styling uses Tamagui primitives from `@/modules/shared/ui` with design-system tokens (Uniwind/Tailwind were removed 2026-10-30)
 
 ## Accessibility and Responsive Behavior Rules
 

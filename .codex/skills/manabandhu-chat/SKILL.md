@@ -7,7 +7,7 @@ description: Maintain ManaBandhu direct, group, support, and AI chat, including 
 
 ## Module Purpose and Ownership
 
-Owns Chat List, New Chat, Conversation, Conversation Info, message state, realtime subscriptions, attachments, presence, and moderation affordances. Realtime service ownership remains under `platform/chat` and `services/chat-realtime`.
+Owns Chat List, New Chat, Conversation, Conversation Info, message state, realtime subscriptions, attachments, presence, and moderation affordances. Backend ownership is `backend/src/main/java/com/manabandhu/backend/chat/`, including `ContactOwnerService`, the single entry point other modules use to open an owner-contact conversation.
 
 ## Route Inventory
 

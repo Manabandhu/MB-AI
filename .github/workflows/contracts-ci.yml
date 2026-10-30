@@ -12,6 +12,7 @@ on:
     paths:
       - packages/api-contracts/**
       - backend/src/main/resources/graphql/**
+      - .github/workflows/contracts-ci.yml
 
 permissions:
   contents: read
@@ -27,7 +28,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
       - name: Verify contract synchronization
         run: node scripts/verify-contracts.mjs
       - name: Parse contract documents

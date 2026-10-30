@@ -13,7 +13,7 @@ class AutomationCatalogTest {
     void catalogIsAllowListedAndUnconfiguredWithoutServerCredentials() {
         var catalog = new AutomationCatalog("", "");
 
-        assertThat(catalog.operations()).hasSize(7).allMatch(operation -> !operation.configured());
+        assertThat(catalog.operations()).hasSize(6).allMatch(operation -> !operation.configured());
         assertThatThrownBy(() -> catalog.require("arbitrary-command"))
                 .isInstanceOf(UnknownAutomationOperationException.class);
     }

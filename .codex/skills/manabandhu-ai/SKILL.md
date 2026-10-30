@@ -7,7 +7,7 @@ description: Maintain ManaBandhu AI assistant and chatbot capabilities, includin
 
 ## Module Purpose and Ownership
 
-Owns user-facing assistant and bot experiences, streaming UI, consent, safety feedback, citations, and typed integration with the AI orchestrator. Orchestration and evaluation infrastructure remain under `services/ai-orchestrator` and `platform/ai`.
+Owns user-facing assistant and bot experiences, streaming UI, consent, safety feedback, citations, and typed integration with a model provider. Backend ownership is `backend/src/main/java/com/manabandhu/backend/ai/`; replies stay a placeholder until a provider and an evaluation suite exist (the old `ai-evaluations` workflow and `services/ai-orchestrator` placeholder were removed on 2026-10-30).
 
 ## Route Inventory
 

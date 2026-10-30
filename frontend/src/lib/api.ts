@@ -1,6 +1,5 @@
 import { ApiError, AuthError, createHttpClient, isLocalOrLanHost } from '@manabandhu/core';
 import Constants from 'expo-constants';
-import { GraphQLClient } from 'graphql-request';
 import { Platform } from 'react-native';
 
 import { env } from '@/lib/env';
@@ -58,8 +57,6 @@ const http = createHttpClient({
   getAccessToken: async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
 });
 
-export const authorizationHeaders = http.authorizationHeaders;
-
 export async function getApiHealth(): Promise<ApiHealth> {
   const response = await fetch(`${getResolvedApiUrl()}/api/v1/health`);
   if (!response.ok) throw new ApiError(`Health check failed: ${response.status}`, response.status);
@@ -79,12 +76,6 @@ export interface IdentityResponse {
   email: string | null;
   fullName: string | null;
   role: string;
-}
-
-export async function graphqlClient() {
-  return new GraphQLClient(`${getResolvedApiUrl()}/graphql`, {
-    headers: await authorizationHeaders(),
-  });
 }
 
 /** Calls the ManaBandhu backend with the signed-in member's token. Every module's `api.ts` goes through this. */

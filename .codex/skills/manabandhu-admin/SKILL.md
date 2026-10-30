@@ -77,7 +77,7 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 - Uses `useQuery` for all admin data fetching
 - Admin mutations use `useMutation` with query invalidation
 - All privileged actions are enforced server-side; client derives authorization from verified JWT claims
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Styling uses Tamagui primitives from `@/modules/shared/ui` with design-system tokens (Uniwind/Tailwind were removed 2026-10-30)
 
 ## Accessibility and Responsive Behavior Rules
 

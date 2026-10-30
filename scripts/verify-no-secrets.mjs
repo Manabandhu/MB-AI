@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { trackedFiles } from './lib/files.mjs';
 
 // Fails when a tracked file contains something that looks like a real credential. Two leaks were found in this
-// repository (a database password in backend/.env.example and Supabase/GitHub tokens in .kilo/kilo.json); this
+// repository (a database password in backend/.env.example and Supabase/GitHub tokens in a since-removed tool config); this
 // keeps them from coming back. Reference secrets through environment variables instead.
 
 const patterns = [

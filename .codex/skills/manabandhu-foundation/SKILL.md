@@ -90,7 +90,7 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 - Foundation screens live in `frontend/src/modules/foundation/screens/` (app shell in `screens/shell/`)
 - Shared controls live in `frontend/src/modules/shared/ui`
 - Use `useQuery` for server state and `useState` for local UI state
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Styling uses Tamagui primitives from `@/modules/shared/ui` with design-system tokens (Uniwind/Tailwind were removed 2026-10-30)
 - `useAdaptiveLayout` governs responsive max-width and column count
 
 ## Accessibility and Responsive Behavior Rules
@@ -152,7 +152,7 @@ Splash navigation waits for the Expo Router root navigation state to expose its 
 - Home = `HomeHero` (greeting with the member's first name or "Welcome back", location chip → `LocationSelectorModal`, search entry; bell/avatar only on phones) + `QuickAccess` + community pulse + module widgets from `home/registry.ts` in a `ResponsiveGrid` (1/2/2/3 columns). Each widget is exported by its module (`RoomsHomeWidget`, `RidesHomeWidget`, `CommunityHomeWidget`, `JobsHomeWidget`, `EventsHomeWidget`, `ReferralsHomeWidget`), uses `WidgetFrame`, owns its query (`[module, 'home-widget', …]`, 60s stale), and is wrapped in `WidgetBoundary`. Pull-to-refresh invalidates every `home-widget` query plus the home shell.
 - Launcher: `launcher/moduleRegistry.ts` aggregates each module's `moduleMeta`; `launcher/rankModules.ts` (pure) orders tiles by device-local visits; `userActivityStore` only stores visits and exposes `useRankedModules`. Explore filters the same registry with the pure helpers in `launcher/exploreFilters.ts` (see "Explore and tab navigation").
 - Profile shows only provider-confirmed badges, activity/account links, and `settings/AppearanceSettings.tsx` (theme + animation level).
-- Desktop/landscape Home hero shows `BrandHero3D`; Splash is rebuilt on Tamagui with `AnimatedBrandMark` and the brand tagline (the unverifiable "Safe & Verified" badge was removed); the redirect timing is unchanged.
+- Splash is rebuilt on Tamagui with `AnimatedBrandMark` and the brand tagline (the unverifiable "Safe & Verified" badge was removed); the redirect timing is unchanged.
 - Home, the shell, Profile, and Appearance use `useT()` strings (English, Telugu, Hindi). Appearance now also picks the language. Widget queries and the home/explore/community shell counts are persisted for instant start; chat/saved/profile shells are not.
 - Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.
 ## Home v2 (2026-10, iPhone feedback)

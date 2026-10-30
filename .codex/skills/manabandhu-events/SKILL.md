@@ -68,7 +68,7 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - Uses `useQuery` and `useMutation` from `@tanstack/react-query`
 - Forms use `react-hook-form` + `zod` + `@hookform/resolvers`
 - Events store instants in UTC and render locale-aware dates
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Styling uses Tamagui primitives from `@/modules/shared/ui` with design-system tokens (Uniwind/Tailwind were removed 2026-10-30)
 
 ## Accessibility and Responsive Behavior Rules
 

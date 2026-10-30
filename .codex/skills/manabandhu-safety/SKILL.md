@@ -58,7 +58,7 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 - Uses `useQuery` for all safety data fetching
 - Blocking is UI-complete; enforcement across modules is backend-dependent
 - Evidence privacy and encryption are backend responsibilities
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Styling uses Tamagui primitives from `@/modules/shared/ui` with design-system tokens (Uniwind/Tailwind were removed 2026-10-30)
 
 ## Accessibility and Responsive Behavior Rules
 

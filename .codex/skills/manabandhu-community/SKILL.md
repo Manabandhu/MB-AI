@@ -71,7 +71,7 @@ Owns Community Home, Discover, Joined Communities, Community Details, Create Pos
 - Route files in `frontend/src/app/community/` are thin wrappers
 - Uses `useQuery` and `useMutation` from `@tanstack/react-query`
 - Forms use `react-hook-form` + `zod` + `@hookform/resolvers`
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Styling uses Tamagui primitives from `@/modules/shared/ui` with design-system tokens (Uniwind/Tailwind were removed 2026-10-30)
 - `useAdaptiveLayout` governs responsive max-width and columns
 
 ## Accessibility and Responsive Behavior Rules

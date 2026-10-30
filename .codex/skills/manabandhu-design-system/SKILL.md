@@ -43,7 +43,7 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 - Confirm with `useConfirm` (or `confirmAction`); `destructive: true` only for delete, cancel and remove.
 - `heart` is the save icon app-wide (not `bookmark`).
 - Every interactive control has a 44pt target, a role, a label and a `focusVisibleStyle`.
-- Gluestack was removed (2026-10). Screens not yet migrated still use `StyleSheet` + design-system constants or Uniwind classes; migrate them to these primitives during each module's review.
+- Gluestack was removed (2026-10). Uniwind/Tailwind were removed (2026-10-30); Tamagui is the only styling system. The few remaining `StyleSheet.create` files (native map view, splash/welcome animation layers) use design-system tokens, never raw values.
 
 ## Rules
 1. Use semantic tokens and theme values (`$primary`, `palette.primary`); no hex literals, local colour objects, or numeric breakpoints in screens.
@@ -57,7 +57,7 @@ description: Maintain ManaBandhu's shared visual language, responsive tokens, ac
 - Auth surfaces use `frontend/src/modules/auth/components/AuthKit.tsx` (32pt titles, 52pt fields/buttons, 14pt radius, 460pt card at ≥600pt) with `BrandMark` as the logo.
 ## Motion and 3D (2026-10)
 - Motion primitives in `shared/ui/motion/`: `FadeIn` (staggered entrance), `AnimatedBrandMark` (tile springs in, saffron dot drops, gentle float), `CountUp` (animates real numeric metrics only). All are static with reduced motion.
-- `shared/ui/hero/BrandHero3D`: on web, a lazily imported three.js / react-three-fiber scene (`BrandScene.web.tsx`: extruded logo tile, white arches, orbiting community spheres, pointer parallax; `flat` to keep brand colours). It renders only when `richMotion` is on and WebGL is available, and shows `AnimatedBrandMark` while loading or otherwise. Native uses `AnimatedBrandMark` until an `expo-gl` scene is verified on devices. three.js is fetched only when a hero is shown.
+- The unused web 3D hero (`shared/ui/hero/BrandHero3D`, three.js, react-three-fiber) was removed on 2026-10-30. `motion/AnimatedBrandMark` remains for the splash screen.
 - Deliberately not added: Lottie (needs licensed assets and a separate web player) and Skia (CanvasKit adds about 3 MB of wasm on web). SVG gradients (`GradientSurface`) and Reanimated cover the same effects at no extra cost. Revisit if a design needs them.
 - Dark theme `onPrimary` is `#160b3d` (the dark primary is light violet, so white text failed WCAG AA). On web the page background follows the explicit theme choice.
 - `breakpoint.narrow` (360) marks cover screens and very small phones inside `compact`.

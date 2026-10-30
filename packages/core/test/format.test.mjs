@@ -59,7 +59,6 @@ test('formatCount is compact', () => {
 
 test('formatRelative works without Intl.RelativeTimeFormat (Hermes)', () => {
   const original = Intl.RelativeTimeFormat;
-  // biome-ignore lint/performance/noDelete: simulate an engine without the API
   delete Intl.RelativeTimeFormat;
   try {
     const now = new Date('2026-03-05T12:00:00Z');

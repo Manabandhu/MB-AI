@@ -10,7 +10,7 @@ Frontend notification center, preferences, permissions, badges, and deep-link be
 The module owns the foundation-level Notifications screen even when it is linked from the global app shell.
 The first-batch inbox route `/notifications` uses `frontend/src/modules/notifications/screens/NotificationsInboxScreen.tsx` and the authenticated per-user endpoint `GET /api/v1/notifications/inbox`.
 
-1. Read `platform/notifications/MODULE.md` and the AsyncAPI contract.
+1. Read `backend/src/main/java/com/manabandhu/backend/notifications/` and the AsyncAPI contract.
 2. Emit versioned, idempotent notification requests; never call providers from business transactions.
 3. Evaluate authorization, consent, preference, locale, timezone, quiet hours, urgency, deduplication, and rate limits.
 4. Track requested, accepted, delivered, opened, failed, and suppressed states without storing secrets.

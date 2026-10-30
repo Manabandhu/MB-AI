@@ -19,7 +19,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 12. The public launch flow begins at `/`, hides the native Expo splash after JS mounts, auto-advances the visible Stitch splash into `/welcome`, supports temporary demo sign-in to `/home`, and keeps the backend-status home surface at `/home`.
 13. Keep reusable foundation constants, typed welcome API shapes, step helpers, and repeated welcome UI under `frontend/src/modules/foundation` rather than in Expo Router files.
 14. First-batch Stitch routes through catalog screen 27 use thin Expo Router entries and module-owned screen components for auth, foundation, notifications, rooms, and rides.
-15. The old local `stitch/` export folder has been removed; use a fresh MCP export as the source for the next Stitch implementation pass. Do not satisfy Stitch requirements by rendering screenshots as the app UI.
+15. Do not satisfy design requirements by rendering screenshots as the app UI.
 16. Shared catalog or Stitch-derived screens must expose connected navigation through primary nav, screen actions, and routed cards so route files are reachable through UI.
 17. Shared UI primitives live under `frontend/src/modules/shared/ui` (Tamagui-based; see the design-system skill). Use them before adding screen-local controls. Icons go through `AppIcon` (per-file `lucide-react-native/icons/*` imports); Gluestack, `@legendapp/motion`, `react-aria`, `react-stately`, `tailwind-variants`, and `iconoir-react-native` were removed.
 18. Keep Expo SDK 57 aligned through `expo install --fix`: React Native 0.86, React 19.2, React Native Web 0.21, and Node 22.13 or newer.
@@ -120,7 +120,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Removed the `country-state-city` dependency (GPL-3.0, 8 MB worldwide city JSON) after it broke every iOS route importing `rooms/utils/locationService` under Hermes in development; offline US data now lives in `rooms/utils/usLocationData.ts`. iOS JS bundle 17.4 MB → 9.3 MB, Hermes bytecode 22.2 MB → 12.0 MB.
 
 ## Theme, core package, and storage (2026-10 foundation pass)
-- The root layout wraps the app in `AppThemeProvider` (`frontend/src/theme/ThemeProvider.tsx`): Tamagui 2.7.7 (`tamagui.config.ts`, runtime mode, no compiler) plus the user's appearance choice from `useAppearanceStore` (`themePreferenceStore.ts`): theme `system | light | dark` and motion `full | reduced | off`. `useAppearance()` returns the resolved scheme, palette, and motion flags; the OS reduced-motion setting always wins over "full". Uniwind follows the same scheme while screens still use classes.
+- The root layout wraps the app in `AppThemeProvider` (`frontend/src/theme/ThemeProvider.tsx`): Tamagui 2.7.7 (`tamagui.config.ts`, runtime mode, no compiler) plus the user's appearance choice from `useAppearanceStore` (`themePreferenceStore.ts`): theme `system | light | dark` and motion `full | reduced | off`. `useAppearance()` returns the resolved scheme, palette, and motion flags; the OS reduced-motion setting always wins over "full".
 - Pin Tamagui packages to the same exact version (2.7.7) until a deliberate upgrade that also satisfies the supply-chain release-age policy.
 - The HTTP client, response parsers (`parseJson`, `parseJsonOrThrow`), `ApiError`/`AuthError`, and formatters live in `@manabandhu/core` (`packages/core`). `frontend/src/lib/api.ts` only configures it (base URL resolution and Supabase token); `apiFetch` keeps its signature.
 - Use `formatDate`, `formatTimeRange`, `formatRelative`, `formatMoney`, `formatSalaryRange`, and `formatCount` from `@manabandhu/core` instead of module-local helpers or inline `toLocaleDateString`. They return `null` for missing input so screens pick an honest label.
@@ -134,7 +134,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Each business module exposes `module.ts` (`moduleMeta`: key, label, summary, route, icon, tone, category, defaultRank, surfaces) and a public `index.ts`. Cross-module imports go through `index.ts` only.
 - `app.json`: `orientation: default`, `ios.supportsTablet`, brand adaptive-icon colour, dark splash, web manifest name/theme colour. `app.config.js` adds iOS associated domains and Android App Links when `APP_LINK_DOMAIN` is set.
 - `metro.config.js` enables Expo production tree shaking (`EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH`, `EXPO_UNSTABLE_TREE_SHAKING`, `experimentalImportSupport`, `inlineRequires`). The web entry bundle went from 7.6 MB to 5.2 MB. Import large libraries by subpath where they offer it.
-- 3D: `three@0.186.1` and `@react-three/fiber@9.8.1` are used on web only through the lazily loaded `shared/ui/hero/BrandScene.web.tsx`; native builds never import them.
+- 3D: removed (2026-10-30). No three.js or react-three-fiber dependency.
 - `/saved` is a protected route (`useRequireAuth('/sign-in')`) like every other personal route.
 - Account & data (`foundation/account`) confirms phone changes in-app (`verifyOtp` type `phone_change`) and always clears the local session after deletion.
 
