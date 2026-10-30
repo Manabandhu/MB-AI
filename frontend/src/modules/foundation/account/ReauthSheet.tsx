@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
-import { OTP_CODE_LENGTH } from '@/modules/auth/utils/authHelpers';
+import { OTP_CODE_LENGTH } from '@/modules/auth';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';

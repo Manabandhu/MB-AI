@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { hasAcceptedTerms } from '@/modules/auth/utils/authHelpers';
 import { recordTermsConsent, takePendingConsent } from '@/modules/auth/utils/consent';
-import { getOnboardingProgress } from '@/modules/foundation/api';
+import { getOnboardingProgress } from '@/modules/onboarding';
 
 export const ONBOARDING_START: Href = '/onboarding/what-brings-you-here';
 export const ACCEPT_TERMS = '/accept-terms' as Href;

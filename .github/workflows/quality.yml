@@ -38,5 +38,9 @@ jobs:
         run: node scripts/verify-api-routes.mjs
       - name: Verify design-system ratchet
         run: node scripts/verify-design-system.mjs
+      - name: Verify screen catalog matches route files
+        run: node scripts/verify-screen-catalog.mjs
+      - name: Verify frontend module boundaries
+        run: node scripts/verify-module-boundaries.mjs
       - name: Scan tracked files for credentials
         run: node scripts/verify-no-secrets.mjs

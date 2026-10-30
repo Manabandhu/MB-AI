@@ -6,7 +6,7 @@ import { ConsentCheckbox } from '@/modules/auth/components/ConsentCheckbox';
 import { friendlyAuthError } from '@/modules/auth/utils/authHelpers';
 import { recordTermsConsent } from '@/modules/auth/utils/consent';
 import { routeAfterAuth } from '@/modules/auth/utils/postAuth';
-import { signOutWithFeedback } from '@/modules/foundation/account/signOut';
+import { signOutWithFeedback } from '@/modules/auth/utils/signOut';
 
 /**
  * Shown once after sign-in when the account has no recorded Terms acceptance (Apple/Google or phone sign-in that

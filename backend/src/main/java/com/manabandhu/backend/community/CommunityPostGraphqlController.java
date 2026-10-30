@@ -1,0 +1,81 @@
+package com.manabandhu.backend.community;
+
+import java.util.List;
+import java.util.UUID;
+
+import jakarta.validation.Valid;
+import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.MutationMapping;
+import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import com.manabandhu.backend.auth.Actor;
+
+@Controller
+public class CommunityPostGraphqlController {
+
+    private final CommunityPostService service;
+
+    CommunityPostGraphqlController(CommunityPostService service) {
+        this.service = service;
+    }
+
+    @QueryMapping
+    List<CommunityPost> communityPosts() {
+        return service.findAll();
+    }
+
+    @MutationMapping
+    CommunityPost createCommunityPost(
+            Authentication authentication, @Argument @Valid CreatePostInput input) {
+        return service.create(Actor.require(authentication).id(), input);
+    }
+
+    @QueryMapping
+    List<Community> communities() {
+        return service.findAllCommunities();
+    }
+
+    @MutationMapping
+    Community createCommunity(Authentication authentication, @Argument @Valid CreateCommunityInput input) {
+        return service.createCommunity(Actor.require(authentication).id(), input.name(), input.description());
+    }
+
+    @QueryMapping
+    List<PostComment> postComments(@Argument UUID postId) {
+        return service.findCommentsByPost(postId);
+    }
+
+    @MutationMapping
+    PostComment addPostComment(Authentication authentication, @Argument UUID postId, @Argument @Valid CreatePostCommentInput input) {
+        return service.addComment(postId, Actor.require(authentication).id(), input.body());
+    }
+
+    @QueryMapping
+    List<PostReaction> postReactions(@Argument UUID postId) {
+        return service.findReactionsByPost(postId);
+    }
+
+    @MutationMapping
+    PostReaction addPostReaction(Authentication authentication, @Argument UUID postId, @Argument @Valid CreatePostReactionInput input) {
+        return service.addReaction(postId, Actor.require(authentication).id(), input.type());
+    }
+
+    // User ids stay private, as in the REST PostView/CommentView read models.
+
+    @SchemaMapping(typeName = "CommunityPost", field = "ownerId")
+    UUID postOwnerId(CommunityPost post) {
+        return null;
+    }
+
+    @SchemaMapping(typeName = "PostComment", field = "authorId")
+    UUID commentAuthorId(PostComment comment) {
+        return null;
+    }
+
+    @SchemaMapping(typeName = "PostReaction", field = "userId")
+    UUID reactionUserId(PostReaction reaction) {
+        return null;
+    }
+}

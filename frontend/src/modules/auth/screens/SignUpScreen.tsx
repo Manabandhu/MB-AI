@@ -13,6 +13,7 @@ import {
   SocialButtons,
 } from '@/modules/auth/components/AuthKit';
 import { ConsentCheckbox } from '@/modules/auth/components/ConsentCheckbox';
+import { TERMS_VERSION } from '@/modules/auth/legal/content';
 import {
   friendlyAuthError,
   isValidEmail,
@@ -21,7 +22,6 @@ import {
   passwordProblem,
 } from '@/modules/auth/utils/authHelpers';
 import { rememberPendingConsent, takePendingConsent } from '@/modules/auth/utils/consent';
-import { TERMS_VERSION } from '@/modules/foundation/legal/content';
 
 type FieldErrors = { name?: string; email?: string; password?: string };
 

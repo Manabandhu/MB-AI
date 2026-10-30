@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { TERMS_VERSION } from '@/modules/foundation/legal/content';
+import { TERMS_VERSION } from '@/modules/auth/legal/content';
 
 const PENDING_KEY = 'manabandhu.pendingTermsConsent';
 

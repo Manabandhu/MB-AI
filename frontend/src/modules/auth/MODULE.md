@@ -52,3 +52,11 @@ client (chunked SecureStore sessions on native).
 Every signed-in account must have `user_metadata.terms_version`. Email sign-up writes it; Apple/Google sign-up records
 the consent ticked before the redirect (`consent.ts`); any other account (Apple/Google or phone from Sign In, older
 accounts) is sent once to `/accept-terms` by `routeAfterAuth()`. `/accept-terms` → `screens/AcceptTermsScreen.tsx`.
+
+## Legal documents and sign-out (2026-10-30)
+
+`legal/content.ts` (Terms of Service, Privacy Policy, `TERMS_VERSION`) and `legal/LegalScreen.tsx` (`/terms`,
+`/privacy`) live here because consent is recorded here; `utils/signOut.ts` (`confirmSignOut`, `signOutWithFeedback`)
+also moved in from foundation. Public API (`index.ts`): `AuthButton`, `OTP_CODE_LENGTH`, `ONBOARDING_START`,
+`routeAfterAuth`, `confirmSignOut`. Auth may import `notifications` and `onboarding` (through their `index.ts`), never
+a feature module or foundation.

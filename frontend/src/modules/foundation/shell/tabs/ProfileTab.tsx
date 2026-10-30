@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
-import { confirmSignOut } from '@/modules/foundation/account/signOut';
+import { confirmSignOut } from '@/modules/auth';
 import { NicknameSheet } from '@/modules/foundation/home/NicknameSheet';
 import { AppearanceSettings } from '@/modules/foundation/settings/AppearanceSettings';
 import { AppButton } from '@/modules/shared/ui/AppButton';

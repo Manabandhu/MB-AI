@@ -4,7 +4,7 @@ import { Platform, Share } from 'react-native';
 import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { supabase } from '@/lib/supabase';
-import { unregisterThisDevice } from '@/modules/notifications/utils/push';
+import { unregisterThisDevice } from '@/modules/notifications';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
@@ -14,7 +14,7 @@ import { ListRow } from '@/modules/shared/ui/ListRow';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { Section } from '@/modules/shared/ui/Section';
 import { TextField } from '@/modules/shared/ui/TextField';
-import { deleteMyAccount, exportMyData, ReauthRequiredError } from './accountApi';
+import { deleteMyAccount, exportMyData, ReauthRequiredError } from './api';
 import { ReauthSheet } from './ReauthSheet';
 import { confirmPhoneChange, requestContactChange } from './reauth';
 

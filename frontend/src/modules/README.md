@@ -6,7 +6,23 @@ Modules may import `src/lib`, `src/platform`, shared design-system packages, and
 
 Shared client UI primitives live in `shared/ui` and are built on Tamagui with design-system tokens (`AppText`, `AppButton`, `Card`, `ListRow`, `Chip`, `TextField`, `Screen`, `Section`, `ResponsiveGrid`, `Skeleton`, `BrandLogo`, …; barrel `shared/ui/index.ts`). Use them before writing screen-local controls. Icons go through `AppIcon`, which maps semantic names to Lucide icons, so a future library swap stays in one file.
 
-Each business module exposes a public `index.ts` (its `moduleMeta` from `module.ts`, plus any Home widget or helper other modules need). Import another module only through that file. Platform-free logic shared by every client (HTTP client, formatters, module metadata types) lives in `packages/core`.
+Each module exposes a public `index.ts` (its `moduleMeta` from `module.ts`, plus any Home widget, function, or type another module needs). Import another module only through that file. Platform-free logic shared by every client (HTTP client, formatters, module metadata and catalog types) lives in `packages/core`.
+
+## Layers
+
+Imports only go downwards; `pnpm verify:boundaries` (also in CI) fails on a deep import into another module or an
+import from a higher layer.
+
+1. `shared` (UI primitives, shared hooks, stores and utils), plus `src/lib`, `src/platform`, `src/theme`
+2. `notifications`
+3. `onboarding`
+4. `auth`
+5. Feature modules (rooms, rides, jobs, referrals, community, chat, events, marketplace, expenses, immigration,
+   utilities, safety, ai-assistant, admin). They may use each other's public API (for example jobs → referrals).
+6. `foundation`, the app shell, organised by sub-feature (see `foundation/MODULE.md`). Only
+   `foundation/launcher/` may import another module's `module.ts` directly.
+
+Route files in `src/app` stay thin and may import a module's screen file directly.
 
 ## Module layout
 
@@ -27,4 +43,4 @@ Every module uses the same folders; create one only when it has a file.
 
 Format dates, times, numbers, and money with `@manabandhu/core` (`formatDate`, `formatTime`, `formatNumber`, `formatMoney`, …) so the user's language applies; do not call `toLocale*String` directly. Show messages and confirmations with `@/modules/shared/ui/notify`.
 
-`screen-catalog.ts` is the canonical product screen inventory. Current business folders are foundation, auth, notifications, rooms, rides, jobs, referrals, community, chat, immigration, expenses, events, marketplace, utilities, safety, ai-assistant, and admin.
+`screen-catalog.ts` is the canonical product screen inventory. Current business folders are foundation, auth, notifications, rooms, rides, jobs, referrals, community, chat, immigration, expenses, events, marketplace, utilities, safety, ai-assistant, onboarding, and admin.

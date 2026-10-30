@@ -7,7 +7,7 @@ import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { useLocationStore } from '@/lib/locationStore';
-import { LocationSelectorModal } from '@/modules/foundation/components/LocationSelectorModal';
+import { LocationSelectorModal } from '@/modules/foundation/location/LocationSelectorModal';
 import { UnreadNotificationDot } from '@/modules/foundation/shell/UnreadNotificationDot';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';

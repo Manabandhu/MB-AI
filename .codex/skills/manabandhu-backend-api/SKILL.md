@@ -137,3 +137,4 @@ description: Maintain ManaBandhu's root Java 25 Spring Boot modular backend, inc
   - Jackson 3 only: the explicit `com.fasterxml.jackson.core:jackson-databind` dependency was removed; code uses `tools.jackson` (`JsonMapper.shared()`, unchecked `JacksonException`). `com.fasterxml.jackson.annotation` stays (Jackson 3 uses it).
   - Inline `org.springframework.data.domain.*` names were replaced with imports; imports are grouped java / third-party / `com.manabandhu` / `jakarta`.
 - `RideChatService.provision` (2026-10-30) has no outer `@Transactional`: `RideOfferService.attachConversation` must lock and re-read the offer in its own transaction, otherwise two concurrent first calls each create a ride chat.
+- Package rename (2026-10-30): `com.manabandhu.backend.post` is now `com.manabandhu.backend.community` (community feature: communities, posts, comments, reactions); `scripts/module-skill-rules.mjs` maps it to the community skill.

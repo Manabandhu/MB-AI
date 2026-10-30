@@ -2,7 +2,11 @@ export const moduleSkillRules = [
   ['manabandhu-mobile-platform', ['frontend/']],
   [
     'manabandhu-foundation',
-    ['frontend/src/modules/foundation/', 'frontend/src/modules/screen-catalog.ts'],
+    [
+      'frontend/src/modules/foundation/',
+      'frontend/src/modules/onboarding/',
+      'frontend/src/modules/screen-catalog.ts',
+    ],
   ],
   ['manabandhu-auth', ['frontend/src/modules/auth/']],
   ['manabandhu-rooms', ['frontend/src/modules/rooms/']],
@@ -11,7 +15,7 @@ export const moduleSkillRules = [
   ['manabandhu-referrals', ['frontend/src/modules/referrals/']],
   [
     'manabandhu-community',
-    ['frontend/src/modules/community/', 'backend/src/main/java/com/manabandhu/backend/post/'],
+    ['frontend/src/modules/community/', 'backend/src/main/java/com/manabandhu/backend/community/'],
   ],
   ['manabandhu-backend-api', ['backend/']],
   [

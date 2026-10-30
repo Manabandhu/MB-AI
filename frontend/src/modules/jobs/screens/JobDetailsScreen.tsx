@@ -9,7 +9,7 @@ import { shareLink } from '@/lib/share';
 import { applyToJob, deleteJobPosting, getJobPosting, updateJobPosting } from '@/modules/jobs/api';
 import { employmentTypeLabel } from '@/modules/jobs/types';
 import { jobStatusIs } from '@/modules/jobs/utils/jobForm';
-import { createReferralRequest } from '@/modules/referrals/api';
+import { createReferralRequest } from '@/modules/referrals';
 import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText, Heading } from '@/modules/shared/ui/AppText';

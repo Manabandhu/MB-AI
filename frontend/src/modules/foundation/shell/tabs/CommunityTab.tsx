@@ -5,7 +5,7 @@ import Head from 'expo-router/head';
 import { XStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { FEED_LIMIT, listPosts } from '@/modules/community';
-import { useShellContent } from '@/modules/foundation/shell/shellApi';
+import { useShellContent } from '@/modules/foundation/shell/api';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Chip } from '@/modules/shared/ui/Chip';
