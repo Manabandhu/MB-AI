@@ -1,71 +1,78 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
-import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { XStack, YStack } from 'tamagui';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { useAppearance } from '@/theme/ThemeProvider';
 
 export type EmptyStateProps = {
   title: string;
   body: string;
-  actionLabel: string;
-  onAction: () => void;
-  icon?: React.ReactNode;
+  actionLabel?: string;
+  onAction?: () => void;
+  /** A second, quieter next step (rendered as a ghost button after the main action). */
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
+  /** Custom illustration; defaults to an icon in a tinted circle. */
+  icon?: ReactNode;
+  iconName?: AppIconName;
+  /** Smaller padding for use inside cards and widgets. */
+  compact?: boolean;
 };
 
-export function EmptyState({ title, body, actionLabel, onAction, icon }: EmptyStateProps) {
-  const colorScheme = useColorScheme();
-
+/** Honest "nothing here yet" state with one clear next step. Never fill an empty list with sample data. */
+export function EmptyState({
+  title,
+  body,
+  actionLabel,
+  onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
+  icon,
+  iconName = 'sparks',
+  compact,
+}: EmptyStateProps) {
+  const { palette } = useAppearance();
   return (
-    <View style={[styles.root, colorScheme === 'dark' && styles.rootDark]}>
-      <View style={styles.icon}>{icon}</View>
-      <Text style={[styles.title, colorScheme === 'dark' && styles.titleDark]}>{title}</Text>
-      <Text style={[styles.body, colorScheme === 'dark' && styles.bodyDark]}>{body}</Text>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel={actionLabel}
-        onPress={onAction}
-        style={[styles.button, colorScheme === 'dark' && styles.buttonDark]}
-      >
-        <Text style={[styles.buttonText, colorScheme === 'dark' && styles.buttonTextDark]}>
-          {actionLabel}
-        </Text>
-      </TouchableOpacity>
-    </View>
+    <YStack alignItems="center" gap="$x3" padding={compact ? '$x4' : '$x8'}>
+      {icon ?? (
+        <YStack
+          alignItems="center"
+          backgroundColor="$primaryTint"
+          borderRadius="$pill"
+          height={compact ? 48 : 72}
+          justifyContent="center"
+          width={compact ? 48 : 72}
+        >
+          <AppIcon color={palette.primary} name={iconName} size={compact ? 22 : 32} />
+        </YStack>
+      )}
+      <AppText center variant={compact ? 'bodyStrong' : 'h3'}>
+        {title}
+      </AppText>
+      <AppText center maxWidth={420} tone="muted">
+        {body}
+      </AppText>
+      {(actionLabel && onAction) || (secondaryActionLabel && onSecondaryAction) ? (
+        <XStack flexWrap="wrap" gap="$x2" justifyContent="center">
+          {actionLabel && onAction ? (
+            <AppButton
+              label={actionLabel}
+              onPress={onAction}
+              size={compact ? 'sm' : 'md'}
+              variant="secondary"
+            />
+          ) : null}
+          {secondaryActionLabel && onSecondaryAction ? (
+            <AppButton
+              label={secondaryActionLabel}
+              onPress={onSecondaryAction}
+              size={compact ? 'sm' : 'md'}
+              variant="ghost"
+            />
+          ) : null}
+        </XStack>
+      ) : null}
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    alignItems: 'center',
-    gap: space.x4,
-    padding: space.x6,
-  },
-  rootDark: {},
-  icon: { marginBottom: space.x3 },
-  title: {
-    color: colors.ink,
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
-    lineHeight: typography.h3.lineHeight,
-    textAlign: 'center',
-  },
-  titleDark: { color: colors.ink },
-  body: {
-    color: colors.muted,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    textAlign: 'center',
-  },
-  bodyDark: { color: colors.muted },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.control,
-    paddingHorizontal: space.x6,
-    paddingVertical: space.x3,
-    marginTop: space.x2,
-  },
-  buttonDark: { backgroundColor: colors.primary },
-  buttonText: {
-    color: colors.surface,
-    fontSize: typography.bodyStrong.fontSize,
-    fontWeight: typography.bodyStrong.fontWeight,
-  },
-  buttonTextDark: { color: colors.surface },
-});

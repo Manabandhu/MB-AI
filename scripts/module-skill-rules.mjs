@@ -24,7 +24,7 @@ export const moduleSkillRules = [
   ],
   ['manabandhu-admin', ['frontend/src/app/admin/', 'frontend/src/modules/admin/']],
   ['manabandhu-api-contracts', ['packages/api-contracts/']],
-  ['manabandhu-architecture', ['docs/architecture/']],
+  ['manabandhu-architecture', ['docs/architecture/', 'packages/core/']],
   ['manabandhu-design-system', ['packages/design-system/', 'stitch/']],
   [
     'manabandhu-notifications',

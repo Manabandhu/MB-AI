@@ -1,3 +1,4 @@
+import { ApiError, AuthError, createHttpClient, isLocalOrLanHost } from '@manabandhu/core';
 import Constants from 'expo-constants';
 import { GraphQLClient } from 'graphql-request';
 import { Platform } from 'react-native';
@@ -5,57 +6,41 @@ import { Platform } from 'react-native';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 
+function withHost(configured: string, hostname: string): string {
+  const u = new URL(configured);
+  u.hostname = hostname;
+  return u.toString().replace(/\/$/, '');
+}
+
 export function getResolvedApiUrl(): string {
   const configured = env.apiUrl;
-  // If in browser (e.g. mobile browser or desktop browser):
+  let configuredHost: string | null = null;
+  try {
+    configuredHost = new URL(configured).hostname;
+  } catch {}
+
+  // In a browser on another device (phone or tablet on the LAN), reach the dev API through the page's host.
   if (typeof window !== 'undefined' && window.location?.hostname) {
     const currentHost = window.location.hostname;
-    if (currentHost && currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
-      try {
-        const u = new URL(configured);
-        const isLocalOrLan =
-          u.hostname === 'localhost' ||
-          u.hostname === '127.0.0.1' ||
-          /^192\.168\./.test(u.hostname) ||
-          /^10\./.test(u.hostname) ||
-          /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(u.hostname);
-        if (isLocalOrLan) {
-          u.hostname = currentHost;
-          return u.toString().replace(/\/$/, '');
-        }
-      } catch {}
+    if (currentHost !== 'localhost' && currentHost !== '127.0.0.1' && configuredHost) {
+      if (isLocalOrLanHost(configuredHost)) return withHost(configured, currentHost);
     }
   }
 
-  // If in native React Native / Expo Go on a mobile device or emulator:
-  if (Platform.OS !== 'web') {
-    try {
-      const u = new URL(configured);
-      const hostUri =
-        Constants.expoConfig?.hostUri ??
-        (Constants as unknown as { manifest2?: { extra?: { expoClient?: { hostUri?: string } } } })
-          ?.manifest2?.extra?.expoClient?.hostUri;
-
-      if (hostUri) {
-        const metroHost = String(hostUri).split(':')[0];
-        if (metroHost) {
-          const isLocalOrLan =
-            u.hostname === 'localhost' ||
-            u.hostname === '127.0.0.1' ||
-            /^192\.168\./.test(u.hostname) ||
-            /^10\./.test(u.hostname) ||
-            /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(u.hostname);
-          if (isLocalOrLan) {
-            u.hostname = metroHost;
-            return u.toString().replace(/\/$/, '');
-          }
-        }
-      }
-      if (Platform.OS === 'android' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1')) {
-        u.hostname = '10.0.2.2';
-        return u.toString().replace(/\/$/, '');
-      }
-    } catch {}
+  // In native Expo Go or a dev build, use the Metro host; Android emulators reach the host machine via 10.0.2.2.
+  if (Platform.OS !== 'web' && configuredHost) {
+    const hostUri =
+      Constants.expoConfig?.hostUri ??
+      (Constants as unknown as { manifest2?: { extra?: { expoClient?: { hostUri?: string } } } })
+        ?.manifest2?.extra?.expoClient?.hostUri;
+    const metroHost = hostUri ? String(hostUri).split(':')[0] : '';
+    if (metroHost && isLocalOrLanHost(configuredHost)) return withHost(configured, metroHost);
+    if (
+      Platform.OS === 'android' &&
+      (configuredHost === 'localhost' || configuredHost === '127.0.0.1')
+    ) {
+      return withHost(configured, '10.0.2.2');
+    }
   }
 
   return configured.replace(/\/$/, '');
@@ -66,30 +51,14 @@ export type ApiHealth = {
   status: string;
 };
 
-export class AuthError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-  ) {
-    super(message);
-    this.name = 'AuthError';
-  }
-}
+export { ApiError, AuthError };
 
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
+const http = createHttpClient({
+  baseUrl: getResolvedApiUrl,
+  getAccessToken: async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
+});
 
-export async function authorizationHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
-}
+export const authorizationHeaders = http.authorizationHeaders;
 
 export async function getApiHealth(): Promise<ApiHealth> {
   const response = await fetch(`${getResolvedApiUrl()}/api/v1/health`);
@@ -118,32 +87,7 @@ export async function graphqlClient() {
   });
 }
 
-export async function apiFetch(path: string, init: RequestInit = {}) {
-  const auth = await authorizationHeaders();
-  const headers = new Headers(init.headers);
-  headers.set('Content-Type', 'application/json');
-  for (const [name, value] of Object.entries(auth)) headers.set(name, value);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
-  if (init.signal) {
-    init.signal.addEventListener('abort', () => controller.abort());
-  }
-
-  try {
-    const response = await fetch(`${getResolvedApiUrl()}${path}`, {
-      ...init,
-      headers,
-      signal: controller.signal,
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      const text = await response.text().catch(() => '');
-      throw new AuthError(text || `Authentication required (${response.status})`, response.status);
-    }
-
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
+/** Calls the ManaBandhu backend with the signed-in member's token. Every module's `api.ts` goes through this. */
+export function apiFetch(path: string, init: RequestInit = {}) {
+  return http.fetch(path, init);
 }

@@ -14,3 +14,8 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 - `frontend/src/modules/admin/screens/AdminJobsScreen.tsx` - Moderate job postings.
 - `frontend/src/modules/admin/screens/AdminEventsScreen.tsx` - Moderate events.
 - `frontend/src/modules/admin/screens/AdminAuditLogScreen.tsx` - System audit log.
+- `frontend/src/modules/admin/screens/AdminUserDetailScreen.tsx` - One member (`/admin/users/[userId]`) with suspend / reactivate.
+- `frontend/src/modules/admin/screens/AdminReportDetailScreen.tsx` - One report (`/admin/reports/[reportId]`) with resolve.
+- `frontend/src/modules/admin/components/AdminGate.tsx`, `useAdminAccess.ts`, `adminAccess.ts` - role gating ("Not authorized" for non-admins; automations need super admin).
+- `frontend/src/modules/admin/components/AdminModerationList.tsx` - shared list chrome for the Rooms/Rides/Community/Jobs/Events/Audit log screens (header with back, search, states, `ModerationBadges`).
+- `frontend/src/modules/admin/hooks.ts` - confirmed suspend/reactivate and resolve actions with visible errors and per-row pending state.

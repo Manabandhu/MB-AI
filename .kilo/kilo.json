@@ -8,7 +8,7 @@
         "-y",
         "@supabase/mcp-server-supabase@0.5.5",
         "--access-token",
-        "sbp_b11a5e45080fe82f93f22430f0823d93ed04ef6f"
+        "{env:SUPABASE_ACCESS_TOKEN}"
       ]
     },
     "github": {
@@ -26,7 +26,7 @@
         "stdio"
       ],
       "environment": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "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",
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}",
         "GITHUB_READ_ONLY": "1"
       }
     },
@@ -36,14 +36,6 @@
         "npx",
         "-y",
         "@playwright/mcp@0.0.38"
-      ]
-    },
-    "puppeteer": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-puppeteer"
       ]
     }
   }

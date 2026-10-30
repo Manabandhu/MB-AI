@@ -1,5 +1,5 @@
-import { MarketplaceScreen } from '@/modules/marketplace/screens/MarketplaceHomeScreen';
+import { MarketplaceHomeScreen } from '@/modules/marketplace/screens/MarketplaceHomeScreen';
 
 export default function CategoriesRoute() {
-  return <MarketplaceScreen screenId="categories" />;
+  return <MarketplaceHomeScreen screenId="categories" />;
 }

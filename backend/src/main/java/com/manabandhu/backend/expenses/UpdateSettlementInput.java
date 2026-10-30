@@ -1,9 +1,8 @@
 package com.manabandhu.backend.expenses;
 
-import java.time.Instant;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 
-import jakarta.validation.constraints.Size;
-
+/** Confirms ({@code completed}) or cancels a pending settlement; {@code settledAt} is set by the server. */
 public record UpdateSettlementInput(
-        @Size(max = 20) String status,
-        Instant settledAt) {}
+        @NotNull @Pattern(regexp = "^(pending|completed|cancelled)$") String status) {}

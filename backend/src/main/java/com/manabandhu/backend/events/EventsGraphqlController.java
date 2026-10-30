@@ -1,17 +1,18 @@
 package com.manabandhu.backend.events;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Pageable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+
+import com.manabandhu.backend.auth.Actor;
 
 @Controller
 public class EventsGraphqlController {
@@ -24,7 +25,7 @@ public class EventsGraphqlController {
 
     @QueryMapping
     List<Event> events() {
-        return service.findAll(Pageable.unpaged()).getContent();
+        return service.findAll(org.springframework.data.domain.PageRequest.of(0, 100)).getContent();
     }
 
     @QueryMapping
@@ -35,26 +36,26 @@ public class EventsGraphqlController {
     }
 
     @QueryMapping
-    List<Event> savedEvents() {
-        return service.findSaved();
+    List<Event> savedEvents(Authentication authentication) {
+        return service.findSaved(Actor.require(authentication));
     }
 
     @QueryMapping
     List<Event> myEvents(Authentication authentication) {
-        return service.findMyEvents(UUID.fromString(authentication.getName()));
+        return service.findMyEvents(Actor.require(authentication).id());
     }
 
     @MutationMapping
     Event createEvent(Authentication authentication, @Argument @Valid CreateEventInput input) {
-        var startAt = java.time.Instant.parse(input.startAt());
-        var endAt = java.time.Instant.parse(input.endAt());
-        return service.create(UUID.fromString(authentication.getName()), input.title(), input.description(),
+        var startAt = EventsService.parseInstant(input.startAt(), "startAt");
+        var endAt = EventsService.parseInstant(input.endAt(), "endAt");
+        return service.create(Actor.require(authentication).id(), input.title(), input.description(),
                 input.location(), input.latitude(), input.longitude(), startAt, endAt, input.categoryId());
     }
 
     @MutationMapping
     EventAttendance attendEvent(Authentication authentication, @Argument UUID eventId, @Argument @Valid CreateEventAttendanceInput input) {
-        return service.attend(eventId, UUID.fromString(authentication.getName()), input.status());
+        return service.attend(eventId, Actor.require(authentication).id(), input.status());
     }
 
     @QueryMapping
@@ -63,7 +64,18 @@ public class EventsGraphqlController {
     }
 
     @QueryMapping
-    List<EventAttendance> eventAttendance(@Argument UUID eventId) {
-        return service.findAttendance(eventId);
+    List<EventAttendance> eventAttendance(Authentication authentication, @Argument UUID eventId) {
+        return service.attendanceFor(Actor.require(authentication), eventId);
+    }
+
+    /** Organizer ids stay private, as in REST; clients use {@code mine}. */
+    @SchemaMapping(typeName = "Event", field = "organizerId")
+    UUID organizerId(Event event) {
+        return null;
+    }
+
+    @SchemaMapping(typeName = "Event", field = "mine")
+    boolean mine(Event event, Authentication authentication) {
+        return Actor.from(authentication).map(actor -> actor.is(event.getOrganizerId())).orElse(false);
     }
 }

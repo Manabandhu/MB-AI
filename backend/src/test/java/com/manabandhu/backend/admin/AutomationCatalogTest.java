@@ -23,8 +23,28 @@ class AutomationCatalogTest {
         var service = new AutomationService(new AutomationCatalog("token", "owner/repository"), "owner/repository", "token");
         var request = new ExecuteAutomationRequest("production", "main", "Approved emergency rollback", false);
 
-        assertThatThrownBy(() -> service.execute("rollback-production", request, "operator-id"))
+        assertThatThrownBy(() -> service.execute("rollback-production", request, "operator-id", true))
                 .isInstanceOfSatisfying(ResponseStatusException.class,
                         exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+    }
+
+    @Test
+    void productionRequiresSuperAdmin() {
+        var service = new AutomationService(new AutomationCatalog("token", "owner/repository"), "owner/repository", "token");
+        var request = new ExecuteAutomationRequest("production", "main", "Approved emergency rollback", true);
+
+        assertThatThrownBy(() -> service.execute("rollback-production", request, "operator-id", false))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void productionOnlyShipsMainOrReleaseTags() {
+        var service = new AutomationService(new AutomationCatalog("token", "owner/repository"), "owner/repository", "token");
+        var request = new ExecuteAutomationRequest("production", "feature/untested", "Approved emergency rollback", true);
+
+        assertThatThrownBy(() -> service.execute("rollback-production", request, "operator-id", true))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 }

@@ -15,7 +15,7 @@ class AdminAccessPolicyTest {
 
     @Test
     void publicOverrideAllowsAnonymousAccess() {
-        var policy = new AdminAccessPolicy(true);
+        var policy = new AdminAccessPolicy(true, "http://localhost:9999/auth/v1");
 
         assertDoesNotThrow(() -> policy.require(null));
         assertEquals("public-demo", policy.actorId(null));
@@ -23,7 +23,7 @@ class AdminAccessPolicyTest {
 
     @Test
     void protectedModeRequiresSuperAdminRole() {
-        var policy = new AdminAccessPolicy(false);
+        var policy = new AdminAccessPolicy(false, "https://example.supabase.co/auth/v1");
         var user = new UsernamePasswordAuthenticationToken("user-1", "n/a", List.of());
         var superAdmin = new UsernamePasswordAuthenticationToken(
                 "admin-1", "n/a", List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
@@ -32,5 +32,14 @@ class AdminAccessPolicyTest {
         assertThrows(AccessDeniedException.class, () -> policy.require(user));
         assertDoesNotThrow(() -> policy.require(superAdmin));
         assertEquals("admin-1", policy.actorId(superAdmin));
+    }
+
+    @Test
+    void publicOverrideIsIgnoredAgainstAHostedIssuer() {
+        var hosted = new AdminAccessPolicy(true, "https://lpzaioyurvgdysdfktzc.supabase.co/auth/v1");
+        assertEquals(false, hosted.publicAccessEnabled());
+        assertThrows(AccessDeniedException.class, () -> hosted.require(null));
+        assertEquals(false, new AdminAccessPolicy(true, "").publicAccessEnabled());
+        assertEquals(true, new AdminAccessPolicy(true, "http://127.0.0.1:9999/auth/v1").publicAccessEnabled());
     }
 }

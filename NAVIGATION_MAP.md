@@ -12,17 +12,23 @@
 ├── /email-login (Email Login)
 ├── /otp-verification (OTP Verification)
 ├── /reset-password (Reset Password)
+├── /accept-terms (Accept Terms once, after sign-in when the account has no recorded consent; sign-in required)
 ├── /choose-login-method (Choose Login Method)
 ├── /home (Home Shell)
 │   ├── /rooms (Rooms Home)
 │   ├── /rides (Rides Home)
 │   ├── /community (Community Home)
 │   └── /notifications (Notifications Inbox)
+│       ├── /notifications/[id] (Notification Detail → "Open" goes to its in-app route)
+│       └── /notifications/settings (Notification Settings, sign-in required)
 ├── /explore (Explore Shell)
 ├── /search (Global Search)
 ├── /saved (Saved Items)
 ├── /profile (Profile)
 │   └── /settings (Settings)
+│       └── /settings/account (Account & data: sign-in details, export, delete; sign-in required)
+├── /terms (Terms of Service, public)
+├── /privacy (Privacy Policy, public)
 ├── /onboarding/*
 │   ├── /onboarding/about (About You)
 │   ├── /onboarding/photo (Profile Photo)
@@ -35,29 +41,28 @@
 │   └── /onboarding/complete (Complete)
 ├── /rooms/*
 │   ├── /rooms/search
-│   ├── /rooms/map
+│   ├── /rooms/map (rooms without coordinates are listed, never pinned)
 │   ├── /rooms/filters
-│   ├── /rooms/saved
-│   ├── /rooms/my-listings
-│   ├── /rooms/create-listing
-│   ├── /rooms/[roomId]
-│   │   └── /rooms/[roomId]/edit
-│   └── /rooms/[roomId]/details
+│   ├── /rooms/saved (sign-in required)
+│   ├── /rooms/my-listings (sign-in required; ?notice= shows the result of a save)
+│   ├── /rooms/create-listing (sign-in required → /rooms/my-listings)
+│   └── /rooms/[roomId] (owner sees Edit + status actions; others Save, Contact host, Quick hello, Report)
+│       ├── /rooms/[roomId]/edit (sign-in required, owner only)
+│       └── /rooms/[roomId]/inquiry (sign-in required → /chat/[conversationId])
 ├── /rides/*
 │   ├── /rides/search
 │   ├── /rides/map
 │   ├── /rides/filters
-│   ├── /rides/offer
-│   ├── /rides/request
-│   ├── /rides/saved
-│   ├── /rides/mine
-│   ├── /rides/history
-│   ├── /rides/[rideId]
-│   │   ├── /rides/[rideId]/manage
-│   │   ├── /rides/[rideId]/seat-requests
-│   │   ├── /rides/[rideId]/participants
-│   │   └── /rides/[rideId]/rate
-│   └── /rides/[rideId]/details
+│   ├── /rides/offer (sign-in required)
+│   ├── /rides/request (redirect → /rides/search, keeps from/to)
+│   ├── /rides/saved (sign-in required)
+│   ├── /rides/mine (sign-in required; tabs Driving | Riding, ?tab=riding; upcoming only)
+│   ├── /rides/history (sign-in required)
+│   └── /rides/[rideId] (sticky bar: Book seats for riders; Manage for the driver; Open chat / Rate for members)
+│       ├── /rides/[rideId]/manage (sign-in required, driver only; tabs Overview | Requests | Riders, ?tab=)
+│       ├── /rides/[rideId]/seat-requests (redirect → manage?tab=requests)
+│       ├── /rides/[rideId]/participants (redirect → manage?tab=riders)
+│       └── /rides/[rideId]/rate (after the ride is completed)
 ├── /community/*
 │   ├── /community/discover
 │   ├── /community/joined
@@ -105,8 +110,9 @@
 │   ├── /marketplace/search
 │   ├── /marketplace/categories
 │   ├── /marketplace/[listingId]
-│   │   └── /marketplace/[listingId]/details
+│   │   └── /marketplace/[listingId]/edit
 │   ├── /marketplace/sell
+│   ├── /marketplace/mine
 │   └── /marketplace/saved
 ├── /referrals/*
 │   ├── /referrals/request
@@ -180,8 +186,10 @@ Splash → Welcome → Sign In/Up → Onboarding → Home
 - Any list → Details → Edit Listing
 
 ### Rides
-- Home → Search → Filters → Map → Offer/Request → Saved → My Rides → History
-- Any list → Details → Manage → Seat Requests → Participants → Rate
+- Home (search, filter chips, list/map) → Ride details → Book seats → Your booking (chat, cancel) → My rides (Riding tab) → Rate after completion
+- Home → Offer a ride → Manage (Overview: start/complete, seats and price, repeat, danger zone | Requests | Riders)
+- Header: My rides, Saved, History; global Search → `/rides/search?from=&to=`; Repeat trip from Manage, My rides, History
+- Any list → Details → Manage (Requests, Riders tabs) → Rate
 
 ### Community
 - Home → Discover → Joined → Details → Create Post → Post Details
@@ -190,7 +198,9 @@ Splash → Welcome → Sign In/Up → Onboarding → Home
 - List → New Chat → Conversation → Conversation Info
 
 ### Admin
-- Dashboard → Users → Reports → Rooms/Rides/Community/Jobs/Events Moderation → Audit Log
+- Dashboard → Users → User Details (`/admin/users/[userId]`) → Reports → Report Details (`/admin/reports/[reportId]`) →
+  Rooms/Rides/Community/Jobs/Events Moderation → Audit Log → Automations (super admin only)
+- Every admin route shows "Not authorized" unless the signed token carries ADMIN or SUPER_ADMIN (automations: SUPER_ADMIN).
 
 ### Events
 - Home → Search → Details → Create → Saved → My Events
@@ -231,6 +241,7 @@ Splash → Welcome → Sign In/Up → Onboarding → Home
 | `manabandhu://community` | `/community` | Community home |
 | `manabandhu://chat` | `/chat` | Chat list |
 | `manabandhu://notifications` | `/notifications` | Notifications inbox |
+| Push tap | `data.route` (in-app path) or `/notifications/{id}` | Opens the related screen; external URLs are ignored |
 | `manabandhu://profile` | `/profile` | User profile |
 | `manabandhu://admin` | `/admin` | Admin dashboard |
 
@@ -238,11 +249,11 @@ Splash → Welcome → Sign In/Up → Onboarding → Home
 
 | Screen | Permission | Action if Missing |
 |---|---|---|
-| /rooms/map | Location | Show permission banner + fallback list |
+| /rooms/map | Location (only for the GPS button) | Alert, then centre on the selected city |
 | /rides/map | Location | Show permission banner + fallback list |
 | /utilities/nearby | Location | Show permission banner + fallback list |
-| /notifications | Push Notifications | Show education banner |
-| /onboarding/notifications | Push Notifications | Show education banner |
+| /notifications/settings | Push Notifications | Asked only when the member turns push on; a refusal shows how to allow it in phone settings |
+| /onboarding/notifications | Push Notifications | Asked after the member picks at least one alert; refusing continues onboarding |
 | /assistant | Microphone (optional) | Disable voice input, show text-only mode |
 
 ## 9. Offline Behavior

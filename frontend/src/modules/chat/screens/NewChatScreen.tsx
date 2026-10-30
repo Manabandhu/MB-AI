@@ -1,106 +1,222 @@
-import { color } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { listConversations } from '@/modules/chat/api';
+import { YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import { addParticipant, createConversation } from '@/modules/chat/api';
+import { type ChatContact, useChatContacts } from '@/modules/chat/contacts';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SearchBar } from '@/modules/shared/components/SearchBar';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { showError } from '@/modules/shared/ui/notify';
+import { PersonRow } from '@/modules/shared/ui/PersonRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { TextField } from '@/modules/shared/ui/TextField';
 
+/**
+ * Starts a direct or group chat with people you already share a conversation with (the app has no member search
+ * yet, so those are the only people the app can name). One person reopens your existing direct chat when there is
+ * one; otherwise the server creates the conversation and the members are added to it.
+ */
 export default function NewChatScreen() {
   const router = useRouter();
-  const layout = useAdaptiveLayout();
+  const queryClient = useQueryClient();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const contacts = useChatContacts(currentUserId);
   const [query, setQuery] = useState('');
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['chat', 'conversations', 'new'],
-    queryFn: listConversations,
+  const [selected, setSelected] = useState<string[]>([]);
+  const [groupName, setGroupName] = useState('');
+  const [groupNameTouched, setGroupNameTouched] = useState(false);
+
+  const list = contacts.data ?? [];
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return list;
+    return list.filter(
+      (c) =>
+        c.label.toLowerCase().includes(term) ||
+        c.sharedIn.some((s) => s.title.toLowerCase().includes(term)),
+    );
+  }, [list, query]);
+
+  const isGroup = selected.length > 1;
+  const groupNameError =
+    isGroup && groupNameTouched && !groupName.trim() ? 'Name the group chat.' : null;
+
+  const start = useMutation({
+    mutationFn: async (people: ChatContact[]) => {
+      if (people.length === 1) {
+        const existing = people[0].sharedIn.find((c) => c.type === 'DIRECT');
+        if (existing) return { id: existing.id, failed: 0 };
+      }
+      const conversation = await createConversation(
+        people.length === 1
+          ? { type: 'DIRECT' }
+          : { type: 'GROUP', title: groupName.trim().slice(0, 200) },
+      );
+      const results = await Promise.allSettled(
+        people.map((p) => addParticipant(conversation.id, p.userId)),
+      );
+      const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+      if (failures.length === people.length) {
+        // Nobody could be added: do not open an empty chat (there is no endpoint to delete it).
+        throw failures[0].reason instanceof Error
+          ? failures[0].reason
+          : new Error('Nobody could be added to the chat.');
+      }
+      return { id: conversation.id, failed: failures.length };
+    },
+    onSuccess: ({ id, failed }) => {
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+      if (failed > 0) {
+        showError(
+          'Some people were not added',
+          `${failed} ${failed === 1 ? 'person' : 'people'} could not be added. The chat was created; try again from a new chat.`,
+        );
+      }
+      router.replace(`/chat/${id}` as Href);
+    },
+    onError: (error) => showError('Could not start the chat', error),
   });
 
-  const conversations = data ?? [];
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return conversations;
-    return conversations.filter((c) => (c.title ?? '').toLowerCase().includes(query.toLowerCase()));
-  }, [conversations, query]);
-
-  if (isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ErrorState
-          title="Unable to load contacts"
-          body="Please check your connection and try again."
-          retryLabel="Retry"
-          onRetry={refetch}
-        />
-      </SafeAreaView>
+  const toggle = (userId: string) =>
+    setSelected((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
-  }
+
+  const onStart = () => {
+    setGroupNameTouched(true);
+    if (selected.length === 0) return;
+    if (isGroup && !groupName.trim()) return;
+    start.mutate(list.filter((c) => selected.includes(c.userId)));
+  };
+
+  const body = () => {
+    if (contacts.isLoading) return <LoadingState label="Loading people you chat with…" />;
+    if (contacts.isError) {
+      return (
+        <ErrorState
+          body="Check your connection and try again."
+          onRetry={() => contacts.refetch()}
+          retryLabel="Retry"
+          title="Unable to load your contacts"
+        />
+      );
+    }
+    if (list.length === 0) {
+      return (
+        <EmptyState
+          actionLabel="Browse rooms"
+          body="Chats start from a room inquiry, a ride, or a listing. After that, you can start new chats with the same people here."
+          iconName="message"
+          onAction={() => router.push('/rooms' as Href)}
+          secondaryActionLabel="Find a ride"
+          onSecondaryAction={() => router.push('/rides' as Href)}
+          title="No one to message yet"
+        />
+      );
+    }
+    return (
+      <YStack gap="$x3">
+        <TextField
+          aria-label="Search people"
+          leadingIcon="search"
+          onChangeText={setQuery}
+          placeholder="Search by name or chat"
+          trailing={
+            query ? (
+              <IconButton
+                icon="close"
+                label="Clear search"
+                onPress={() => setQuery('')}
+                variant="plain"
+              />
+            ) : undefined
+          }
+          value={query}
+        />
+        {filtered.length === 0 ? (
+          <EmptyState
+            actionLabel="Clear search"
+            body="No one you chat with matches that search."
+            compact
+            onAction={() => setQuery('')}
+            title="No matches"
+          />
+        ) : (
+          <YStack gap="$x2">
+            {filtered.map((c) => {
+              const isSelected = selected.includes(c.userId);
+              return (
+                <PersonRow
+                  actions={
+                    <AppButton
+                      icon={isSelected ? 'check' : 'plus'}
+                      label={isSelected ? 'Added' : 'Add'}
+                      onPress={() => toggle(c.userId)}
+                      size="sm"
+                      variant={isSelected ? 'primary' : 'secondary'}
+                    />
+                  }
+                  key={c.userId}
+                  name={c.label}
+                  subtitle={`In ${c.sharedIn.map((s) => s.title).join(', ')}`}
+                />
+              );
+            })}
+          </YStack>
+        )}
+        {isGroup ? (
+          <TextField
+            error={groupNameError}
+            label="Group name"
+            maxLength={200}
+            onBlur={() => setGroupNameTouched(true)}
+            onChangeText={setGroupName}
+            placeholder="e.g. Arbor Oaks flatmates"
+            value={groupName}
+          />
+        ) : null}
+      </YStack>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader title="New Chat" subtitle="Start a conversation with community members." />
-          <SearchBar value={query} onChangeText={setQuery} placeholder="Search people" />
-          {isLoading ? (
-            <LoadingState />
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              title="No contacts found"
-              body="Try a different search."
-              actionLabel="Clear search"
-              onAction={() => setQuery('')}
-            />
-          ) : (
-            <View style={styles.list}>
-              {filtered.map((c) => (
-                <Pressable
-                  key={c.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Start chat with ${c.title ?? ''}`}
-                  onPress={() => router.push(`/chat/${c.id}`)}
-                  style={styles.item}
-                >
-                  <View style={styles.itemBody}>
-                    <Text style={styles.itemTitle}>{c.title ?? ''}</Text>
-                    <Text style={styles.itemSubtitle} numberOfLines={1}>
-                      {c.lastMessage ?? ''}
-                    </Text>
-                  </View>
-                  <Text style={styles.itemAction}>Message</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <YStack flex={1}>
+      <Screen
+        bottomInset={selected.length > 0 ? ACTION_BAR_SPACE : 0}
+        keyboardAvoiding
+        onRefresh={() => contacts.refetch()}
+        refreshing={contacts.isRefetching}
+      >
+        <ScreenHeader
+          back={{ fallback: '/chat' as Href }}
+          subtitle="Message people you already chat with"
+          title="New chat"
+        />
+        {body()}
+      </Screen>
+      {selected.length > 0 ? (
+        <ActionBar
+          label="Start chat"
+          leading={
+            <AppText variant="bodyStrong">
+              {selected.length === 1 ? '1 person' : `${selected.length} people · group chat`}
+            </AppText>
+          }
+        >
+          <AppButton
+            label={selected.length === 1 ? 'Open chat' : 'Start group chat'}
+            loading={start.isPending}
+            onPress={onStart}
+          />
+        </ActionBar>
+      ) : null}
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: color.background },
-  page: { flexGrow: 1, padding: 16 },
-  container: { gap: 16, width: '100%', alignSelf: 'center' },
-  list: { gap: 12 },
-  item: {
-    backgroundColor: color.surface,
-    borderColor: color.border,
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-  },
-  itemBody: { flex: 1, gap: 4 },
-  itemTitle: { color: color.ink, fontSize: 17, fontWeight: '800', lineHeight: 22 },
-  itemSubtitle: { color: color.muted, fontSize: 14, lineHeight: 20 },
-  itemAction: { color: color.primary, fontSize: 14, fontWeight: '700' },
-});

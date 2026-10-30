@@ -4,9 +4,13 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 interface ImmigrationGuideRepository extends JpaRepository<ImmigrationGuide, UUID> {
     List<ImmigrationGuide> findAllByOrderByCreatedAtDesc();
     List<ImmigrationGuide> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
     List<ImmigrationGuide> findByCategoryOrderByCreatedAtDesc(String category);
+
+    @Query("SELECT COUNT(DISTINCT g.category) FROM ImmigrationGuide g")
+    long countDistinctCategories();
 }

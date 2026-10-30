@@ -1,8 +1,11 @@
 package com.manabandhu.backend.foundation;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.manabandhu.backend.auth.Actor;
 
 @RestController
 @RequestMapping("/api/v1/foundation")
@@ -20,7 +23,8 @@ public class FoundationController {
     }
 
     @GetMapping("/screens/{screenId}")
-    CatalogScreenContent screen(@org.springframework.web.bind.annotation.PathVariable String screenId) {
-        return service.screen(screenId);
+    CatalogScreenContent screen(Authentication authentication,
+                                @org.springframework.web.bind.annotation.PathVariable String screenId) {
+        return service.screen(screenId, Actor.from(authentication));
     }
 }

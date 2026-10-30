@@ -3,6 +3,7 @@ package com.manabandhu.backend.safety;
 import java.util.List;
 import java.util.UUID;
 
+import com.manabandhu.backend.auth.Actor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +21,11 @@ public class SafetyReportService {
         return repository.findByReporterIdOrderByCreatedAtDesc(reporterId);
     }
 
+    /** Moderation queue: newest 500 reports, admins only. */
     @Transactional(readOnly = true)
-    public List<SafetyReport> findAllForAdmin() {
-        return repository.findAll();
+    public List<SafetyReport> findAllForAdmin(Actor actor) {
+        actor.requireAdmin();
+        return repository.findTop500ByOrderByCreatedAtDesc();
     }
 
     @Transactional(readOnly = true)
@@ -40,8 +43,10 @@ public class SafetyReportService {
         return repository.save(new SafetyReport(reporterId, targetId, category, description, status, severity, evidenceUrls));
     }
 
+    /** Only moderators resolve reports; a reporter cannot close their own report (or anyone else's). */
     @Transactional
-    public SafetyReport resolve(UUID id) {
+    public SafetyReport resolve(Actor actor, UUID id) {
+        actor.requireAdmin();
         var report = repository.findById(id).orElseThrow();
         report.resolve();
         return report;

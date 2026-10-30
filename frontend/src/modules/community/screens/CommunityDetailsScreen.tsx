@@ -1,181 +1,154 @@
-import { color as colors, contentWidth } from '@manabandhu/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { getCommunity, joinCommunity, leaveCommunity, listPosts } from '@/modules/community/api';
-import { DetailScreen } from '@/modules/shared/components/DetailScreen';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import { FEED_LIMIT, getCommunity, listPosts } from '@/modules/community/api';
+import { PostCard } from '@/modules/community/components/PostCard';
+import { useMembershipToggle } from '@/modules/community/hooks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { errorText } from '@/modules/shared/ui/notify';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 
+/** A community: what it is, join/leave, and its posts. */
 export function CommunityDetailsScreen() {
   const router = useRouter();
-  const layout = useAdaptiveLayout();
-  const maxWidth = layout.windowClass === 'compact' ? contentWidth.compact : layout.maxContentWidth;
   const { communityId } = useLocalSearchParams<{ communityId: string }>();
-  const [joined, setJoined] = useState(false);
+  const signedIn = useAuthStore((s) => s.status === 'authenticated');
+  const membership = useMembershipToggle();
 
-  const {
-    data: community,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
+  const communityQuery = useQuery({
     queryKey: ['communities', communityId],
     queryFn: () => getCommunity(communityId),
-    enabled: !!communityId,
+    enabled: Boolean(communityId),
   });
-
-  const { data: posts, isLoading: postsLoading } = useQuery({
+  const postsQuery = useQuery({
     queryKey: ['communities', communityId, 'posts'],
     queryFn: () => listPosts(communityId),
-    enabled: !!communityId,
+    enabled: Boolean(communityId),
   });
 
-  const handleToggleJoin = async () => {
-    try {
-      if (joined) {
-        await leaveCommunity(communityId);
-        setJoined(false);
-        Alert.alert('Left Community', `You left ${community?.name ?? 'the community'}.`);
-      } else {
-        await joinCommunity(communityId);
-        setJoined(true);
-        Alert.alert('Joined!', `Welcome to ${community?.name ?? 'the community'}!`);
-      }
-    } catch {
-      setJoined((prev) => !prev);
+  if (communityQuery.isLoading) {
+    return (
+      <Screen>
+        <BackButton fallback="/community" />
+        <LoadingState label="Loading community…" />
+      </Screen>
+    );
+  }
+
+  if (communityQuery.isError || !communityQuery.data) {
+    const notFound = (communityQuery.error as { status?: number } | null)?.status === 404;
+    return (
+      <Screen>
+        <BackButton fallback="/community" />
+        <ErrorState
+          body={notFound ? 'This community no longer exists.' : errorText(communityQuery.error)}
+          onRetry={notFound ? undefined : () => communityQuery.refetch()}
+          retryLabel="Retry"
+          title={notFound ? 'Community not found' : 'Could not load community'}
+        />
+      </Screen>
+    );
+  }
+
+  const community = communityQuery.data;
+  const posts = postsQuery.data ?? [];
+  const createPostRoute = `/community/create-post?communityId=${community.id}` as Href;
+  const members = `${community.memberCount.toLocaleString()} ${community.memberCount === 1 ? 'member' : 'members'}`;
+
+  const onToggle = () => {
+    if (!signedIn) {
+      router.push('/sign-in' as Href);
+      return;
     }
+    membership.toggle(community);
   };
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <LoadingState />
-      </SafeAreaView>
-    );
-  }
-
-  if (isError || !community) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ErrorState
-          body="Please check your connection and try again."
-          onRetry={refetch}
-          retryLabel="Retry"
-          title="Unable to load community"
-        />
-      </SafeAreaView>
-    );
-  }
-
-  const postList = posts ?? [];
-  const memberCount = (community.memberCount || 0) + (joined ? 1 : 0);
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={[styles.container, { maxWidth }]}>
-          {/* Header */}
-          <DetailScreen
-            actions={[
-              {
-                label: 'Create Post',
-                onPress: () =>
-                  router.push(`/community/create-post?communityId=${communityId}` as Href),
-              },
-              {
-                label: joined ? '✓ Joined' : '+ Join Community',
-                onPress: handleToggleJoin,
-                variant: joined ? 'secondary' : 'primary',
-              },
-            ]}
-            eyebrow={`${community.category || 'City'} Space • 👥 ${memberCount} Members`}
-            sections={[]}
-            subtitle={community.description}
-            title={community.name}
+    <Screen
+      onRefresh={() => Promise.all([communityQuery.refetch(), postsQuery.refetch()])}
+      refreshing={communityQuery.isRefetching || postsQuery.isRefetching}
+    >
+      <YStack gap="$x4">
+        <ScreenHeader
+          back={{ fallback: '/community' as Href }}
+          subtitle={[community.metroArea, members].filter(Boolean).join(' · ')}
+          title={community.name}
+        />
+        <XStack alignItems="center" flexWrap="wrap" gap="$x2">
+          {community.category ? (
+            <StatusBadge label={categoryLabel(community.category)} tone="info" />
+          ) : null}
+          {community.isJoined ? <StatusBadge label="Joined" tone="success" /> : null}
+        </XStack>
+        {community.description ? <AppText>{community.description}</AppText> : null}
+        <XStack flexWrap="wrap" gap="$x3">
+          <AppButton
+            disabled={membership.pendingId === community.id}
+            label={community.isJoined ? 'Leave' : 'Join community'}
+            loading={membership.pendingId === community.id}
+            onPress={onToggle}
+            variant={community.isJoined ? 'secondary' : 'primary'}
           />
-
-          <SectionHeader
-            subtitle={`${postList.length} active discussions`}
-            title="Community Feed"
-          />
-          {postsLoading ? (
-            <LoadingState />
-          ) : postList.length === 0 ? (
-            <EmptyState
-              actionLabel="Create Post"
-              body="Be the first to share an update, sublease, or question in this space."
-              onAction={() =>
-                router.push(`/community/create-post?communityId=${communityId}` as Href)
-              }
-              title="No posts yet"
-            />
-          ) : (
-            <View style={styles.list}>
-              {postList.map((post) => (
-                <Pressable
-                  accessibilityLabel={post.title}
-                  accessibilityRole="button"
-                  key={post.id}
-                  onPress={() => router.push(`/community/post/${post.id}` as Href)}
-                  style={styles.item}
-                >
-                  <Text style={styles.itemTitle}>{post.title}</Text>
-                  <Text numberOfLines={3} style={styles.itemBody}>
-                    {post.body}
-                  </Text>
-                  <View style={styles.itemFooter}>
-                    <Text style={styles.itemMeta}>
-                      {post.authorName || 'Member'} · {post.commentCount ?? 0} comments
-                    </Text>
-                    <Text style={styles.likeCount}>❤️ {post.likeCount ?? 0}</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          )}
-
-          <View style={styles.actions}>
+          {community.isJoined ? (
             <AppButton
-              label="Explore All Communities"
-              onPress={() => router.push('/community')}
+              icon="plus"
+              label="Create post"
+              onPress={() => router.push(createPostRoute)}
               variant="secondary"
             />
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          ) : null}
+        </XStack>
+
+        <Heading variant="h4">Posts</Heading>
+        {postsQuery.isLoading ? (
+          <LoadingState count={3} label="Loading posts…" variant="skeleton" />
+        ) : postsQuery.isError ? (
+          <ErrorState
+            body={errorText(postsQuery.error)}
+            compact
+            onRetry={() => postsQuery.refetch()}
+            retryLabel="Retry"
+            title="Could not load posts"
+          />
+        ) : posts.length === 0 ? (
+          <EmptyState
+            actionLabel={community.isJoined ? 'Create post' : undefined}
+            body={
+              community.isJoined
+                ? 'Be the first to share an update or ask a question here.'
+                : 'Join to start the first conversation here.'
+            }
+            iconName="message"
+            onAction={community.isJoined ? () => router.push(createPostRoute) : undefined}
+            title="No posts yet"
+          />
+        ) : (
+          <YStack gap="$x3">
+            {posts.length >= FEED_LIMIT ? (
+              <AppText tone="muted" variant="caption">
+                Showing the latest {FEED_LIMIT} posts.
+              </AppText>
+            ) : null}
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </YStack>
+        )}
+      </YStack>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: 16 },
-  container: { gap: 16, width: '100%', alignSelf: 'center' },
-  list: { gap: 12 },
-  item: {
-    backgroundColor: '#fff',
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    gap: 8,
-  },
-  itemTitle: { fontSize: 16, fontWeight: '700', color: colors.ink },
-  itemBody: { fontSize: 14, color: '#4b5563', lineHeight: 20 },
-  itemFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  itemMeta: { fontSize: 12, color: '#6b7280' },
-  likeCount: { fontSize: 12, color: '#6b7280' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
-});
+/** The server stores categories enum-style (`CITY`, `CAMPUS`); show them as words. */
+function categoryLabel(category: string): string {
+  const text = category.replace(/_/g, ' ').toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

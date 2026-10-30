@@ -35,6 +35,12 @@ public class Expense {
     @Column(length = 50)
     private String category;
 
+    @Column(length = 150)
+    private String title;
+
+    @Column(name = "split_type", length = 30)
+    private String splitType;
+
     @Column(name = "expense_date", nullable = false)
     private LocalDate expenseDate;
 
@@ -44,6 +50,13 @@ public class Expense {
     protected Expense() {}
 
     Expense(UUID groupId, UUID payerId, BigDecimal amount, String currency, String description, String category, LocalDate expenseDate) {
+        this(groupId, payerId, amount, currency, null, description, category, "EQUAL", expenseDate);
+    }
+
+    Expense(UUID groupId, UUID payerId, BigDecimal amount, String currency, String title, String description,
+            String category, String splitType, LocalDate expenseDate) {
+        this.title = title;
+        this.splitType = splitType;
         this.id = UUID.randomUUID();
         this.groupId = groupId;
         this.payerId = payerId;
@@ -63,5 +76,7 @@ public class Expense {
     public String getDescription() { return description; }
     public String getCategory() { return category; }
     public LocalDate getExpenseDate() { return expenseDate; }
+    public String getTitle() { return title; }
+    public String getSplitType() { return splitType; }
     public Instant getCreatedAt() { return createdAt; }
 }

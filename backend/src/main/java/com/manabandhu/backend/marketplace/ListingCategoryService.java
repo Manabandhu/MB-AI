@@ -20,7 +20,7 @@ public class ListingCategoryService {
 
     @Transactional(readOnly = true)
     public List<ListingCategory> findAll() {
-        return repository.findAllByOrderByNameAsc();
+        return repository.findAllByOrderByNameAsc().stream().limit(MarketplaceRules.LIST_CAP).toList();
     }
 
     @Transactional(readOnly = true)
@@ -28,10 +28,14 @@ public class ListingCategoryService {
         return repository.findById(id);
     }
 
+    /** Moderators manage the category list. */
     @Transactional
-    public ListingCategory create(String name, String slug) {
+    public ListingCategory create(com.manabandhu.backend.auth.Actor actor, String name, String slug) {
+        if (!actor.admin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
+        }
         if (repository.existsBySlug(slug)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Slug already exists");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Slug already exists");
         }
         return repository.save(new ListingCategory(name, slug));
     }

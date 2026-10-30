@@ -5,6 +5,7 @@ on:
     paths:
       - frontend/**
       - packages/design-system/**
+      - packages/core/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -15,6 +16,7 @@ on:
     paths:
       - frontend/**
       - packages/design-system/**
+      - packages/core/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -48,10 +50,18 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check formatting, lint, and types
         run: pnpm lint
+      - name: Run shared package tests
+        run: pnpm test:packages
       - name: Run frontend tests
         run: pnpm --filter @manabandhu/frontend test
       - name: Export responsive web application
         run: pnpm --filter @manabandhu/frontend exec expo export --platform web
+        # The export validates public runtime config. This build is only verified, never deployed, so it uses
+        # inert placeholders; deploy-web reads real values from the target environment's variables.
+        env:
+          EXPO_PUBLIC_API_URL: http://localhost:8080
+          EXPO_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
       - name: Upload web build
         uses: actions/upload-artifact@v7
         with:

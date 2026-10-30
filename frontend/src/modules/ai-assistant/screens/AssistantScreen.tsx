@@ -1,150 +1,147 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useRef, useState } from 'react';
+import type { ScrollView } from 'react-native';
+import { XStack, YStack } from 'tamagui';
 import { getAssistantMessages, sendAssistantMessage } from '@/modules/ai-assistant/api';
-import { Banner } from '@/modules/shared/components/Banner';
+import { isUserRole, oldestFirst } from '@/modules/ai-assistant/assistantFormat';
+import { ChatBubble, ChatFrame, Composer, scrollToNewest } from '@/modules/chat';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { MessageBubble } from '@/modules/shared/components/MessageBubble';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BackButton } from '@/modules/shared/ui/BackButton';
+import { IconButton } from '@/modules/shared/ui/IconButton';
 
+const timeOf = (iso: string) =>
+  iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+/**
+ * The assistant conversation, oldest message first. The backend stores each question and currently answers with a
+ * fixed "not connected to an AI model yet" reply, and the subtitle says so. A failed send puts the question back in
+ * the input instead of losing it.
+ */
 export function AssistantScreen() {
-  const layout = useAdaptiveLayout();
+  const router = useRouter();
   const queryClient = useQueryClient();
+  const scrollRef = useRef<ScrollView>(null);
   const messages = useQuery({ queryKey: ['assistant', 'messages'], queryFn: getAssistantMessages });
-  const data = messages.data ?? [];
-  const [text, setText] = useState('');
-  const [offline, setOffline] = useState(false);
+  // Home quick prompts open the assistant pre-filled; the member still reviews and sends it.
+  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
+  const [text, setText] = useState(typeof prompt === 'string' ? prompt : '');
 
-  const sendMutation = useMutation({
+  const send = useMutation({
     mutationFn: (content: string) => sendAssistantMessage({ content }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assistant', 'messages'] });
-      setOffline(false);
+    // Awaiting keeps the pending bubble until the stored question and reply are in the list (no flicker).
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['assistant'] });
+      scrollToNewest(scrollRef);
     },
-    onError: () => setOffline(true),
+    onError: (_error, content) => {
+      // Keep the question: restore it unless the member already typed something new.
+      setText((current) => (current.trim() ? current : content));
+    },
   });
 
-  const send = () => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
+  const onSend = () => {
+    const content = text.trim();
+    if (!content || send.isPending) return;
     setText('');
-    sendMutation.mutate(trimmed);
+    send.reset();
+    send.mutate(content);
+    scrollToNewest(scrollRef);
   };
 
-  const sorted = useMemo(() => [...data].reverse(), [data]);
+  const ordered = useMemo(() => oldestFirst(messages.data ?? []), [messages.data]);
+
+  const header = (
+    <XStack alignItems="center" gap="$x2">
+      <BackButton fallback="/" />
+      <YStack flex={1} minWidth={0}>
+        <AppText numberOfLines={1} role="heading" variant="h4">
+          ManaBandhu assistant
+        </AppText>
+        <AppText numberOfLines={2} tone="muted" variant="caption">
+          Preview: no AI model connected, so it can't answer yet.
+        </AppText>
+      </YStack>
+      <IconButton
+        icon="clock"
+        label="Assistant history"
+        onPress={() => router.push('/assistant/history' as Href)}
+        variant="plain"
+      />
+      <IconButton
+        icon="book"
+        label="Citations"
+        onPress={() => router.push('/assistant/citations' as Href)}
+        variant="plain"
+      />
+    </XStack>
+  );
+
+  const pendingQuestion = send.isPending ? send.variables : null;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-        <SectionHeader
-          eyebrow="Assistant"
-          title="ManaBandhu assistant"
-          subtitle="Ask about rooms, rides, community, or safety."
+    <ChatFrame
+      composer={
+        <Composer
+          busy={send.isPending}
+          label="Ask the assistant"
+          onChangeText={setText}
+          onSend={onSend}
+          placeholder="Ask about rooms, rides, or safety…"
+          sendLabel="Send question"
+          value={text}
         />
-        {offline ? (
-          <Banner
-            title="Offline"
-            body="You can view cached messages, but new queries are disabled."
-            variant="warning"
-          />
-        ) : null}
-        <ScrollView style={styles.chatScroll} contentContainerStyle={styles.chat}>
-          {messages.isLoading ? (
-            <LoadingState variant="skeleton" count={3} />
-          ) : messages.isError ? (
-            <ErrorState
-              title="Unable to load messages"
-              body="Please check your connection and try again."
-              retryLabel="Retry"
-              onRetry={() => messages.refetch()}
+      }
+      header={header}
+      notices={
+        send.isError ? (
+          <AppText role="alert" tone="danger" variant="caption">
+            Your question was not sent
+            {send.error instanceof Error ? ` (${send.error.message})` : ''}. It is back in the
+            message field so you can send it again.
+          </AppText>
+        ) : null
+      }
+      scrollRef={scrollRef}
+    >
+      {messages.isLoading ? (
+        <LoadingState count={3} variant="skeleton" />
+      ) : messages.isError ? (
+        <ErrorState
+          body="Please check your connection and try again."
+          onRetry={() => messages.refetch()}
+          retryLabel="Retry"
+          title="Unable to load messages"
+        />
+      ) : ordered.length === 0 && !pendingQuestion ? (
+        <EmptyState
+          body="Type a question below. Your questions are saved to your history."
+          iconName="sparks"
+          title="No messages yet"
+        />
+      ) : (
+        <>
+          {ordered.map((item) => (
+            <ChatBubble
+              body={item.content ?? item.body ?? ''}
+              key={item.id}
+              mine={isUserRole(item.role)}
+              time={timeOf(item.createdAt)}
             />
-          ) : data.length === 0 ? (
-            <EmptyState
-              title="No messages yet"
-              body="Ask a question below to start chatting with ManaBandhu assistant."
-              actionLabel="Start chatting"
-              onAction={() => {}}
-            />
-          ) : (
-            sorted.map((item) => (
-              <MessageBubble
-                key={item.id}
-                body={item.body ?? item.content ?? ''}
-                sent={item.sent ?? item.role === 'USER'}
-                time={
-                  item.time ??
-                  (item.createdAt
-                    ? new Date(item.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
-                    : '')
-                }
-              />
-            ))
-          )}
-        </ScrollView>
-        <View style={styles.inputRow}>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder="Type a message..."
-            placeholderTextColor={colors.muted}
-            accessibilityLabel="Message input"
-            style={styles.input}
-          />
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Send"
-            onPress={send}
-            style={[styles.sendButton, !text.trim() && styles.sendButtonDisabled]}
-            disabled={!text.trim()}
-          >
-            <AppIcon color={colors.surface} name="message" size={18} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.actions}>
-          <AppButton label="History" route="/assistant/history" variant="secondary" />
-          <AppButton label="Citations" route="/assistant/citations" variant="secondary" />
-        </View>
-      </View>
-    </SafeAreaView>
+          ))}
+          {pendingQuestion ? (
+            <>
+              <ChatBubble body={pendingQuestion} mine status="sending" time="" />
+              <AppText aria-live="polite" tone="muted" variant="caption">
+                Assistant is replying…
+              </AppText>
+            </>
+          ) : null}
+        </>
+      )}
+    </ChatFrame>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  container: { alignSelf: 'center', flex: 1, gap: space.x6, padding: space.x4, width: '100%' },
-  chat: { flexGrow: 1, gap: space.x3 },
-  chatScroll: { flex: 1 },
-  inputRow: { flexDirection: 'row', gap: space.x3 },
-  input: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 16,
-    minHeight: 48,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
-  },
-  sendButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radius.control,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: space.x4,
-  },
-  sendButtonDisabled: { opacity: 0.5 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.x3 },
-});

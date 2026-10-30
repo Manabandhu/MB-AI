@@ -1,226 +1,141 @@
-import { color as colors, radius, space, typography } from '@manabandhu/design-system';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { getRideHistory, reactivateRideOffer } from '@/modules/rides/api';
+import { useQuery } from '@tanstack/react-query';
+import { type Href, useRouter } from 'expo-router';
+import { Fragment, useState } from 'react';
+import { YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import { getRideHistory } from '@/modules/rides/api';
+import { InlineNotice } from '@/modules/rides/components/InlineNotice';
+import { RepeatTripSheet } from '@/modules/rides/components/RepeatTripSheet';
+import { formatDeparture } from '@/modules/rides/components/RideCard';
+import { useTimedNotice } from '@/modules/rides/hooks/useTimedNotice';
+import type { Ride } from '@/modules/rides/types';
+import { errorMessage, statusIs, statusLabel, statusTone } from '@/modules/rides/utils/rideFormat';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { OwnerItemCard, type OwnerItemOverflowAction } from '@/modules/shared/ui/OwnerItemCard';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 
+/**
+ * Completed, cancelled or departed rides the user drove or rode on (`GET /rides/history`). Completed rides lead
+ * with Rate (the server refuses a second rating and says so); drivers can repeat any past trip.
+ */
 export function RideHistoryScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.back();
-      return true;
-    });
-    return () => sub.remove();
-  }, [router]);
-
-  const [reActivatingId, setReActivatingId] = useState<string | null>(null);
-
-  const { data, isLoading, isError, refetch } = useQuery({
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
+  const [repeatRide, setRepeatRide] = useState<Ride | null>(null);
+  const notices = useTimedNotice();
+  const query = useQuery({
     queryKey: ['rides', 'history'],
     queryFn: getRideHistory,
+    enabled: isAuthenticated,
   });
 
-  const handleReactivate = async (rideId: string) => {
-    try {
-      setReActivatingId(rideId);
-      const tomorrow = new Date(Date.now() + 86400000).toISOString();
-      const cloned = await reactivateRideOffer(rideId, tomorrow);
-      queryClient.invalidateQueries({ queryKey: ['rides', 'mine'] });
-      queryClient.invalidateQueries({ queryKey: ['rides', 'history'] });
-      Alert.alert(
-        'Trip Re-activated! 🚗',
-        'Past ride has been cloned with fresh active status for tomorrow.',
-        [
-          { text: 'View New Offer', onPress: () => router.push(`/rides/${cloned.id}`) },
-          { text: 'Go to My Rides', onPress: () => router.push('/rides/mine') },
-        ],
-      );
-    } catch (e: unknown) {
-      Alert.alert('Re-activation Failed', (e as Error)?.message || 'Unable to re-activate ride.');
-    } finally {
-      setReActivatingId(null);
+  const body = () => {
+    if (!isAuthenticated || query.isLoading) {
+      return <LoadingState count={3} label="Loading ride history…" variant="skeleton" />;
     }
+    if (query.isError) {
+      return (
+        <ErrorState
+          body={errorMessage(query.error)}
+          onRetry={() => query.refetch()}
+          retryLabel="Retry"
+          title="Could not load ride history"
+        />
+      );
+    }
+    const rides = query.data ?? [];
+    if (rides.length === 0) {
+      return (
+        <EmptyState
+          actionLabel="Find a ride"
+          body="Rides you drove or rode on appear here once they finish, are cancelled, or depart."
+          iconName="clock"
+          onAction={() => router.push('/rides/search' as Href)}
+          title="No ride history yet"
+        />
+      );
+    }
+    return (
+      <YStack gap="$x3">
+        {rides.map((ride) => {
+          const completed = statusIs(ride.status, 'completed');
+          const repeat = () => setRepeatRide(ride);
+          const overflow: OwnerItemOverflowAction[] = [];
+          if (ride.isDriver && completed) {
+            overflow.push({ label: 'Repeat trip', icon: 'repeat', onPress: repeat });
+          }
+          if (ride.isDriver) {
+            overflow.push({
+              label: 'Manage ride',
+              icon: 'settings',
+              onPress: () => router.push(`/rides/${ride.id}/manage` as Href),
+            });
+          }
+          return (
+            <Fragment key={ride.id}>
+              <OwnerItemCard
+                actions={
+                  completed ? (
+                    <AppButton
+                      icon="star"
+                      label={ride.isDriver ? 'Rate riders' : 'Rate driver'}
+                      onPress={() => router.push(`/rides/${ride.id}/rate` as Href)}
+                      size="sm"
+                    />
+                  ) : ride.isDriver ? (
+                    <AppButton
+                      icon="repeat"
+                      label="Repeat trip"
+                      onPress={repeat}
+                      size="sm"
+                      variant="secondary"
+                    />
+                  ) : undefined
+                }
+                href={`/rides/${ride.id}` as Href}
+                meta={[formatDeparture(ride.departureAt), ride.isDriver ? 'You drove' : 'You rode']}
+                overflow={overflow.length ? overflow : undefined}
+                status={
+                  <StatusBadge label={statusLabel(ride.status)} tone={statusTone(ride.status)} />
+                }
+                title={ride.routeLabel}
+                trailing={ride.contributionLabel ?? undefined}
+              />
+              <InlineNotice notice={notices.at(ride.id)} />
+            </Fragment>
+          );
+        })}
+      </YStack>
+    );
   };
 
-  if (isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ErrorState
-          title="Unable to load ride history"
-          body="Please check your connection and try again."
-          retryLabel="Retry"
-          onRetry={refetch}
-        />
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={[styles.page, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
-      >
-        <View style={styles.container}>
-          <View style={styles.headerBar}>
-            <Pressable
-              accessibilityLabel="Back to Rides"
-              onPress={() => router.back()}
-              style={styles.backBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <AppIcon color={colors.ink} name="chevron-left" size={20} />
-            </Pressable>
-            <Text style={styles.eyebrow}>Past Carpools</Text>
-          </View>
-          <Text style={styles.title}>Ride History</Text>
-          <Text style={styles.subtitle}>
-            Review completed trips, submit ratings, or re-activate past routes in 1 click.
-          </Text>
-
-          {isLoading ? (
-            <LoadingState />
-          ) : data && data.length > 0 ? (
-            data.map((ride) => (
-              <View key={ride.id} style={styles.card}>
-                <View style={styles.cardTop}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>{ride.title}</Text>
-                    <Text style={styles.cardSubtitle}>
-                      {ride.pickupArea} → {ride.destination}
-                    </Text>
-                    <Text style={styles.cardMeta}>
-                      📅 {new Date(ride.departureAt).toLocaleDateString()} • {ride.status}
-                    </Text>
-                  </View>
-                  <View style={styles.statusBadge}>
-                    <Text style={styles.statusBadgeText}>{ride.status}</Text>
-                  </View>
-                </View>
-
-                {/* Actions: Re-activate Trip (1-Click) + Rate */}
-                <View style={styles.cardActions}>
-                  <Pressable
-                    style={styles.reactivateBtn}
-                    disabled={reActivatingId === ride.id}
-                    onPress={() => handleReactivate(ride.id)}
-                  >
-                    {reActivatingId === ride.id ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
-                    ) : (
-                      <>
-                        <AppIcon name="sparks" size={14} color="#ffffff" />
-                        <Text style={styles.reactivateBtnText}>Re-activate Trip</Text>
-                      </>
-                    )}
-                  </Pressable>
-
-                  <AppButton
-                    label="Rate Experience"
-                    onPress={() => router.push(`/rides/${ride.id}/rate`)}
-                    variant="secondary"
-                  />
-                </View>
-              </View>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <AppIcon name="car" size={36} color={colors.muted} />
-              <Text style={styles.emptyTitle}>No ride history</Text>
-              <Text style={styles.emptyBody}>Completed rides will appear here.</Text>
-              <AppButton label="Browse rides" onPress={() => router.push('/rides/search')} />
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Screen onRefresh={() => query.refetch()} refreshing={query.isRefetching}>
+      <ScreenHeader
+        back={{ fallback: '/rides/mine' as Href }}
+        subtitle="Rate finished trips or post a past route again"
+        title="Ride history"
+      />
+      {body()}
+      <RepeatTripSheet
+        onClose={() => setRepeatRide(null)}
+        onPosted={(newRide) => {
+          const from = repeatRide?.id ?? newRide.id;
+          setRepeatRide(null);
+          notices.show({
+            anchor: from,
+            text: 'Repeat trip posted. Riders can book it now.',
+            href: `/rides/${newRide.id}/manage`,
+            hrefLabel: 'Manage new ride',
+          });
+        }}
+        ride={repeatRide}
+      />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { backgroundColor: colors.background, flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x5, maxWidth: 640, width: '100%' },
-  eyebrow: { color: colors.teal, fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
-  title: { ...typography.h1, color: colors.ink },
-  subtitle: { ...typography.body, color: colors.muted, marginBottom: space.x4 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x3,
-    padding: space.x4,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: space.x2,
-  },
-  cardTitle: { ...typography.h4, color: colors.ink, fontWeight: '800' },
-  cardSubtitle: { ...typography.body, color: colors.muted },
-  cardMeta: { ...typography.caption, color: colors.primary, marginTop: 4 },
-  statusBadge: {
-    backgroundColor: 'rgba(107,114,128,0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
-  statusBadgeText: { fontSize: 11, fontWeight: '800', color: colors.muted },
-  cardActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: space.x2,
-    paddingTop: 4,
-  },
-  reactivateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.primary,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x2,
-    borderRadius: radius.control,
-  },
-  reactivateBtnText: { color: '#ffffff', fontSize: 13, fontWeight: '800' },
-  emptyState: { alignItems: 'center', gap: space.x3, padding: space.x6 },
-  emptyTitle: { ...typography.h3, color: colors.ink, textAlign: 'center' },
-  emptyBody: { ...typography.body, color: colors.muted, textAlign: 'center' },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    marginBottom: space.x2,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(67,30,190,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

@@ -1,129 +1,262 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
+import { formatDate } from '@manabandhu/core';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { YStack } from 'tamagui';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SearchBar } from '@/modules/shared/components/SearchBar';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { getPackages } from '@/modules/utilities/api';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { AppButton } from '@/modules/shared/ui/AppButton';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { DateTimeField } from '@/modules/shared/ui/DateTimeField';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { IconButton } from '@/modules/shared/ui/IconButton';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
+import { TextField } from '@/modules/shared/ui/TextField';
+import { createPackage, getPackages, type PackageStatus } from '@/modules/utilities/api';
+import {
+  matchesSearch,
+  PACKAGE_STATUSES,
+  packageStatus,
+  trackingNumberError,
+} from '@/modules/utilities/utilitiesFormat';
 
-export function PackageTrackingScreen() {
-  const layout = useAdaptiveLayout();
-  const packages = useQuery({ queryKey: ['utilities', 'packages'], queryFn: getPackages });
-  const data = packages.data ?? [];
-  const [search, setSearch] = useState('');
+const CARRIERS = ['USPS', 'UPS', 'FedEx', 'Amazon', 'DHL'] as const;
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return data;
-    const term = search.toLowerCase();
-    return data.filter(
-      (item) =>
-        item.title.toLowerCase().includes(term) ||
-        item.body.toLowerCase().includes(term) ||
-        item.meta.toLowerCase().includes(term),
-    );
-  }, [data, search]);
+function AddPackageSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [carrier, setCarrier] = useState<string>('USPS');
+  const [otherCarrier, setOtherCarrier] = useState('');
+  const [status, setStatus] = useState<PackageStatus>('IN_TRANSIT');
+  const [eta, setEta] = useState<Date | null>(null);
+  const [touched, setTouched] = useState(false);
 
-  if (packages.isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Utilities" title="Package tracking" />
-          <LoadingState variant="skeleton" count={4} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const carrierName = carrier === 'Other' ? otherCarrier.trim() : carrier;
+  const numberError = touched ? trackingNumberError(trackingNumber) : null;
+  const carrierError = touched && !carrierName ? 'Enter the carrier.' : null;
 
-  if (packages.isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Utilities" title="Package tracking" />
-          <ErrorState
-            title="Unable to load packages"
-            body="Check your connection and try again."
-            retryLabel="Retry"
-            onRetry={() => packages.refetch()}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const add = useMutation({
+    mutationFn: () =>
+      createPackage({
+        trackingNumber: trackingNumber.trim(),
+        carrier: carrierName.slice(0, 80),
+        status,
+        estimatedDelivery: eta ? eta.toISOString() : null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['utilities'] });
+      setTrackingNumber('');
+      setOtherCarrier('');
+      setEta(null);
+      setTouched(false);
+      onClose();
+    },
+  });
+
+  const submit = () => {
+    setTouched(true);
+    if (trackingNumberError(trackingNumber) || !carrierName) return;
+    add.mutate();
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader
-            eyebrow="Utilities"
-            title="Package tracking"
-            subtitle="Track deliveries and pickup windows."
-          />
-          <SearchBar value={search} onChangeText={setSearch} placeholder="Search packages..." />
-          {filtered.length === 0 ? (
-            <EmptyState
-              title="No packages found"
-              body="Try a different search term or add a tracking number."
-              actionLabel="Clear search"
-              onAction={() => setSearch('')}
+    <BottomSheet
+      onClose={onClose}
+      scrollable
+      subtitle="Keep your deliveries in one list. Status is what you enter here."
+      title="Add a package"
+      visible={visible}
+    >
+      <YStack gap="$x4">
+        <TextField
+          autoCapitalize="characters"
+          autoCorrect={false}
+          error={numberError}
+          label="Tracking number"
+          maxLength={80}
+          onChangeText={setTrackingNumber}
+          value={trackingNumber}
+        />
+        <YStack gap="$x2">
+          <AppText variant="label">Carrier</AppText>
+          <FilterChipRow label="Carrier" role="radiogroup">
+            {[...CARRIERS, 'Other'].map((c) => (
+              <Chip
+                key={c}
+                label={c}
+                onPress={() => setCarrier(c)}
+                radio
+                selected={carrier === c}
+              />
+            ))}
+          </FilterChipRow>
+          {carrier === 'Other' ? (
+            <TextField
+              error={carrierError}
+              label="Carrier name"
+              maxLength={80}
+              onChangeText={setOtherCarrier}
+              value={otherCarrier}
             />
-          ) : (
-            <View style={styles.list}>
-              {filtered.map((item) => (
-                <View key={item.id} style={styles.card}>
-                  <View style={styles.iconRow}>
-                    <AppIcon color={colors.primary} name="package" size={22} />
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                  </View>
-                  <Text style={styles.cardBody}>{item.body}</Text>
-                  <View style={styles.timelineRow}>
-                    <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-                    <View style={styles.timelineLine} />
-                    <View style={styles.timelineTexts}>
-                      <Text style={styles.cardMeta}>{item.meta}</Text>
-                      <Text style={styles.status}>{item.status}</Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          ) : null}
+        </YStack>
+        <YStack gap="$x2">
+          <AppText variant="label">Status</AppText>
+          <FilterChipRow label="Status" role="radiogroup">
+            {PACKAGE_STATUSES.map((s) => (
+              <Chip
+                key={s.value}
+                label={s.label}
+                onPress={() => setStatus(s.value)}
+                radio
+                selected={status === s.value}
+              />
+            ))}
+          </FilterChipRow>
+        </YStack>
+        <DateTimeField
+          helper="Optional"
+          label="Expected delivery"
+          minimumDate={new Date()}
+          mode="date"
+          onChange={setEta}
+          value={eta}
+        />
+        {add.isError ? (
+          <AppText role="alert" tone="danger" variant="caption">
+            {add.error instanceof Error ? add.error.message : 'Could not add the package.'} Please
+            try again.
+          </AppText>
+        ) : null}
+        <AppButton
+          fullWidth
+          label="Add package"
+          loading={add.isPending}
+          onPress={submit}
+          size="lg"
+        />
+      </YStack>
+    </BottomSheet>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  page: { flexGrow: 1, padding: space.x4 },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    gap: space.x2,
-    padding: space.x4,
-  },
-  iconRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2 },
-  cardTitle: { color: colors.ink, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  cardBody: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  timelineRow: { flexDirection: 'row', alignItems: 'center', gap: space.x2, marginTop: space.x1 },
-  dot: { height: 10, width: 10, borderRadius: 5 },
-  timelineLine: {
-    backgroundColor: colors.border,
-    flex: 1,
-    height: 2,
-  },
-  timelineTexts: { gap: space.x1 },
-  cardMeta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-  status: { color: colors.teal, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-});
+/** Your tracked packages with their status, plus a form to add one. */
+export function PackageTrackingScreen() {
+  const packages = useQuery({ queryKey: ['utilities', 'packages'], queryFn: getPackages });
+  const [search, setSearch] = useState('');
+  const [adding, setAdding] = useState(false);
+  const data = packages.data ?? [];
+
+  const filtered = useMemo(
+    () =>
+      data.filter((item) =>
+        matchesSearch(search, [
+          item.trackingNumber,
+          item.carrier,
+          packageStatus(item.status).label,
+        ]),
+      ),
+    [data, search],
+  );
+
+  const body = () => {
+    if (packages.isLoading) return <LoadingState count={4} variant="skeleton" />;
+    if (packages.isError) {
+      return (
+        <ErrorState
+          body="Check your connection and try again."
+          onRetry={() => packages.refetch()}
+          retryLabel="Retry"
+          title="Unable to load packages"
+        />
+      );
+    }
+    if (data.length === 0) {
+      return (
+        <EmptyState
+          actionLabel="Add a package"
+          body="Add a tracking number to keep your deliveries in one place."
+          iconName="package"
+          onAction={() => setAdding(true)}
+          title="No packages yet"
+        />
+      );
+    }
+    return (
+      <YStack gap="$x3">
+        <TextField
+          aria-label="Search packages"
+          leadingIcon="search"
+          onChangeText={setSearch}
+          placeholder="Search by number, carrier, or status"
+          trailing={
+            search ? (
+              <IconButton
+                icon="close"
+                label="Clear search"
+                onPress={() => setSearch('')}
+                variant="plain"
+              />
+            ) : undefined
+          }
+          value={search}
+        />
+        {filtered.length === 0 ? (
+          <EmptyState
+            actionLabel="Clear search"
+            body="No packages match that search."
+            compact
+            onAction={() => setSearch('')}
+            title="No matches"
+          />
+        ) : (
+          filtered.map((item) => {
+            const status = packageStatus(item.status);
+            return (
+              <Card key={item.id}>
+                <StatusBadge icon="package" label={status.label} tone={status.tone} />
+                <AppText selectable variant="bodyStrong">
+                  {item.trackingNumber}
+                </AppText>
+                <AppText tone="muted" variant="caption">
+                  {[
+                    item.carrier,
+                    item.estimatedDelivery
+                      ? `expected ${formatDate(item.estimatedDelivery, 'short')}`
+                      : null,
+                    `updated ${formatDate(item.lastUpdate, 'short')}`,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </AppText>
+              </Card>
+            );
+          })
+        )}
+      </YStack>
+    );
+  };
+
+  return (
+    <Screen
+      keyboardAvoiding
+      onRefresh={() => packages.refetch()}
+      refreshing={packages.isRefetching}
+    >
+      <ScreenHeader
+        back={{ fallback: '/utilities' as Href }}
+        primaryAction={{ label: 'Add package', icon: 'plus', onPress: () => setAdding(true) }}
+        subtitle="Deliveries you are expecting."
+        title="Packages"
+      />
+      {body()}
+      <AddPackageSheet onClose={() => setAdding(false)} visible={adding} />
+    </Screen>
+  );
+}

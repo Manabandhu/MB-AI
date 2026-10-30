@@ -1,0 +1,14 @@
+{
+  "name": "@manabandhu/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Platform-free TypeScript shared by every ManaBandhu client: HTTP client, formatters, module metadata.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check:platform-free": "node scripts/check-platform-free.mjs"
+  }
+}

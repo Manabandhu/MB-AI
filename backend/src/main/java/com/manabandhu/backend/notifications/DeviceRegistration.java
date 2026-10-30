@@ -5,11 +5,10 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/** A push token for one device. The token moves to whoever signed in on that device most recently. */
 @Entity
 @Table(name = "device_registrations")
 public class DeviceRegistration {
@@ -17,15 +16,14 @@ public class DeviceRegistration {
     @Id
     private UUID id;
 
-    @Column(name = "user_id", nullable = false, updatable = false)
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
     @Column(name = "device_token", nullable = false, length = 200)
     private String deviceToken;
 
     @Column(nullable = false, length = 20)
-    @Enumerated(EnumType.STRING)
-    private Platform platform;
+    private String platform;
 
     @Column(nullable = false)
     private boolean enabled;
@@ -38,32 +36,31 @@ public class DeviceRegistration {
 
     protected DeviceRegistration() {}
 
-    DeviceRegistration(UUID userId, String deviceToken, Platform platform, boolean enabled) {
+    DeviceRegistration(UUID userId, String deviceToken, String platform) {
         this.id = UUID.randomUUID();
         this.userId = userId;
         this.deviceToken = deviceToken;
         this.platform = platform;
-        this.enabled = enabled;
+        this.enabled = true;
         this.createdAt = Instant.now();
+        this.lastUsedAt = createdAt;
+    }
+
+    void assignTo(UUID userId, String platform) {
+        this.userId = userId;
+        this.platform = platform;
+        this.enabled = true;
+        this.lastUsedAt = Instant.now();
+    }
+
+    void disable() {
+        this.enabled = false;
     }
 
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }
     public String getDeviceToken() { return deviceToken; }
-    public Platform getPlatform() { return platform; }
+    public String getPlatform() { return platform; }
     public boolean isEnabled() { return enabled; }
     public Instant getLastUsedAt() { return lastUsedAt; }
-    public Instant getCreatedAt() { return createdAt; }
-
-    public void markUsed() {
-        this.lastUsedAt = Instant.now();
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public enum Platform {
-        IOS, ANDROID, WEB
-    }
 }

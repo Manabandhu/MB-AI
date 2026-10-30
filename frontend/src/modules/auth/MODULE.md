@@ -1,10 +1,21 @@
 # Authentication
 
-Owns Sign In, Sign Up, Forgot Password, session lifecycle, account recovery, identity verification, authorization-aware navigation, and Supabase Auth adapters.
+Owns Sign In, Sign Up, phone sign-in with SMS codes, Forgot/Reset Password, OAuth (Apple, Google), the sign-in
+callback, session lifecycle, and where a member lands after signing in. Authentication is Supabase Auth end to end;
+there is no demo sign-in path.
 
-The current auth routes `/sign-in`, `/sign-up`, `/forgot-password`, and related login/reset steps render through dedicated screen files in `frontend/src/modules/auth/screens/`; demo submission uses a local demo session with `demo@manabandhu.local` / `DemoPass123` and returns to `/home`, while regular password authentication uses Supabase.
+`frontend/src/lib/authStore.ts` owns the session store and Supabase calls. `frontend/src/lib/supabase.ts` owns the shared
+client (chunked SecureStore sessions on native).
 
-`frontend/src/lib/supabase.ts` owns the shared Supabase client and includes a static-render WebSocket fallback for Node runtimes that do not expose `globalThis.WebSocket`.
+## Flow
+
+1. `/welcome` → "Get started" (`/sign-up`) or "I already have an account" (`/sign-in`).
+2. Sign in or up with Apple, Google, email + password, or phone (`/phone-login` → `/otp-verification`).
+3. `useRedirectIfAuthenticated()` on every auth route calls `routeAfterAuth()` (`postAuth.ts`): onboarding
+   (`/onboarding/what-brings-you-here`) until `isCompleted`, then `/home`. Screens never navigate after success.
+4. Email sign-ups that need confirmation show "Check your email"; the link returns through `/auth/callback`.
+5. Forgot password sends a link to `/reset-password` (web) or `manabandhu://reset-password` (app); that route has no
+   signed-in redirect because the recovery link itself signs the member in.
 
 ## Screens
 
@@ -12,16 +23,32 @@ The current auth routes `/sign-in`, `/sign-up`, `/forgot-password`, and related 
 |---|---|---|
 | SignInScreen | `/sign-in` | `screens/SignInScreen.tsx` |
 | SignUpScreen | `/sign-up` | `screens/SignUpScreen.tsx` |
-| ForgotPasswordScreen | `/forgot-password` | `screens/ForgotPasswordScreen.tsx` |
 | PhoneLoginScreen | `/phone-login` | `screens/PhoneLoginScreen.tsx` |
-| EmailLoginScreen | `/email-login` | `screens/EmailLoginScreen.tsx` |
 | OtpVerificationScreen | `/otp-verification` | `screens/OtpVerificationScreen.tsx` |
+| ForgotPasswordScreen | `/forgot-password` | `screens/ForgotPasswordScreen.tsx` |
 | ResetPasswordScreen | `/reset-password` | `screens/ResetPasswordScreen.tsx` |
-| ChooseLoginMethodScreen | `/choose-login-method` | `screens/ChooseLoginMethodScreen.tsx` |
+| AuthCallbackScreen | `/auth/callback` | `screens/AuthCallbackScreen.tsx` |
 
-## Fixtures
+`/choose-login-method` and `/email-login` redirect to `/sign-in` so older links keep working.
 
-| Fixture | File | Purpose |
-|---|---|---|
-| authCredentialsFixture | `fixtures.ts` | Demo credentials |
-| authFlowsFixture | `fixtures.ts` | Auth flow copy |
+## Building blocks
+
+- `components/AuthKit.tsx`: `AuthScreen` (safe areas, keyboard avoidance, large title, footer pinned above the home
+  indicator, centered card at ≥600pt), `AuthField` (52pt, 17pt text, autofill props, show/hide password),
+  `AuthButton`, `SocialButtons` (Apple first), `AuthDivider`, `AuthNotice`, `AuthSwitch`.
+- `authHelpers.ts`: pure helpers covered by `frontend/test/authHelpers.test.mjs` (email/password rules, E.164,
+  friendly Supabase error messages, OAuth/recovery redirect parsing).
+- `postAuth.ts`: `routeAfterAuth()`.
+
+## Configuration required in Supabase Auth
+
+- Redirect URLs: `https://<web-origin>/auth/callback`, `https://<web-origin>/reset-password`,
+  `manabandhu://auth/callback`, `manabandhu://reset-password`.
+- Providers: Apple and Google enabled with their client IDs; Phone with an SMS provider (e.g. Twilio).
+- Locally, `scripts/local-dev/auth.mjs serve` stands in for these endpoints (codes are written to `.local-dev/jwks.log`).
+
+## Terms consent (2026-10-13)
+
+Every signed-in account must have `user_metadata.terms_version`. Email sign-up writes it; Apple/Google sign-up records
+the consent ticked before the redirect (`consent.ts`); any other account (Apple/Google or phone from Sign In, older
+accounts) is sent once to `/accept-terms` by `routeAfterAuth()`. `/accept-terms` → `screens/AcceptTermsScreen.tsx`.

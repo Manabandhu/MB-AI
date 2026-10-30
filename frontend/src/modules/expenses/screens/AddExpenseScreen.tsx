@@ -1,525 +1,198 @@
-import { useRouter } from 'expo-router';
+import { formatMoney } from '@manabandhu/core';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { YStack } from 'tamagui';
+import { createExpense, listExpenseGroups } from '@/modules/expenses/api';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { createExpense } from '@/modules/expenses/api';
+  EXPENSE_CATEGORIES,
+  type ExpenseCategoryId,
+  parseAmount,
+  toLocalDateString,
+} from '@/modules/expenses/expenseMath';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { showMessage } from '@/modules/shared/ui/notify';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { TextField } from '@/modules/shared/ui/TextField';
 
-const C = {
-  primary: '#431ebe',
-  primarySoft: 'rgba(67,30,190,0.08)',
-  teal: '#00696b',
-  tealSoft: 'rgba(0,105,107,0.08)',
-  accent: '#ff7e33',
-  bg: '#faf8ff',
-  cardBg: '#ffffff',
-  border: '#e8e5f2',
-  ink: '#1b1829',
-  inkMuted: '#6b6882',
-  emerald: '#16a34a',
-  emeraldSoft: '#dcfce7',
-};
-
-const CATEGORIES = [
-  'Groceries & Subzi',
-  'Rent & Electric',
-  'Dining & Snacks',
-  'Rides & Fuel',
-  'Wifi & Utilities',
-  'Household Essentials',
-];
-
+/**
+ * Records an expense in one of your groups, split equally between its members (the only split the app offers).
+ * The amount is parsed strictly and rounded to cents; on success it confirms and goes back.
+ */
 export function AddExpenseScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
-
+  const queryClient = useQueryClient();
+  const params = useLocalSearchParams<{ groupId?: string }>();
+  const groups = useQuery({ queryKey: ['expenses', 'groups'], queryFn: listExpenseGroups });
+  const [pickedGroupId, setPickedGroupId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Groceries & Subzi');
-  const [splitMethod, setSplitMethod] = useState<'equal' | 'you_paid' | 'roommate_paid'>('equal');
-  const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [category, setCategory] = useState<ExpenseCategoryId>('GROCERIES');
+  const [touched, setTouched] = useState(false);
 
-  const onSubmit = async () => {
-    if (!title.trim()) {
-      setError('Please provide an expense title.');
-      return;
-    }
-    const num = parseFloat(amount);
-    if (Number.isNaN(num) || num <= 0) {
-      setError('Please enter a valid expense amount greater than $0.');
-      return;
-    }
-    setError(null);
-    try {
-      await createExpense({
-        groupId: 'group-apt-1',
+  const groupList = groups.data ?? [];
+  const groupId =
+    pickedGroupId ??
+    (params.groupId && groupList.some((g) => g.id === params.groupId) ? params.groupId : null) ??
+    groupList[0]?.id ??
+    null;
+  const group = groupList.find((g) => g.id === groupId);
+  const currency = group?.currency ?? 'USD';
+  const parsed = parseAmount(amount);
+  const amountError = touched ? parsed.error : null;
+  const titleError = touched && !title.trim() ? 'Say what the expense was for.' : null;
+
+  const save = useMutation({
+    mutationFn: () =>
+      createExpense({
+        groupId: groupId ?? '',
         title: title.trim(),
-        amount: num,
-        category: selectedCategory.includes('Rent')
-          ? 'RENT'
-          : selectedCategory.includes('Wifi')
-            ? 'WIFI'
-            : selectedCategory.includes('Fuel')
-              ? 'GAS_TOLLS'
-              : selectedCategory.includes('Groceries')
-                ? 'GROCERIES'
-                : 'GENERAL',
-        splitType: splitMethod === 'equal' ? 'EQUAL' : 'EXACT',
-      });
-    } catch {}
-    setSubmitted(true);
+        amount: parsed.value ?? 0,
+        category,
+        splitType: 'EQUAL',
+        expenseDate: toLocalDateString(),
+      }),
+    onSuccess: (expense) => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      showMessage(
+        'Expense added',
+        `${formatMoney(expense.amount, expense.currency || currency)} for "${expense.title}" was split equally in ${group?.name ?? 'your group'}.`,
+      );
+      if (router.canGoBack()) router.back();
+      else router.replace(`/expenses/groups/${groupId}` as Href);
+    },
+  });
+
+  const onSubmit = () => {
+    setTouched(true);
+    if (!groupId || parsed.error || !title.trim()) return;
+    save.mutate();
   };
 
-  if (submitted) {
+  const header = (
+    <ScreenHeader
+      back={{ fallback: '/expenses' as Href }}
+      subtitle="Split equally between everyone in the group."
+      title="Add an expense"
+    />
+  );
+
+  if (groups.isLoading) {
     return (
-      <SafeAreaView style={s.safe}>
-        <View style={s.successContainer}>
-          <View style={s.successBadge}>
-            <AppIcon color="#ffffff" name="check" size={32} />
-          </View>
-          <Text style={s.successTitle}>Expense Recorded!</Text>
-          <Text style={s.successBody}>
-            ${parseFloat(amount).toFixed(2)} for "{title}" has been split and added to your group
-            balance.
-          </Text>
-          <View style={s.successCard}>
-            <View style={s.successRow}>
-              <Text style={s.successLabel}>Category</Text>
-              <Text style={s.successVal}>{selectedCategory}</Text>
-            </View>
-            <View style={s.successRow}>
-              <Text style={s.successLabel}>Split Rule</Text>
-              <Text style={s.successVal}>
-                {splitMethod === 'equal' ? 'Split Equally (50/50)' : 'Individual Settlement'}
-              </Text>
-            </View>
-          </View>
-          <View style={{ width: '100%', maxWidth: 320, gap: 10, marginTop: 16 }}>
-            <AppButton label="View All Balances" route="/expenses" />
-            <Pressable
-              onPress={() => {
-                setTitle('');
-                setAmount('');
-                setSubmitted(false);
-              }}
-              style={s.addAnotherBtn}
-            >
-              <Text style={s.addAnotherText}>Add Another Expense</Text>
-            </Pressable>
-          </View>
-        </View>
-      </SafeAreaView>
+      <Screen maxWidth="form">
+        {header}
+        <LoadingState label="Loading your groups…" />
+      </Screen>
+    );
+  }
+  if (groups.isError) {
+    return (
+      <Screen maxWidth="form">
+        {header}
+        <ErrorState
+          body="Your groups could not be loaded, so the expense cannot be added yet."
+          onRetry={() => groups.refetch()}
+          retryLabel="Retry"
+          title="Unable to load groups"
+        />
+      </Screen>
+    );
+  }
+  if (groupList.length === 0) {
+    return (
+      <Screen maxWidth="form">
+        {header}
+        <EmptyState
+          actionLabel="Create a group"
+          body="Expenses belong to a group. Create one for your flat, trip, or carpool first."
+          iconName="wallet"
+          onAction={() => router.push('/expenses/groups' as Href)}
+          title="No expense groups yet"
+        />
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={s.safe}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Header */}
-          <View style={s.headerRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-              onPress={() => router.back()}
-              style={s.backBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <AppIcon color={C.ink} name="chevron-left" size={20} />
-            </Pressable>
-            <View style={s.headerTextCol}>
-              <Text style={s.headerEyebrow}>Shared Expenses</Text>
-              <Text style={s.headerTitle}>Add an Expense</Text>
-            </View>
-          </View>
-
-          {/* Error Banner */}
-          {error ? (
-            <View style={s.errorBanner}>
-              <AppIcon color="#ba1a1a" name="warning" size={18} />
-              <Text style={s.errorBannerText}>{error}</Text>
-            </View>
-          ) : null}
-
-          <View style={s.formCard}>
-            {/* Amount Input */}
-            <View style={s.fieldGroup}>
-              <Text style={s.fieldLabel}>TOTAL AMOUNT *</Text>
-              <View style={s.amountInputWrap}>
-                <Text style={s.dollarSign}>$</Text>
-                <TextInput
-                  accessibilityLabel="Expense amount"
-                  placeholder="0.00"
-                  placeholderTextColor={C.inkMuted}
-                  value={amount}
-                  keyboardType="decimal-pad"
-                  onChangeText={setAmount}
-                  style={s.amountInput}
+    <YStack flex={1}>
+      <Screen bottomInset={ACTION_BAR_SPACE} keyboardAvoiding maxWidth="form">
+        {header}
+        <Card gap="$x4">
+          <YStack gap="$x2">
+            <AppText variant="label">Group</AppText>
+            <FilterChipRow label="Group" role="radiogroup">
+              {groupList.map((g) => (
+                <Chip
+                  key={g.id}
+                  label={g.name}
+                  onPress={() => setPickedGroupId(g.id)}
+                  radio
+                  selected={g.id === groupId}
                 />
-              </View>
-            </View>
-
-            {/* Title Input */}
-            <View style={s.fieldGroup}>
-              <Text style={s.fieldLabel}>WHAT WAS IT FOR? *</Text>
-              <TextInput
-                accessibilityLabel="Expense title"
-                placeholder="e.g. Patel Brothers groceries, Electricity bill"
-                placeholderTextColor={C.inkMuted}
-                value={title}
-                onChangeText={setTitle}
-                style={s.input}
-              />
-            </View>
-
-            {/* Category Chips */}
-            <View style={s.fieldGroup}>
-              <Text style={s.fieldLabel}>CATEGORY</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.chipsRow}
-              >
-                {CATEGORIES.map((cat) => {
-                  const active = selectedCategory === cat;
-                  return (
-                    <Pressable
-                      key={cat}
-                      onPress={() => setSelectedCategory(cat)}
-                      style={[s.categoryChip, active && s.categoryChipActive]}
-                    >
-                      <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>
-                        {cat}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Split Method */}
-            <View style={s.fieldGroup}>
-              <Text style={s.fieldLabel}>SPLIT METHOD</Text>
-              <View style={s.splitRow}>
-                <Pressable
-                  onPress={() => setSplitMethod('equal')}
-                  style={[s.splitOption, splitMethod === 'equal' && s.splitOptionActive]}
-                >
-                  <Text
-                    style={[
-                      s.splitOptionTitle,
-                      splitMethod === 'equal' && s.splitOptionTitleActive,
-                    ]}
-                  >
-                    Split 50 / 50
-                  </Text>
-                  <Text style={s.splitOptionSub}>Equally between all flatmates</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setSplitMethod('you_paid')}
-                  style={[s.splitOption, splitMethod === 'you_paid' && s.splitOptionActive]}
-                >
-                  <Text
-                    style={[
-                      s.splitOptionTitle,
-                      splitMethod === 'you_paid' && s.splitOptionTitleActive,
-                    ]}
-                  >
-                    You Paid Entirely
-                  </Text>
-                  <Text style={s.splitOptionSub}>Others owe you full amount</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={s.actionRow}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Cancel"
-                onPress={() => router.back()}
-                style={s.cancelBtn}
-              >
-                <Text style={s.cancelBtnText}>Cancel</Text>
-              </Pressable>
-              <View style={{ flex: 1 }}>
-                <AppButton label="Save Expense" onPress={onSubmit} />
-              </View>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              ))}
+            </FilterChipRow>
+          </YStack>
+          <TextField
+            error={amountError}
+            helper={`Amount in ${currency}`}
+            inputMode="decimal"
+            keyboardType="decimal-pad"
+            label="Amount"
+            maxLength={14}
+            onChangeText={setAmount}
+            placeholder="0.00"
+            value={amount}
+          />
+          <TextField
+            error={titleError}
+            label="What was it for?"
+            maxLength={150}
+            onChangeText={setTitle}
+            placeholder="e.g. Groceries, electricity bill"
+            value={title}
+          />
+          <YStack gap="$x2">
+            <AppText variant="label">Category</AppText>
+            <FilterChipRow label="Category" role="radiogroup">
+              {EXPENSE_CATEGORIES.map((c) => (
+                <Chip
+                  icon={c.icon}
+                  key={c.id}
+                  label={c.label}
+                  onPress={() => setCategory(c.id)}
+                  radio
+                  selected={category === c.id}
+                />
+              ))}
+            </FilterChipRow>
+          </YStack>
+          {save.isError ? (
+            <AppText role="alert" tone="danger" variant="caption">
+              {save.error instanceof Error ? save.error.message : 'Unable to add the expense.'}{' '}
+              Please try again.
+            </AppText>
+          ) : null}
+        </Card>
+      </Screen>
+      <ActionBar
+        label="Save expense"
+        leading={
+          parsed.value !== null ? (
+            <AppText variant="bodyStrong">{formatMoney(parsed.value, currency)}</AppText>
+          ) : undefined
+        }
+      >
+        <AppButton label="Save expense" loading={save.isPending} onPress={onSubmit} />
+      </ActionBar>
+    </YStack>
   );
 }
-
-const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 48,
-    maxWidth: 680,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  contentDesktop: {
-    padding: 32,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.cardBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTextCol: {
-    flex: 1,
-  },
-  headerEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: C.ink,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fee2e2',
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-    marginBottom: 16,
-  },
-  errorBannerText: {
-    color: '#ba1a1a',
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
-  },
-  formCard: {
-    backgroundColor: C.cardBg,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 20,
-    gap: 20,
-  },
-  fieldGroup: {
-    gap: 8,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: C.inkMuted,
-    letterSpacing: 0.5,
-  },
-  amountInputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.bg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  dollarSign: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: C.primary,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 26,
-    fontWeight: '800',
-    color: C.ink,
-    padding: 0,
-  },
-  input: {
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: C.ink,
-  },
-  chipsRow: {
-    gap: 8,
-    paddingVertical: 2,
-  },
-  categoryChip: {
-    backgroundColor: C.bg,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  categoryChipActive: {
-    backgroundColor: C.primary,
-    borderColor: C.primary,
-  },
-  categoryChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.inkMuted,
-  },
-  categoryChipTextActive: {
-    color: '#ffffff',
-  },
-  splitRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  splitOption: {
-    flex: 1,
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 12,
-    gap: 4,
-  },
-  splitOptionActive: {
-    backgroundColor: C.primarySoft,
-    borderColor: C.primary,
-  },
-  splitOptionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: C.ink,
-  },
-  splitOptionTitleActive: {
-    color: C.primary,
-  },
-  splitOptionSub: {
-    fontSize: 11,
-    color: C.inkMuted,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
-  },
-  cancelBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtnText: {
-    color: C.inkMuted,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  successContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  successBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: C.emerald,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: C.ink,
-    marginBottom: 8,
-  },
-  successBody: {
-    fontSize: 14,
-    color: C.inkMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 320,
-    marginBottom: 20,
-  },
-  successCard: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: C.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    gap: 10,
-  },
-  successRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  successLabel: {
-    fontSize: 12,
-    color: C.inkMuted,
-    fontWeight: '600',
-  },
-  successVal: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  addAnotherBtn: {
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addAnotherText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.primary,
-  },
-});

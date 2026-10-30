@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pnpm lint)",
+      "Bash(pnpm verify)",
+      "Bash(pnpm verify:*)",
+      "Bash(pnpm review:commit)",
+      "Bash(pnpm review:history)",
+      "Bash(pnpm --filter @manabandhu/frontend test)",
+      "Bash(pnpm --filter @manabandhu/frontend typecheck)",
+      "Bash(npx biome check:*)",
+      "Bash(npx biome format:*)",
+      "Bash(node scripts/verify-*.mjs)",
+      "Bash(node scripts/local-dev/authz-smoke.mjs:*)",
+      "Bash(node scripts/local-dev/auth.mjs mint:*)",
+      "Bash(scripts/local-dev/start.sh:*)",
+      "Bash(scripts/local-dev/start-supabase.sh:*)",
+      "Bash(scripts/local-dev/stop.sh)",
+      "Bash(./mvnw -q -B -o test:*)",
+      "Bash(./mvnw -q -B -o compile:*)",
+      "Bash(./mvnw -q -B test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Read(./.env)",
+      "Read(./backend/.env)",
+      "Read(./frontend/.env.local)"
+    ]
+  }
+}

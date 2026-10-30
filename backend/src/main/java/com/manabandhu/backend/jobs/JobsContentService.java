@@ -1,74 +1,82 @@
 package com.manabandhu.backend.jobs;
 
+import static com.manabandhu.backend.foundation.CatalogContent.item;
+import static com.manabandhu.backend.foundation.CatalogContent.metric;
+import static com.manabandhu.backend.foundation.CatalogContent.metrics;
+import static com.manabandhu.backend.foundation.CatalogContent.personal;
+
+import java.util.List;
+import java.util.Optional;
+
+import com.manabandhu.backend.auth.Actor;
 import com.manabandhu.backend.foundation.CatalogScreenContent;
 import com.manabandhu.backend.foundation.UnknownCatalogScreenException;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Jobs screens. Open job counts come from COUNT queries; application and posting counts are the signed-in
+ * viewer's own. Screens without a data source show no metrics.
+ */
 @Service
 class JobsContentService {
 
-    CatalogScreenContent screen(String screenId) {
+    private static final String OPEN = "open";
+
+    private final JobPostingRepository postingRepository;
+    private final JobApplicationRepository applicationRepository;
+
+    JobsContentService(JobPostingRepository postingRepository, JobApplicationRepository applicationRepository) {
+        this.postingRepository = postingRepository;
+        this.applicationRepository = applicationRepository;
+    }
+
+    @Transactional(readOnly = true)
+    CatalogScreenContent screen(String screenId, Optional<Actor> viewer) {
         return switch (screenId) {
-            case "home" -> content(
+            case "home" -> new CatalogScreenContent(
                     "Find the right opportunity",
                     "Browse open jobs, categories, and application status from one discovery surface.",
                     "Jobs",
-                    java.util.List.of(
-                            new com.manabandhu.backend.foundation.CatalogMetric("Open jobs", "24"),
-                            new com.manabandhu.backend.foundation.CatalogMetric("Applications", "6")),
-                    java.util.List.of(
+                    metrics()
+                            .add("Open jobs", postingRepository.countByStatus(OPEN))
+                            .addFor(viewer, "Your applications", actor -> applicationRepository.countByApplicantId(actor.id()))
+                            .build(),
+                    List.of(
                             item("browse", "Browse jobs", "Search by title, company, location, and employment type.", "Open jobs", "/jobs/search"),
                             item("filters", "Refine by category", "Narrow jobs by industry, remote preference, and salary range.", "Filters", "/jobs/filters")));
-            case "search" -> content(
+            case "search" -> new CatalogScreenContent(
                     "Search jobs",
                     "Find jobs by title, company, location, employment type, and salary expectations.",
                     "Jobs",
-                    java.util.List.of(
-                            new com.manabandhu.backend.foundation.CatalogMetric("Filters", "6"),
-                            new com.manabandhu.backend.foundation.CatalogMetric("Saved searches", "2")),
-                    java.util.List.of(
+                    List.of(metric("Open jobs", postingRepository.countByStatus(OPEN))),
+                    List.of(
                             item("title", "Title and company", "Search by role name, keywords, or employer.", "Core filter", "/jobs"),
                             item("location", "Location and remote", "Filter by city, region, or fully remote preference.", "Trip fit", "/jobs/filters")));
-            case "filters" -> content(
+            case "filters" -> new CatalogScreenContent(
                     "Job filters",
                     "Narrow job discovery by category, employment type, salary, and remote flexibility.",
                     "Jobs",
-                    java.util.List.of(
-                            new com.manabandhu.backend.foundation.CatalogMetric("Active filters", "3"),
-                            new com.manabandhu.backend.foundation.CatalogMetric("Matches", "9")),
-                    java.util.List.of(
+                    List.of(),
+                    List.of(
                             item("category", "Industry", "Filter by job category and sub-specialty.", "Category", "/jobs"),
                             item("salary", "Salary range", "Set minimum and maximum compensation expectations.", "Compensation", "/jobs")));
-            case "saved" -> content(
+            case "saved" -> new CatalogScreenContent(
                     "Saved jobs",
                     "Track jobs you want to compare, revisit, or apply to later.",
                     "Jobs",
-                    java.util.List.of(
-                            new com.manabandhu.backend.foundation.CatalogMetric("Saved", "—")),
-                    java.util.List.of(item("saved", "Sign in to see saved jobs", "Saved jobs appear here for easy comparison.", "Search jobs", "/jobs/search")));
-            case "post" -> content(
+                    List.of(),
+                    List.of(item("saved", "Sign in to see saved jobs", "Saved jobs appear here for easy comparison.", "Search jobs", "/jobs/search")));
+            case "post" -> new CatalogScreenContent(
                     "Post a job",
                     "Create a job listing with clear expectations, contact handoff, and application details.",
                     "Jobs",
-                    java.util.List.of(
-                            new com.manabandhu.backend.foundation.CatalogMetric("Steps", "4"),
-                            new com.manabandhu.backend.foundation.CatalogMetric("Required fields", "7")),
-                    java.util.List.of(
+                    personal(viewer, actor -> List.of(metric("Your postings", postingRepository.countByOwnerId(actor.id())))),
+                    List.of(
                             item("basics", "Basics", "Title, company, location, and employment type.", "Step 1", "/jobs"),
                             item("details", "Details", "Description, salary, application URL, and contact method.", "Step 2", "/jobs/saved")));
             default -> throw new UnknownCatalogScreenException(screenId);
         };
-    }
-
-    private static CatalogScreenContent content(String title, String subtitle, String eyebrow,
-                                                 java.util.List<com.manabandhu.backend.foundation.CatalogMetric> metrics,
-                                                 java.util.List<com.manabandhu.backend.foundation.CatalogItem> items) {
-        return new CatalogScreenContent(title, subtitle, eyebrow, metrics, items);
-    }
-
-    private static com.manabandhu.backend.foundation.CatalogItem item(String id, String title, String body,
-                                                                       String meta, String route) {
-        return new com.manabandhu.backend.foundation.CatalogItem(id, title, body, meta, route, null);
     }
 }

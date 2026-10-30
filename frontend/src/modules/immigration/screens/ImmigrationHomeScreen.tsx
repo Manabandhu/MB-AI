@@ -1,482 +1,32 @@
-import { radius, space } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
-import { getImmigrationScreen } from '@/modules/immigration/api';
-import { FeatureScreen } from '@/modules/shared/components/FeatureScreen';
+import { formatDate } from '@manabandhu/core';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { type Href, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { XStack, YStack } from 'tamagui';
+import { useAuthStore } from '@/lib/authStore';
+import {
+  type ImmigrationChecklist,
+  type ImmigrationFaqItem,
+  type ImmigrationGuide,
+  type ImmigrationNews,
+  type ImmigrationResource,
+  listImmigrationChecklists,
+  listImmigrationFaq,
+  listImmigrationGuides,
+  listImmigrationNews,
+  listImmigrationResources,
+} from '@/modules/immigration/api';
+import { openUrl } from '@/modules/immigration/utils/openUrl';
+import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppIcon } from '@/modules/shared/ui/AppIcon';
-import { useAdaptiveLayout } from '@/platform/adaptive';
-
-type ImmigrationScreenProps = {
-  screenId: keyof typeof immigrationRoutes;
-};
-
-type ImmigrationTab = 'all' | 'h1b' | 'opt' | 'greencard' | 'parents';
-
-export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
-  const router = useRouter();
-  const layout = useAdaptiveLayout();
-  const [activeTab, setActiveTab] = useState<ImmigrationTab>('all');
-  const [savedGuides, setSavedGuides] = useState<Set<string>>(new Set(['guide-parents']));
-
-  const screen = useQuery({
-    queryKey: ['immigration', 'screen', screenId],
-    queryFn: () => getImmigrationScreen(screenId),
-    retry: false,
-  });
-
-  if (screen.isLoading) {
-    return <LoadingState label="Loading immigration resources..." />;
-  }
-
-  // If viewing a sub-screen, use FeatureScreen
-  if (screenId !== 'home') {
-    const data = screen.data ?? DEFAULT_IMMIGRATION_DATA[screenId] ?? DEFAULT_IMMIGRATION_DATA.home;
-    return (
-      <FeatureScreen
-        actions={immigrationActions[screenId]}
-        cards={data.items}
-        currentRoute={immigrationRoutes[screenId]}
-        eyebrow={data.eyebrow}
-        metrics={data.metrics}
-        subtitle={data.subtitle}
-        title={data.title}
-      />
-    );
-  }
-
-  const toggleSave = (id: string) => {
-    setSavedGuides((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-        Alert.alert('Bookmark Removed', 'Article removed from your saved items.');
-      } else {
-        next.add(id);
-        Alert.alert('Bookmark Saved', 'Article saved for offline reference.');
-      }
-      return next;
-    });
-  };
-
-  return (
-    <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.scrollContent}>
-        <View style={[s.container, { maxWidth: layout.maxContentWidth }]}>
-          {/* Header */}
-          <View style={s.headerRow}>
-            <View style={s.headerLeft}>
-              <View style={s.badgePill}>
-                <Text style={s.badgePillText}>IMMIGRATION & VISA HUB • LIVE SYNC</Text>
-              </View>
-              <Text style={s.headerTitle}>Visa Guidance & Bulletin</Text>
-              <Text style={s.headerSubtitle}>
-                Community-verified guides, real-time priority date movement & vetted attorneys.
-              </Text>
-            </View>
-            <Pressable
-              style={s.searchIconBtn}
-              onPress={() => router.push('/immigration/resources')}
-              accessibilityRole="button"
-              accessibilityLabel="Browse resources"
-            >
-              <AppIcon name="search" size={20} color="#431ebe" />
-            </Pressable>
-          </View>
-
-          {/* Visa Bulletin Hero Card */}
-          <View style={s.bulletinCard}>
-            <View style={s.bulletinHeader}>
-              <View style={s.bulletinTag}>
-                <Text style={s.bulletinTagText}>USCIS VISA BULLETIN • OCT 2026</Text>
-              </View>
-              <Text style={s.bulletinSyncText}>Synced with Travel.State.Gov</Text>
-            </View>
-
-            <Text style={s.bulletinHeroTitle}>India Priority Date Movement</Text>
-
-            {/* Movement Tickers */}
-            <View style={s.tickerGrid}>
-              <View style={s.tickerCol}>
-                <Text style={s.tickerCategory}>EB-2 INDIA</Text>
-                <Text style={s.tickerDate}>15 JUL 2013</Text>
-                <View style={s.movementRow}>
-                  <Text style={s.movementGreen}>▲ +2 Months</Text>
-                </View>
-              </View>
-
-              <View style={s.tickerDivider} />
-
-              <View style={s.tickerCol}>
-                <Text style={s.tickerCategory}>EB-3 INDIA</Text>
-                <Text style={s.tickerDate}>01 NOV 2012</Text>
-                <View style={s.movementRow}>
-                  <Text style={s.movementGreen}>▲ +1.5 Months</Text>
-                </View>
-              </View>
-
-              <View style={s.tickerDivider} />
-
-              <View style={s.tickerCol}>
-                <Text style={s.tickerCategory}>EB-1 INDIA</Text>
-                <Text style={s.tickerDate}>CURRENT</Text>
-                <View style={s.movementRow}>
-                  <Text style={s.movementTeal}>Zero Backlog</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Hero Action CTA */}
-            <View style={s.heroActions}>
-              <Pressable
-                style={s.heroTrackBtn}
-                onPress={() =>
-                  Alert.alert(
-                    'Priority Date Tracking',
-                    'You will receive push notifications when your priority date moves.',
-                  )
-                }
-              >
-                <AppIcon name="bell" size={16} color="#431ebe" />
-                <Text style={s.heroTrackBtnText}>Track Your Priority Date</Text>
-              </Pressable>
-              <Text style={s.heroTrackingCount}>14.8k Bandhus tracking</Text>
-            </View>
-          </View>
-
-          {/* Topic Filter Chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipsRow}>
-            <Pressable
-              style={[s.chip, activeTab === 'all' && s.chipActive]}
-              onPress={() => setActiveTab('all')}
-            >
-              <Text style={[s.chipText, activeTab === 'all' && s.chipTextActive]}>
-                All Guides (32)
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[s.chip, activeTab === 'h1b' && s.chipActive]}
-              onPress={() => setActiveTab('h1b')}
-            >
-              <Text style={[s.chipText, activeTab === 'h1b' && s.chipTextActive]}>
-                H-1B & Stamping
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[s.chip, activeTab === 'opt' && s.chipActive]}
-              onPress={() => setActiveTab('opt')}
-            >
-              <Text style={[s.chipText, activeTab === 'opt' && s.chipTextActive]}>OPT / STEM</Text>
-            </Pressable>
-            <Pressable
-              style={[s.chip, activeTab === 'greencard' && s.chipActive]}
-              onPress={() => setActiveTab('greencard')}
-            >
-              <Text style={[s.chipText, activeTab === 'greencard' && s.chipTextActive]}>
-                Green Card
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[s.chip, activeTab === 'parents' && s.chipActive]}
-              onPress={() => setActiveTab('parents')}
-            >
-              <Text style={[s.chipText, activeTab === 'parents' && s.chipTextActive]}>
-                B-1/B-2 Parents
-              </Text>
-            </Pressable>
-          </ScrollView>
-
-          {/* Guide Cards */}
-          <View style={s.guidesList}>
-            {/* Guide 1: H-1B */}
-            {(activeTab === 'all' || activeTab === 'h1b') && (
-              <View style={s.guideCard}>
-                <View style={s.guideTopRow}>
-                  <View style={s.guideTagBlue}>
-                    <Text style={s.guideTagBlueText}>
-                      Checklist Included • Hyderabad/Chennai VAC
-                    </Text>
-                  </View>
-                  <Pressable onPress={() => toggleSave('guide-h1b')}>
-                    <AppIcon
-                      name="star"
-                      size={18}
-                      color={savedGuides.has('guide-h1b') ? '#ff7e33' : '#a5adc6'}
-                    />
-                  </Pressable>
-                </View>
-
-                <Text style={s.guideTitle}>
-                  H-1B Dropbox & Stamping Guide (Hyderabad & Chennai VAC 2026)
-                </Text>
-
-                <View style={s.bulletsBox}>
-                  <Text style={s.bulletItem}>
-                    • 221(g) blue slip prevention & client letter formats
-                  </Text>
-                  <Text style={s.bulletItem}>
-                    • DS-160 photo specifications & fee receipt locking
-                  </Text>
-                  <Text style={s.bulletItem}>
-                    • Biometrics slot booking & document collection tips
-                  </Text>
-                </View>
-
-                <View style={s.guideFooter}>
-                  <Text style={s.authorText}>Karthik V. • 8 yrs H-1B Veteran</Text>
-                  <View style={s.ratingRow}>
-                    <AppIcon name="star" size={13} color="#ff7e33" />
-                    <Text style={s.ratingText}>4.9 (342) • 2.4k views</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Guide 2: OPT STEM */}
-            {(activeTab === 'all' || activeTab === 'opt') && (
-              <View style={s.guideCard}>
-                <View style={s.guideTopRow}>
-                  <View style={[s.guideTagBlue, { backgroundColor: 'rgba(0,105,107,0.08)' }]}>
-                    <Text style={[s.guideTagBlueText, { color: '#00696b' }]}>
-                      Step-by-Step Verified • STEM OPT 24-Month
-                    </Text>
-                  </View>
-                  <Pressable onPress={() => toggleSave('guide-opt')}>
-                    <AppIcon
-                      name="star"
-                      size={18}
-                      color={savedGuides.has('guide-opt') ? '#ff7e33' : '#a5adc6'}
-                    />
-                  </Pressable>
-                </View>
-
-                <Text style={s.guideTitle}>
-                  F-1 OPT to STEM Extension: Step-by-Step Filing & Form I-983
-                </Text>
-
-                <View style={s.bulletsBox}>
-                  <Text style={s.bulletItem}>
-                    • Form I-983 training plan sample packet & DSO approval window
-                  </Text>
-                  <Text style={s.bulletItem}>
-                    • Form I-765 online e-filing walkthrough with live screenshots
-                  </Text>
-                  <Text style={s.bulletItem}>
-                    • 180-day automatic work authorization grace period safeguards
-                  </Text>
-                </View>
-
-                <View style={s.guideFooter}>
-                  <Text style={s.authorText}>Pooja Varma • Software Engineer, Dell</Text>
-                  <View style={s.ratingRow}>
-                    <AppIcon name="star" size={13} color="#ff7e33" />
-                    <Text style={s.ratingText}>4.8 (189) • 1.8k views</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Guide 3: B-2 Parents */}
-            {(activeTab === 'all' || activeTab === 'parents') && (
-              <View style={s.guideCard}>
-                <View style={s.guideTopRow}>
-                  <View style={[s.guideTagBlue, { backgroundColor: '#fff7ed' }]}>
-                    <Text style={[s.guideTagBlueText, { color: '#ea580c' }]}>
-                      Most Saved Article ★ • Senior Parents Care
-                    </Text>
-                  </View>
-                  <Pressable onPress={() => toggleSave('guide-parents')}>
-                    <AppIcon
-                      name="star"
-                      size={18}
-                      color={savedGuides.has('guide-parents') ? '#ff7e33' : '#a5adc6'}
-                    />
-                  </Pressable>
-                </View>
-
-                <Text style={s.guideTitle}>
-                  B-2 Parents Visitor Visa: Medical Insurance & Extension Guide
-                </Text>
-
-                <View style={s.bulletsBox}>
-                  <Text style={s.bulletItem}>
-                    • Patriot America Plus vs INF Elite visitor insurance comparison
-                  </Text>
-                  <Text style={s.bulletItem}>
-                    • CBP port-of-entry questions & immigration counter tips
-                  </Text>
-                  <Text style={s.bulletItem}>
-                    • Form I-539 6-month stay extension filing checklist & affidavit
-                  </Text>
-                </View>
-
-                <View style={s.guideFooter}>
-                  <Text style={s.authorText}>Dr. Srinivas Rao • Round Rock, TX</Text>
-                  <View style={s.ratingRow}>
-                    <AppIcon name="star" size={13} color="#ff7e33" />
-                    <Text style={s.ratingText}>5.0 (512) • 4.1k views</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* Attorney Consultation Banner */}
-          <View style={s.attorneyCard}>
-            <View style={s.attorneyHeader}>
-              <View style={s.attorneyBadge}>
-                <AppIcon name="shield" size={14} color="#00696b" />
-                <Text style={s.attorneyBadgeText}>Vetted Legal Network</Text>
-              </View>
-              <Text style={s.attorneyTag}>Zero Platform Commission</Text>
-            </View>
-
-            <Text style={s.attorneyTitle}>Need Personalized Legal Advice?</Text>
-            <Text style={s.attorneyBody}>
-              Connect with vetted Indian-origin immigration attorneys for H-1B RFE responses, I-140
-              NIW evaluations, and Green Card filings.
-            </Text>
-
-            <View style={s.attorneyProfileRow}>
-              <View style={s.attorneyAvatar}>
-                <Text style={s.attorneyAvatarText}>RS</Text>
-              </View>
-              <View style={s.attorneyInfo}>
-                <Text style={s.attorneyName}>Rajesh K. Sharma, Esq.</Text>
-                <Text style={s.attorneyCredentials}>Licensed Texas Attorney • AILA Member</Text>
-              </View>
-            </View>
-
-            <Pressable
-              style={s.attorneyBookBtn}
-              onPress={() =>
-                Alert.alert(
-                  'Attorney Consultation',
-                  'Intro call request forwarded to Attorney Rajesh Sharma. Office will contact you within 24 hours.',
-                )
-              }
-            >
-              <Text style={s.attorneyBookBtnText}>Book Free 15-Min Intro Call</Text>
-            </Pressable>
-          </View>
-
-          {/* Bottom Nav Links */}
-          <View style={s.footerLinks}>
-            <AppButton
-              label="Browse All 32 Guides"
-              route="/immigration/resources"
-              variant="secondary"
-            />
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-const DEFAULT_IMMIGRATION_DATA: Record<string, CatalogScreenContent> = {
-  home: {
-    title: 'Immigration & Visa Resources',
-    subtitle: 'Guides, legal resources, visa updates, and FAQs for the Indian diaspora.',
-    eyebrow: 'Immigration',
-    metrics: [
-      { label: 'Guides', value: '32' },
-      { label: 'FAQ items', value: '120' },
-      { label: 'Attorneys', value: '18' },
-    ],
-    items: [
-      {
-        id: 'resources',
-        title: 'Resources',
-        body: 'Browse all guides and official references.',
-        meta: 'Library',
-        route: '/immigration/resources',
-      },
-      {
-        id: 'guides',
-        title: 'Step-by-step Guides',
-        body: 'H-1B, OPT, and green card walk-throughs.',
-        meta: 'Guides',
-        route: '/immigration/guides',
-      },
-      {
-        id: 'checklists',
-        title: 'Checklists',
-        body: 'Document checklists for visa interviews.',
-        meta: 'Tools',
-        route: '/immigration/checklists',
-      },
-      {
-        id: 'faq',
-        title: 'Community FAQ',
-        body: 'Frequently asked questions answered by experts.',
-        meta: 'Answers',
-        route: '/immigration/faq',
-      },
-    ],
-  },
-  resources: {
-    title: 'Immigration Resource Library',
-    subtitle: 'Curated articles and legal references.',
-    eyebrow: 'Library',
-    metrics: [],
-    items: [],
-  },
-  guides: {
-    title: 'Step-by-Step Immigration Guides',
-    subtitle: 'Detailed walkthroughs for visa filings.',
-    eyebrow: 'Guides',
-    metrics: [],
-    items: [],
-  },
-  checklists: {
-    title: 'Document Checklists',
-    subtitle: 'Stay organized before your interview or filing.',
-    eyebrow: 'Checklists',
-    metrics: [],
-    items: [],
-  },
-  faq: {
-    title: 'Frequently Asked Questions',
-    subtitle: 'Community-sourced and attorney-reviewed answers.',
-    eyebrow: 'FAQ',
-    metrics: [],
-    items: [],
-  },
-  questions: {
-    title: 'Ask a Question',
-    subtitle: 'Submit an immigration query to the community.',
-    eyebrow: 'Q&A',
-    metrics: [],
-    items: [],
-  },
-  uscis: {
-    title: 'USCIS Official Updates',
-    subtitle: 'Direct policy announcements and processing dates.',
-    eyebrow: 'Official',
-    metrics: [],
-    items: [],
-  },
-  news: {
-    title: 'Immigration News',
-    subtitle: 'Policy shifts, executive orders, and legal trends.',
-    eyebrow: 'News',
-    metrics: [],
-    items: [],
-  },
-  saved: {
-    title: 'Saved Guides & Checklists',
-    subtitle: 'Quick access to your bookmarked legal articles.',
-    eyebrow: 'Bookmarks',
-    metrics: [],
-    items: [],
-  },
-};
+import { AppText, Heading } from '@/modules/shared/ui/AppText';
+import { Card } from '@/modules/shared/ui/Card';
+import { Chip } from '@/modules/shared/ui/Chip';
+import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 
 const immigrationRoutes = {
   home: '/immigration',
@@ -490,392 +40,490 @@ const immigrationRoutes = {
   saved: '/immigration/saved',
 } as const;
 
-const immigrationActions = {
-  home: [
-    { label: 'Resources', route: '/immigration/resources' },
-    { label: 'Guides', route: '/immigration/guides' },
-    { label: 'Checklists', route: '/immigration/checklists' },
-    { label: 'FAQ', route: '/immigration/faq' },
-  ],
-  resources: [
-    { label: 'Guides', route: '/immigration/guides' },
-    { label: 'Home', route: '/immigration' },
-  ],
-  guides: [
-    { label: 'Checklists', route: '/immigration/checklists' },
-    { label: 'Home', route: '/immigration' },
-  ],
-  checklists: [
-    { label: 'Guides', route: '/immigration/guides' },
-    { label: 'Home', route: '/immigration' },
-  ],
-  faq: [
-    { label: 'Questions', route: '/immigration/questions' },
-    { label: 'Home', route: '/immigration' },
-  ],
-  questions: [
-    { label: 'FAQ', route: '/immigration/faq' },
-    { label: 'Home', route: '/immigration' },
-  ],
-  uscis: [
-    { label: 'News', route: '/immigration/news' },
-    { label: 'Home', route: '/immigration' },
-  ],
-  news: [
-    { label: 'USCIS', route: '/immigration/uscis' },
-    { label: 'Home', route: '/immigration' },
-  ],
-  saved: [
-    { label: 'Resources', route: '/immigration/resources' },
-    { label: 'Home', route: '/immigration' },
-  ],
-} as const;
+type ImmigrationScreenId = keyof typeof immigrationRoutes;
 
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#faf8ff' },
-  scrollContent: { padding: space.x4, flexGrow: 1 },
-  container: { width: '100%', alignSelf: 'center', gap: space.x4 },
+type ImmigrationScreenProps = {
+  screenId: ImmigrationScreenId;
+};
 
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+/** Static section copy only; every list and count below comes from the immigration API. */
+const SCREEN_COPY: Record<ImmigrationScreenId, { title: string; subtitle: string }> = {
+  home: {
+    title: 'Immigration & Visa Hub',
+    subtitle: 'Guides, news, checklists, and resources shared with the community.',
   },
-  headerLeft: { flex: 1, gap: 4 },
-  badgePill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+  resources: { title: 'Resource Library', subtitle: 'Forms, links, and reference documents.' },
+  guides: { title: 'Guides', subtitle: 'Step-by-step walkthroughs for common filings.' },
+  checklists: { title: 'Checklists', subtitle: 'Document checklists for filings and interviews.' },
+  faq: { title: 'Frequently Asked Questions', subtitle: 'Answers to common questions.' },
+  questions: {
+    title: 'Ask a question',
+    subtitle: 'Questions are answered by members in Community.',
   },
-  badgePillText: {
-    color: '#431ebe',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#131b2e',
-    letterSpacing: -0.4,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#625f6e',
-    lineHeight: 18,
-  },
-  searchIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#eaedff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  uscis: { title: 'USCIS Updates', subtitle: 'News items published from USCIS sources.' },
+  news: { title: 'Immigration News', subtitle: 'Policy and processing updates.' },
+  saved: { title: 'Saved', subtitle: 'Your bookmarked guides and checklists.' },
+};
 
-  bulletinCard: {
-    backgroundColor: '#431ebe',
-    borderRadius: 20,
-    padding: space.x4,
-    gap: space.x3,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  bulletinHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  bulletinTag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
-  bulletinTagText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  bulletinSyncText: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 11,
-  },
-  bulletinHeroTitle: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
+function checklistItemCount(itemsJson?: string | null): number | null {
+  if (!itemsJson) return null;
+  try {
+    const parsed: unknown = JSON.parse(itemsJson);
+    return Array.isArray(parsed) ? parsed.length : null;
+  } catch {
+    return null;
+  }
+}
 
-  tickerGrid: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
-    borderRadius: 14,
-    padding: 12,
-    alignItems: 'center',
-  },
-  tickerCol: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  tickerDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  tickerCategory: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  tickerDate: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  movementRow: {
-    marginTop: 2,
-  },
-  movementGreen: {
-    color: '#34d399',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  movementTeal: {
-    color: '#6ee7b7',
-    fontSize: 10,
-    fontWeight: '700',
-  },
+export function ImmigrationScreen({ screenId }: ImmigrationScreenProps) {
+  const copy = SCREEN_COPY[screenId];
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.refetchQueries({ queryKey: ['immigration'], type: 'active' });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
-  heroActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 4,
-  },
-  heroTrackBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  heroTrackBtnText: {
-    color: '#431ebe',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  heroTrackingCount: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 11,
-    fontWeight: '600',
-  },
+  return (
+    <Screen onRefresh={onRefresh} refreshing={refreshing}>
+      <YStack gap="$x4" width="100%">
+        <ScreenHeader
+          back={{ fallback: (screenId === 'home' ? '/home' : '/immigration') as Href }}
+          subtitle={copy.subtitle}
+          title={copy.title}
+        />
+        <ImmigrationSection screenId={screenId} />
+      </YStack>
+    </Screen>
+  );
+}
 
-  chipsRow: {
-    flexDirection: 'row',
-    marginVertical: 4,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: radius.pill,
-    backgroundColor: '#f1f3f9',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  chipActive: {
-    backgroundColor: '#431ebe',
-    borderColor: '#431ebe',
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#625f6e',
-  },
-  chipTextActive: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
+function ImmigrationSection({ screenId }: ImmigrationScreenProps) {
+  switch (screenId) {
+    case 'home':
+      return <ImmigrationHome />;
+    case 'guides':
+      return <GuidesList />;
+    case 'news':
+      return <NewsList />;
+    case 'uscis':
+      return <NewsList uscisOnly />;
+    case 'resources':
+      return <ResourcesList />;
+    case 'checklists':
+      return <ChecklistsList />;
+    case 'faq':
+      return <FaqList />;
+    case 'questions':
+      return <AskInCommunity />;
+    case 'saved':
+      return <SavedPlaceholder />;
+    default:
+      return null;
+  }
+}
 
-  guidesList: {
-    gap: 12,
-  },
-  guideCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#eaedff',
-    gap: 10,
-    shadowColor: '#431ebe',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  guideTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  guideTagBlue: {
-    backgroundColor: 'rgba(67, 30, 190, 0.08)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  guideTagBlueText: {
-    color: '#431ebe',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  guideTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#131b2e',
-    lineHeight: 22,
-  },
-  bulletsBox: {
-    gap: 4,
-    backgroundColor: '#faf8ff',
-    padding: 10,
-    borderRadius: 10,
-  },
-  bulletItem: {
-    fontSize: 12,
-    color: '#374151',
-    lineHeight: 18,
-  },
-  guideFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 4,
-  },
-  authorText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#625f6e',
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  ratingText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#625f6e',
-  },
+// ─── Home ─────────────────────────────────────────────────────────────────────
 
-  attorneyCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#eaedff',
-    gap: 12,
-    shadowColor: '#00696b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  attorneyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  attorneyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0, 105, 107, 0.08)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  attorneyBadgeText: {
-    color: '#00696b',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  attorneyTag: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#625f6e',
-  },
-  attorneyTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#131b2e',
-  },
-  attorneyBody: {
-    fontSize: 13,
-    color: '#625f6e',
-    lineHeight: 19,
-  },
-  attorneyProfileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#faf8ff',
-    padding: 10,
-    borderRadius: 12,
-  },
-  attorneyAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#e6f4f4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#00696b',
-  },
-  attorneyAvatarText: {
-    color: '#00696b',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  attorneyInfo: {
-    flex: 1,
-  },
-  attorneyName: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#131b2e',
-  },
-  attorneyCredentials: {
-    fontSize: 11,
-    color: '#625f6e',
-  },
-  attorneyBookBtn: {
-    backgroundColor: '#00696b',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  attorneyBookBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
+function ImmigrationHome() {
+  const router = useRouter();
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const guides = useQuery({
+    queryKey: ['immigration', 'guides'],
+    queryFn: () => listImmigrationGuides(),
+  });
+  const news = useQuery({ queryKey: ['immigration', 'news'], queryFn: listImmigrationNews });
 
-  footerLinks: {
-    paddingTop: space.x2,
-  },
-});
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const guide of guides.data ?? []) if (guide.category) set.add(guide.category);
+    return Array.from(set).sort();
+  }, [guides.data]);
+
+  const visibleGuides = (guides.data ?? []).filter(
+    (g) => activeCategory === 'all' || g.category === activeCategory,
+  );
+  const latestNews = (news.data ?? [])
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.publishedAt ?? b.createdAt).getTime() -
+        new Date(a.publishedAt ?? a.createdAt).getTime(),
+    );
+
+  return (
+    <YStack gap="$x3">
+      {/* Latest update: the newest real news item, hidden when there is none */}
+      {latestNews[0] ? <LatestUpdateCard item={latestNews[0]} /> : null}
+
+      <XStack flexWrap="wrap" gap="$x2">
+        <AppButton label="Resources" route="/immigration/resources" variant="secondary" />
+        <AppButton label="Checklists" route="/immigration/checklists" variant="secondary" />
+        <AppButton label="FAQ" route="/immigration/faq" variant="secondary" />
+      </XStack>
+
+      <Heading variant="h4">Guides</Heading>
+      {guides.isLoading ? (
+        <LoadingState label="Loading guides..." />
+      ) : guides.isError ? (
+        <ErrorState
+          title="Unable to load guides"
+          body={guides.error instanceof Error ? guides.error.message : 'Please try again.'}
+          retryLabel="Retry"
+          onRetry={() => guides.refetch()}
+        />
+      ) : (guides.data ?? []).length === 0 ? (
+        <EmptyState
+          title="No guides yet"
+          body="Guides will appear here once they are published."
+          actionLabel="Browse resources"
+          onAction={() => router.push('/immigration/resources' as Href)}
+        />
+      ) : (
+        <>
+          {categories.length > 1 ? (
+            <FilterChipRow label="Guide category" role="radiogroup">
+              {['all', ...categories].map((cat) => (
+                <Chip
+                  key={cat}
+                  label={cat === 'all' ? 'All' : cat}
+                  onPress={() => setActiveCategory(cat)}
+                  radio
+                  selected={activeCategory === cat}
+                />
+              ))}
+            </FilterChipRow>
+          ) : null}
+          {visibleGuides.map((guide) => (
+            <GuideCard key={guide.id} guide={guide} />
+          ))}
+        </>
+      )}
+
+      <Heading variant="h4">Recent news</Heading>
+      {news.isLoading ? (
+        <LoadingState label="Loading news..." />
+      ) : news.isError ? (
+        <ErrorState
+          title="Unable to load news"
+          body={news.error instanceof Error ? news.error.message : 'Please try again.'}
+          retryLabel="Retry"
+          onRetry={() => news.refetch()}
+        />
+      ) : latestNews.length === 0 ? (
+        <EmptyState
+          title="No news yet"
+          body="Immigration updates will appear here once they are published."
+          actionLabel="Browse guides"
+          onAction={() => router.push('/immigration/guides' as Href)}
+        />
+      ) : (
+        latestNews.slice(0, 3).map((item) => <NewsCard key={item.id} item={item} />)
+      )}
+    </YStack>
+  );
+}
+
+function LatestUpdateCard({ item }: { item: ImmigrationNews }) {
+  const date = formatDate(item.publishedAt ?? item.createdAt);
+  return (
+    <Card>
+      <AppText tone="teal" variant="overline">
+        LATEST UPDATE{item.source ? ` • ${item.source.toUpperCase()}` : ''}
+        {date ? ` • ${date}` : ''}
+      </AppText>
+      <Heading variant="h4">{item.title}</Heading>
+      {item.body ? (
+        <AppText numberOfLines={4} tone="muted">
+          {item.body}
+        </AppText>
+      ) : null}
+      {item.url ? (
+        <XStack>
+          <AppButton
+            icon="globe"
+            label="Read source"
+            onPress={() => openUrl(item.url as string)}
+            size="sm"
+            variant="ghost"
+          />
+        </XStack>
+      ) : null}
+    </Card>
+  );
+}
+
+// ─── Cards ────────────────────────────────────────────────────────────────────
+
+function CardMeta({ meta }: { meta: unknown[] }) {
+  return meta.length > 0 ? (
+    <AppText tone="muted" variant="caption">
+      {meta.join(' • ')}
+    </AppText>
+  ) : null;
+}
+
+function GuideCard({ guide }: { guide: ImmigrationGuide }) {
+  const meta = [
+    guide.category,
+    guide.difficultyLevel ? guide.difficultyLevel.toLowerCase() : null,
+    guide.estimatedDurationMinutes ? `${guide.estimatedDurationMinutes} min` : null,
+    formatDate(guide.createdAt),
+  ].filter(Boolean);
+  const [open, setOpen] = useState(false);
+  const hasContent = Boolean(guide.content?.trim());
+  return (
+    <Card
+      aria-expanded={hasContent ? open : undefined}
+      gap="$x1"
+      onPress={hasContent ? () => setOpen((v) => !v) : undefined}
+    >
+      <AppText variant="bodyStrong">{guide.title}</AppText>
+      {guide.description ? <AppText tone="muted">{guide.description}</AppText> : null}
+      {open && hasContent ? <AppText marginTop="$x2">{guide.content}</AppText> : null}
+      <CardMeta meta={meta} />
+      {hasContent ? (
+        <AppText tone="primary" variant="label">
+          {open ? 'Hide guide' : 'Read guide'}
+        </AppText>
+      ) : null}
+    </Card>
+  );
+}
+
+function NewsCard({ item }: { item: ImmigrationNews }) {
+  const meta = [item.source, item.category, formatDate(item.publishedAt ?? item.createdAt)].filter(
+    Boolean,
+  );
+  return (
+    <Card
+      gap="$x1"
+      onPress={item.url ? () => openUrl(item.url as string) : undefined}
+      role={item.url ? 'link' : undefined}
+    >
+      <AppText variant="bodyStrong">{item.title}</AppText>
+      {item.body ? (
+        <AppText numberOfLines={3} tone="muted">
+          {item.body}
+        </AppText>
+      ) : null}
+      <CardMeta meta={meta} />
+    </Card>
+  );
+}
+
+function ResourceCard({ resource }: { resource: ImmigrationResource }) {
+  const meta = [
+    resource.resourceType ? resource.resourceType.toLowerCase() : null,
+    resource.category,
+    resource.verified ? 'verified by admin' : null,
+  ].filter(Boolean);
+  return (
+    <Card gap="$x1" href={`/immigration/resources/${resource.id}`}>
+      <AppText variant="bodyStrong">{resource.title}</AppText>
+      {resource.description ? (
+        <AppText numberOfLines={3} tone="muted">
+          {resource.description}
+        </AppText>
+      ) : null}
+      <CardMeta meta={meta} />
+    </Card>
+  );
+}
+
+function ChecklistCard({ checklist }: { checklist: ImmigrationChecklist }) {
+  const count = checklistItemCount(checklist.itemsJson);
+  const meta = [
+    checklist.category,
+    count !== null ? `${count} ${count === 1 ? 'item' : 'items'}` : null,
+    checklist.dueDate ? `due ${formatDate(checklist.dueDate)}` : null,
+  ].filter(Boolean);
+  return (
+    <Card gap="$x1">
+      <AppText variant="bodyStrong">{checklist.title}</AppText>
+      {checklist.description ? <AppText tone="muted">{checklist.description}</AppText> : null}
+      <CardMeta meta={meta} />
+    </Card>
+  );
+}
+
+function FaqCard({ item }: { item: ImmigrationFaqItem }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Card aria-expanded={open} gap="$x1" onPress={() => setOpen((v) => !v)}>
+      <AppText variant="bodyStrong">{item.question}</AppText>
+      {open ? <AppText tone="muted">{item.answer}</AppText> : null}
+      {item.category ? (
+        <AppText tone="muted" variant="caption">
+          {item.category}
+        </AppText>
+      ) : null}
+    </Card>
+  );
+}
+
+// ─── Lists ────────────────────────────────────────────────────────────────────
+
+type ListQuery<T> = {
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  data: T[] | undefined;
+  refetch: () => unknown;
+};
+
+function QueryList<T extends { id: string }>({
+  query,
+  noun,
+  emptyBody,
+  render,
+}: {
+  query: ListQuery<T>;
+  noun: string;
+  emptyBody: string;
+  render: (item: T) => React.ReactNode;
+}) {
+  const router = useRouter();
+  if (query.isLoading) return <LoadingState label={`Loading ${noun}...`} />;
+  if (query.isError) {
+    return (
+      <ErrorState
+        title={`Unable to load ${noun}`}
+        body={query.error instanceof Error ? query.error.message : 'Please try again.'}
+        retryLabel="Retry"
+        onRetry={() => query.refetch()}
+      />
+    );
+  }
+  const items = query.data ?? [];
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        title={`No ${noun} yet`}
+        body={emptyBody}
+        actionLabel="Immigration home"
+        onAction={() => router.push('/immigration' as Href)}
+      />
+    );
+  }
+  return <YStack gap="$x3">{items.map((item) => render(item))}</YStack>;
+}
+
+function GuidesList() {
+  const query = useQuery({
+    queryKey: ['immigration', 'guides'],
+    queryFn: () => listImmigrationGuides(),
+  });
+  return (
+    <QueryList
+      query={query}
+      noun="guides"
+      emptyBody="Guides will appear here once they are published."
+      render={(guide) => <GuideCard key={guide.id} guide={guide} />}
+    />
+  );
+}
+
+function NewsList({ uscisOnly = false }: { uscisOnly?: boolean }) {
+  const query = useQuery({ queryKey: ['immigration', 'news'], queryFn: listImmigrationNews });
+  const data = uscisOnly
+    ? query.data?.filter((n) =>
+        `${n.source ?? ''} ${n.category ?? ''} ${n.url ?? ''}`.toLowerCase().includes('uscis'),
+      )
+    : query.data;
+  return (
+    <QueryList
+      query={{ ...query, data }}
+      noun={uscisOnly ? 'USCIS updates' : 'news'}
+      emptyBody="Updates will appear here once they are published."
+      render={(item) => <NewsCard key={item.id} item={item} />}
+    />
+  );
+}
+
+function ResourcesList() {
+  const query = useQuery({
+    queryKey: ['immigration', 'resources'],
+    queryFn: () => listImmigrationResources(),
+  });
+  return (
+    <QueryList
+      query={query}
+      noun="resources"
+      emptyBody="Resources will appear here once they are shared."
+      render={(resource) => <ResourceCard key={resource.id} resource={resource} />}
+    />
+  );
+}
+
+function ChecklistsList() {
+  const router = useRouter();
+  const authStatus = useAuthStore((st) => st.status);
+  const query = useQuery({
+    queryKey: ['immigration', 'checklists'],
+    queryFn: () => listImmigrationChecklists(),
+    // Checklists are personal; the endpoint requires a signed-in member.
+    enabled: authStatus === 'authenticated',
+  });
+  if (authStatus === 'unauthenticated') {
+    return (
+      <EmptyState
+        title="Sign in to see your checklists"
+        body="Checklists are private to your account."
+        actionLabel="Sign in"
+        onAction={() => router.push('/sign-in' as Href)}
+      />
+    );
+  }
+  if (authStatus === 'loading') return <LoadingState label="Loading checklists..." />;
+  return (
+    <QueryList
+      query={query}
+      noun="checklists"
+      emptyBody="Checklists you create will appear here."
+      render={(checklist) => <ChecklistCard key={checklist.id} checklist={checklist} />}
+    />
+  );
+}
+
+function FaqList() {
+  const query = useQuery({ queryKey: ['immigration', 'faq'], queryFn: () => listImmigrationFaq() });
+  return (
+    <QueryList
+      query={query}
+      noun="questions"
+      emptyBody="Answered questions will appear here once they are published."
+      render={(item) => <FaqCard key={item.id} item={item} />}
+    />
+  );
+}
+
+function AskInCommunity() {
+  const router = useRouter();
+  return (
+    <EmptyState
+      title="Ask the community"
+      body="Post your visa or immigration question in Community, where members who have been through it can answer. Common questions are already answered in the FAQ."
+      actionLabel="Ask in Community"
+      onAction={() => router.push('/community/create-post' as Href)}
+      secondaryActionLabel="Read the FAQ"
+      onSecondaryAction={() => router.push('/immigration/faq' as Href)}
+    />
+  );
+}
+
+function SavedPlaceholder() {
+  const router = useRouter();
+  return (
+    <EmptyState
+      title="Nothing saved"
+      body="Saving immigration guides is not available yet. Browse guides and resources instead."
+      actionLabel="Browse guides"
+      onAction={() => router.push('/immigration/guides' as Href)}
+    />
+  );
+}

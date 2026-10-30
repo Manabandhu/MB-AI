@@ -9,4 +9,8 @@ interface ListingImageRepository extends JpaRepository<ListingImage, UUID> {
     List<ListingImage> findByListingIdOrderBySortOrderAsc(UUID listingId);
 
     void deleteByListingId(UUID listingId);
+
+    long countByListingId(UUID listingId);
+
+    List<ListingImage> findByListingIdInOrderBySortOrderAscCreatedAtAsc(java.util.Collection<UUID> listingIds);
 }

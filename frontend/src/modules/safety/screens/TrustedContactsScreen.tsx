@@ -1,121 +1,215 @@
-import { color as colors, radius, space } from '@manabandhu/design-system';
-import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { getTrustedContacts } from '@/modules/safety/api';
+import { formatDate } from '@manabandhu/core';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
+import { useState } from 'react';
+import { Linking } from 'react-native';
+import { XStack, YStack } from 'tamagui';
+import { createTrustedContact, getTrustedContacts } from '@/modules/safety/api';
+import { telHref, trustedContactErrors } from '@/modules/safety/safetyFormat';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { useAdaptiveLayout } from '@/platform/adaptive';
+import { AppText } from '@/modules/shared/ui/AppText';
+import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
+import { showError } from '@/modules/shared/ui/notify';
+import { PersonRow } from '@/modules/shared/ui/PersonRow';
+import { Screen } from '@/modules/shared/ui/Screen';
+import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
+import { TextField } from '@/modules/shared/ui/TextField';
 
+const open = async (url: string, what: string) => {
+  try {
+    await Linking.openURL(url);
+  } catch (error) {
+    showError(`Could not open ${what}`, error);
+  }
+};
+
+function AddContactSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [relationship, setRelationship] = useState('');
+  const [touched, setTouched] = useState(false);
+  const errors = touched ? trustedContactErrors({ name, phone, email }) : {};
+
+  const reset = () => {
+    setName('');
+    setPhone('');
+    setEmail('');
+    setRelationship('');
+    setTouched(false);
+  };
+
+  const add = useMutation({
+    mutationFn: () =>
+      createTrustedContact({
+        name: name.trim(),
+        phone: phone.trim() || undefined,
+        email: email.trim() || undefined,
+        relationship: relationship.trim() || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['safety'] });
+      reset();
+      onClose();
+    },
+  });
+
+  const submit = () => {
+    setTouched(true);
+    if (Object.keys(trustedContactErrors({ name, phone, email })).length > 0) return;
+    add.mutate();
+  };
+
+  return (
+    <BottomSheet
+      onClose={onClose}
+      scrollable
+      subtitle="Saved to your account only. ManaBandhu does not contact them for you."
+      title="Add a trusted contact"
+      visible={visible}
+    >
+      <YStack gap="$x3">
+        <TextField
+          autoComplete="name"
+          error={errors.name}
+          label="Name"
+          maxLength={120}
+          onChangeText={setName}
+          value={name}
+        />
+        <TextField
+          autoComplete="tel"
+          error={errors.phone}
+          keyboardType="phone-pad"
+          label="Phone"
+          maxLength={20}
+          onChangeText={setPhone}
+          placeholder="+1 555 123 4567"
+          value={phone}
+        />
+        <TextField
+          autoCapitalize="none"
+          autoComplete="email"
+          error={errors.email}
+          keyboardType="email-address"
+          label="Email"
+          maxLength={200}
+          onChangeText={setEmail}
+          value={email}
+        />
+        <TextField
+          helper="Optional, e.g. sister, roommate"
+          label="Relationship"
+          maxLength={120}
+          onChangeText={setRelationship}
+          value={relationship}
+        />
+        {add.isError ? (
+          <AppText role="alert" tone="danger" variant="caption">
+            {add.error instanceof Error ? add.error.message : 'Could not add the contact.'} Please
+            try again.
+          </AppText>
+        ) : null}
+        <AppButton
+          fullWidth
+          label="Save contact"
+          loading={add.isPending}
+          onPress={submit}
+          size="lg"
+        />
+      </YStack>
+    </BottomSheet>
+  );
+}
+
+/**
+ * People you would call in an emergency, with one-tap call and email. Contacts can be added; editing and removing
+ * are not available until the backend has endpoints for them.
+ */
 export function TrustedContactsScreen() {
-  const layout = useAdaptiveLayout();
+  const [adding, setAdding] = useState(false);
   const contacts = useQuery({
     queryKey: ['safety', 'trusted-contacts'],
     queryFn: getTrustedContacts,
   });
-  const data = contacts.data ?? [];
 
-  if (contacts.isLoading) {
+  const body = () => {
+    if (contacts.isLoading) return <LoadingState count={3} variant="skeleton" />;
+    if (contacts.isError) {
+      return (
+        <ErrorState
+          body="Check your connection and try again."
+          onRetry={() => contacts.refetch()}
+          retryLabel="Retry"
+          title="Unable to load trusted contacts"
+        />
+      );
+    }
+    const data = contacts.data ?? [];
+    if (data.length === 0) {
+      return (
+        <EmptyState
+          actionLabel="Add a contact"
+          body="Add family or friends you would call in an emergency so their details are one tap away."
+          iconName="shield"
+          onAction={() => setAdding(true)}
+          title="No trusted contacts"
+        />
+      );
+    }
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Safety" title="Trusted contacts" />
-          <LoadingState variant="skeleton" count={3} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (contacts.isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { maxWidth: layout.maxContentWidth }]}>
-          <SectionHeader eyebrow="Safety" title="Trusted contacts" />
-          <ErrorState
-            title="Unable to load trusted contacts"
-            body="Check your connection and try again."
-            retryLabel="Retry"
-            onRetry={() => contacts.refetch()}
+      <YStack gap="$x2">
+        {data.map((item) => (
+          <PersonRow
+            detail={
+              item.phone || item.email ? (
+                <XStack flexWrap="wrap" gap="$x2">
+                  {item.phone ? (
+                    <AppButton
+                      icon="phone"
+                      label={`Call ${item.phone}`}
+                      onPress={() => void open(telHref(item.phone ?? ''), 'the phone app')}
+                      size="sm"
+                      variant="secondary"
+                    />
+                  ) : null}
+                  {item.email ? (
+                    <AppButton
+                      icon="mail"
+                      label={item.email}
+                      onPress={() => void open(`mailto:${item.email}`, 'your email app')}
+                      size="sm"
+                      variant="ghost"
+                    />
+                  ) : null}
+                </XStack>
+              ) : undefined
+            }
+            key={item.id}
+            name={item.name}
+            subtitle={[item.relationship, `added ${formatDate(item.createdAt, 'short')}`]
+              .filter(Boolean)
+              .join(' · ')}
           />
-        </View>
-      </SafeAreaView>
+        ))}
+      </YStack>
     );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.container, { maxWidth: layout.maxContentWidth, padding: space.x4 }]}>
-        <SectionHeader
-          eyebrow="Safety"
-          title="Trusted contacts"
-          subtitle="People who can be notified during an emergency."
-          actionLabel="Add contact"
-          onAction={() => {}}
-        />
-        {data.length === 0 ? (
-          <EmptyState
-            title="No trusted contacts"
-            body="Add someone you trust so they can support you if needed."
-            actionLabel="Add contact"
-            onAction={() => {}}
-          />
-        ) : (
-          <View style={styles.list}>
-            {data.map((item) => (
-              <View key={item.id} style={styles.card}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {item.name
-                      .split(' ')
-                      .map((part) => part[0])
-                      .join('')
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </Text>
-                </View>
-                <View style={styles.details}>
-                  <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.relationship}>{item.relationship}</Text>
-                  <Text style={styles.meta}>Added {item.addedAt}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-        <AppButton label="Add trusted contact" route="/safety/trusted-contacts" />
-      </View>
-    </SafeAreaView>
+    <Screen onRefresh={() => contacts.refetch()} refreshing={contacts.isRefetching}>
+      <ScreenHeader
+        back={{ fallback: '/safety' as Href }}
+        primaryAction={{ label: 'Add', icon: 'plus', onPress: () => setAdding(true) }}
+        subtitle="People you would call in an emergency."
+        title="Trusted contacts"
+      />
+      {body()}
+      <AddContactSheet onClose={() => setAdding(false)} visible={adding} />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  container: { alignSelf: 'center', gap: space.x6, width: '100%' },
-  list: { gap: space.x3 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x3,
-    padding: space.x4,
-  },
-  avatar: {
-    alignItems: 'center',
-    backgroundColor: colors.primarySoft,
-    borderRadius: radius.pill,
-    height: 48,
-    justifyContent: 'center',
-    width: 48,
-  },
-  avatarText: { color: colors.primary, fontSize: 16, fontWeight: '800' },
-  details: { flex: 1, gap: space.x1 },
-  name: { color: colors.ink, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  relationship: { color: colors.teal, fontSize: 14, fontWeight: '700' },
-  meta: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-});

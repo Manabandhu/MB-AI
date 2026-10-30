@@ -8,5 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface AssistantCitationRepository extends JpaRepository<AssistantCitation, UUID> {
     List<AssistantCitation> findByMessageIdOrderByCreatedAtAsc(UUID messageId);
 
-    List<AssistantCitation> findTop20ByOrderByCreatedAtDesc();
+    List<AssistantCitation> findByMessageIdInOrderByCreatedAtAsc(List<UUID> messageIds);
+
 }

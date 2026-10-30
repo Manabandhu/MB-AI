@@ -1,4 +1,4 @@
-import { City, State } from 'country-state-city';
+import { US_CITIES, US_STATES } from './usLocationData';
 
 export type USState = {
   code: string;
@@ -25,21 +25,39 @@ export type ZipLookupResult = {
   lng: number;
 };
 
-// 1. Free Country/State/City lookup (100% offline, zero API key)
+// 1. Free State/City lookup (100% offline, zero API key)
+type RawUSCity = { name: string; stateCode: string; latitude: number; longitude: number };
+
+let parsedCities: RawUSCity[] | null = null;
+
+function allUSCities(): RawUSCity[] {
+  if (!parsedCities) {
+    parsedCities = US_CITIES.split('\n').map((line) => {
+      const [stateCode, name, latitude, longitude] = line.split('|');
+      return {
+        name,
+        stateCode,
+        latitude: latitude ? Number(latitude) || 0 : 0,
+        longitude: longitude ? Number(longitude) || 0 : 0,
+      };
+    });
+  }
+  return parsedCities;
+}
+
 export function getUSStates(): USState[] {
-  const raw = State.getStatesOfCountry('US') || [];
-  return raw.map((s) => ({
-    code: s.isoCode,
-    name: s.name,
-  }));
+  return US_STATES.split('\n').map((line) => {
+    const [code, name] = line.split('|');
+    return { code, name };
+  });
 }
 
 export function getCitiesByState(stateCode: string): USCity[] {
   if (!stateCode) return [];
-  const raw = City.getCitiesOfState('US', stateCode.toUpperCase()) || [];
-  return raw.map((c) => ({
-    name: c.name,
-  }));
+  const code = stateCode.toUpperCase();
+  return allUSCities()
+    .filter((c) => c.stateCode === code)
+    .map((c) => ({ name: c.name }));
 }
 
 interface PhotonFeature {
@@ -63,7 +81,7 @@ export async function searchAddressFree(query: string): Promise<FreeAddressSugge
     const res = await fetch(
       `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&bbox=-125,24,-66,49`,
     );
-    if (!res.ok) return [];
+    if (!res.ok) throw new Error(`Address search failed (${res.status}).`);
     const data = await res.json();
     return (data.features || []).map((f: PhotonFeature) => ({
       formattedAddress: [
@@ -81,9 +99,9 @@ export async function searchAddressFree(query: string): Promise<FreeAddressSugge
       lat: f.geometry?.coordinates?.[1] ?? 0,
       lng: f.geometry?.coordinates?.[0] ?? 0,
     }));
-  } catch (e) {
-    console.warn('Photon geocoding fallback error:', e);
-    return [];
+  } catch (error) {
+    // Surface the failure to the form instead of pretending there were no matches.
+    throw error instanceof Error ? error : new Error('Address search is unavailable.');
   }
 }
 
@@ -92,7 +110,8 @@ export async function lookupZipCodeFree(zip: string): Promise<ZipLookupResult | 
   if (!/^\d{5}$/.test(zip)) return null;
   try {
     const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-    if (!res.ok) return null;
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`ZIP lookup failed (${res.status}).`);
     const data = await res.json();
     const place = data.places?.[0];
     return place
@@ -103,8 +122,8 @@ export async function lookupZipCodeFree(zip: string): Promise<ZipLookupResult | 
           lng: parseFloat(place.longitude),
         }
       : null;
-  } catch {
-    return null;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error('ZIP lookup is unavailable.');
   }
 }
 
@@ -121,14 +140,13 @@ let cachedUSCities: SearchCityResult[] | null = null;
 
 function getCachedUSCities(): SearchCityResult[] {
   if (!cachedUSCities) {
-    const raw = City.getCitiesOfCountry('US') || [];
-    cachedUSCities = raw.map((c) => ({
+    cachedUSCities = allUSCities().map((c) => ({
       id: `${c.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${c.stateCode.toLowerCase()}`,
       name: `${c.name}, ${c.stateCode}`,
       cityName: c.name,
       stateCode: c.stateCode,
-      latitude: c.latitude ? Number(c.latitude) || 0 : 0,
-      longitude: c.longitude ? Number(c.longitude) || 0 : 0,
+      latitude: c.latitude,
+      longitude: c.longitude,
     }));
   }
   return cachedUSCities;
@@ -192,7 +210,7 @@ export const ALL_USA_CITY: SearchCityResult = {
 /**
  * Calculates straight-line distance in miles between two coordinate points
  */
-export function getDistanceMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function getDistanceMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLat = (lat2 - lat1) * 0.017453292519943295;
   const dLon = (lon2 - lon1) * 0.017453292519943295;
   const a =
@@ -207,7 +225,7 @@ export function getDistanceMiles(lat1: number, lon1: number, lat2: number, lon2:
 /**
  * Finds the closest indexed US city to any GPS or IP coordinates
  */
-export function getClosestUSCity(latitude: number, longitude: number): SearchCityResult | null {
+function getClosestUSCity(latitude: number, longitude: number): SearchCityResult | null {
   const cities = getCachedUSCities();
   let closest: SearchCityResult | null = null;
   let minDist = Number.POSITIVE_INFINITY;

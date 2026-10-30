@@ -4,10 +4,8 @@ export async function getAssistantMessages(): Promise<AssistantMessage[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/assistant/messages'), 'Assistant messages');
 }
 
-export async function sendAssistantMessage(body: {
-  content: string;
-  conversationId?: string;
-}): Promise<AssistantMessage> {
+/** Sends to your latest conversation (the server creates one when you have none) and returns the reply. */
+export async function sendAssistantMessage(body: { content: string }): Promise<AssistantMessage> {
   return parseJsonOrThrow(
     await apiFetch('/api/v1/assistant/messages', {
       method: 'POST',
@@ -19,6 +17,18 @@ export async function sendAssistantMessage(body: {
 
 export async function getAssistantHistory(): Promise<AssistantConversation[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/assistant/history'), 'Assistant history');
+}
+
+/** Messages of one of your past conversations, oldest first. */
+export async function getAssistantConversationMessages(
+  conversationId: string,
+): Promise<AssistantMessage[]> {
+  return parseJsonOrThrow(
+    await apiFetch(
+      `/api/v1/assistant/conversations/${encodeURIComponent(conversationId)}/messages`,
+    ),
+    'Assistant conversation',
+  );
 }
 
 export async function getAssistantCitations(): Promise<AssistantCitation[]> {

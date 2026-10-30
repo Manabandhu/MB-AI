@@ -4,19 +4,20 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 
 ## Component Inventory
 
-- `SafetyCenterScreen` - catalog screen using `FeatureScreen`
-- `ReportsScreen` - list screen with filter chips, status badges, and `SectionHeader`
-- `BlockedUsersScreen` - list screen with avatars, `SwipeAction`, and `SectionHeader`
-- `TrustedContactsScreen` - list screen with avatars, add action, and `SectionHeader`
+- `SafetyCenterScreen` - Call 911/988, the member's own counts, tool links, true trust statements only.
+- `ReportsScreen` - your reports (All/Open/Closed), "File a report" about someone you chat with.
+- `BlockedUsersScreen` - blocked members; Unblock asks first.
+- `TrustedContactsScreen` - add contacts (name + phone or email); call or email them. No edit/remove endpoint yet.
+- `components/ReportSheet` - files `POST /safety/reports`; exported from `index.ts` (used by chat).
+- `safetyFormat.ts` - report reasons/categories/status, trusted-contact validation, `telHref`.
 
 ## API
 
-- `GET /api/v1/safety/center` - returns `CatalogScreenContent`
-- `GET /api/v1/safety/reports` - returns `ReportItem[]`
-- `GET /api/v1/safety/blocked-users` - returns `BlockedUserItem[]`
-- `GET /api/v1/safety/trusted-contacts` - returns `TrustedContactItem[]`
+- `GET|POST /api/v1/safety/reports`
+- `GET /api/v1/safety/blocked-users`, `POST /api/v1/safety/blocked-users/{id}/unblock`
+- `GET|POST /api/v1/safety/trusted-contacts`
 
-## Routes
+## Routes (all require sign-in)
 
 - `/safety` - `SafetyCenterScreen`
 - `/safety/reports` - `ReportsScreen`

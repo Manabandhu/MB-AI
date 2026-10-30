@@ -1,6 +1,7 @@
 import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
-import { supabase } from '@/lib/supabase';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
+
+// All expense data goes through the backend, which enforces group membership. Errors are surfaced to the
+// screens instead of being replaced with sample data, so a failed save is never shown as a success.
 
 export type ExpenseCategory =
   | 'RENT'
@@ -15,175 +16,101 @@ export type ExpenseGroupType = 'APARTMENT' | 'TRIP' | 'CARPOOL' | 'EVENT';
 export type ExpenseGroup = {
   id: string;
   name: string;
+  description?: string | null;
   groupType: ExpenseGroupType;
   currency: string;
   createdBy: string;
   createdAt: string;
-  memberCount?: number;
-  totalExpenses?: number;
+  memberCount: number;
+  totalExpenses: number;
 };
 
 export type Expense = {
   id: string;
   groupId: string;
   payerId: string;
-  payerName?: string;
   title: string;
+  description?: string | null;
   amount: number;
+  currency: string;
   category: ExpenseCategory;
   splitType: 'EQUAL' | 'EXACT' | 'PERCENTAGE';
+  expenseDate: string;
   createdAt: string;
-};
-
-export type ExpenseSplit = {
-  id: string;
-  expenseId: string;
-  userId: string;
-  userName?: string;
-  amount: number;
-  paid: boolean;
 };
 
 export type Settlement = {
   id: string;
   groupId: string;
   fromUserId: string;
-  fromUserName?: string;
   toUserId: string;
-  toUserName?: string;
   amount: number;
-  status: 'PENDING' | 'SETTLED';
-  settledAt: string;
+  currency: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  settledAt: string | null;
+  createdAt: string;
 };
 
 export type DebtBalance = {
+  groupId: string;
+  groupName: string;
   fromUserId: string;
-  fromUserName: string;
   toUserId: string;
-  toUserName: string;
   amount: number;
+  currency: string;
 };
 
-export async function getExpensesScreen(screenId: string): Promise<CatalogScreenContent> {
-  return parseJsonOrThrow(
-    await apiFetch(`/api/v1/expenses/screens/${screenId}`),
-    'Expenses screen',
-  );
-}
+type RawExpense = Omit<Expense, 'amount' | 'title'> & {
+  amount: number | string;
+  title?: string | null;
+};
+type RawGroup = Omit<ExpenseGroup, 'totalExpenses'> & { totalExpenses: number | string };
+type RawAmount<T> = Omit<T, 'amount'> & { amount: number | string };
+
+const toGroup = (g: RawGroup): ExpenseGroup => ({ ...g, totalExpenses: Number(g.totalExpenses) });
+const toExpense = (e: RawExpense): Expense => ({
+  ...e,
+  amount: Number(e.amount),
+  title: e.title || e.description || 'Expense',
+});
+const withAmount = <T>(row: RawAmount<T>): T => ({ ...row, amount: Number(row.amount) }) as T;
 
 export async function listExpenseGroups(): Promise<ExpenseGroup[]> {
-  const { data, error } = await supabase
-    .from('expense_groups')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error || !data || data.length === 0) {
-    // Return sample groups if empty
-    return [
-      {
-        id: 'group-apt-1',
-        name: 'Arbor Oaks 2BHK Roommates',
-        groupType: 'APARTMENT',
-        currency: 'USD',
-        createdBy: 'u1',
-        createdAt: new Date().toISOString(),
-        memberCount: 3,
-        totalExpenses: 2150,
-      },
-      {
-        id: 'group-trip-1',
-        name: 'Austin → Dallas Weekend Carpool',
-        groupType: 'CARPOOL',
-        currency: 'USD',
-        createdBy: 'u2',
-        createdAt: new Date().toISOString(),
-        memberCount: 4,
-        totalExpenses: 78,
-      },
-      {
-        id: 'group-trip-2',
-        name: 'Smoky Mountains Fall Getaway',
-        groupType: 'TRIP',
-        currency: 'USD',
-        createdBy: 'u3',
-        createdAt: new Date().toISOString(),
-        memberCount: 6,
-        totalExpenses: 640,
-      },
-    ];
-  }
-
-  return data.map((g) => ({
-    id: g.id,
-    name: g.name,
-    groupType: (g.group_type as ExpenseGroupType) || 'APARTMENT',
-    currency: g.currency || 'USD',
-    createdBy: g.created_by || g.owner_id || '',
-    createdAt: g.created_at,
-    memberCount: 3,
-  }));
+  const groups = await parseJsonOrThrow<RawGroup[]>(
+    await apiFetch('/api/v1/expenses/groups'),
+    'Expense groups',
+  );
+  return groups.map(toGroup);
 }
 
 export async function getExpenseGroup(groupId: string): Promise<ExpenseGroup> {
-  const { data } = await supabase
-    .from('expense_groups')
-    .select('*')
-    .eq('id', groupId)
-    .maybeSingle();
-  if (data) {
-    return {
-      id: data.id,
-      name: data.name,
-      groupType: (data.group_type as ExpenseGroupType) || 'APARTMENT',
-      currency: data.currency || 'USD',
-      createdBy: data.created_by || data.owner_id || '',
-      createdAt: data.created_at,
-    };
-  }
-  return {
-    id: groupId,
-    name: 'Apartment Roommates',
-    groupType: 'APARTMENT',
-    currency: 'USD',
-    createdBy: '',
-    createdAt: new Date().toISOString(),
-  };
+  return toGroup(
+    await parseJsonOrThrow<RawGroup>(
+      await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}`),
+      'Expense group',
+    ),
+  );
 }
 
 export async function createExpenseGroup(input: {
   name: string;
   groupType: ExpenseGroupType;
+  description?: string;
 }): Promise<ExpenseGroup> {
-  const user = (await supabase.auth.getUser()).data?.user;
-  const { data, error } = await supabase
-    .from('expense_groups')
-    .insert({
-      name: input.name,
-      group_type: input.groupType,
-      currency: 'USD',
-      created_by: user?.id,
-    })
-    .select()
-    .single();
+  return toGroup(
+    await parseJsonOrThrow<RawGroup>(
+      await apiFetch('/api/v1/expenses/groups', { method: 'POST', body: JSON.stringify(input) }),
+      'Create expense group',
+    ),
+  );
+}
 
-  if (error || !data) {
-    return {
-      id: `group-${Date.now()}`,
-      name: input.name,
-      groupType: input.groupType,
-      currency: 'USD',
-      createdBy: user?.id || '',
-      createdAt: new Date().toISOString(),
-    };
-  }
-  return {
-    id: data.id,
-    name: data.name,
-    groupType: data.group_type,
-    currency: data.currency,
-    createdBy: data.created_by,
-    createdAt: data.created_at,
-  };
+export async function listGroupExpenses(groupId: string): Promise<Expense[]> {
+  const expenses = await parseJsonOrThrow<RawExpense[]>(
+    await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/expenses`),
+    'Group expenses',
+  );
+  return expenses.map(toExpense);
 }
 
 export async function createExpense(input: {
@@ -192,43 +119,44 @@ export async function createExpense(input: {
   amount: number;
   category: ExpenseCategory;
   splitType?: 'EQUAL' | 'EXACT';
+  /** Local calendar date `YYYY-MM-DD`; the server's default (UTC today) can be a different day. */
+  expenseDate?: string;
 }): Promise<Expense> {
-  const user = (await supabase.auth.getUser()).data?.user;
-  const { data, error } = await supabase
-    .from('expenses')
-    .insert({
-      group_id: input.groupId,
-      payer_id: user?.id,
-      title: input.title,
-      amount: input.amount,
-      category: input.category,
-      split_type: input.splitType || 'EQUAL',
-    })
-    .select()
-    .single();
+  const { groupId, ...body } = input;
+  return toExpense(
+    await parseJsonOrThrow<RawExpense>(
+      await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/expenses`, {
+        method: 'POST',
+        body: JSON.stringify({ ...body, splitType: body.splitType ?? 'EQUAL' }),
+      }),
+      'Record expense',
+    ),
+  );
+}
 
-  if (error || !data) {
-    return {
-      id: `exp-${Date.now()}`,
-      groupId: input.groupId,
-      payerId: user?.id || '',
-      title: input.title,
-      amount: input.amount,
-      category: input.category,
-      splitType: input.splitType || 'EQUAL',
-      createdAt: new Date().toISOString(),
-    };
-  }
-  return {
-    id: data.id,
-    groupId: data.group_id,
-    payerId: data.payer_id,
-    title: data.title,
-    amount: Number(data.amount),
-    category: data.category,
-    splitType: data.split_type,
-    createdAt: data.created_at,
-  };
+export async function listBalances(): Promise<DebtBalance[]> {
+  const balances = await parseJsonOrThrow<RawAmount<DebtBalance>[]>(
+    await apiFetch('/api/v1/expenses/balances'),
+    'Balances',
+  );
+  return balances.map((b) => withAmount<DebtBalance>(b));
+}
+
+/** Every open pairwise balance in one group (members only). */
+export async function listGroupBalances(groupId: string): Promise<DebtBalance[]> {
+  const balances = await parseJsonOrThrow<RawAmount<DebtBalance>[]>(
+    await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/balances`),
+    'Group balances',
+  );
+  return balances.map((b) => withAmount<DebtBalance>(b));
+}
+
+export async function listSettlements(): Promise<Settlement[]> {
+  const settlements = await parseJsonOrThrow<RawAmount<Settlement>[]>(
+    await apiFetch('/api/v1/expenses/settlements'),
+    'Settlements',
+  );
+  return settlements.map((s) => withAmount<Settlement>(s));
 }
 
 export async function recordSettlement(input: {
@@ -237,37 +165,67 @@ export async function recordSettlement(input: {
   toUserId: string;
   amount: number;
 }): Promise<Settlement> {
-  const { data, error } = await supabase
-    .from('settlements')
-    .insert({
-      group_id: input.groupId,
-      from_user_id: input.fromUserId,
-      to_user_id: input.toUserId,
-      amount: input.amount,
-      status: 'SETTLED',
-      settled_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
+  const { groupId, ...body } = input;
+  return withAmount<Settlement>(
+    await parseJsonOrThrow<RawAmount<Settlement>>(
+      // The server decides the status: a payer's record stays pending until the recipient confirms it.
+      await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/settlements`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+      'Record settlement',
+    ),
+  );
+}
 
-  if (error || !data) {
-    return {
-      id: `settle-${Date.now()}`,
-      groupId: input.groupId,
-      fromUserId: input.fromUserId,
-      toUserId: input.toUserId,
-      amount: input.amount,
-      status: 'SETTLED',
-      settledAt: new Date().toISOString(),
-    };
-  }
-  return {
-    id: data.id,
-    groupId: data.group_id,
-    fromUserId: data.from_user_id,
-    toUserId: data.to_user_id,
-    amount: Number(data.amount),
-    status: data.status,
-    settledAt: data.settled_at,
-  };
+/** The recipient confirms (`completed`) a pending payment; either party may cancel it. */
+export async function updateSettlementStatus(
+  settlementId: string,
+  status: 'completed' | 'cancelled',
+): Promise<Settlement> {
+  return withAmount<Settlement>(
+    await parseJsonOrThrow<RawAmount<Settlement>>(
+      await apiFetch(`/api/v1/expenses/settlements/${encodeURIComponent(settlementId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+      'Update settlement',
+    ),
+  );
+}
+
+/** Member user ids of a group (any member may read them). */
+export async function listGroupMembers(groupId: string): Promise<string[]> {
+  return parseJsonOrThrow<string[]>(
+    await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/members`),
+    'Group members',
+  );
+}
+
+/** Owner only: adds a member by user id and returns the updated member ids. */
+export async function addGroupMember(groupId: string, userId: string): Promise<string[]> {
+  return parseJsonOrThrow<string[]>(
+    await apiFetch(`/api/v1/expenses/groups/${encodeURIComponent(groupId)}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+    'Add member',
+  );
+}
+
+/**
+ * The owner removes a member, or a member leaves (pass your own id). The owner cannot leave, and anyone with an open
+ * balance in the group gets a 409 until it is settled.
+ */
+export async function removeGroupMember(groupId: string, userId: string): Promise<void> {
+  const response = await apiFetch(
+    `/api/v1/expenses/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`,
+    { method: 'DELETE' },
+  );
+  if (!response.ok) await parseJsonOrThrow(response, 'Remove member');
+}
+
+/** Short, stable label for a member until the app has a profile directory. */
+export function memberLabel(userId: string, currentUserId: string | undefined): string {
+  return userId === currentUserId ? 'You' : `Member ${userId.slice(0, 4).toUpperCase()}`;
 }

@@ -1,123 +1,128 @@
-import { color } from '@manabandhu/design-system';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type Href, useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import type { Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { listUsers, updateUserStatus } from '@/modules/admin/api';
+import { XStack, YStack } from 'tamagui';
+import { isSuspended } from '@/modules/admin/adminAccess';
+import { listUsers } from '@/modules/admin/api';
+import { memberRoleLabel, UserStatusBadge } from '@/modules/admin/components/AdminBits';
+import { useUserStatusAction } from '@/modules/admin/hooks';
 import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
-import { SearchBar } from '@/modules/shared/components/SearchBar';
-import { SectionHeader } from '@/modules/shared/components/SectionHeader';
-import { AppButton } from '@/modules/shared/ui/AppButton';
+import {
+  AppButton,
+  AppText,
+  Card,
+  IconButton,
+  Screen,
+  ScreenHeader,
+  SkeletonCard,
+  StatusBadge,
+  TextField,
+} from '@/modules/shared/ui';
 
+/** Member accounts (latest 200) with search, a detail page per member, and confirmed suspend / reactivate. */
 export default function AdminUsersScreen() {
-  const router = useRouter();
   const [query, setQuery] = useState('');
-  const queryClient = useQueryClient();
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: listUsers,
   });
-  const mutation = useMutation({
-    mutationFn: updateUserStatus,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
-  });
-
-  const users = data ?? [];
+  const { toggle, pendingId } = useUserStatusAction();
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return users;
+    const users = data ?? [];
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
     return users.filter(
-      (u) =>
-        u.name.toLowerCase().includes(query.toLowerCase()) ||
-        u.email.toLowerCase().includes(query.toLowerCase()),
+      (u) => u.name.toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q),
     );
-  }, [users, query]);
-
-  if (isError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ErrorState
-          title="Unable to load users"
-          body="Please check your connection and try again."
-          retryLabel="Retry"
-          onRetry={refetch}
-        />
-      </SafeAreaView>
-    );
-  }
+  }, [data, query]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.container}>
-          <SectionHeader title="Users" subtitle="Manage user accounts and permissions." />
-          <SearchBar value={query} onChangeText={setQuery} placeholder="Search users" />
-          {isLoading ? (
-            <LoadingState />
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              title="No users found"
-              body="Try adjusting your search."
-              actionLabel="Clear search"
-              onAction={() => setQuery('')}
+    <Screen onRefresh={() => void refetch()} refreshing={isRefetching}>
+      <ScreenHeader
+        back={{ fallback: '/admin' as Href }}
+        subtitle="Search accounts, open a member, or suspend access."
+        title="Users"
+      />
+      <TextField
+        autoCapitalize="none"
+        autoCorrect={false}
+        leadingIcon="search"
+        onChangeText={setQuery}
+        placeholder="Search by name or email"
+        trailing={
+          query ? (
+            <IconButton
+              icon="close"
+              label="Clear search"
+              onPress={() => setQuery('')}
+              variant="plain"
             />
-          ) : (
-            <View style={styles.list}>
-              {filtered.map((u) => (
-                <Pressable
-                  key={u.id}
-                  accessibilityRole="button"
-                  onPress={() => router.push(`/admin/users/${u.id}` as Href)}
-                  style={styles.item}
-                >
-                  <View style={styles.itemBody}>
-                    <Text style={styles.itemTitle}>{u.name}</Text>
-                    <Text style={styles.itemSubtitle}>{u.email}</Text>
-                    <Text style={styles.itemMeta}>
-                      {u.role} · {u.status}
-                    </Text>
-                  </View>
-                  <AppButton
-                    label={u.status === 'Active' ? 'Suspend' : 'Activate'}
-                    variant="secondary"
-                    onPress={() =>
-                      mutation.mutate({
-                        id: u.id,
-                        status: u.status === 'Active' ? 'Suspended' : 'Active',
-                      })
-                    }
-                  />
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          ) : undefined
+        }
+        value={query}
+      />
+      {isLoading ? (
+        <YStack gap="$x2">
+          <SkeletonCard lines={2} />
+          <SkeletonCard lines={2} />
+        </YStack>
+      ) : isError ? (
+        <ErrorState
+          body={error instanceof Error ? error.message : 'Please try again.'}
+          onRetry={() => void refetch()}
+          title="Unable to load users"
+        />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          actionLabel={query ? 'Clear search' : undefined}
+          body={query ? 'No account matches that name or email.' : 'No accounts yet.'}
+          iconName="user"
+          onAction={query ? () => setQuery('') : undefined}
+          title="No users found"
+        />
+      ) : (
+        <YStack gap="$x2">
+          {filtered.map((u) => {
+            const suspended = isSuspended(u.status);
+            return (
+              <Card key={u.id} padding="$x3">
+                <YStack gap="$x2">
+                  <YStack gap={2}>
+                    <AppText numberOfLines={1} variant="bodyStrong">
+                      {u.name && u.name !== '—' ? u.name : 'No display name'}
+                    </AppText>
+                    <AppText numberOfLines={1} tone="muted" variant="caption">
+                      {u.email}
+                    </AppText>
+                  </YStack>
+                  <XStack flexWrap="wrap" gap="$x2">
+                    <StatusBadge label={memberRoleLabel(u.role)} tone="neutral" />
+                    <UserStatusBadge status={u.status} />
+                  </XStack>
+                  <XStack flexWrap="wrap" gap="$x2" justifyContent="flex-end">
+                    <AppButton
+                      label="Details"
+                      route={`/admin/users/${u.id}`}
+                      size="sm"
+                      variant="ghost"
+                    />
+                    <AppButton
+                      disabled={pendingId !== undefined && pendingId !== u.id}
+                      label={suspended ? 'Reactivate' : 'Suspend'}
+                      loading={pendingId === u.id}
+                      onPress={() => void toggle(u)}
+                      size="sm"
+                      variant={suspended ? 'secondary' : 'danger'}
+                    />
+                  </XStack>
+                </YStack>
+              </Card>
+            );
+          })}
+        </YStack>
+      )}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: color.background },
-  page: { flexGrow: 1, padding: 16 },
-  container: { gap: 16, maxWidth: 1200, width: '100%', alignSelf: 'center' },
-  list: { gap: 12 },
-  item: {
-    backgroundColor: color.surface,
-    borderColor: color.border,
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-  },
-  itemBody: { flex: 1, gap: 4 },
-  itemTitle: { color: color.ink, fontSize: 17, fontWeight: '800', lineHeight: 22 },
-  itemSubtitle: { color: color.muted, fontSize: 14, lineHeight: 20 },
-  itemMeta: { color: color.primary, fontSize: 12, fontWeight: '700', marginTop: 4 },
-});

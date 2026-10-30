@@ -19,7 +19,7 @@ public class RoomSavedSearchService {
 
     @Transactional(readOnly = true)
     public List<RoomSavedSearch> findByUserId(UUID userId) {
-        return repository.findByUserIdOrderByCreatedAtDesc(userId);
+        return repository.findByUserIdOrderByCreatedAtDesc(userId, org.springframework.data.domain.PageRequest.of(0, 100));
     }
 
     @Transactional(readOnly = true)

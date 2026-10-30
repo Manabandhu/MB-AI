@@ -1,7 +1,6 @@
 package com.manabandhu.backend.rooms;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -9,47 +8,38 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.auth.Actor;
+
 @Service
 public class RoomAvailabilityService {
 
     private final RoomAvailabilityRepository repository;
-    private final RoomListingRepository listingRepository;
+    private final RoomListingService listingService;
 
-    RoomAvailabilityService(RoomAvailabilityRepository repository, RoomListingRepository listingRepository) {
+    RoomAvailabilityService(RoomAvailabilityRepository repository, RoomListingService listingService) {
         this.repository = repository;
-        this.listingRepository = listingRepository;
+        this.listingService = listingService;
     }
 
+    /** Availability of a public listing, or of the viewer's own listing in any status. */
     @Transactional(readOnly = true)
-    public List<RoomAvailability> findByListingId(UUID listingId) {
+    public List<RoomAvailability> findVisible(UUID listingId, Actor viewer) {
+        listingService.requireVisible(listingId, viewer);
         return repository.findByListingIdOrderByAvailableFromAsc(listingId);
     }
 
-    @Transactional(readOnly = true)
-    public Optional<RoomAvailability> findById(UUID id) {
-        return repository.findById(id);
-    }
-
     @Transactional
-    public RoomAvailability create(UUID listingId, UUID actorId, boolean isAdmin, CreateRoomAvailabilityInput input) {
-        requireOwnedListing(listingId, actorId, isAdmin);
+    public RoomAvailability create(Actor actor, UUID listingId, CreateRoomAvailabilityInput input) {
+        listingService.requireOwned(actor, listingId);
         var availability = new RoomAvailability(listingId, input.availableFrom(), input.availableTo(), input.minStayMonths());
         return repository.save(availability);
     }
 
     @Transactional
-    public void delete(UUID id, UUID actorId, boolean isAdmin) {
+    public void delete(Actor actor, UUID id) {
         var availability = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room availability not found"));
-        requireOwnedListing(availability.getListingId(), actorId, isAdmin);
+        listingService.requireOwned(actor, availability.getListingId());
         repository.deleteById(id);
-    }
-
-    private void requireOwnedListing(UUID listingId, UUID actorId, boolean isAdmin) {
-        var listing = listingRepository.findById(listingId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room listing not found"));
-        if (!isAdmin && !listing.getOwnerId().equals(actorId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this listing");
-        }
     }
 }

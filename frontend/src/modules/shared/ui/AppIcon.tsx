@@ -1,90 +1,75 @@
-import { color as colors } from '@manabandhu/design-system';
-import {
-  Bed,
-  Bell,
-  Book,
-  Calendar,
-  Car,
-  Cart,
-  Check,
-  Community,
-  Compass,
-  DeliveryTruck,
-  Eye,
-  EyeClosed,
-  Filter,
-  FilterList,
-  Globe,
-  HelpCircle,
-  Home,
-  Key,
-  Lock,
-  LogOut,
-  Mail,
-  Map as MapIcon,
-  MessageText,
-  NavArrowDown,
-  NavArrowLeft,
-  NavArrowRight,
-  Package,
-  Phone,
-  Plus,
-  Search,
-  ShieldCheck,
-  Sparks,
-  Star,
-  Suitcase,
-  User,
-  UserBadgeCheck,
-  Wallet,
-  WarningTriangle,
-  Wrench,
-} from 'iconoir-react-native';
+// One file per icon keeps unused Lucide icons out of every bundle.
+import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import ArrowUpDown from 'lucide-react-native/icons/arrow-up-down';
+import BadgeCheck from 'lucide-react-native/icons/badge-check';
+import BedDouble from 'lucide-react-native/icons/bed-double';
+import Bell from 'lucide-react-native/icons/bell';
+import BookOpen from 'lucide-react-native/icons/book-open';
+import Bookmark from 'lucide-react-native/icons/bookmark';
+import Briefcase from 'lucide-react-native/icons/briefcase';
+import Building2 from 'lucide-react-native/icons/building';
+import Calendar from 'lucide-react-native/icons/calendar';
+import Car from 'lucide-react-native/icons/car';
+import Check from 'lucide-react-native/icons/check';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import CircleHelp from 'lucide-react-native/icons/circle-question-mark';
+import Clock from 'lucide-react-native/icons/clock';
+import Compass from 'lucide-react-native/icons/compass';
+import Ellipsis from 'lucide-react-native/icons/ellipsis';
+import Eye from 'lucide-react-native/icons/eye';
+import EyeOff from 'lucide-react-native/icons/eye-off';
+import Globe from 'lucide-react-native/icons/globe';
+import GraduationCap from 'lucide-react-native/icons/graduation-cap';
+import Handshake from 'lucide-react-native/icons/handshake';
+import Heart from 'lucide-react-native/icons/heart';
+import Home from 'lucide-react-native/icons/house';
+import Key from 'lucide-react-native/icons/key';
+import Languages from 'lucide-react-native/icons/languages';
+import List from 'lucide-react-native/icons/list';
+import ListFilter from 'lucide-react-native/icons/list-filter';
+import Lock from 'lucide-react-native/icons/lock';
+import LogOut from 'lucide-react-native/icons/log-out';
+import Mail from 'lucide-react-native/icons/mail';
+import MapIcon from 'lucide-react-native/icons/map';
+import MapPin from 'lucide-react-native/icons/map-pin';
+import Menu from 'lucide-react-native/icons/menu';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
+import Minus from 'lucide-react-native/icons/minus';
+import Monitor from 'lucide-react-native/icons/monitor';
+import Moon from 'lucide-react-native/icons/moon';
+import Package from 'lucide-react-native/icons/package';
+import PartyPopper from 'lucide-react-native/icons/party-popper';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Phone from 'lucide-react-native/icons/phone';
+import Plane from 'lucide-react-native/icons/plane';
+import Plus from 'lucide-react-native/icons/plus';
+import Receipt from 'lucide-react-native/icons/receipt';
+import RefreshCw from 'lucide-react-native/icons/refresh-cw';
+import Repeat from 'lucide-react-native/icons/repeat';
+import Search from 'lucide-react-native/icons/search';
+import Settings from 'lucide-react-native/icons/settings';
+import Share2 from 'lucide-react-native/icons/share-2';
+import ShieldCheck from 'lucide-react-native/icons/shield-check';
+import ShoppingBag from 'lucide-react-native/icons/shopping-bag';
+import Siren from 'lucide-react-native/icons/siren';
+import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
+import Sparkles from 'lucide-react-native/icons/sparkles';
+import Star from 'lucide-react-native/icons/star';
+import Sun from 'lucide-react-native/icons/sun';
+import Trash from 'lucide-react-native/icons/trash';
+import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
+import Truck from 'lucide-react-native/icons/truck';
+import User from 'lucide-react-native/icons/user';
+import Users from 'lucide-react-native/icons/users';
+import Wallet from 'lucide-react-native/icons/wallet';
+import Wrench from 'lucide-react-native/icons/wrench';
+import X from 'lucide-react-native/icons/x';
+import Zap from 'lucide-react-native/icons/zap';
 import type { ColorValue } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-
-export type AppIconName =
-  | 'apple'
-  | 'bed'
-  | 'bell'
-  | 'book'
-  | 'briefcase'
-  | 'calendar'
-  | 'car'
-  | 'check'
-  | 'chevron-down'
-  | 'chevron-left'
-  | 'chevron-right'
-  | 'community'
-  | 'compass'
-  | 'delivery'
-  | 'eye'
-  | 'eye-closed'
-  | 'filter'
-  | 'filter-list'
-  | 'globe'
-  | 'google'
-  | 'help'
-  | 'home'
-  | 'key'
-  | 'lock'
-  | 'logout'
-  | 'mail'
-  | 'map'
-  | 'marketplace'
-  | 'message'
-  | 'package'
-  | 'phone'
-  | 'plus'
-  | 'search'
-  | 'shield'
-  | 'sparks'
-  | 'star'
-  | 'user'
-  | 'verified-user'
-  | 'wallet'
-  | 'warning'
-  | 'wrench';
+import { useTheme } from 'tamagui';
 
 function GoogleOriginalIcon({ size = 20 }: { size?: number }) {
   return (
@@ -127,65 +112,96 @@ function AppleOriginalIcon({
   );
 }
 
+/**
+ * Every icon in the app goes through this map, so a future icon-library swap stays in this file. Names describe
+ * meaning (`briefcase` for jobs), not the glyph's library name.
+ */
 const iconMap = {
-  bed: Bed,
+  'arrow-right': ArrowRight,
+  bed: BedDouble,
   bell: Bell,
-  book: Book,
-  briefcase: Suitcase,
+  book: BookOpen,
+  bookmark: Bookmark,
+  briefcase: Briefcase,
+  building: Building2,
   calendar: Calendar,
   car: Car,
   check: Check,
-  'chevron-down': NavArrowDown,
-  'chevron-left': NavArrowLeft,
-  'chevron-right': NavArrowRight,
-  community: Community,
+  'chevron-down': ChevronDown,
+  'chevron-left': ChevronLeft,
+  'chevron-right': ChevronRight,
+  clock: Clock,
+  close: X,
+  community: Users,
   compass: Compass,
-  delivery: DeliveryTruck,
+  delivery: Truck,
+  education: GraduationCap,
+  emergency: Siren,
+  event: PartyPopper,
   eye: Eye,
-  'eye-closed': EyeClosed,
-  filter: Filter,
-  'filter-list': FilterList,
+  'eye-closed': EyeOff,
+  filter: SlidersHorizontal,
+  'filter-list': ListFilter,
   globe: Globe,
-  help: HelpCircle,
+  handshake: Handshake,
+  heart: Heart,
+  help: CircleHelp,
   home: Home,
   key: Key,
+  list: List,
+  language: Languages,
   lock: Lock,
   logout: LogOut,
   mail: Mail,
   map: MapIcon,
-  marketplace: Cart,
-  message: MessageText,
+  'map-pin': MapPin,
+  marketplace: ShoppingBag,
+  menu: Menu,
+  minus: Minus,
+  message: MessageCircle,
+  monitor: Monitor,
+  moon: Moon,
+  more: Ellipsis,
   package: Package,
+  pencil: Pencil,
   phone: Phone,
+  plane: Plane,
   plus: Plus,
+  receipt: Receipt,
+  refresh: RefreshCw,
+  repeat: Repeat,
   search: Search,
+  settings: Settings,
+  share: Share2,
   shield: ShieldCheck,
-  sparks: Sparks,
+  sparks: Sparkles,
   star: Star,
+  sun: Sun,
+  swap: ArrowUpDown,
+  trash: Trash,
   user: User,
-  'verified-user': UserBadgeCheck,
+  'verified-user': BadgeCheck,
   wallet: Wallet,
-  warning: WarningTriangle,
+  warning: TriangleAlert,
   wrench: Wrench,
+  zap: Zap,
 } as const;
+
+export type AppIconName = keyof typeof iconMap | 'apple' | 'google';
 
 type AppIconProps = {
   name: AppIconName;
+  /** Defaults to the current theme's text colour, so icons follow light and dark mode. */
   color?: ColorValue;
   size?: number;
   strokeWidth?: number;
 };
 
-export function AppIcon({ name, color = colors.ink, size = 20, strokeWidth = 2.25 }: AppIconProps) {
-  if (name === 'google') {
-    return <GoogleOriginalIcon size={size} />;
-  }
-  if (name === 'apple') {
-    return <AppleOriginalIcon color={color} size={size} />;
-  }
-  const Icon = iconMap[name as keyof typeof iconMap];
-  if (!Icon) {
-    return null;
-  }
-  return <Icon color={color} height={size} strokeWidth={strokeWidth} width={size} />;
+export function AppIcon({ name, color, size = 20, strokeWidth = 2 }: AppIconProps) {
+  const theme = useTheme();
+  const resolved = color ?? theme.color?.val;
+  if (name === 'google') return <GoogleOriginalIcon size={size} />;
+  if (name === 'apple') return <AppleOriginalIcon color={resolved} size={size} />;
+  const Icon = iconMap[name];
+  return <Icon color={resolved as string} size={size} strokeWidth={strokeWidth} />;
 }

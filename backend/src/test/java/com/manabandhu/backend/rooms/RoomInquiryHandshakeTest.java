@@ -14,14 +14,16 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.Authentication;
 
+import com.manabandhu.backend.auth.Actor;
 import com.manabandhu.backend.chat.Conversation;
 import com.manabandhu.backend.chat.ConversationParticipant;
 import com.manabandhu.backend.chat.ConversationParticipantService;
 import com.manabandhu.backend.chat.ConversationService;
 import com.manabandhu.backend.chat.Message;
 import com.manabandhu.backend.chat.MessageService;
+import com.manabandhu.backend.notifications.Notification;
+import com.manabandhu.backend.notifications.NotificationPublisher;
 
 class RoomInquiryHandshakeTest {
 
@@ -30,7 +32,8 @@ class RoomInquiryHandshakeTest {
     private ConversationService conversationService;
     private ConversationParticipantService participantService;
     private MessageService messageService;
-    private RoomsController controller;
+    private NotificationPublisher notifications;
+    private RoomInquiryService service;
 
     @BeforeEach
     void setUp() {
@@ -40,21 +43,9 @@ class RoomInquiryHandshakeTest {
         participantService = mock(ConversationParticipantService.class);
         messageService = mock(MessageService.class);
 
-        controller = new RoomsController(
-                mock(RoomsContentService.class),
-                listingService,
-                mock(RoomAvailabilityService.class),
-                mock(RoomBookingService.class),
-                mock(RoomImageService.class),
-                mock(RoomFavoriteService.class),
-                mock(RoomSavedSearchService.class),
-                mock(RoomReportService.class),
-                mock(RoomAnalyticsService.class),
-                inquiryRepository,
-                conversationService,
-                participantService,
-                messageService
-        );
+        notifications = mock(NotificationPublisher.class);
+        service = new RoomInquiryService(listingService, inquiryRepository, conversationService, participantService,
+                messageService, notifications);
     }
 
     @Test
@@ -63,11 +54,10 @@ class RoomInquiryHandshakeTest {
         var hostId = UUID.randomUUID();
         var senderId = UUID.randomUUID();
 
-        var auth = mock(Authentication.class);
-        when(auth.getName()).thenReturn(senderId.toString());
+        var actor = new Actor(senderId, false, false);
 
         var listing = new RoomListing(hostId, "Sunny Room", "Desc", BigDecimal.valueOf(800), "PRIVATE", "active", "Austin", null, null, null);
-        when(listingService.findById(roomId)).thenReturn(Optional.of(listing));
+        when(listingService.findPublishedById(roomId)).thenReturn(Optional.of(listing));
 
         var conversation = mock(Conversation.class);
         var convId = UUID.randomUUID();
@@ -87,14 +77,14 @@ class RoomInquiryHandshakeTest {
                 "Hi, I am interested in this room!"
         );
 
-        var response = controller.inquire(auth, roomId, input);
+        var body = service.inquire(actor, roomId, input);
 
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        var body = response.getBody();
         assertThat(body).isNotNull();
         assertThat(body.conversationId()).isEqualTo(convId);
 
         verify(participantService).add(convId, hostId, ConversationParticipant.ParticipantRole.MEMBER);
         verify(inquiryRepository).save(any(RoomInquiry.class));
+        verify(notifications).publish(eq(hostId), eq(senderId), eq(Notification.NotificationType.ROOM), any(), any(),
+                eq("/chat/" + convId));
     }
 }

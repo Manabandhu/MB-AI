@@ -33,6 +33,10 @@ public class ConversationParticipant {
     @Enumerated(EnumType.STRING)
     private ParticipantRole role;
 
+    /** Written only by {@link ConversationParticipantRepository#advanceLastReadAt} so it can never move backwards. */
+    @Column(name = "last_read_at", insertable = false, updatable = false)
+    private Instant lastReadAt;
+
     protected ConversationParticipant() {}
 
     ConversationParticipant(UUID conversationId, UUID userId, ParticipantRole role) {
@@ -49,9 +53,15 @@ public class ConversationParticipant {
     public Instant getJoinedAt() { return joinedAt; }
     public Instant getLeftAt() { return leftAt; }
     public ParticipantRole getRole() { return role; }
+    /** Package-private so the participant list never exposes other members' read times. */
+    Instant getLastReadAt() { return lastReadAt; }
 
     public void leave() {
         this.leftAt = Instant.now();
+    }
+
+    void rejoin() {
+        this.leftAt = null;
     }
 
     public enum ParticipantRole {

@@ -37,4 +37,13 @@ class PackageTrackingServiceTest {
         var updated = service.updateStatus(tracking.getId(), PackageTracking.TrackingStatus.DELIVERED);
         assertThat(updated.getStatus()).isEqualTo(PackageTracking.TrackingStatus.DELIVERED);
     }
+
+    @org.junit.jupiter.api.Test
+    void unknownTrackingStatusIsABadRequest() {
+        org.assertj.core.api.Assertions.assertThat(PackageTracking.TrackingStatus.parse("in_transit"))
+                .isEqualTo(PackageTracking.TrackingStatus.IN_TRANSIT);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> PackageTracking.TrackingStatus.parse("teleported"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("400");
+    }
 }

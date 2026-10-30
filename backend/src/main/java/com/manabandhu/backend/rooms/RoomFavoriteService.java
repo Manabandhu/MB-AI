@@ -1,7 +1,6 @@
 package com.manabandhu.backend.rooms;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -41,16 +40,6 @@ public class RoomFavoriteService {
     @Transactional(readOnly = true)
     public List<RoomListing> findSavedListings(UUID userId) {
         return listingRepository.findSavedListingsByUserId(userId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<RoomListingResponse> findListingResponses(UUID userId, RoomListingService listingService) {
-        return findSavedListings(userId).stream()
-                .map(l -> RoomListingResponse.from(l,
-                        listingService.amenitiesFor(l.getId()),
-                        listingService.preferencesFor(l.getId()),
-                        true))
-                .toList();
     }
 
     @Transactional

@@ -9,4 +9,8 @@ interface CommunityPostRepository extends JpaRepository<CommunityPost, UUID> {
     List<CommunityPost> findAllByOrderByCreatedAtDesc();
 
     List<CommunityPost> findByCommunityIdOrderByCreatedAtDesc(UUID communityId);
+
+    List<CommunityPost> findTop100ByOrderByCreatedAtDesc();
+
+    List<CommunityPost> findTop100ByCommunityIdOrderByCreatedAtDesc(UUID communityId);
 }

@@ -1,5 +1,3 @@
-export { MyReferralsScreen } from './screens/MyReferralsScreen';
-export { OfferReferralScreen } from './screens/OfferReferralScreen';
-export { ReferralDetailsScreen } from './screens/ReferralDetailsScreen';
-export { ReferralsScreen } from './screens/ReferralsHomeScreen';
-export { RequestReferralScreen } from './screens/RequestReferralScreen';
+// Public API of the referrals module. Other modules and the app shell import only from here.
+export { ReferralsHomeWidget } from './home/ReferralsHomeWidget';
+export { moduleMeta } from './module';

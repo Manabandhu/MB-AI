@@ -4,19 +4,21 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 
 ## Component Inventory
 
-- `UtilitiesHomeScreen` - catalog screen using `FeatureScreen`
-- `PackageTrackingScreen` - list screen with `SearchBar`, timeline rows, and `SectionHeader`
-- `NearbyScreen` - list screen with permission banner, map-style filter, and `SectionHeader`
-- `EmergencyResourcesScreen` - list screen with warning banner and `SectionHeader`
+- `UtilitiesHomeScreen` - shortcuts plus searchable items from `/utilities/home`
+- `PackageTrackingScreen` - your packages with status badges, search, and an "Add package" form
+- `NearbyScreen` - directory places with real search and category filter; Directions and Call
+- `EmergencyResourcesScreen` - Call 911, then resources with Call and Directions
+- `utilitiesFormat.ts` - package statuses, search matching, distance, `tel:` and maps links
 
 ## API
 
 - `GET /api/v1/utilities/home` - returns `CatalogScreenContent`
-- `GET /api/v1/utilities/packages` - returns `PackageItem[]`
-- `GET /api/v1/utilities/nearby` - returns `NearbyItem[]`
-- `GET /api/v1/utilities/emergency` - returns `EmergencyItem[]`
+- `GET /api/v1/utilities/packages` - returns `PackageItem[]` (backend `PackageTracking`)
+- `POST /api/v1/utilities/packages` - `{ trackingNumber, carrier, status, estimatedDelivery? }`
+- `GET /api/v1/utilities/nearby` - returns `NearbyItem[]` (backend `NearbyPlace`)
+- `GET /api/v1/utilities/emergency` - returns `EmergencyItem[]` (backend `EmergencyResource`)
 
-## Routes
+## Routes (`/utilities/packages` requires sign-in; the rest are public)
 
 - `/utilities` - `UtilitiesHomeScreen`
 - `/utilities/packages` - `PackageTrackingScreen`

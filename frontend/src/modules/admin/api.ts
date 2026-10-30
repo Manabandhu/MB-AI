@@ -16,7 +16,7 @@ export type AutomationExecution = {
   status: string;
   environment: string;
   ref: string;
-  requestedAt: string;
+  acceptedAt: string;
 };
 
 export type AdminUser = {
@@ -117,7 +117,7 @@ export async function listUsers(): Promise<AdminUser[]> {
   return parseJson(await apiFetch('/api/v1/admin/users'));
 }
 
-export async function getUser(id: string): Promise<AdminUser> {
+export async function getAdminUser(id: string): Promise<AdminUser> {
   return parseJson(await apiFetch(`/api/v1/admin/users/${encodeURIComponent(id)}`));
 }
 

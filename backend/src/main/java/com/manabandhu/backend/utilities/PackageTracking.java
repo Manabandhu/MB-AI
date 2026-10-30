@@ -67,6 +67,17 @@ public class PackageTracking {
     }
 
     public enum TrackingStatus {
-        PENDING, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION
+        PENDING, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION;
+
+        /** Parses client input case-insensitively; unknown values are a 400, not a 500. */
+        public static TrackingStatus parse(String value) {
+            try {
+                return valueOf(value.trim().toUpperCase(java.util.Locale.ROOT));
+            } catch (RuntimeException exception) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST,
+                        "status must be one of pending, in_transit, out_for_delivery, delivered, exception");
+            }
+        }
     }
 }

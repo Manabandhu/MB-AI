@@ -1,9 +1,14 @@
 # ManaBandhu Design System
 
+> Implementation (2026-10): tokens live in `packages/design-system/src` (`tokens.ts`, `brand.ts`, `motion.ts`) and drive the
+> Tamagui config in `frontend/src/theme/tamagui.config.ts`. Build screens from the primitives in
+> `frontend/src/modules/shared/ui` (see ADR 0005). Members choose System/Light/Dark, animation level, and language in
+> Profile → Appearance. `pnpm verify:design` blocks new hard-coded colours, palettes, and breakpoints.
+
 ## 1. Brand Foundation
 
 ### Logo
-- Primary logo asset: `assets/images/welcome/manabandhu-logo.jpg`
+- Logo sources: `frontend/assets/brand/*.svg` (mark, glyph, mono, wordmark); app icons are generated with `pnpm brand:icons`. In code use `BrandMark` / `BrandLogo`.
 - Icon: `assets/images/icon.png`
 - Splash icon: `assets/images/splash-icon.png`
 - Android adaptive icon foreground: `assets/images/android-icon-foreground.png`
@@ -145,7 +150,7 @@
 ## 8. Iconography
 
 ### Icon Library
-- Primary: `iconoir-react-native`
+- Primary: Lucide via `AppIcon` (`lucide-react-native/icons/*`, one import per icon)
 - Size scale: `xs` (16), `sm` (20), `md` (24), `lg` (32), `xl` (48)
 - Stroke width: `thin` (1.5), `regular` (2.25), `bold` (3)
 
@@ -269,7 +274,7 @@ Every screen must handle:
 ## 14. Assets & Images
 
 ### Required Assets
-- `assets/images/welcome/manabandhu-logo.jpg` - primary logo
+- `assets/brand/logo-mark.svg` - primary logo (two arches sharing a leg, saffron friend dot, violet gradient tile)
 - `assets/images/welcome/community-services.jpg` - welcome image 1
 - `assets/images/welcome/trusted-neighborhood.jpg` - welcome image 2
 - `assets/images/icon.png` - app icon
@@ -277,7 +282,7 @@ Every screen must handle:
 - `assets/images/android-icon-foreground.png` - Android adaptive icon
 - `assets/images/android-icon-background.png` - Android adaptive icon bg
 - Placeholder avatars: generated initials-based avatars
-- Category icons: `iconoir-react-native` semantic icons
+- Category icons: semantic names in `AppIcon` (Lucide)
 
 ### Image Rules
 - Use `expo-image` for optimized caching

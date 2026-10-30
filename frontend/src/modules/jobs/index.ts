@@ -1,6 +1,3 @@
-export { JobDetailsScreen } from './screens/JobDetailsScreen';
-export { JobsFiltersScreen } from './screens/JobsFiltersScreen';
-export { JobsScreen } from './screens/JobsHomeScreen';
-export { JobsSearchScreen } from './screens/JobsSearchScreen';
-export { PostJobScreen } from './screens/PostJobScreen';
-export { SavedJobsScreen } from './screens/SavedJobsScreen';
+// Public API of the jobs module. Other modules and the app shell import only from here.
+export { JobsHomeWidget } from './home/JobsHomeWidget';
+export { moduleMeta } from './module';

@@ -25,6 +25,7 @@ public record OwnerRoomListingResponse(
         Instant updatedAt,
         List<String> amenities,
         List<String> preferences,
+        String coverImageUrl,
         String dietaryPreference,
         String genderPreference,
         String bathroomType,
@@ -38,7 +39,7 @@ public record OwnerRoomListingResponse(
         String county) {
 
     public static OwnerRoomListingResponse from(RoomListing listing, List<String> amenities,
-            List<String> preferences) {
+            List<String> preferences, String coverImageUrl) {
         return new OwnerRoomListingResponse(
                 listing.getId(),
                 listing.getOwnerId(),
@@ -55,6 +56,7 @@ public record OwnerRoomListingResponse(
                 listing.getUpdatedAt(),
                 amenities,
                 preferences,
+                coverImageUrl,
                 listing.getDietaryPreference(),
                 listing.getGenderPreference(),
                 listing.getBathroomType(),

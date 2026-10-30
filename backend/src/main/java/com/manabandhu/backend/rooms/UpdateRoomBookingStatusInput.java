@@ -1,6 +1,7 @@
 package com.manabandhu.backend.rooms;
 
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 public record UpdateRoomBookingStatusInput(
-        @Size(max = 20) String status) {}
+        @NotBlank @Pattern(regexp = "pending|accepted|rejected|cancelled") String status) {}

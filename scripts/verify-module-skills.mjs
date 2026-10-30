@@ -1,14 +1,8 @@
-import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
+import { gitLines as gitLinesStrict } from './lib/files.mjs';
 import { requiredSkillChanges, moduleSkillRules as rules } from './module-skill-rules.mjs';
 
-function gitLines(args) {
-  try {
-    return execFileSync('git', args, { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
-  } catch {
-    return [];
-  }
-}
+const gitLines = (args) => gitLinesStrict(args, { tolerant: true });
 
 const baseRef = process.env.SKILL_BASE_REF;
 const committedChanges = baseRef

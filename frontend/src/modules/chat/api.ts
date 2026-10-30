@@ -6,7 +6,8 @@ export type Conversation = {
   title?: string;
   lastMessage?: string;
   lastMessageAt?: string;
-  unreadCount?: number;
+  /** Messages from others after the caller's read marker; null for an admin who is not a member. */
+  unreadCount?: number | null;
   participants?: Participant[];
 };
 
@@ -57,22 +58,56 @@ export async function sendMessage(
   );
 }
 
+export type ConversationReadState = {
+  conversationId: string;
+  lastReadAt: string;
+  unreadCount: number;
+};
+
+/**
+ * Moves the caller's read marker up to `messageId` (or to now without one). The server never moves it backwards.
+ * Throws on any non-2xx so callers only clear unread state after the server accepted it.
+ */
+export async function markConversationRead(
+  conversationId: string,
+  messageId?: string,
+): Promise<ConversationReadState> {
+  return parseJsonOrThrow(
+    await apiFetch(`/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/read`, {
+      method: 'POST',
+      body: JSON.stringify(messageId ? { messageId } : {}),
+    }),
+    'MarkConversationRead',
+  );
+}
+
 export async function getParticipants(conversationId: string): Promise<Participant[]> {
   return parseJson(
     await apiFetch(`/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/participants`),
   );
 }
 
+/** Creates a DIRECT or GROUP conversation owned by the caller (`POST /conversations`). */
 export async function createConversation(input: {
   type: 'DIRECT' | 'GROUP';
   title?: string;
-  participantIds: string[];
 }): Promise<Conversation> {
   return parseJsonOrThrow(
     await apiFetch('/api/v1/chat/conversations', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-    'CreateConversation',
+    'Start conversation',
+  );
+}
+
+/** Adds a member to a conversation you own (`POST /conversations/{id}/participants`). */
+export async function addParticipant(conversationId: string, userId: string): Promise<Participant> {
+  return parseJsonOrThrow(
+    await apiFetch(
+      `/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/participants`,
+      { method: 'POST', body: JSON.stringify({ userId }) },
+    ),
+    'Add participant',
   );
 }
