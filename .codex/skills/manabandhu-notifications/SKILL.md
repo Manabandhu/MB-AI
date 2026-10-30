@@ -51,7 +51,7 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 - **One settings store:** `notification_settings.preferences` jsonb (`NotificationSettingsService`).
   - Keys: channels (`inApp`, `push`, `email`, `sms`), the categories above, and `quietHours`/`quietStart`/`quietEnd` ("HH:mm")/`timeZone` (IANA).
   - Invalid values are a 400, never silently dropped.
-  - `GET/POST /notifications/preferences` are views over the same channel keys.
+  - Channel switches are edited through `PATCH /notifications/settings` (the legacy `/preferences` views were removed 2026-10-30).
   - The `NotificationPreference` entity was removed; the old `notification_preferences` table is unused.
 - **Inbox:**
   - `GET /inbox?page&size` is paged in SQL (size ≤ 50) and returns `{items, page, hasMore, unreadCount}`.

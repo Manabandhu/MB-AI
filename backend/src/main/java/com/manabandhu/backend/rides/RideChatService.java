@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
@@ -41,8 +40,12 @@ public class RideChatService {
         this.messageService = messageService;
     }
 
-    /** Returns the ride's chat (creating it on first use) after checking that {@code actor} is a ride member. */
-    @Transactional
+    /**
+     * Returns the ride's chat (creating it on first use) after checking that {@code actor} is a ride member.
+     * Deliberately not {@code @Transactional}: {@link RideOfferService#attachConversation} must start its own
+     * transaction so its {@code SELECT … FOR UPDATE} reads the current conversation id instead of the copy loaded
+     * above; otherwise two concurrent first calls would each create a chat.
+     */
     public RideChatResponse provision(Actor actor, UUID offerId) {
         var offer = offerService.findById(offerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ride offer not found"));
