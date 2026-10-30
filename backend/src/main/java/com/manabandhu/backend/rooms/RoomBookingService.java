@@ -4,19 +4,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
 
 /** Booking requests on a listing. REST and GraphQL both go through {@link #create}. */
 @Service
 public class RoomBookingService {
 
-    static final int LIST_CAP = 200;
 
     /** pending can be decided or withdrawn; an accepted booking can still be cancelled; the rest are final. */
     private static final Map<String, List<String>> TRANSITIONS = Map.of(
@@ -39,12 +38,12 @@ public class RoomBookingService {
         if (!actor.admin() && !actor.is(listing.getOwnerId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot view bookings for this listing");
         }
-        return repository.findByListingIdOrderByCreatedAtDesc(listingId, PageRequest.of(0, LIST_CAP));
+        return repository.findByListingIdOrderByCreatedAtDesc(listingId, Paging.firstPage());
     }
 
     @Transactional(readOnly = true)
     public List<RoomBooking> findByRequester(Actor actor) {
-        return repository.findByRequesterIdOrderByCreatedAtDesc(actor.id(), PageRequest.of(0, LIST_CAP));
+        return repository.findByRequesterIdOrderByCreatedAtDesc(actor.id(), Paging.firstPage());
     }
 
     @Transactional(readOnly = true)

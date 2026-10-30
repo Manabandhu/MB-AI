@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
 
 @RestController
 @RequestMapping("/api/v1/foundation")

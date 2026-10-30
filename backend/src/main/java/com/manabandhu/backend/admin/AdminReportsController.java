@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.manabandhu.backend.common.audit.AdminAuditService;
 import com.manabandhu.backend.safety.SafetyReportService;
 
 @RestController

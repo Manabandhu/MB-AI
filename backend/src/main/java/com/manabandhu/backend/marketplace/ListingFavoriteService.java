@@ -3,11 +3,12 @@ package com.manabandhu.backend.marketplace;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.manabandhu.backend.common.Paging;
 
 @Service
 public class ListingFavoriteService {
@@ -22,13 +23,13 @@ public class ListingFavoriteService {
 
     @Transactional(readOnly = true)
     public List<ListingFavorite> findByUserId(UUID userId) {
-        return repository.findByUserIdOrderByCreatedAtDesc(userId).stream().limit(MarketplaceRules.LIST_CAP).toList();
+        return repository.findByUserIdOrderByCreatedAtDesc(userId).stream().limit(Paging.LIST_CAP).toList();
     }
 
     /** The saved listings themselves that are still public, newest save first. */
     @Transactional(readOnly = true)
     public List<Listing> savedListings(UUID userId) {
-        return listingRepository.findSavedBy(userId, PageRequest.of(0, MarketplaceRules.LIST_CAP));
+        return listingRepository.findSavedBy(userId, Paging.firstPage());
     }
 
     @Transactional(readOnly = true)

@@ -8,14 +8,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.chat.ContactOwnerService;
 import com.manabandhu.backend.chat.Conversation;
-import com.manabandhu.backend.chat.ConversationParticipant;
 import com.manabandhu.backend.chat.ConversationParticipantService;
-import com.manabandhu.backend.chat.ConversationService;
 import com.manabandhu.backend.chat.Message;
 import com.manabandhu.backend.chat.MessageService;
 import com.manabandhu.backend.notifications.Notification;
-import com.manabandhu.backend.notifications.NotificationPublisher;
 
 /** A member asks a host about an active listing: opens a chat with an intro message and notifies the host. */
 @Service
@@ -23,20 +21,18 @@ public class RoomInquiryService {
 
     private final RoomListingService listingService;
     private final RoomInquiryRepository repository;
-    private final ConversationService conversationService;
     private final ConversationParticipantService participantService;
     private final MessageService messageService;
-    private final NotificationPublisher notifications;
+    private final ContactOwnerService contacts;
 
     RoomInquiryService(RoomListingService listingService, RoomInquiryRepository repository,
-                       ConversationService conversationService, ConversationParticipantService participantService,
-                       MessageService messageService, NotificationPublisher notifications) {
+                       ConversationParticipantService participantService, MessageService messageService,
+                       ContactOwnerService contacts) {
         this.listingService = listingService;
         this.repository = repository;
-        this.conversationService = conversationService;
         this.participantService = participantService;
         this.messageService = messageService;
-        this.notifications = notifications;
+        this.contacts = contacts;
     }
 
     @Transactional
@@ -70,20 +66,17 @@ public class RoomInquiryService {
             return new RoomInquiryResponse(inquiry.getId(), inquiry.getConversationId());
         }
 
-        var title = "Room Inquiry: " + listing.getTitle();
-        var conversation = conversationService.create(senderId, Conversation.ConversationType.ROOM_INQUIRY, title);
-        participantService.add(conversation.getId(), hostId, ConversationParticipant.ParticipantRole.MEMBER);
-        messageService.send(conversation.getId(), senderId, introText, Message.MessageType.TEXT);
+        var conversationId = contacts.open(new ContactOwnerService.Contact(
+                senderId, hostId, Conversation.ConversationType.ROOM_INQUIRY, "Room Inquiry: " + listing.getTitle(),
+                introText, Notification.NotificationType.ROOM, "New room inquiry",
+                "Someone asked about \"" + listing.getTitle() + "\"."));
 
         var inquiry = repository.save(new RoomInquiry(
-                roomId, senderId, hostId, conversation.getId(),
+                roomId, senderId, hostId, conversationId,
                 input.moveInDate(), input.stayDurationMonths(),
                 input.dietaryLifestyle(), input.introMessage()
         ));
-
-        notifications.publish(hostId, senderId, Notification.NotificationType.ROOM, "New room inquiry",
-                "Someone asked about \"" + listing.getTitle() + "\".", "/chat/" + conversation.getId());
-        return new RoomInquiryResponse(inquiry.getId(), conversation.getId());
+        return new RoomInquiryResponse(inquiry.getId(), conversationId);
     }
 
     private static String introText(RoomListing listing, RoomInquiryInput input) {

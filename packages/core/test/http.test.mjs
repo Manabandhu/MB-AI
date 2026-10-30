@@ -32,6 +32,15 @@ test('parseJson surfaces raw text detail', async () => {
   });
 });
 
+test('parseJson reads a problem+json body that only has detail', async () => {
+  await assert.rejects(
+    parseJson(json(400, { status: 400, title: 'Bad Request', detail: 'title: must not be blank' })),
+    {
+      message: 'title: must not be blank',
+    },
+  );
+});
+
 test('client attaches bearer token and base url, and raises AuthError on 401', async () => {
   const calls = [];
   const client = createHttpClient({

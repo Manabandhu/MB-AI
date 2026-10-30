@@ -1,4 +1,4 @@
-package com.manabandhu.backend.foundation;
+package com.manabandhu.backend.common.catalog;
 
 public record CatalogItem(
         String id,

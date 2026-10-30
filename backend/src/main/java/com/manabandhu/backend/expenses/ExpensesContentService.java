@@ -1,8 +1,8 @@
 package com.manabandhu.backend.expenses;
 
-import static com.manabandhu.backend.foundation.CatalogContent.item;
-import static com.manabandhu.backend.foundation.CatalogContent.metric;
-import static com.manabandhu.backend.foundation.CatalogContent.personal;
+import static com.manabandhu.backend.common.catalog.CatalogContent.item;
+import static com.manabandhu.backend.common.catalog.CatalogContent.metric;
+import static com.manabandhu.backend.common.catalog.CatalogContent.personal;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -12,13 +12,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 
-import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.foundation.CatalogMetric;
-import com.manabandhu.backend.foundation.CatalogScreenContent;
-import com.manabandhu.backend.foundation.UnknownCatalogScreenException;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.catalog.CatalogMetric;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
+import com.manabandhu.backend.common.catalog.UnknownCatalogScreenException;
 
 /**
  * Expense screens. Every metric is the signed-in caller's own data (groups, balances, settlements);

@@ -1,4 +1,4 @@
-package com.manabandhu.backend.foundation;
+package com.manabandhu.backend.common.catalog;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

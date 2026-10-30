@@ -18,9 +18,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class OnboardingService {
@@ -28,11 +27,11 @@ public class OnboardingService {
     private static final Logger log = LoggerFactory.getLogger(OnboardingService.class);
 
     private final JdbcTemplate jdbcTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public OnboardingService(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = JsonMapper.shared();
     }
 
     @Transactional(readOnly = true)

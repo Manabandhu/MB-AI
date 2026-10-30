@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.foundation.CatalogScreenContent;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
 
 import jakarta.validation.Valid;
 

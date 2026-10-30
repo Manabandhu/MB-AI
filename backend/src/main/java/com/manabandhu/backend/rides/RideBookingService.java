@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
 
 /**
  * Seat bookings. Every non-cancelled booking holds its seats; cancelling is terminal and returns them.
@@ -26,7 +27,6 @@ public class RideBookingService {
     static final String CANCELLED = "cancelled";
     private static final Set<String> STATUSES = Set.of(PENDING, CONFIRMED, CANCELLED);
 
-    static final int LIST_CAP = 200;
 
     private final RideBookingRepository repository;
     private final RideOfferRepository offerRepository;
@@ -61,7 +61,7 @@ public class RideBookingService {
 
     @Transactional(readOnly = true)
     public List<RideBooking> findByUserId(UUID userId) {
-        return repository.findByUserIdOrderByCreatedAtDesc(userId, org.springframework.data.domain.PageRequest.of(0, LIST_CAP));
+        return repository.findByUserIdOrderByCreatedAtDesc(userId, Paging.firstPage());
     }
 
     @Transactional(readOnly = true)

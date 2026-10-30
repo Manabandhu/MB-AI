@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-
-import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,12 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.chat.Conversation;
-import com.manabandhu.backend.chat.ConversationParticipant;
-import com.manabandhu.backend.chat.ConversationParticipantService;
-import com.manabandhu.backend.chat.ConversationService;
-import com.manabandhu.backend.chat.Message;
-import com.manabandhu.backend.chat.MessageService;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/rides")
@@ -40,32 +37,27 @@ public class RidesController {
     private final RideParticipantService participantService;
     private final RideBookingService bookingService;
     private final RideRatingService ratingService;
-    private final ConversationService conversationService;
-    private final ConversationParticipantService chatParticipantService;
-    private final MessageService messageService;
+    private final RideChatService rideChatService;
     private final RideFavoriteService favoriteService;
     private final RideViews rideViews;
 
     RidesController(RidesContentService contentService, RideOfferService offerService,
                     RideRequestService requestService, RideParticipantService participantService,
                     RideBookingService bookingService, RideRatingService ratingService,
-                    ConversationService conversationService, ConversationParticipantService chatParticipantService,
-                    MessageService messageService, RideFavoriteService favoriteService, RideViews rideViews) {
+                    RideChatService rideChatService, RideFavoriteService favoriteService, RideViews rideViews) {
         this.contentService = contentService;
         this.offerService = offerService;
         this.requestService = requestService;
         this.participantService = participantService;
         this.bookingService = bookingService;
         this.ratingService = ratingService;
-        this.conversationService = conversationService;
-        this.chatParticipantService = chatParticipantService;
-        this.messageService = messageService;
+        this.rideChatService = rideChatService;
         this.favoriteService = favoriteService;
         this.rideViews = rideViews;
     }
 
     @GetMapping("/screens/{screenId}")
-    com.manabandhu.backend.foundation.CatalogScreenContent screen(@PathVariable String screenId) {
+    com.manabandhu.backend.common.catalog.CatalogScreenContent screen(@PathVariable String screenId) {
         return contentService.screen(screenId);
     }
 
@@ -80,9 +72,9 @@ public class RidesController {
             Pageable pageable) {
         // Soonest departure first only; a client-chosen sort could name a column that does not exist (500).
         var page = offerService.searchActive(origin, destination, avoidTolls, genderPreference, isRecurring,
-                org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
         var views = rideViews.searchViews(page.getContent(), viewer(authentication));
-        return new org.springframework.data.domain.PageImpl<>(views, page.getPageable(), page.getTotalElements());
+        return new PageImpl<>(views, page.getPageable(), page.getTotalElements());
     }
 
     @PostMapping("/offers")
@@ -151,39 +143,7 @@ public class RidesController {
     ResponseEntity<RideChatResponse> provisionRideChat(
             Authentication authentication,
             @PathVariable UUID offerId) {
-        var actor = Actor.require(authentication);
-        var actorId = actor.id();
-        var offer = requireOffer(offerId);
-        // Only the driver and passengers with a live booking or accepted request may join the ride chat.
-        offerService.requireRideMember(actor, offer);
-
-        var conversationId = offerService.attachConversation(offerId, locked -> {
-            var title = "Ride: " + locked.getOriginArea() + " → " + locked.getDestinationArea();
-            var conversation = conversationService.create(locked.getDriverId(), Conversation.ConversationType.RIDE_TEMP, title);
-            // Bookings are pending/confirmed/cancelled; riders with an accepted request join on their own first call.
-            for (var booking : bookingService.findByRideId(offerId)) {
-                if ("confirmed".equalsIgnoreCase(booking.getStatus()) && !booking.getUserId().equals(locked.getDriverId())) {
-                    chatParticipantService.add(conversation.getId(), booking.getUserId(), ConversationParticipant.ParticipantRole.MEMBER);
-                }
-            }
-            String initialNotice = String.format(
-                    "🚗 Ride Coordination Chat created for %s → %s.\n\n" +
-                    "🔒 Ephemeral Notice: This chat is temporary and will permanently self-delete 2 hours after the ride is marked completed.",
-                    locked.getOriginArea(), locked.getDestinationArea()
-            );
-            messageService.send(conversation.getId(), locked.getDriverId(), initialNotice, Message.MessageType.SYSTEM);
-            return conversation.getId();
-        });
-
-        if (!chatParticipantService.isParticipant(conversationId, actorId)) {
-            chatParticipantService.add(conversationId, actorId, ConversationParticipant.ParticipantRole.MEMBER);
-        }
-        return ResponseEntity.ok(new RideChatResponse(
-                conversationId,
-                offerId,
-                offer.getChatExpiresAt(),
-                "🔒 Ephemeral Chat: This conversation will automatically self-delete 2 hours after ride completion."
-        ));
+        return ResponseEntity.ok(rideChatService.provision(Actor.require(authentication), offerId));
     }
 
     @DeleteMapping({"/offers/{offerId}", "/{offerId}"})

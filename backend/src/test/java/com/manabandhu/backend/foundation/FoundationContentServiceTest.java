@@ -16,6 +16,7 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.catalog.CatalogMetric;
 
 class FoundationContentServiceTest {
 

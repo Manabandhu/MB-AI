@@ -1,8 +1,8 @@
 package com.manabandhu.backend.foundation;
 
-import static com.manabandhu.backend.foundation.CatalogContent.item;
-import static com.manabandhu.backend.foundation.CatalogContent.metrics;
-import static com.manabandhu.backend.foundation.CatalogContent.personal;
+import static com.manabandhu.backend.common.catalog.CatalogContent.item;
+import static com.manabandhu.backend.common.catalog.CatalogContent.metrics;
+import static com.manabandhu.backend.common.catalog.CatalogContent.personal;
 
 import java.util.List;
 import java.util.Optional;
@@ -10,13 +10,14 @@ import java.util.OptionalLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
+import com.manabandhu.backend.common.catalog.UnknownCatalogScreenException;
 
 @Service
 public class FoundationContentService {

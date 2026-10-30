@@ -1,4 +1,4 @@
-package com.manabandhu.backend.admin;
+package com.manabandhu.backend.common.audit;
 
 import java.time.Instant;
 import java.util.List;
@@ -6,9 +6,13 @@ import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Append-only record of privileged actions, shown on the Super Admin audit screen. */
+/**
+ * Append-only record of privileged actions, shown on the Super Admin audit screen. Lives in {@code common} so feature
+ * modules (chat, rooms) can audit without depending on the admin package.
+ */
 @Service
 public class AdminAuditService {
 
@@ -21,7 +25,7 @@ public class AdminAuditService {
     }
 
     /** Runs in its own transaction so callers inside read-only transactions (for example chat reads) can audit. */
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(String actor, String action, String targetType, String targetId) {
         jdbcTemplate.update(
                 "INSERT INTO public.admin_audit_log (actor, action, target_type, target_id) VALUES (?, ?, ?, ?)",

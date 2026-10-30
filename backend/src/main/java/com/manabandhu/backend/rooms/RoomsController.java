@@ -7,10 +7,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,9 +21,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
@@ -75,7 +76,7 @@ public class RoomsController {
     }
 
     @GetMapping("/screens/{screenId}")
-    com.manabandhu.backend.foundation.CatalogScreenContent screen(Authentication authentication, @PathVariable String screenId) {
+    com.manabandhu.backend.common.catalog.CatalogScreenContent screen(Authentication authentication, @PathVariable String screenId) {
         return contentService.screen(screenId, Actor.from(authentication));
     }
 
@@ -100,9 +101,9 @@ public class RoomsController {
                 genderPreference, minRent, maxRent, bath, lat, lng, radiusMiles);
         // Newest first only; a client-chosen sort could name a column that does not exist (500).
         var page = listingService.search(criteria,
-                org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
         var responses = views.publicViews(page.getContent(), viewer(authentication));
-        return new org.springframework.data.domain.PageImpl<>(responses, page.getPageable(), page.getTotalElements());
+        return new PageImpl<>(responses, page.getPageable(), page.getTotalElements());
     }
 
     @PostMapping("/listings")

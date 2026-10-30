@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -13,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
 
 import jakarta.validation.Valid;
 
@@ -23,20 +23,18 @@ public class RoomListingGraphqlController {
     private final RoomListingService listingService;
     private final RoomFavoriteService favoriteService;
     private final RoomBookingService bookingService;
-    private final RoomListingRepository listingRepository;
 
     RoomListingGraphqlController(RoomListingService listingService, RoomFavoriteService favoriteService,
-                                 RoomBookingService bookingService, RoomListingRepository listingRepository) {
+                                 RoomBookingService bookingService) {
         this.listingService = listingService;
         this.favoriteService = favoriteService;
         this.bookingService = bookingService;
-        this.listingRepository = listingRepository;
     }
 
     /** The newest 100 active listings; REST {@code GET /api/v1/rooms/listings} pages and filters. */
     @QueryMapping
     List<RoomListing> roomListings() {
-        return listingRepository.findByStatusOrderByCreatedAtDesc("active", PageRequest.of(0, 100)).getContent();
+        return listingService.newestActive(Paging.SHORT_LIST_CAP);
     }
 
     /** Same visibility as REST: active or paused for everyone, any status for the owner or an admin. */

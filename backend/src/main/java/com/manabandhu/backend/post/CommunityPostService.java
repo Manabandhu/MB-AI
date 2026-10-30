@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -106,8 +107,8 @@ public class CommunityPostService {
 
     @Transactional(readOnly = true)
     public List<Community> findAllCommunities() {
-        return communityRepository.findAll(org.springframework.data.domain.Sort.by(
-                org.springframework.data.domain.Sort.Direction.DESC, "memberCount"));
+        return communityRepository.findAll(Sort.by(
+                Sort.Direction.DESC, "memberCount"));
     }
 
     @Transactional(readOnly = true)

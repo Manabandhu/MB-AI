@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.common.Paging;
+
 @Service
 public class RoomSavedSearchService {
 
@@ -19,7 +21,7 @@ public class RoomSavedSearchService {
 
     @Transactional(readOnly = true)
     public List<RoomSavedSearch> findByUserId(UUID userId) {
-        return repository.findByUserIdOrderByCreatedAtDesc(userId, org.springframework.data.domain.PageRequest.of(0, 100));
+        return repository.findByUserIdOrderByCreatedAtDesc(userId, Paging.firstPage(Paging.SHORT_LIST_CAP));
     }
 
     @Transactional(readOnly = true)

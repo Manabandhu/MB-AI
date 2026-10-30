@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.manabandhu.backend.common.Paging;
+
 @Service
 public class ListingCategoryService {
 
@@ -20,7 +22,7 @@ public class ListingCategoryService {
 
     @Transactional(readOnly = true)
     public List<ListingCategory> findAll() {
-        return repository.findAllByOrderByNameAsc().stream().limit(MarketplaceRules.LIST_CAP).toList();
+        return repository.findAllByOrderByNameAsc().stream().limit(Paging.LIST_CAP).toList();
     }
 
     @Transactional(readOnly = true)

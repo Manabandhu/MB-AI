@@ -25,7 +25,7 @@ class RoomListingGraphqlControllerTest {
     private final RoomFavoriteService favoriteService = mock(RoomFavoriteService.class);
     private final RoomBookingService bookingService = mock(RoomBookingService.class);
     private final RoomListingGraphqlController controller = new RoomListingGraphqlController(
-            listingService, favoriteService, bookingService, mock(RoomListingRepository.class));
+            listingService, favoriteService, bookingService);
     private final UUID userId = UUID.randomUUID();
     private final UsernamePasswordAuthenticationToken auth =
             new UsernamePasswordAuthenticationToken(userId.toString(), null, List.of());

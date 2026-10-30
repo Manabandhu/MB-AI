@@ -11,14 +11,14 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The single store of notification settings ({@code notification_settings.preferences} jsonb). Channels
@@ -26,7 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
  * publisher and the push dispatcher read the same values the settings screen writes.
  */
 @Service
-public class NotificationsContentService {
+public class NotificationSettingsService {
 
     static final Map<String, Object> DEFAULT_SETTINGS = Map.ofEntries(
             Map.entry("allNotifications", true),
@@ -50,12 +50,12 @@ public class NotificationsContentService {
     private static final Set<String> TIME_KEYS = Set.of("quietStart", "quietEnd");
     private static final Pattern HH_MM = Pattern.compile("^([01]\\d|2[0-3]):[0-5]\\d$");
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NotificationsContentService.class);
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NotificationSettingsService.class);
 
     private final JdbcTemplate jdbcTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonMapper objectMapper = JsonMapper.shared();
 
-    NotificationsContentService(JdbcTemplate jdbcTemplate) {
+    NotificationSettingsService(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -165,7 +165,7 @@ public class NotificationsContentService {
                         log.warn("notification_settings_stale_value user={} key={}", userId, key);
                     }
                 });
-            } catch (JsonProcessingException ignored) {
+            } catch (JacksonException ignored) {
                 // A corrupt row falls back to defaults rather than failing the settings screen.
             }
         }
@@ -175,7 +175,7 @@ public class NotificationsContentService {
     private String toJson(Map<String, Object> settings) {
         try {
             return objectMapper.writeValueAsString(settings);
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalStateException("Could not serialise notification settings", exception);
         }
     }

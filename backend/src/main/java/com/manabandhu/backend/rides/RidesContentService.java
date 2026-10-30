@@ -1,7 +1,7 @@
 package com.manabandhu.backend.rides;
 
-import static com.manabandhu.backend.foundation.CatalogContent.item;
-import static com.manabandhu.backend.foundation.CatalogContent.metric;
+import static com.manabandhu.backend.common.catalog.CatalogContent.item;
+import static com.manabandhu.backend.common.catalog.CatalogContent.metric;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -10,14 +10,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
-import com.manabandhu.backend.foundation.CatalogItem;
-import com.manabandhu.backend.foundation.CatalogScreenContent;
-import com.manabandhu.backend.foundation.UnknownCatalogScreenException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.manabandhu.backend.common.catalog.CatalogItem;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
+import com.manabandhu.backend.common.catalog.UnknownCatalogScreenException;
 
 /** Rides screens. Counts and featured rides come from upcoming active offers; nothing is invented. */
 @Service

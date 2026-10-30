@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.chat.ContactOwnerService;
 import com.manabandhu.backend.chat.Conversation;
 import com.manabandhu.backend.chat.ConversationParticipant;
 import com.manabandhu.backend.chat.ConversationParticipantService;
@@ -34,8 +35,9 @@ class ReferralContactServiceTest {
     private final ConversationService conversations = mock(ConversationService.class);
     private final ConversationParticipantService participants = mock(ConversationParticipantService.class);
     private final MessageService messages = mock(MessageService.class);
-    private final ReferralContactService service = spy(new ReferralContactService(referrals, conversations,
-            participants, messages, mock(NotificationPublisher.class), mock(JdbcTemplate.class)));
+    private final ReferralContactService service = spy(new ReferralContactService(referrals, participants,
+            new ContactOwnerService(conversations, participants, messages, mock(NotificationPublisher.class)),
+            mock(JdbcTemplate.class)));
     private final UUID ownerId = UUID.randomUUID();
     private final Actor caller = new Actor(UUID.randomUUID(), false, false);
     private static final String PITCH = "Hi, I am a backend engineer looking for a referral.";
@@ -62,7 +64,7 @@ class ReferralContactServiceTest {
 
         assertThat(service.contact(caller, referral.getId(), PITCH)).isEqualTo(conversationId);
 
-        verify(participants).add(conversationId, caller.id(), ConversationParticipant.ParticipantRole.MEMBER);
+        // The creator becomes the OWNER participant inside ConversationService.create; the referrer is added here.
         verify(participants).add(conversationId, ownerId, ConversationParticipant.ParticipantRole.MEMBER);
         verify(messages).send(eq(conversationId), eq(caller.id()), anyString(), eq(Message.MessageType.TEXT));
     }

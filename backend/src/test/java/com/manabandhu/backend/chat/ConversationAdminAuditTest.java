@@ -10,10 +10,11 @@ import static org.mockito.Mockito.when;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.manabandhu.backend.admin.AdminAuditService;
-import com.manabandhu.backend.auth.Actor;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.audit.AdminAuditService;
 
 class ConversationAdminAuditTest {
 

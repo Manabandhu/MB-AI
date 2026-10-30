@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.chat.ContactOwnerService;
 import com.manabandhu.backend.chat.Conversation;
 import com.manabandhu.backend.chat.ConversationParticipant;
 import com.manabandhu.backend.chat.ConversationParticipantService;
@@ -44,8 +45,8 @@ class RoomInquiryHandshakeTest {
         messageService = mock(MessageService.class);
 
         notifications = mock(NotificationPublisher.class);
-        service = new RoomInquiryService(listingService, inquiryRepository, conversationService, participantService,
-                messageService, notifications);
+        service = new RoomInquiryService(listingService, inquiryRepository, participantService, messageService,
+                new ContactOwnerService(conversationService, participantService, messageService, notifications));
     }
 
     @Test

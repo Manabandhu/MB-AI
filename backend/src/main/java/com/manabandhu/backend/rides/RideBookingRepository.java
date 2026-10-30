@@ -3,6 +3,7 @@ package com.manabandhu.backend.rides;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 interface RideBookingRepository extends JpaRepository<RideBooking, UUID> {
@@ -13,7 +14,7 @@ interface RideBookingRepository extends JpaRepository<RideBooking, UUID> {
     @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(b.seatsBooked), 0) FROM RideBooking b WHERE b.rideId = :rideId AND LOWER(b.status) <> 'cancelled'")
     long sumLiveSeats(@org.springframework.data.repository.query.Param("rideId") UUID rideId);
 
-    List<RideBooking> findByUserIdOrderByCreatedAtDesc(UUID userId, org.springframework.data.domain.Pageable pageable);
+    List<RideBooking> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     List<RideBooking> findByRideIdOrderByCreatedAtDesc(UUID rideId);
 

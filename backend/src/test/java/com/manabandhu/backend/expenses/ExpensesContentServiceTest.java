@@ -18,7 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.foundation.CatalogMetric;
+import com.manabandhu.backend.common.catalog.CatalogMetric;
 
 @ExtendWith(MockitoExtension.class)
 class ExpensesContentServiceTest {
