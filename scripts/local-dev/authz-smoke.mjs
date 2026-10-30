@@ -1303,7 +1303,10 @@ console.log('== notifications');
   const missing = await call('A', 'GET', `/api/v1/notifications/${crypto.randomUUID()}`);
   expect('service errors carry message', typeof missing.body?.message, 'string');
   expect('service errors carry problem status', missing.body?.status, missing.status);
-  const invalid = await call('A', 'POST', '/api/v1/notifications/devices', { token: '', platform: 'ios' });
+  const invalid = await call('A', 'POST', '/api/v1/notifications/devices', {
+    token: '',
+    platform: 'ios',
+  });
   expect('validation errors carry message', typeof invalid.body?.message, 'string');
   await status('non-Expo push token rejected', 400, 'A', 'POST', '/api/v1/notifications/devices', {
     token: 'https://evil.example/hook',
