@@ -11,8 +11,6 @@ import { getSavedRides } from '@/modules/rides/api';
 import type { Ride } from '@/modules/rides/types';
 import { getFavorites } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import {
   type AppIconName,
   Card,
@@ -23,6 +21,8 @@ import {
   SegmentedControl,
   SkeletonCard,
 } from '@/modules/shared/ui';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 
 type TabId = 'all' | 'rooms' | 'rides' | 'events';
 
@@ -41,8 +41,7 @@ type Group = {
 };
 
 function eventSubtitle(e: Event) {
-  const date = e.startAt ? new Date(e.startAt) : null;
-  const when = date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString() : '';
+  const when = formatDate(e.startAt) ?? '';
   return [e.location, when].filter(Boolean).join(' · ');
 }
 

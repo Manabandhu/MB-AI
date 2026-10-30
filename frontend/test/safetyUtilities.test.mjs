@@ -4,14 +4,14 @@ import {
   isUserRole,
   oldestFirst,
   safeExternalUrl,
-} from '../src/modules/ai-assistant/assistantFormat.ts';
+} from '../src/modules/ai-assistant/utils/assistantFormat.ts';
 import {
   reportCategory,
   reportCategoryLabel,
   reportStatus,
   telHref,
   trustedContactErrors,
-} from '../src/modules/safety/safetyFormat.ts';
+} from '../src/modules/safety/utils/safetyFormat.ts';
 import {
   formatDistance,
   mapsSearchUrl,
@@ -19,7 +19,7 @@ import {
   packageStatus,
   telLink,
   trackingNumberError,
-} from '../src/modules/utilities/utilitiesFormat.ts';
+} from '../src/modules/utilities/utils/utilitiesFormat.ts';
 
 test('report categories round-trip to readable labels', () => {
   assert.equal(reportCategory('user', 'harassment'), 'user:harassment');

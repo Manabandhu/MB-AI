@@ -28,7 +28,7 @@ Owns expense groups, entries, balances, settlements, currency precision, partici
 - `AddExpenseScreen` - `Screen maxWidth="form" keyboardAvoiding` + `ActionBar`; group/category radio chips (category by id from `EXPENSE_CATEGORIES`), strict amount (`parseAmount`), equal split only (no split picker); success = `showMessage` + `router.back()`
 - `BalancesScreen` - per-currency owed/owe cards and net lines; "Record payment" / "Mark received" with `useConfirm` before `recordSettlement`
 - `SettlementsScreen` - `StatusBadge` (case-insensitive `settlementStatus`), "Confirm received" (confirm) and "Cancel payment" (destructive confirm)
-- Pure helpers: `expenses/expenseMath.ts` (`parseAmount`, `EXPENSE_CATEGORIES`, `categoryLabel`, `sumByCurrency`, `netByCurrency`, `settlementStatus`, `isUuid`, `localDate`), tested by `frontend/test/expenseMath.test.mjs`
+- Pure helpers: `expenses/utils/expenseMath.ts` (`parseAmount`, `EXPENSE_CATEGORIES`, `categoryLabel`, `sumByCurrency`, `netByCurrency`, `settlementStatus`, `isUuid`, `localDate`), tested by `frontend/test/expenseMath.test.mjs`
 - Shared: `Screen`, `ScreenHeader`, `ActionBar`, `Card`, `Chip`, `FilterChipRow`, `SegmentedControl`, `StatusBadge`, `PersonRow`, `BottomSheet`, `TextField`, `useConfirm`, `notify`, `EmptyState`, `ErrorState`, `LoadingState`, `formatMoney`/`formatDate`
 
 ## API Surface (`frontend/src/modules/expenses/api.ts`)

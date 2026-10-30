@@ -16,16 +16,16 @@ import {
   unreactPost,
 } from '@/modules/community/api';
 import { nextReaction, REACTIONS, withViewerReaction } from '@/modules/community/utils/reactions';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { errorText, showError, showMessage } from '@/modules/shared/ui/notify';
 import { PersonRow } from '@/modules/shared/ui/PersonRow';
 import { Screen } from '@/modules/shared/ui/Screen';

@@ -24,7 +24,7 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - `PackageTrackingScreen` - your packages with `StatusBadge` (`packageStatus`, case-insensitive), search, and an "Add package" `BottomSheet` (tracking number, carrier chips/other, status chips, optional `DateTimeField` date)
 - `NearbyScreen` - real search (`TextField`) plus category radio chips over `GET /utilities/nearby`; each place has Directions (maps search URL) and Call (`tel:`). No location permission UI: the endpoint is not location-aware
 - `EmergencyResourcesScreen` - Call 911 card, then resources with Call (`tel:`) and Directions; empty copy differs from the error state
-- Pure helpers: `utilities/utilitiesFormat.ts` (`PACKAGE_STATUSES`, `packageStatus`, `matchesSearch`, `formatDistance`, `telLink`, `mapsSearchUrl`, `trackingNumberError`), tested in `frontend/test/safetyUtilities.test.mjs`
+- Pure helpers: `utilities/utils/utilitiesFormat.ts` (`PACKAGE_STATUSES`, `packageStatus`, `matchesSearch`, `formatDistance`, `telLink`, `mapsSearchUrl`, `trackingNumberError`), tested in `frontend/test/safetyUtilities.test.mjs`
 
 ## API Surface
 

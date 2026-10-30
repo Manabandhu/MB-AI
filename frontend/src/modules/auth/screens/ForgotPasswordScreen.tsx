@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useAuthStore } from '@/lib/authStore';
-import { friendlyAuthError, isValidEmail } from '@/modules/auth/authHelpers';
 import { AuthButton, AuthField, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
+import { friendlyAuthError, isValidEmail } from '@/modules/auth/utils/authHelpers';
 
 export function ForgotPasswordScreen() {
   const resetPassword = useAuthStore((s) => s.resetPassword);

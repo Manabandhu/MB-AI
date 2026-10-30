@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { routeForPushData } from '../src/modules/notifications/pushRoutes.ts';
+import { routeForPushData } from '../src/modules/notifications/utils/pushRoutes.ts';
 
 test('a push opens its in-app route', () => {
   assert.equal(routeForPushData({ route: '/rides/1', notificationId: 'n1' }), '/rides/1');

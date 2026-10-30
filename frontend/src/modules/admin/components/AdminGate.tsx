@@ -1,10 +1,10 @@
 import type { Href } from 'expo-router';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
 import { Screen, SkeletonCard } from '@/modules/shared/ui';
-import type { AdminRole } from '../adminAccess';
-import { useAdminAccess } from '../useAdminAccess';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { useAdminAccess } from '../hooks/useAdminAccess';
+import type { AdminRole } from '../utils/adminAccess';
 
 /**
  * Shows admin screens only to members whose signed role allows them, and a plain "not authorized" state to

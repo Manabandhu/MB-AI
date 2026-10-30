@@ -2,7 +2,7 @@ import type { Href } from 'expo-router';
 import { Platform } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
-import { ONBOARDING_START } from '@/modules/auth/postAuth';
+import { ONBOARDING_START } from '@/modules/auth/utils/postAuth';
 import { confirmSignOut } from '@/modules/foundation/account/signOut';
 import { useMapPreferencesStore } from '@/modules/shared/stores/mapPreferencesStore';
 import {

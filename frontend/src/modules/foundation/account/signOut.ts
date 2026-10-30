@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/lib/authStore';
-import { unregisterThisDevice } from '@/modules/notifications/push';
+import { unregisterThisDevice } from '@/modules/notifications/utils/push';
 import { confirm, showError } from '@/modules/shared/ui/notify';
 
 /**

@@ -25,7 +25,7 @@ Owns the safety center, user reports, blocked users, trusted contacts, emergency
 - `BlockedUsersScreen` - `PersonRow` list; "Unblock" asks with a red `useConfirm`
 - `TrustedContactsScreen` - `PersonRow` list with Call (`tel:`) and email (`mailto:`) buttons; "Add" `BottomSheet` (name + phone or email, validated by `trustedContactErrors`). No edit/remove: the backend has no endpoints
 - `components/ReportSheet` (exported from `safety/index.ts`) - reason and severity radio chips, details (min 10 chars), `POST /api/v1/safety/reports`; closes and confirms only after the server stored it. Used by chat's conversation info
-- Pure helpers: `safety/safetyFormat.ts` (`REPORT_REASONS`, `reportCategory`, `reportCategoryLabel`, `reportStatus`, `trustedContactErrors`, `telHref`), tested in `frontend/test/safetyUtilities.test.mjs`
+- Pure helpers: `safety/utils/safetyFormat.ts` (`REPORT_REASONS`, `reportCategory`, `reportCategoryLabel`, `reportStatus`, `trustedContactErrors`, `telHref`), tested in `frontend/test/safetyUtilities.test.mjs`
 
 ## API Surface
 

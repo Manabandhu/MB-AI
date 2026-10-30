@@ -1,4 +1,4 @@
-import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { apiFetch, parseJsonOrThrow } from '@/lib/api';
 
 /** The server wants a fresh sign-in (within 10 minutes) before deleting the account. */
 export class ReauthRequiredError extends Error {

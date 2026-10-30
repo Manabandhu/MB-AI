@@ -19,7 +19,6 @@ import { formatDeparture, rideTags, seatsText } from '@/modules/rides/components
 import { useSavedRides } from '@/modules/rides/hooks/useSavedRides';
 import { useTimedNotice } from '@/modules/rides/hooks/useTimedNotice';
 import type { Ride } from '@/modules/rides/types';
-import { showError, showMessage } from '@/modules/rides/utils/notify';
 import {
   bookingBlockReason,
   durationLabel,
@@ -33,8 +32,6 @@ import {
   statusTone,
   viewerSeat,
 } from '@/modules/rides/utils/rideFormat';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
@@ -42,8 +39,11 @@ import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { NumberStepper } from '@/modules/shared/ui/NumberStepper';
+import { showError, showMessage } from '@/modules/shared/ui/notify';
 import { PersonRow } from '@/modules/shared/ui/PersonRow';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';

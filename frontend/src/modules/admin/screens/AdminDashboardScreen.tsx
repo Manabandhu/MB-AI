@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { YStack } from 'tamagui';
-import { isOpenReport } from '@/modules/admin/adminAccess';
 import {
   listAdminCommunityPosts,
   listAdminEvents,
@@ -12,10 +11,9 @@ import {
 } from '@/modules/admin/api';
 import { AdminRoleBadge } from '@/modules/admin/components/AdminBits';
 import { useResolveReportAction } from '@/modules/admin/hooks';
+import { useAdminAccess } from '@/modules/admin/hooks/useAdminAccess';
 import { ReportCard } from '@/modules/admin/screens/AdminReportsScreen';
-import { useAdminAccess } from '@/modules/admin/useAdminAccess';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { isOpenReport } from '@/modules/admin/utils/adminAccess';
 import {
   type AppIconName,
   AppText,
@@ -28,6 +26,8 @@ import {
   Section,
   SkeletonCard,
 } from '@/modules/shared/ui';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 
 // Every count and queue item here comes from the admin APIs. There is no sample queue: an empty queue says so,
 // and a failed request shows an error with retry.

@@ -1,4 +1,4 @@
-import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/apiClient';
+import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/api';
 
 export type Referral = {
   id: string;

@@ -50,7 +50,8 @@ export type ApiHealth = {
   status: string;
 };
 
-export { ApiError, AuthError };
+// Response helpers live in @manabandhu/core so every client surface parses errors the same way.
+export { ApiError, AuthError, parseJson, parseJsonOrThrow } from '@manabandhu/core';
 
 const http = createHttpClient({
   baseUrl: getResolvedApiUrl,

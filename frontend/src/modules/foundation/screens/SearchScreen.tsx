@@ -1,3 +1,4 @@
+import { formatDate } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -13,8 +14,6 @@ import { formatListingPrice } from '@/modules/marketplace/utils/format';
 import { rideSearchHref } from '@/modules/rides';
 import { listRoomListings } from '@/modules/rooms/api';
 import type { RoomListing } from '@/modules/rooms/types';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import {
   type AppIconName,
   AppText,
@@ -29,6 +28,8 @@ import {
   SkeletonCard,
   TextField,
 } from '@/modules/shared/ui';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 
 type CategoryId = 'all' | 'rooms' | 'rides' | 'jobs' | 'events' | 'market';
@@ -71,9 +72,7 @@ type Source = {
 };
 
 function eventDate(e: Event) {
-  if (!e.startAt) return '';
-  const date = new Date(e.startAt);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString();
+  return formatDate(e.startAt) ?? '';
 }
 
 /**

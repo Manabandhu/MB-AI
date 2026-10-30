@@ -4,7 +4,7 @@ import { Platform, Share } from 'react-native';
 import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { supabase } from '@/lib/supabase';
-import { unregisterThisDevice } from '@/modules/notifications/push';
+import { unregisterThisDevice } from '@/modules/notifications/utils/push';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';

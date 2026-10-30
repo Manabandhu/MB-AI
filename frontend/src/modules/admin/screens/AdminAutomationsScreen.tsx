@@ -7,7 +7,6 @@ import {
   executeAutomation,
   listAutomationOperations,
 } from '@/modules/admin/api';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import {
   AppButton,
   AppText,
@@ -24,6 +23,7 @@ import {
   TextField,
   useConfirm,
 } from '@/modules/shared/ui';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 
 type Environment = 'development' | 'staging' | 'production';

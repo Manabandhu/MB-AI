@@ -1,4 +1,4 @@
-import { apiFetch, parseJson } from '@/lib/apiClient';
+import { apiFetch, parseJson } from '@/lib/api';
 import { type RawPage, toPage } from '@/lib/springPage';
 import type {
   CreateRideOfferInput,

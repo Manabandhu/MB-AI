@@ -150,7 +150,7 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected` 
 - Color contrast meets WCAG 2.1 AA (at least 4.5:1 ratio)
 - Color is not the only indicator of state
 - Guest `ActionBar` on room detail groups "Quick hello" and "Contact host" in one `XStack`, so on phones both wrap together under the price instead of splitting across rows.
-- Address suggestion rows in `RoomForm` are keyboard-operable on web (`keyboardPress` + focus ring). The My listings save notice travels as a code (`notice=saved-visible|published|draft|saved`, `rooms/saveNotice.ts`); unknown codes render nothing, so a link cannot inject app-styled text.
+- Address suggestion rows in `RoomForm` are keyboard-operable on web (`keyboardPress` + focus ring). The My listings save notice travels as a code (`notice=saved-visible|published|draft|saved`, `rooms/utils/saveNotice.ts`); unknown codes render nothing, so a link cannot inject app-styled text.
 
 ## Current Implementation Status
 
@@ -195,3 +195,4 @@ Listing statuses: `draft`, `active`, `paused`, `archived`, `rented`, `rejected` 
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['housing', 'roommate', 'sublease', 'sublet', 'rent', 'apartment', 'lease', 'accommodation']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
 - Visual QA pass (2026-10-14, offline stack, 390/768/1440 light+dark): the owner "Edit" button on `RoomDetailScreen` uses the `pencil` icon instead of `settings`.
 - Moderation audit (2026-10-14): `RoomListingService.moderate` and `RoomReportService.review` record `room.moderate` / `room_report.review` in `admin_audit_log` through `AdminAuditService` (tests in `RoomsProductionRulesTest`).
+- Structure cleanup (2026-10-30): imports use `@/lib/api` (the `@/lib/apiClient` shim was removed) and `@/modules/shared/ui/*` (the old `shared/components` folder and the per-module `utils/notify` re-exports were removed; use `@/modules/shared/ui/notify`). Dates, times and counts go through `@manabandhu/core` (`formatDate`, `formatTime`, `formatNumber`) instead of `toLocale*String`. The module follows the layout in `frontend/src/modules/README.md` (`utils/`, `hooks/`, `stores/`). `RoomForm` keeps the sections; its zod schema lives in `components/room-form/schema.ts` and layout parts (`FormSection`, `FieldPair`, `ChipGroup`, `ToggleRow`, `UploadStatus`) in `components/room-form/FormParts.tsx`. `locationService`/`usLocationData` moved to `shared/utils/location/` (also used by foundation and `lib/locationStore`). `savedRoomsStore` lives in `stores/`, `saveNotice` in `utils/`.

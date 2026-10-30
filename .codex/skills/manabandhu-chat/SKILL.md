@@ -25,8 +25,8 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
 - `ConversationScreen` - `ChatFrame` (fixed header, list pinned to newest, keyboard-avoiding composer on iOS and Android), `ChatBubble`, `Composer`; your unsent messages live in a pending list with "Sending…" / "Not sent" + Retry/Discard
 - `ConversationInfoScreen` - type badge, members (`PersonRow`, role labels), shared photos (http(s) only), Report member / Report conversation via safety's `ReportSheet`
 - Module components (`chat/components/`): `ChatFrame`, `ChatBubble`, `Composer` (also exported from `chat/index.ts`; the AI assistant screen reuses them)
-- Pure helpers: `chat/chatFormat.ts` (`participantLabel`, `conversationTypeLabel`, `conversationTitle`, `roleLabel`, `isHttpUrl`, `contactsFromParticipants`), tested by `frontend/test/chatFormat.test.mjs`
-- `chat/contacts.ts`: `listChatContacts` / `useChatContacts` (participants of your 20 most recent conversations, deduped) - the only source of other members' ids until a member search exists; exported for expenses (add member) and safety (file a report)
+- Pure helpers: `chat/utils/chatFormat.ts` (`participantLabel`, `conversationTypeLabel`, `conversationTitle`, `roleLabel`, `isHttpUrl`, `contactsFromParticipants`), tested by `frontend/test/chatFormat.test.mjs`
+- `chat/hooks/useContacts.ts`: `listChatContacts` / `useChatContacts` (participants of your 20 most recent conversations, deduped) - the only source of other members' ids until a member search exists; exported for expenses (add member) and safety (file a report)
 
 ## API Surface
 
@@ -113,3 +113,4 @@ Owns Chat List, New Chat, Conversation, Conversation Info, message state, realti
   - `NewChatScreen` throws (and does not navigate) when every participant add fails; there is no endpoint to delete the empty conversation.
   - `ChatFrame` drops the home-indicator inset under the composer while the keyboard is open.
 - Visual QA pass (2026-10-14, offline stack, 390/768/1440 light+dark): message times use `hour: 'numeric'` ("1:59 PM", not "01:59 PM"). The offline stack has no Supabase Realtime, so the conversation screen logs a failed `ws://localhost:9999/realtime` handshake locally; that is expected there.
+- Structure cleanup (2026-10-30): imports use `@/lib/api` (the `@/lib/apiClient` shim was removed) and `@/modules/shared/ui/*` (the old `shared/components` folder and the per-module `utils/notify` re-exports were removed; use `@/modules/shared/ui/notify`). Dates, times and counts go through `@manabandhu/core` (`formatDate`, `formatTime`, `formatNumber`) instead of `toLocale*String`. The module follows the layout in `frontend/src/modules/README.md` (`utils/`, `hooks/`, `stores/`). `chatFormat`/`readState` moved to `utils/`; `contacts.ts` is now `hooks/useContacts.ts`, next to `useMarkConversationRead` and `useRealtimeChat`.

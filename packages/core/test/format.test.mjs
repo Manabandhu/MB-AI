@@ -4,6 +4,7 @@ import {
   formatCount,
   formatDate,
   formatMoney,
+  formatNumber,
   formatRelative,
   formatSalaryRange,
   formatTimeRange,
@@ -78,4 +79,19 @@ test('compact numbers promote to the next unit instead of reaching 1000', () => 
   assert.equal(formatCount(999_999_999_999), '1T');
   assert.equal(formatCount(-1500), '-1.5K');
   assert.equal(formatMoney(999_999, 'USD', { compact: true }), '$1M');
+});
+
+test('formatNumber groups digits in the active locale', () => {
+  setFormatLocale('en-US');
+  assert.equal(formatNumber(1234567), '1,234,567');
+  setFormatLocale(undefined);
+});
+
+test('weekday and hour date styles', () => {
+  setFormatLocale('en-US');
+  const date = new Date(2026, 9, 17, 18, 0);
+  assert.equal(formatDate(date, 'weekdayDate'), 'Sat, Oct 17');
+  assert.equal(formatDate(date, 'weekdayLongDate'), 'Saturday, Oct 17');
+  assert.equal(formatDate(date, 'hour'), '6 PM');
+  setFormatLocale(undefined);
 });

@@ -8,4 +8,23 @@ Shared client UI primitives live in `shared/ui` and are built on Tamagui with de
 
 Each business module exposes a public `index.ts` (its `moduleMeta` from `module.ts`, plus any Home widget or helper other modules need). Import another module only through that file. Platform-free logic shared by every client (HTTP client, formatters, module metadata types) lives in `packages/core`.
 
-`screen-catalog.ts` is the canonical product screen inventory. Current business folders are foundation, auth, notifications, rooms, rides, jobs, referrals, community, chat, immigration, expenses, events, marketplace, utilities, safety, and admin. Technical AI and analytics modules remain separate cross-cutting boundaries.
+## Module layout
+
+Every module uses the same folders; create one only when it has a file.
+
+| Path | Holds |
+| --- | --- |
+| `api.ts` (+ topic files such as `rides/mapsApi.ts`) | Backend calls through `apiFetch` from `@/lib/api` |
+| `types.ts` | Response and domain types |
+| `screens/` | Route-level screens (imported by `src/app` route files) |
+| `components/` | Module-specific components |
+| `hooks/` | React hooks (`hooks/index.ts` for small modules) |
+| `stores/` | Zustand stores |
+| `utils/` | Pure helpers and formatters (unit-tested in `frontend/test`) |
+| `home/` | Home widgets |
+| `module.ts` / `index.ts` | Launcher metadata and the public API |
+| `MODULE.md` | Ownership notes |
+
+Format dates, times, numbers, and money with `@manabandhu/core` (`formatDate`, `formatTime`, `formatNumber`, `formatMoney`, …) so the user's language applies; do not call `toLocale*String` directly. Show messages and confirmations with `@/modules/shared/ui/notify`.
+
+`screen-catalog.ts` is the canonical product screen inventory. Current business folders are foundation, auth, notifications, rooms, rides, jobs, referrals, community, chat, immigration, expenses, events, marketplace, utilities, safety, ai-assistant, and admin.

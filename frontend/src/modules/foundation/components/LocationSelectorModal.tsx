@@ -3,12 +3,12 @@ import { ActivityIndicator, FlatList } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { ALL_USA_LOCATION, type AppLocation, useLocationStore } from '@/lib/locationStore';
-import { searchAllUSCities } from '@/modules/rooms/utils/locationService';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { TextField } from '@/modules/shared/ui/TextField';
+import { searchAllUSCities } from '@/modules/shared/utils/location/locationService';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 /** Shortest query that searches every US city (shorter text keeps the nearby list). */

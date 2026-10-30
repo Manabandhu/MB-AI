@@ -6,7 +6,7 @@ import {
   autocompletePlacesGoogle,
   geocodeAddress,
   MapsRateLimitError,
-} from '@/modules/rides/services/googleMapsService';
+} from '@/modules/rides/mapsApi';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';

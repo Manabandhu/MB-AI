@@ -1,4 +1,4 @@
-import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { apiFetch, parseJsonOrThrow } from '@/lib/api';
 
 // All expense data goes through the backend, which enforces group membership. Errors are surfaced to the
 // screens instead of being replaced with sample data, so a failed save is never shown as a success.

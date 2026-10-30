@@ -1,0 +1,113 @@
+import { useEffect, useRef, useState } from 'react';
+import { useAuthStore } from '@/lib/authStore';
+import { supabase } from '@/lib/supabase';
+import type { Message } from '../api';
+
+export type TypingPayload = {
+  userId: string;
+  userName: string;
+  conversationId: string;
+};
+
+export function useRealtimeChat(
+  conversationId: string | undefined,
+  onIncomingMessage?: (message: Message) => void,
+) {
+  const currentUser = useAuthStore((state) => state.user);
+  const [typingUsers, setTypingUsers] = useState<{ [userId: string]: string }>({});
+  const typingTimeoutRef = useRef<{ [userId: string]: ReturnType<typeof setTimeout> }>({});
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  useEffect(() => {
+    if (!conversationId) return;
+
+    // Private channel: Supabase checks the realtime.messages policy (V29) so only participants can join,
+    // listen for typing events, or broadcast them.
+    const channelName = `conversation:${conversationId}`;
+    const channel = supabase.channel(channelName, { config: { private: true } });
+    channelRef.current = channel;
+
+    // 1. New messages: the backend writes to public.messages; RLS limits delivery to participants.
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const row = payload.new as unknown as {
+            id: string;
+            conversation_id: string;
+            sender_id: string;
+            body?: string;
+            message_type?: Message['messageType'];
+            created_at?: string;
+          };
+          if (row && onIncomingMessage) {
+            const msg: Message = {
+              id: row.id,
+              conversationId: row.conversation_id,
+              senderId: row.sender_id,
+              body: row.body || '',
+              messageType: row.message_type || 'TEXT',
+              createdAt: row.created_at || new Date().toISOString(),
+              // Live rows include everyone's messages; only the viewer's own count as sent by them.
+              sent: Boolean(currentUser?.id) && row.sender_id === currentUser?.id,
+            };
+            onIncomingMessage(msg);
+          }
+        },
+      )
+      // 2. Listen for typing indicator broadcasts
+      .on('broadcast', { event: 'typing' }, ({ payload }: { payload: TypingPayload }) => {
+        if (!payload || payload.userId === currentUser?.id) return;
+        const uid = payload.userId;
+        const name = payload.userName || 'Someone';
+
+        setTypingUsers((prev) => ({ ...prev, [uid]: name }));
+
+        if (typingTimeoutRef.current[uid]) {
+          clearTimeout(typingTimeoutRef.current[uid]);
+        }
+        typingTimeoutRef.current[uid] = setTimeout(() => {
+          setTypingUsers((prev) => {
+            const next = { ...prev };
+            delete next[uid];
+            return next;
+          });
+        }, 2500);
+      })
+      .subscribe();
+
+    return () => {
+      Object.values(typingTimeoutRef.current).forEach(clearTimeout);
+      typingTimeoutRef.current = {};
+      supabase.removeChannel(channel);
+      channelRef.current = null;
+    };
+  }, [conversationId, currentUser?.id, onIncomingMessage]);
+
+  const sendTypingEvent = () => {
+    if (!channelRef.current || !currentUser || !conversationId) return;
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: {
+        userId: currentUser.id,
+        userName:
+          currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
+        conversationId,
+      },
+    });
+  };
+
+  const typingNames = Object.values(typingUsers);
+
+  return {
+    typingNames,
+    sendTypingEvent,
+  };
+}

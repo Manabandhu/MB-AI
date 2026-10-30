@@ -1,4 +1,4 @@
-import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { apiFetch, parseJsonOrThrow } from '@/lib/api';
 
 // Types mirror the backend entities serialized by SafetyController (SafetyReport, BlockedUser, TrustedContact).
 // There is no sample or fallback data: callers surface errors and render empty states for empty lists.

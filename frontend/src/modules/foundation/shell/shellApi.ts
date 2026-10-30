@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { apiFetch, parseJsonOrThrow } from '@/lib/api';
 import { persistMeta } from '@/lib/queryPersistence';
 
 export type ShellKind = 'home' | 'explore' | 'community' | 'chat' | 'profile';

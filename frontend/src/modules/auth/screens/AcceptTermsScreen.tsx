@@ -1,11 +1,11 @@
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import { useAuthStore } from '@/lib/authStore';
-import { friendlyAuthError } from '@/modules/auth/authHelpers';
 import { AuthButton, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
 import { ConsentCheckbox } from '@/modules/auth/components/ConsentCheckbox';
-import { recordTermsConsent } from '@/modules/auth/consent';
-import { routeAfterAuth } from '@/modules/auth/postAuth';
+import { friendlyAuthError } from '@/modules/auth/utils/authHelpers';
+import { recordTermsConsent } from '@/modules/auth/utils/consent';
+import { routeAfterAuth } from '@/modules/auth/utils/postAuth';
 import { signOutWithFeedback } from '@/modules/foundation/account/signOut';
 
 /**

@@ -1,3 +1,4 @@
+import { formatDate } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -9,15 +10,15 @@ import {
   eventTimeErrors,
   nextWeekday,
 } from '@/modules/events/utils/eventTime';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { DateTimeField } from '@/modules/shared/ui/DateTimeField';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { errorText } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
@@ -34,8 +35,8 @@ function presetLabel(date: Date, now: Date) {
       ? 'Tomorrow'
       : date.toDateString() === now.toDateString()
         ? 'Today'
-        : date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-  return `${day} · ${date.toLocaleTimeString(undefined, { hour: 'numeric' })}`;
+        : formatDate(date, 'weekdayDate');
+  return `${day} · ${formatDate(date, 'hour')}`;
 }
 
 type Errors = {

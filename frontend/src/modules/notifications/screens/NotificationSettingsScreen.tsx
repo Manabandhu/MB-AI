@@ -10,11 +10,11 @@ import {
 import { PushSection } from '@/modules/notifications/components/PushSection';
 import { QuietHoursSection } from '@/modules/notifications/components/QuietHoursSection';
 import { SettingRow } from '@/modules/notifications/components/SettingRow';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import type { AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { Section } from '@/modules/shared/ui/Section';

@@ -1,3 +1,4 @@
+import { formatDate } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -11,15 +12,15 @@ import {
   isHttpUrl,
   participantLabel,
   roleLabel,
-} from '@/modules/chat/chatFormat';
+} from '@/modules/chat/utils/chatFormat';
 import { ReportSheet } from '@/modules/safety';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Avatar } from '@/modules/shared/ui/Avatar';
 import { Card } from '@/modules/shared/ui/Card';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { PersonRow } from '@/modules/shared/ui/PersonRow';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
@@ -138,7 +139,7 @@ export default function ConversationInfoScreen() {
                   }
                   key={p.id}
                   name={name}
-                  subtitle={`${roleLabel(p.role)} · joined ${new Date(p.joinedAt).toLocaleDateString()}`}
+                  subtitle={`${roleLabel(p.role)} · joined ${formatDate(p.joinedAt) ?? 'recently'}`}
                 />
               );
             })}

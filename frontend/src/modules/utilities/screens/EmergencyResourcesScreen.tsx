@@ -2,18 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { Linking } from 'react-native';
 import { XStack, YStack } from 'tamagui';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { showError } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 import { getEmergencyResources } from '@/modules/utilities/api';
-import { mapsSearchUrl, telLink } from '@/modules/utilities/utilitiesFormat';
+import { mapsSearchUrl, telLink } from '@/modules/utilities/utils/utilitiesFormat';
 
 const open = async (url: string, what: string) => {
   try {

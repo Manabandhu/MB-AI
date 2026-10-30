@@ -5,7 +5,7 @@ import { ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
-import { routeAfterAuth } from '@/modules/auth/postAuth';
+import { routeAfterAuth } from '@/modules/auth/utils/postAuth';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { AnimatedBrandMark } from '@/modules/shared/ui/motion/AnimatedBrandMark';
