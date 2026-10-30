@@ -1,22 +1,22 @@
 package com.manabandhu.backend.rooms;
 
-import static com.manabandhu.backend.foundation.CatalogContent.item;
-import static com.manabandhu.backend.foundation.CatalogContent.metric;
-import static com.manabandhu.backend.foundation.CatalogContent.metrics;
-import static com.manabandhu.backend.foundation.CatalogContent.personal;
+import static com.manabandhu.backend.common.catalog.CatalogContent.item;
+import static com.manabandhu.backend.common.catalog.CatalogContent.metric;
+import static com.manabandhu.backend.common.catalog.CatalogContent.metrics;
+import static com.manabandhu.backend.common.catalog.CatalogContent.personal;
 
 import java.util.List;
 import java.util.Optional;
 
-import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.foundation.CatalogItem;
-import com.manabandhu.backend.foundation.CatalogMetric;
-import com.manabandhu.backend.foundation.CatalogScreenContent;
-import com.manabandhu.backend.foundation.UnknownCatalogScreenException;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.catalog.CatalogItem;
+import com.manabandhu.backend.common.catalog.CatalogMetric;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
+import com.manabandhu.backend.common.catalog.UnknownCatalogScreenException;
 
 /**
  * Rooms screens. Listing counts come from COUNT queries; saved and own-listing counts are computed for the

@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { BackButton } from '@/modules/shared/ui/BackButton';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { getMarketplaceListing } from '../api';
 import { ListingForm } from '../components/ListingForm';

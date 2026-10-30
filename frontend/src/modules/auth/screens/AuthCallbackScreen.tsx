@@ -1,11 +1,12 @@
-import { space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
+import { YStack } from 'tamagui';
 import { useRedirectIfAuthenticated } from '@/lib/authStore';
 import { supabase } from '@/lib/supabase';
-import { friendlyAuthError, parseAuthRedirect } from '@/modules/auth/authHelpers';
 import { AuthButton, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
+import { friendlyAuthError, parseAuthRedirect } from '@/modules/auth/utils/authHelpers';
+import { AppText } from '@/modules/shared/ui/AppText';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 /**
@@ -53,22 +54,18 @@ export function AuthCallbackScreen() {
   }
 
   return (
-    <View
-      style={[styles.center, { backgroundColor: palette.surface }]}
+    <YStack
       accessibilityLiveRegion="polite"
+      alignItems="center"
+      backgroundColor="$surface"
+      flex={1}
+      gap="$x4"
+      justifyContent="center"
     >
       <ActivityIndicator size="large" color={palette.primary} />
-      <Text style={[styles.text, { color: palette.muted }]}>Signing you in…</Text>
-    </View>
+      <AppText tone="muted" variant="lead">
+        Signing you in…
+      </AppText>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x4,
-  },
-  text: { fontSize: 17 },
-});

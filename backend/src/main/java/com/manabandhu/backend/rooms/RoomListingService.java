@@ -1,5 +1,7 @@
 package com.manabandhu.backend.rooms;
 
+import static com.manabandhu.backend.common.Strings.blankToNull;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -12,14 +14,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.manabandhu.backend.admin.AdminAuditService;
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
+import com.manabandhu.backend.common.audit.AdminAuditService;
 
 @Service
 public class RoomListingService {
 
     private static final List<String> STATUSES = List.of("draft", "active", "paused", "archived", "rejected", "rented");
-    static final int MY_LISTINGS_CAP = 200;
     static final int AMENITIES_CAP = 30;
 
     private final RoomListingRepository repository;
@@ -84,8 +86,13 @@ public class RoomListingService {
     /** The owner's newest listings, capped. */
     @Transactional(readOnly = true)
     public List<RoomListing> findByOwner(UUID ownerId) {
-        return repository.findByOwnerIdOrderByCreatedAtDesc(ownerId,
-                org.springframework.data.domain.PageRequest.of(0, MY_LISTINGS_CAP));
+        return repository.findByOwnerIdOrderByCreatedAtDesc(ownerId, Paging.firstPage());
+    }
+
+    /** The newest {@code limit} active listings (GraphQL list; REST pages and filters through {@link #search}). */
+    @Transactional(readOnly = true)
+    public List<RoomListing> newestActive(int limit) {
+        return repository.findByStatusOrderByCreatedAtDesc("active", Paging.firstPage(limit)).getContent();
     }
 
     /** Active listings matching every provided filter; {@code radiusMiles} applies around {@code lat}/{@code lng}. */
@@ -106,10 +113,6 @@ public class RoomListingService {
                 blankToNull(criteria.stateCode()), blankToNull(criteria.dietaryPreference()),
                 blankToNull(criteria.genderPreference()), criteria.minRent(), criteria.maxRent(),
                 blankToNull(criteria.bathroomType()), minLat, maxLat, minLng, maxLng, pageable);
-    }
-
-    private static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
     }
 
     @Transactional

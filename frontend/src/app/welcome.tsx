@@ -1,3 +1,3 @@
-import { WelcomeScreen } from '@/modules/foundation/screens/WelcomeScreen';
+import { WelcomeScreen } from '@/modules/foundation/entry/WelcomeScreen';
 
 export default WelcomeScreen;

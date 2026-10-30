@@ -10,14 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.chat.ContactOwnerService;
 import com.manabandhu.backend.chat.Conversation;
 import com.manabandhu.backend.chat.ConversationParticipant;
 import com.manabandhu.backend.chat.ConversationParticipantService;
-import com.manabandhu.backend.chat.ConversationService;
-import com.manabandhu.backend.chat.Message;
-import com.manabandhu.backend.chat.MessageService;
 import com.manabandhu.backend.notifications.Notification;
-import com.manabandhu.backend.notifications.NotificationPublisher;
 
 /**
  * A member contacts the poster of an open referral: reuses their direct chat (or opens one), sends the message,
@@ -27,20 +24,15 @@ import com.manabandhu.backend.notifications.NotificationPublisher;
 public class ReferralContactService {
 
     private final ReferralRepository referrals;
-    private final ConversationService conversationService;
     private final ConversationParticipantService participantService;
-    private final MessageService messageService;
-    private final NotificationPublisher notifications;
+    private final ContactOwnerService contacts;
     private final JdbcTemplate jdbcTemplate;
 
-    ReferralContactService(ReferralRepository referrals, ConversationService conversationService,
-                           ConversationParticipantService participantService, MessageService messageService,
-                           NotificationPublisher notifications, JdbcTemplate jdbcTemplate) {
+    ReferralContactService(ReferralRepository referrals, ConversationParticipantService participantService,
+                           ContactOwnerService contacts, JdbcTemplate jdbcTemplate) {
         this.referrals = referrals;
-        this.conversationService = conversationService;
         this.participantService = participantService;
-        this.messageService = messageService;
-        this.notifications = notifications;
+        this.contacts = contacts;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -67,19 +59,19 @@ public class ReferralContactService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Write at least 20 characters");
         }
 
+        var contact = new ContactOwnerService.Contact(
+                actor.id(), ownerId, Conversation.ConversationType.DIRECT, "Referral: " + referral.getTitle(),
+                "About your referral \"" + referral.getTitle() + "\":\n\n" + text,
+                Notification.NotificationType.REFERRAL, "New referral message",
+                "Someone messaged you about \"" + referral.getTitle() + "\".");
         var conversationId = existingDirect(actor.id(), ownerId);
         if (conversationId == null) {
-            var title = ("Referral: " + referral.getTitle());
-            var conversation = conversationService.create(actor.id(), Conversation.ConversationType.DIRECT,
-                    title.length() > 200 ? title.substring(0, 200) : title);
-            conversationId = conversation.getId();
+            return contacts.open(contact);
         }
+        // Reuse the direct chat these two already share; rejoin either side that had left.
         participantService.add(conversationId, actor.id(), ConversationParticipant.ParticipantRole.MEMBER);
         participantService.add(conversationId, ownerId, ConversationParticipant.ParticipantRole.MEMBER);
-        var body = "About your referral \"" + referral.getTitle() + "\":\n\n" + text;
-        messageService.send(conversationId, actor.id(), body, Message.MessageType.TEXT);
-        notifications.publish(ownerId, actor.id(), Notification.NotificationType.REFERRAL, "New referral message",
-                "Someone messaged you about \"" + referral.getTitle() + "\".", "/chat/" + conversationId);
+        contacts.post(conversationId, contact);
         return conversationId;
     }
 

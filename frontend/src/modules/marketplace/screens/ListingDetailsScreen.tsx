@@ -6,8 +6,6 @@ import { Image, ScrollView } from 'react-native';
 import { useTheme, XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { shareLink } from '@/lib/share';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
@@ -15,7 +13,10 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
+import { confirmAction, showError, showMessage } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import {
   contactSeller,
@@ -36,7 +37,6 @@ import {
   shareMessage,
   statusIs,
 } from '../utils/listingRules';
-import { confirmAction, showError, showMessage } from '../utils/notify';
 
 const GALLERY_HEIGHT = 300;
 /** The owner's bar can wrap to two rows, so reserve a little more than one bar. */

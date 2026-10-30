@@ -17,9 +17,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 class AutomationService {
@@ -34,7 +33,7 @@ class AutomationService {
             .build();
     private final String repository;
     private final String token;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonMapper objectMapper = JsonMapper.shared();
 
     AutomationService(
             AutomationCatalog catalog,
@@ -116,7 +115,7 @@ class AutomationService {
                     )
             );
             return objectMapper.writeValueAsString(payload);
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to serialize automation payload", exception);
         }
     }

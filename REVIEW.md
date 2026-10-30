@@ -14,7 +14,7 @@ here before (see `docs/reviews/`). Flag violations as **blocking** unless marked
    wildcards over modules with user data and any public route that returns user IDs, contact info, addresses, or notes.
 4. **New tables** enable RLS and revoke `anon`/`authenticated`, or ship an explicit, reviewed policy. `SECURITY
    DEFINER` functions must `SET search_path`.
-5. **Secrets.** No real credentials in tracked files, including `.env.example`, tool configs (`.kilo/`, `.mcp.json`),
+5. **Secrets.** No real credentials in tracked files, including `.env.example`, tool configs (`.mcp.json`, `.vscode/`),
    scripts, and `app.json`. `pnpm verify:secrets` must pass. If a secret was ever committed, require rotation.
 6. **Error responses** never include exception messages, SQL, or class names for 5xx (`ApiExceptionHandler`).
 7. **Admin and automation.** Production deploy/migrate/rollback require `SUPER_ADMIN` and a `main`/`v*` ref; every

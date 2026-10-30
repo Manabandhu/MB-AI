@@ -1,4 +1,4 @@
-import { formatMoney } from '@manabandhu/core';
+import { formatDate, formatMoney } from '@manabandhu/core';
 
 /** "Free" for giveaways, otherwise the price in its currency with cents ($24.99, $1,200.00). */
 export function formatListingPrice(price: number | string | null | undefined, currency?: string) {
@@ -9,7 +9,5 @@ export function formatListingPrice(price: number | string | null | undefined, cu
 }
 
 export function formatListedDate(iso: string | null | undefined) {
-  if (!iso) return null;
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString();
+  return formatDate(iso);
 }

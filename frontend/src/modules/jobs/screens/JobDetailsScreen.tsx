@@ -1,4 +1,4 @@
-import { formatRelative, formatSalaryRange } from '@manabandhu/core';
+import { formatDate, formatRelative, formatSalaryRange } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -9,9 +9,7 @@ import { shareLink } from '@/lib/share';
 import { applyToJob, deleteJobPosting, getJobPosting, updateJobPosting } from '@/modules/jobs/api';
 import { employmentTypeLabel } from '@/modules/jobs/types';
 import { jobStatusIs } from '@/modules/jobs/utils/jobForm';
-import { createReferralRequest } from '@/modules/referrals/api';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { createReferralRequest } from '@/modules/referrals';
 import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText, Heading } from '@/modules/shared/ui/AppText';
@@ -19,7 +17,9 @@ import { BackButton } from '@/modules/shared/ui/BackButton';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Card } from '@/modules/shared/ui/Card';
 import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { errorText, showError, showMessage } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
@@ -253,7 +253,7 @@ export function JobDetailsScreen() {
               {job.category?.name ? <StatusBadge label={job.category.name} tone="primary" /> : null}
             </XStack>
             <AppText tone="muted" variant="caption">
-              Posted {formatRelative(job.createdAt) ?? new Date(job.createdAt).toLocaleDateString()}
+              Posted {formatRelative(job.createdAt) ?? formatDate(job.createdAt)}
               {isOwner ? ' · by you' : ''}
             </AppText>
           </Card>

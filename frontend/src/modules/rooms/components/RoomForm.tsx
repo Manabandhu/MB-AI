@@ -3,11 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Switch } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { XStack, YStack } from 'tamagui';
-import { z } from 'zod';
 import { useAuthStore } from '@/lib/authStore';
 import {
   addRoomImage,
@@ -18,20 +17,12 @@ import {
   publishRoomListing,
   updateRoomListing,
 } from '@/modules/rooms/api';
-import type { RoomSaveNotice } from '@/modules/rooms/saveNotice';
 import {
   type CreateRoomListingInput,
   type OwnerRoomListing,
   type RoomAmenityItem,
   statusIs,
 } from '@/modules/rooms/types';
-import {
-  type FreeAddressSuggestion,
-  getCitiesByState,
-  lookupZipCodeFree,
-  searchAddressFree,
-} from '@/modules/rooms/utils/locationService';
-import { showError } from '@/modules/rooms/utils/notify';
 import {
   BATHROOM_OPTIONS,
   DIETARY_OPTIONS,
@@ -40,56 +31,37 @@ import {
   LEASE_TERMS,
   ROOM_TYPES,
 } from '@/modules/rooms/utils/roomLabels';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
+import type { RoomSaveNotice } from '@/modules/rooms/utils/saveNotice';
 import { deleteUpload, useImageUpload } from '@/modules/shared/hooks/useImageUpload';
 import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
-import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
+import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
+import { showError } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { TextField } from '@/modules/shared/ui/TextField';
+import {
+  type FreeAddressSuggestion,
+  getCitiesByState,
+  lookupZipCodeFree,
+  searchAddressFree,
+} from '@/modules/shared/utils/location/locationService';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 import { useAppearance } from '@/theme/ThemeProvider';
-
-const MAX_PHOTOS = 10;
-const MAX_AMENITIES = 30;
-
-const money = (label: string) =>
-  z.string().refine((v) => v.trim() === '' || (Number.isFinite(Number(v)) && Number(v) >= 0), {
-    message: `${label} must be 0 or more`,
-  });
-
-const roomFormSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required').max(200),
-  description: z.string().max(4000),
-  price: z
-    .string()
-    .min(1, 'Rent is required')
-    .refine((v) => Number.isFinite(Number(v)) && Number(v) > 0, 'Rent must be greater than 0'),
-  securityDeposit: money('Deposit'),
-  utilitiesIncluded: z.boolean(),
-  estUtilityMonthly: money('Estimated utilities'),
-  roomType: z.string().min(1, 'Room type is required').max(50),
-  broadLocation: z.string().trim().min(1, 'City and area are required').max(200),
-  exactAddress: z.string().max(4000),
-  zipCode: z.string().max(10),
-  stateCode: z.string().max(50, 'State must be 50 characters or fewer'),
-  county: z.string().max(100),
-  latitude: z.string(),
-  longitude: z.string(),
-  dietaryPreference: z.string(),
-  genderPreference: z.string(),
-  bathroomType: z.string(),
-  leaseTerm: z.string(),
-  universityShuttleAccessible: z.boolean(),
-});
-
-type RoomFormValues = z.infer<typeof roomFormSchema>;
+import { ChipGroup, FieldPair, FormSection, ToggleRow, UploadStatus } from './room-form/FormParts';
+import {
+  MAX_AMENITIES,
+  MAX_PHOTOS,
+  optionalNumber,
+  type RoomFormValues,
+  roomFormSchema,
+} from './room-form/schema';
 
 type RoomFormProps = {
   mode: 'create' | 'edit';
@@ -98,8 +70,6 @@ type RoomFormProps = {
 
 /** A photo in the form: `imageId` is set once it is attached to the listing on the server. */
 type FormPhoto = { url: string; imageId?: string; removing?: boolean };
-
-const optionalNumber = (v: string) => (v.trim() === '' ? undefined : Number(v));
 
 /** Create/edit form for a room listing, including photos (uploaded to storage, then attached) and amenities. */
 export function RoomForm({ mode, initial }: RoomFormProps) {
@@ -888,145 +858,4 @@ export function RoomForm({ mode, initial }: RoomFormProps) {
       </ActionBar>
     </YStack>
   );
-}
-
-function FormSection({
-  icon,
-  title,
-  children,
-}: {
-  icon: AppIconName;
-  title: string;
-  children: ReactNode;
-}) {
-  const { palette } = useAppearance();
-  return (
-    <Card gap="$x3" variant="outlined">
-      <XStack alignItems="center" gap="$x2">
-        <AppIcon color={palette.primary} name={icon} size={20} />
-        <AppText role="heading" variant="h4">
-          {title}
-        </AppText>
-      </XStack>
-      {children}
-    </Card>
-  );
-}
-
-/** Two fields side by side on wider windows, stacked on phones. */
-function FieldPair({ wide, children }: { wide: boolean; children: ReactNode }) {
-  return wide ? (
-    <XStack alignItems="flex-start" gap="$x3">
-      {children}
-    </XStack>
-  ) : (
-    <YStack gap="$x4">{children}</YStack>
-  );
-}
-
-function ChipGroup({
-  label,
-  radio,
-  children,
-}: {
-  label: string;
-  /** One-of-many choice: the chips are `radio` and the group a `radiogroup`. */
-  radio?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <YStack gap="$x2">
-      <AppText variant="label">{label}</AppText>
-      <XStack aria-label={label} flexWrap="wrap" gap="$x2" role={radio ? 'radiogroup' : 'group'}>
-        {children}
-      </XStack>
-    </YStack>
-  );
-}
-
-/** Yes/no setting with a real switch; the label names the switch for screen readers. */
-function ToggleRow({
-  label,
-  description,
-  value,
-  onToggle,
-}: {
-  label: string;
-  description: string;
-  value: boolean;
-  onToggle: () => void;
-}) {
-  const { palette } = useAppearance();
-  return (
-    <XStack
-      alignItems="center"
-      backgroundColor="$surfaceContainerLow"
-      borderRadius="$control"
-      gap="$x3"
-      minHeight={52}
-      padding="$x3"
-    >
-      <YStack flex={1} gap={2}>
-        <AppText variant="label">{label}</AppText>
-        <AppText tone="muted" variant="caption">
-          {description}
-        </AppText>
-      </YStack>
-      <Switch
-        accessibilityHint={description}
-        accessibilityLabel={label}
-        onValueChange={onToggle}
-        thumbColor={palette.surface}
-        // react-native-web colours the "on" thumb separately.
-        {...({ activeThumbColor: palette.surface } as object)}
-        trackColor={{ false: palette.border, true: palette.primary }}
-        value={value}
-      />
-    </XStack>
-  );
-}
-
-function UploadStatus({
-  state,
-  onCancel,
-  onDismiss,
-}: {
-  state: ReturnType<typeof useImageUpload>['state'];
-  onCancel: () => void;
-  onDismiss: () => void;
-}) {
-  if (state.status === 'picking') {
-    return (
-      <AppText aria-live="polite" tone="muted" variant="caption">
-        Choose a photo…
-      </AppText>
-    );
-  }
-  if (state.status === 'uploading') {
-    return (
-      <XStack alignItems="center" aria-live="polite" gap="$x3">
-        <YStack backgroundColor="$surfaceContainerLow" borderRadius="$pill" flex={1} height={8}>
-          <YStack
-            backgroundColor="$primary"
-            borderRadius="$pill"
-            height={8}
-            width={`${Math.max(4, state.progress)}%`}
-          />
-        </YStack>
-        <AppText variant="caption">{state.progress}%</AppText>
-        <AppButton label="Cancel" onPress={onCancel} size="sm" variant="ghost" />
-      </XStack>
-    );
-  }
-  if (state.status === 'error') {
-    return (
-      <XStack alignItems="center" aria-live="polite" gap="$x2">
-        <AppText flex={1} tone="danger" variant="caption">
-          {state.message}
-        </AppText>
-        <AppButton label="Dismiss" onPress={onDismiss} size="sm" variant="ghost" />
-      </XStack>
-    );
-  }
-  return null;
 }

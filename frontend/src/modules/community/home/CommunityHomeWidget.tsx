@@ -1,8 +1,8 @@
 import { formatRelative } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import { persistMeta } from '@/lib/queryPersistence';
-import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
 import { ListRow } from '@/modules/shared/ui/ListRow';
+import { WidgetFrame } from '@/modules/shared/ui/WidgetFrame';
 import { listPosts } from '../api';
 
 /** Latest community posts. The age leads the subtitle: as trailing meta it squeezed titles to a few letters. */

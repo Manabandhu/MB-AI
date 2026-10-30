@@ -3,7 +3,6 @@ package com.manabandhu.backend.rides;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -14,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
 
 import jakarta.validation.Valid;
 
@@ -42,7 +42,7 @@ public class RidesGraphqlController {
     /** The next 100 open rides, the same set as REST {@code GET /api/v1/rides/offers}. */
     @QueryMapping
     List<RideOffer> rideOffers() {
-        return offerService.searchActive(null, null, null, null, null, PageRequest.of(0, 100)).getContent();
+        return offerService.searchActive(null, null, null, null, null, Paging.firstPage(Paging.SHORT_LIST_CAP)).getContent();
     }
 
     @QueryMapping

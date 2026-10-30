@@ -4,8 +4,8 @@ import { router } from 'expo-router';
 import { useCallback, useRef } from 'react';
 import { create } from 'zustand';
 import { useAuthStore } from '@/lib/authStore';
+import { showError } from '@/modules/shared/ui/notify';
 import { favoriteMarketplaceListing, unfavoriteMarketplaceListing } from '../api';
-import { showError } from '../utils/notify';
 
 /**
  * In-memory optimistic save choices, keyed to the user who made them. The server (`savedByViewer`) stays the source

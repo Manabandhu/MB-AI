@@ -5,7 +5,7 @@ import {
   isOpenReport,
   isSuspended,
   statusLabel,
-} from '../adminAccess';
+} from '../utils/adminAccess';
 
 /** The caller's real role (from the signed token), replacing the old hard-coded "SUPER ADMIN" badge. */
 export function AdminRoleBadge({ role }: { role: AdminRole | null }) {

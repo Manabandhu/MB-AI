@@ -18,7 +18,7 @@ interface EventRepository extends JpaRepository<Event, UUID> {
             ORDER BY e.startAt ASC""")
     List<Event> findSavedByUser(@org.springframework.data.repository.query.Param("userId") UUID userId,
                                 @org.springframework.data.repository.query.Param("statuses") java.util.Collection<String> statuses,
-                                org.springframework.data.domain.Pageable page);
+                                Pageable page);
 
     List<Event> findByOrganizerIdOrderByCreatedAtDesc(UUID organizerId);
 

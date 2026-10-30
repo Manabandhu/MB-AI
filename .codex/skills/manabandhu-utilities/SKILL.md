@@ -24,7 +24,7 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - `PackageTrackingScreen` - your packages with `StatusBadge` (`packageStatus`, case-insensitive), search, and an "Add package" `BottomSheet` (tracking number, carrier chips/other, status chips, optional `DateTimeField` date)
 - `NearbyScreen` - real search (`TextField`) plus category radio chips over `GET /utilities/nearby`; each place has Directions (maps search URL) and Call (`tel:`). No location permission UI: the endpoint is not location-aware
 - `EmergencyResourcesScreen` - Call 911 card, then resources with Call (`tel:`) and Directions; empty copy differs from the error state
-- Pure helpers: `utilities/utilitiesFormat.ts` (`PACKAGE_STATUSES`, `packageStatus`, `matchesSearch`, `formatDistance`, `telLink`, `mapsSearchUrl`, `trackingNumberError`), tested in `frontend/test/safetyUtilities.test.mjs`
+- Pure helpers: `utilities/utils/utilitiesFormat.ts` (`PACKAGE_STATUSES`, `packageStatus`, `matchesSearch`, `formatDistance`, `telLink`, `mapsSearchUrl`, `trackingNumberError`), tested in `frontend/test/safetyUtilities.test.mjs`
 
 ## API Surface
 
@@ -60,7 +60,7 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - Providers are behind typed adapters with timeouts, retries, and caching
 - Location is requested only when needed
 - External links are labeled with source and freshness
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Styling uses Tamagui primitives from `@/modules/shared/ui` with design-system tokens (Uniwind/Tailwind were removed 2026-10-30)
 
 ## Accessibility and Responsive Behavior Rules
 
@@ -88,3 +88,4 @@ Owns package tracking, nearby services, emergency resources, provider links, loc
 - P0 fix (2026-10-10): `POST /utilities/packages` parses `status` case-insensitively with `TrackingStatus.parse`; unknown values are 400 instead of 500.
 - Launcher keywords (2026-10-12): `module.ts` sets `keywords: ['packages', 'package tracking', 'delivery', 'nearby services', 'emergency numbers']` (`ModuleMeta.keywords`), which Explore search matches by word prefix alongside the label, summary and category. Keep them to things this module does today.
 - P0/P1 pass (2026-10-13): frontend types now match the backend entities (the old `title/body/meta` types made every list blank and search crash). Removed the fake Nearby search (a `Text` that set "Search nearby...") and the "Filter" button that toggled a fake location-permission banner; added a real search and category filter. Packages gain an Add form and status badges; emergency resources are callable/openable. UtilitiesHome dropped ~290 lines of dead styles and the `✕` text clear button. `/utilities/packages` is guarded; home, nearby and emergency stay public.
+- Module boundaries (2026-10-30): other modules import this one only through its `index.ts`; `pnpm verify:boundaries` (in `pnpm verify` and the Quality workflow) fails on deep imports and on imports from a higher layer (shared < notifications < onboarding < auth < feature modules < foundation). Catalog screen types come from `@manabandhu/core`.

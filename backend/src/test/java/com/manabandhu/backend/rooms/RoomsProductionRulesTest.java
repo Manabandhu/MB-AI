@@ -19,12 +19,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.manabandhu.backend.admin.AdminAuditService;
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.chat.ContactOwnerService;
 import com.manabandhu.backend.chat.Conversation;
 import com.manabandhu.backend.chat.ConversationParticipantService;
 import com.manabandhu.backend.chat.ConversationService;
 import com.manabandhu.backend.chat.MessageService;
+import com.manabandhu.backend.common.audit.AdminAuditService;
 import com.manabandhu.backend.media.StorageUrls;
 import com.manabandhu.backend.notifications.NotificationPublisher;
 
@@ -214,7 +215,7 @@ class RoomsProductionRulesTest {
     private final MessageService messages = mock(MessageService.class);
     private final NotificationPublisher notifications = mock(NotificationPublisher.class);
     private final RoomInquiryService inquiryService = new RoomInquiryService(listingService, inquiryRepository,
-            conversationService, participants, messages, notifications);
+            participants, messages, new ContactOwnerService(conversationService, participants, messages, notifications));
 
     private RoomInquiryInput inquiryInput() {
         return new RoomInquiryInput(LocalDate.now().plusDays(3), null, null, "Hello");

@@ -1,7 +1,5 @@
 package com.manabandhu.backend.rides;
 
-import com.manabandhu.backend.notifications.Notification;
-import com.manabandhu.backend.notifications.NotificationPublisher;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -14,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
+import com.manabandhu.backend.notifications.Notification;
+import com.manabandhu.backend.notifications.NotificationPublisher;
 
 /** Seat requests: the rider asks, the driver accepts or rejects, the rider may withdraw. */
 @Service
@@ -56,7 +57,7 @@ public class RideRequestService {
 
     @Transactional(readOnly = true)
     public List<RideRequest> findByRider(UUID riderId) {
-        return repository.findByRiderIdOrderByCreatedAtDesc(riderId, org.springframework.data.domain.PageRequest.of(0, 200));
+        return repository.findByRiderIdOrderByCreatedAtDesc(riderId, Paging.firstPage());
     }
 
     @Transactional(readOnly = true)

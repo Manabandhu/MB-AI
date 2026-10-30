@@ -7,7 +7,7 @@ description: Maintain ManaBandhu AI assistant and chatbot capabilities, includin
 
 ## Module Purpose and Ownership
 
-Owns user-facing assistant and bot experiences, streaming UI, consent, safety feedback, citations, and typed integration with the AI orchestrator. Orchestration and evaluation infrastructure remain under `services/ai-orchestrator` and `platform/ai`.
+Owns user-facing assistant and bot experiences, streaming UI, consent, safety feedback, citations, and typed integration with a model provider. Backend ownership is `backend/src/main/java/com/manabandhu/backend/ai/`; replies stay a placeholder until a provider and an evaluation suite exist (the old `ai-evaluations` workflow and `services/ai-orchestrator` placeholder were removed on 2026-10-30).
 
 ## Route Inventory
 
@@ -22,7 +22,7 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - `AssistantScreen` - chat's `ChatFrame`/`ChatBubble`/`Composer` (imported from `@/modules/chat`); messages oldest first; honest subtitle ("not connected to an AI model yet"); pending question bubble + "Assistant is replying…"; a failed send restores the question into the input and shows an inline alert; header icon buttons for History and Citations; back falls back to `/`
 - `AssistantHistoryScreen` - `Screen`/`ScreenHeader`; each conversation `Card` expands to load and show its messages
 - `AssistantCitationsScreen` - citation `Card`s open their http(s) URL with `Linking` (other schemes are ignored)
-- Pure helpers: `ai-assistant/assistantFormat.ts` (`oldestFirst`, `isUserRole`, `safeExternalUrl`), tested in `frontend/test/safetyUtilities.test.mjs`
+- Pure helpers: `ai-assistant/utils/assistantFormat.ts` (`oldestFirst`, `isUserRole`, `safeExternalUrl`), tested in `frontend/test/safetyUtilities.test.mjs`
 
 ## API Surface
 

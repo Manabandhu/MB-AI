@@ -1,4 +1,4 @@
-import { TermsScreen } from '@/modules/foundation/legal/LegalScreen';
+import { TermsScreen } from '@/modules/auth/legal/LegalScreen';
 
 export default function TermsRoute() {
   return <TermsScreen />;

@@ -9,14 +9,14 @@ import {
   notificationKeys,
 } from '@/modules/notifications/api';
 import { notificationVisual } from '@/modules/notifications/components/notificationVisuals';
-import { routeForPushData } from '@/modules/notifications/pushRoutes';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { routeForPushData } from '@/modules/notifications/utils/pushRoutes';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { Screen } from '@/modules/shared/ui/Screen';
 
 /** One notification. Opening it (from the inbox or a push) marks it read; "Open" goes to the related screen. */

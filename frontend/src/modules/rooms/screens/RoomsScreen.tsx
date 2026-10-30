@@ -26,14 +26,14 @@ import {
 } from '@/modules/rooms/utils/roomFilters';
 import { formatAmount } from '@/modules/rooms/utils/roomFormat';
 import { errorMessage } from '@/modules/rooms/utils/roomLabels';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 import { TextField } from '@/modules/shared/ui/TextField';

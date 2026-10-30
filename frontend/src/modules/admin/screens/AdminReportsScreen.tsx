@@ -1,15 +1,14 @@
+import { formatDate } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
-import { isOpenReport } from '@/modules/admin/adminAccess';
 import type { AdminReport } from '@/modules/admin/api';
 import { listReports } from '@/modules/admin/api';
 import { ReportStatusBadge } from '@/modules/admin/components/AdminBits';
 import { useResolveReportAction } from '@/modules/admin/hooks';
+import { isOpenReport } from '@/modules/admin/utils/adminAccess';
 import { reportCategoryLabel } from '@/modules/safety';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import {
   AppButton,
   AppText,
@@ -21,6 +20,8 @@ import {
   SkeletonCard,
   TextField,
 } from '@/modules/shared/ui';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 
 type Filter = 'open' | 'closed' | 'all';
 
@@ -57,7 +58,7 @@ export function ReportCard({
         </AppText>
         <AppText tone="muted" variant="caption">
           {report.reporterName}
-          {Number.isNaN(created.getTime()) ? '' : ` · ${created.toLocaleDateString()}`}
+          {formatDate(created) ? ` · ${formatDate(created)}` : ''}
         </AppText>
         <XStack flexWrap="wrap" gap="$x2" justifyContent="flex-end">
           <AppButton

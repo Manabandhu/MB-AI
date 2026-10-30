@@ -1,6 +1,5 @@
 import { ApiError, AuthError, createHttpClient, isLocalOrLanHost } from '@manabandhu/core';
 import Constants from 'expo-constants';
-import { GraphQLClient } from 'graphql-request';
 import { Platform } from 'react-native';
 
 import { env } from '@/lib/env';
@@ -51,14 +50,13 @@ export type ApiHealth = {
   status: string;
 };
 
-export { ApiError, AuthError };
+// Response helpers live in @manabandhu/core so every client surface parses errors the same way.
+export { ApiError, AuthError, parseJson, parseJsonOrThrow } from '@manabandhu/core';
 
 const http = createHttpClient({
   baseUrl: getResolvedApiUrl,
   getAccessToken: async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
 });
-
-export const authorizationHeaders = http.authorizationHeaders;
 
 export async function getApiHealth(): Promise<ApiHealth> {
   const response = await fetch(`${getResolvedApiUrl()}/api/v1/health`);
@@ -79,12 +77,6 @@ export interface IdentityResponse {
   email: string | null;
   fullName: string | null;
   role: string;
-}
-
-export async function graphqlClient() {
-  return new GraphQLClient(`${getResolvedApiUrl()}/graphql`, {
-    headers: await authorizationHeaders(),
-  });
 }
 
 /** Calls the ManaBandhu backend with the signed-in member's token. Every module's `api.ts` goes through this. */

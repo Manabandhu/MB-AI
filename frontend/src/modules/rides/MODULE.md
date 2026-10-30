@@ -65,7 +65,7 @@ the whole `['rides']` prefix.
 - `DeparturePicker` (thin wrapper over the shared `DateTimeField`, today through 30 days ahead), `RepeatTripSheet`
   (asks for the new departure, defaulting to the original time of day on the next future day), `RideLocationPicker`
   (debounced place suggestions; typing clears coordinates; also the From/To fields on search).
-- `services/googleMapsService.ts`: route facts come only from the Directions proxy. On failure the result has no
+- `mapsApi.ts`: route facts come only from the Directions proxy. On failure the result has no
   route and a message, and the ride is posted without distance/duration. 429 shows `MAPS_RATE_LIMIT_MESSAGE`.
   Autocomplete/geocode fall back to OpenStreetMap Photon when the proxy is unavailable (not on 429).
 - `utils/rideFormat.ts` (pure, tested by `frontend/test/rideFormat.test.mjs` and `rideBooking.test.mjs`): `statusIs`,

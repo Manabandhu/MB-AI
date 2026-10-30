@@ -1,7 +1,7 @@
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { YStack } from 'tamagui';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 

@@ -42,7 +42,7 @@ ever committed (history keeps it).
    `app.json`/`EXPO_PUBLIC_*` (only publishable or referrer-restricted keys belong there).
 7. **CI/CD** — workflows declare least-privilege `permissions:`, never interpolate `${{ inputs.* }}`/`github.event.*`
    into `run:` scripts, and production operations require reviewed refs and environment approval.
-8. **Tooling configs** — `.kilo/`, `.mcp.json`, `.vscode/`, scripts: tokens must come from environment variables.
+8. **Tooling configs** — `.mcp.json`, `.vscode/`, `frontend/eas.json`, scripts: tokens must come from environment variables.
 
 ## Output
 

@@ -5,19 +5,19 @@ description: Maintain ManaBandhu build, CI/CD, environments, releases, migration
 
 # Deployments
 
-1. Read `platform/deployments/MODULE.md` and the affected `infra/deployments/*/MODULE.md`.
+1. Read the affected workflow in `.github/workflows/` and, for native builds, `frontend/eas.json` (profiles `development`, `staging`, `production`, matching the GitHub release environments; `release-mobile.yml` pins `eas-cli@27.2.0`).
 2. Keep native mobile and web builds rooted at `frontend/`; keep backend, migration, and worker pipelines independently releasable.
 3. Pin tools and dependencies; use reproducible builds, previews, tests, contract checks, security scans, and provenance.
 4. Reference secrets from the deployment platform. Never commit credentials or signing material.
 5. Use staged/canary rollout, health and observability gates, backward-compatible migrations, and tested rollback.
 6. Super Admin dispatches only allow-listed `.github/workflows` through the Spring control plane. Preserve GitHub Environment approval gates and the `actor_id`/`execution_id` audit inputs.
-7. Current workflows build web/backend/mobile artifacts, run migrations and AI evaluations, and expose provider command boundaries. Provider secrets and commands must be configured per GitHub Environment before production use.
+7. Current workflows build web/backend/mobile artifacts, run migrations, and expose provider command boundaries. Provider secrets and commands must be configured per GitHub Environment before production use.
 8. Keep CI single-purpose and clearly named: Frontend, Backend, API Contracts, Governance, Dependency Review, Security Analysis, and Workflow Validation. Use path filters, least-privilege permissions, concurrency cancellation, timeouts, and short-lived artifacts where applicable.
 9. Use Checkout 7, Setup Node 7, Setup Java 5, Setup Go 7, pnpm Setup 6, Upload Artifact 7, Dependency Review 5, CodeQL 4, and actionlint 1.7.9 until a deliberate verified upgrade.
 10. Use quoted heredocs for multiline Ruby or other embedded languages in `run` blocks so actionlint and ShellCheck parse the shell boundary correctly.
 11. Grant CodeQL `actions: read`, `contents: read`, and `security-events: write`; SARIF upload reads workflow-run metadata before publishing results.
 12. Update this skill when providers, environments, pipeline paths, commands, action baselines, or release policy change.
-13. Every workflow declares top-level `permissions: contents: read` and widens per job only when needed. The `migrate` workflow runs Flyway with `-baselineOnMigrate=true -baselineVersion=0` to match backend startup. The Quality workflow also runs `scripts/verify-api-routes.mjs` and `scripts/verify-no-secrets.mjs`; tool configs (`.kilo/kilo.json`, `.mcp.json`) reference tokens only through environment variables.
+13. Every workflow declares top-level `permissions: contents: read` and widens per job only when needed. The `migrate` workflow runs Flyway with `-baselineOnMigrate=true -baselineVersion=0` to match backend startup. The Quality workflow also runs `scripts/verify-api-routes.mjs` and `scripts/verify-no-secrets.mjs`; tool configs (`.mcp.json`) reference tokens only through environment variables.
 14. The `migrate` workflow also passes `-ignoreMigrationPatterns='*:missing'` because the hosted database has a V29 applied outside the repository.
 - `CI · Dependency Review` checks whether the dependency graph is enabled; if so it runs `actions/dependency-review-action`, otherwise it warns and runs `scripts/audit-new-vulnerabilities.mjs <base> <head>`, which fails only on pnpm advisories (moderate and above) the PR introduces. Maven dependencies are only reviewed once the dependency graph is on.
 - `CI · Frontend` also triggers on `packages/core/**` and runs `pnpm test:packages` (shared package tests) before the frontend tests.
@@ -25,3 +25,4 @@ description: Maintain ManaBandhu build, CI/CD, environments, releases, migration
 - Backend env (2026-10-11): `PUSH_NOTIFICATIONS_ENABLED` (default false; set true where deployed to send Expo pushes) and optional `EXPO_ACCESS_TOKEN`. Migration V35 (`push_device_tokens`) dedupes `device_registrations` tokens and adds indexes.
 - Account deletion and admin suspension need `SUPABASE_PROJECT_URL` and `SUPABASE_SERVICE_ROLE_KEY` on the backend (otherwise 503). Migration V36 adjusts a `room_reports` FK. Supabase dashboard setup: `docs/auth/SUPABASE_SETUP.md`.
 - Migration V37 upserts the storage buckets (avatars, rooms, rides, posts, community and marketplace are public images up to 5 MB; documents is private, up to 10 MB). Uploads need `SUPABASE_PROJECT_URL` and `SUPABASE_SERVICE_ROLE_KEY` on the backend.
+- Quality workflow (2026-10-30) also runs `scripts/verify-screen-catalog.mjs` (was only in `pnpm verify`) and the new `scripts/verify-module-boundaries.mjs`.

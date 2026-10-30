@@ -16,7 +16,7 @@ register(
 );
 
 const { ALL_USA_CITY, getCitiesByState, getNearbyUSCities, getUSStates, searchAllUSCities } =
-  await import('../src/modules/rooms/utils/locationService.ts');
+  await import('../src/modules/shared/utils/location/locationService.ts');
 
 test('lists US states with codes', () => {
   const states = getUSStates();

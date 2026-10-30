@@ -1,3 +1,4 @@
+import { formatNumber } from '@manabandhu/core';
 import { useEffect, useState } from 'react';
 import { AppText, type AppTextProps } from '@/modules/shared/ui/AppText';
 import { useAppearance } from '@/theme/ThemeProvider';
@@ -25,5 +26,5 @@ export function CountUp({ value, ...props }: { value: string } & AppTextProps) {
     return () => cancelAnimationFrame(frame);
   }, [numeric, reduceMotion, target]);
 
-  return <AppText {...props}>{numeric ? shown.toLocaleString() : value}</AppText>;
+  return <AppText {...props}>{numeric ? formatNumber(shown) : value}</AppText>;
 }

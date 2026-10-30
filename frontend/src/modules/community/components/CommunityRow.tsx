@@ -1,3 +1,4 @@
+import { formatNumber } from '@manabandhu/core';
 import type { Href } from 'expo-router';
 import { XStack, YStack } from 'tamagui';
 import type { Community } from '@/modules/community/api';
@@ -13,7 +14,7 @@ type CommunityRowProps = {
 
 /** A community in a list: opens the community; the join/leave button sits beside it. */
 export function CommunityRow({ community, onToggle, pending }: CommunityRowProps) {
-  const members = `${community.memberCount.toLocaleString()} ${community.memberCount === 1 ? 'member' : 'members'}`;
+  const members = `${formatNumber(community.memberCount)} ${community.memberCount === 1 ? 'member' : 'members'}`;
   return (
     <Card padding="$x3">
       <XStack alignItems="center" gap="$x3">

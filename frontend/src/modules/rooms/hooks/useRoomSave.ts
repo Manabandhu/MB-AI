@@ -3,8 +3,8 @@ import type { Href } from 'expo-router';
 import { router } from 'expo-router';
 import { useCallback } from 'react';
 import { useAuthStore } from '@/lib/authStore';
-import { useSavedRoomsStore } from '@/modules/rooms/savedRoomsStore';
-import { showError } from '@/modules/rooms/utils/notify';
+import { useSavedRoomsStore } from '@/modules/rooms/stores/savedRoomsStore';
+import { showError } from '@/modules/shared/ui/notify';
 
 const EMPTY: Record<string, boolean> = {};
 

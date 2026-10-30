@@ -478,19 +478,6 @@ paths:
           in: query
           schema: { type: string }
   /notifications:
-    get:
-      operationId: listNotifications
-      summary: List notifications
-      description: The caller's newest 50 notifications. Prefer /notifications/inbox, which pages.
-      responses:
-        '200':
-          description: Notifications
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Notification'
     post:
       operationId: createNotification
       summary: Create notification
@@ -593,36 +580,6 @@ paths:
       responses:
         '204': { description: Removed }
         '404': { description: Not one of the caller's devices }
-  /notifications/preferences:
-    get:
-      operationId: listNotificationPreferences
-      summary: List notification channel switches
-      description: Derived from /notifications/settings (inApp, push, email, sms); the two always agree.
-      responses:
-        '200':
-          description: Notification preferences
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/NotificationPreference'
-    post:
-      operationId: setNotificationPreference
-      summary: Set notification preference
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetPreferenceRequest'
-      responses:
-        '200':
-          description: Preference updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationPreference'
   /chat/conversations:
     get:
       operationId: listConversations
@@ -4337,20 +4294,6 @@ components:
         body: { type: string, maxLength: 4000 }
         type: { type: string, enum: [SYSTEM, COMMUNITY, SAFETY, RIDE, ROOM, CHAT, AI] }
         actionRoute: { type: string, maxLength: 200 }
-    NotificationPreference:
-      type: object
-      additionalProperties: false
-      required: [channel, enabled]
-      properties:
-        channel: { type: string, enum: [IN_APP, PUSH, EMAIL, SMS] }
-        enabled: { type: boolean }
-    SetPreferenceRequest:
-      type: object
-      additionalProperties: false
-      required: [channel, enabled]
-      properties:
-        channel: { type: string, enum: [IN_APP, PUSH, EMAIL, SMS] }
-        enabled: { type: boolean }
     Conversation:
       type: object
       additionalProperties: false
@@ -4594,9 +4537,17 @@ components:
       enum: [FLEXIBLE, SHORT_TERM, LONG_TERM, SUBLEASE, MONTH_TO_MONTH, SIX_MONTHS, ONE_YEAR]
     ApiError:
       type: object
-      description: Error body for rule violations raised by services. Bean-validation failures use a problem+json body instead.
+      description: >-
+        Every error response (service rules, bean validation, malformed requests) is RFC 9457 problem+json that also
+        carries `error` and `message` with the same human-readable text as `detail`. 5xx bodies never include
+        exception messages, SQL, or class names.
       required: [error, message]
       properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
         error: { type: string }
         message: { type: string }
     RoomListing:
@@ -5533,7 +5484,7 @@ components:
     Unauthorized: { description: Authentication is required }
     Forbidden: { description: SUPER_ADMIN role is required }
     AdminRequired: { description: ADMIN or SUPER_ADMIN role is required }
-    BadRequest: { description: 'Validation failed (problem+json body), or a service rule rejected a value ({error, message} body)' }
+    BadRequest: { description: 'Validation failed or a service rule rejected a value (ApiError problem+json body)' }
     NotOwner:
       description: The caller does not own the resource and is not an admin
       content:

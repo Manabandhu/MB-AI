@@ -4,7 +4,6 @@ import { YStack } from 'tamagui';
 import { reactivateRideOffer } from '@/modules/rides/api';
 import { DeparturePicker, type DepartureValue } from '@/modules/rides/components/DeparturePicker';
 import type { Ride } from '@/modules/rides/types';
-import { showError } from '@/modules/rides/utils/notify';
 import {
   departureError,
   departureFrom,
@@ -13,6 +12,7 @@ import {
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
+import { showError } from '@/modules/shared/ui/notify';
 
 /**
  * "Repeat trip": the driver picks the new departure (defaulting to the original time of day on the next day) and

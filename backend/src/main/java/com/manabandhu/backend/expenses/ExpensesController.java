@@ -4,7 +4,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.foundation.CatalogScreenContent;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/expenses")

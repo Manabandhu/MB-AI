@@ -1,3 +1,4 @@
+import { formatDate } from '@manabandhu/core';
 import { departureFrom } from '@/modules/rides/utils/rideFormat';
 import { DateTimeField, formatTimeOfDay } from '@/modules/shared/ui/DateTimeField';
 import { addDays, dayDifference, startOfDay } from '@/modules/shared/ui/fieldMath';
@@ -13,7 +14,7 @@ export function formatTime(hour: number, minute: number) {
 
 export function departureSummary(value: DepartureValue, now = new Date()) {
   const date = departureFrom(value.dayOffset, value.hour, value.minute, now);
-  return `${date.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })} at ${formatTime(value.hour, value.minute)}`;
+  return `${formatDate(date, 'weekdayLongDate')} at ${formatTime(value.hour, value.minute)}`;
 }
 
 /**

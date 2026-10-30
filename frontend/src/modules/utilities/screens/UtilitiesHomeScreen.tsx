@@ -2,19 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { TextField } from '@/modules/shared/ui/TextField';
 import { getUtilitiesHome } from '@/modules/utilities/api';
-import { matchesSearch } from '@/modules/utilities/utilitiesFormat';
+import { matchesSearch } from '@/modules/utilities/utils/utilitiesFormat';
 
 // The hub lists only what GET /api/v1/utilities/home returns. There is no built-in service directory, ratings, or
 // prices: those would be invented.

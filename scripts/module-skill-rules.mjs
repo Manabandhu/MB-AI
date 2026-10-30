@@ -2,7 +2,11 @@ export const moduleSkillRules = [
   ['manabandhu-mobile-platform', ['frontend/']],
   [
     'manabandhu-foundation',
-    ['frontend/src/modules/foundation/', 'frontend/src/modules/screen-catalog.ts'],
+    [
+      'frontend/src/modules/foundation/',
+      'frontend/src/modules/onboarding/',
+      'frontend/src/modules/screen-catalog.ts',
+    ],
   ],
   ['manabandhu-auth', ['frontend/src/modules/auth/']],
   ['manabandhu-rooms', ['frontend/src/modules/rooms/']],
@@ -11,7 +15,7 @@ export const moduleSkillRules = [
   ['manabandhu-referrals', ['frontend/src/modules/referrals/']],
   [
     'manabandhu-community',
-    ['frontend/src/modules/community/', 'backend/src/main/java/com/manabandhu/backend/post/'],
+    ['frontend/src/modules/community/', 'backend/src/main/java/com/manabandhu/backend/community/'],
   ],
   ['manabandhu-backend-api', ['backend/']],
   [
@@ -25,32 +29,32 @@ export const moduleSkillRules = [
   ['manabandhu-admin', ['frontend/src/app/admin/', 'frontend/src/modules/admin/']],
   ['manabandhu-api-contracts', ['packages/api-contracts/']],
   ['manabandhu-architecture', ['docs/architecture/', 'packages/core/']],
-  ['manabandhu-design-system', ['packages/design-system/', 'stitch/']],
+  ['manabandhu-design-system', ['packages/design-system/']],
   [
     'manabandhu-notifications',
     [
       'frontend/src/modules/notifications/',
-      'platform/notifications/',
-      'services/notification-worker/',
+      'backend/src/main/java/com/manabandhu/backend/notifications/',
     ],
   ],
   [
     'manabandhu-ai',
-    ['frontend/src/modules/ai-assistant/', 'platform/ai/', 'services/ai-orchestrator/'],
+    ['frontend/src/modules/ai-assistant/', 'backend/src/main/java/com/manabandhu/backend/ai/'],
   ],
-  ['manabandhu-chat', ['frontend/src/modules/chat/', 'platform/chat/', 'services/chat-realtime/']],
+  [
+    'manabandhu-chat',
+    ['frontend/src/modules/chat/', 'backend/src/main/java/com/manabandhu/backend/chat/'],
+  ],
   ['manabandhu-immigration', ['frontend/src/modules/immigration/']],
   ['manabandhu-expenses', ['frontend/src/modules/expenses/']],
   ['manabandhu-events', ['frontend/src/modules/events/']],
   ['manabandhu-marketplace', ['frontend/src/modules/marketplace/']],
   ['manabandhu-utilities', ['frontend/src/modules/utilities/']],
   ['manabandhu-safety', ['frontend/src/modules/safety/']],
-  [
-    'manabandhu-analytics',
-    ['frontend/src/modules/analytics/', 'platform/analytics/', 'services/analytics-pipeline/'],
-  ],
-  ['manabandhu-deployments', ['platform/deployments/', 'infra/deployments/', '.github/workflows/']],
-  ['manabandhu-observability', ['platform/observability/', 'infra/observability/']],
+  // Analytics has no runtime code yet; the skill holds the rules for when instrumentation is added.
+  ['manabandhu-analytics', []],
+  ['manabandhu-deployments', ['.github/workflows/', 'frontend/eas.json']],
+  ['manabandhu-observability', ['backend/src/main/java/com/manabandhu/backend/health/']],
 ];
 
 export function requiredSkillChanges(files) {

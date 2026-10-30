@@ -13,8 +13,6 @@ import {
   rsvpEvent,
 } from '@/modules/events/api';
 import { rsvpIs } from '@/modules/events/utils/eventTime';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText, Heading } from '@/modules/shared/ui/AppText';
@@ -22,8 +20,10 @@ import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { errorText, showError, showMessage } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';

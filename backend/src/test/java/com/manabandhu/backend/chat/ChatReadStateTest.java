@@ -17,8 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.manabandhu.backend.admin.AdminAuditService;
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.audit.AdminAuditService;
 
 /** Unread counts and mark-read against a real (H2, PostgreSQL mode) database, through the services. */
 @DataJpaTest(properties = {

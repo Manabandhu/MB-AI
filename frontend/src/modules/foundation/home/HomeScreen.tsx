@@ -5,7 +5,7 @@ import { XStack, YStack } from 'tamagui';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { AssistantEntry } from '@/modules/ai-assistant';
-import { useShellContent } from '@/modules/foundation/shell/shellApi';
+import { useShellContent } from '@/modules/foundation/shell/api';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { CountUp } from '@/modules/shared/ui/motion/CountUp';
 import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';

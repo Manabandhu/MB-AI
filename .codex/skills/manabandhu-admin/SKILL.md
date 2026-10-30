@@ -77,7 +77,7 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 - Uses `useQuery` for all admin data fetching
 - Admin mutations use `useMutation` with query invalidation
 - All privileged actions are enforced server-side; client derives authorization from verified JWT claims
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Styling uses Tamagui primitives from `@/modules/shared/ui` with design-system tokens (Uniwind/Tailwind were removed 2026-10-30)
 
 ## Accessibility and Responsive Behavior Rules
 
@@ -114,3 +114,4 @@ Owns Dashboard, Users, Reports, Rooms/Rides/Community/Jobs/Events Moderation, Au
 - Phase 2 visual rebuild (2026-10-14): the six moderation/list screens render through `components/AdminModerationList.tsx` (`AdminModerationList`, `ModerationBadges`, `moderationTone`) on shared primitives; same queries, search fields and destinations, still behind `AdminGate`.
 - Visual QA pass (2026-10-14, offline stack, 390/768/1440 light+dark): `reportTypeLabel` (`AdminReportsScreen`, also used by the dashboard and report detail) delegates to the safety module's public `reportCategoryLabel`; `AdminUsersScreen`/`AdminUserDetailScreen` show "No display name" instead of the server's `—` placeholder.
 - Frontend types match the backend records (2026-10-14 contract audit): immigration resources carry `mine` (no owner id), ride chat responses carry `message`, automation executions carry `acceptedAt`.
+- Structure cleanup (2026-10-30): imports use `@/lib/api` (the `@/lib/apiClient` shim was removed) and `@/modules/shared/ui/*` (the old `shared/components` folder and the per-module `utils/notify` re-exports were removed; use `@/modules/shared/ui/notify`). Dates, times and counts go through `@manabandhu/core` (`formatDate`, `formatTime`, `formatNumber`) instead of `toLocale*String`. The module follows the layout in `frontend/src/modules/README.md` (`utils/`, `hooks/`, `stores/`). Admin dates use `formatDate(..., 'dateTime')`; `adminAccess` moved to `utils/`, `useAdminAccess` and the hooks file to `hooks/`.

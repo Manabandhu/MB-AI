@@ -1286,15 +1286,28 @@ console.log('== notifications');
     preferences: { quietHours: true, quietStart: '22:30', timeZone: 'America/Chicago' },
   });
   expect('quiet hours persist', quiet.body?.preferences?.quietStart, '22:30');
-  const channels = (await call('A', 'GET', '/api/v1/notifications/preferences')).body ?? [];
-  await call('A', 'POST', '/api/v1/notifications/preferences', { channel: 'PUSH', enabled: false });
+  await call('A', 'PATCH', '/api/v1/notifications/settings', { preferences: { push: false } });
   expect(
-    'channel switches and settings are one store',
+    'channel switches live in settings',
     (await call('A', 'GET', '/api/v1/notifications/settings')).body?.preferences?.push,
     false,
   );
-  expect('channel list derives from settings', channels.length, 4);
-  await call('A', 'POST', '/api/v1/notifications/preferences', { channel: 'PUSH', enabled: true });
+  await call('A', 'PATCH', '/api/v1/notifications/settings', { preferences: { push: true } });
+  // The legacy channel endpoints were removed in favour of /settings.
+  expect(
+    'legacy channel list is gone',
+    (await call('A', 'GET', '/api/v1/notifications/preferences')).status >= 400,
+    true,
+  );
+  // Every error is problem+json with error/message (service rules and framework validation alike).
+  const missing = await call('A', 'GET', `/api/v1/notifications/${crypto.randomUUID()}`);
+  expect('service errors carry message', typeof missing.body?.message, 'string');
+  expect('service errors carry problem status', missing.body?.status, missing.status);
+  const invalid = await call('A', 'POST', '/api/v1/notifications/devices', {
+    token: '',
+    platform: 'ios',
+  });
+  expect('validation errors carry message', typeof invalid.body?.message, 'string');
   await status('non-Expo push token rejected', 400, 'A', 'POST', '/api/v1/notifications/devices', {
     token: 'https://evil.example/hook',
     platform: 'ios',

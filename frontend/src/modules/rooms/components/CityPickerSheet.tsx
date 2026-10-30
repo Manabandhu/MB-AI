@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useTheme, XStack, YStack } from 'tamagui';
 import { ALL_USA_LOCATION, type AppLocation, useLocationStore } from '@/lib/locationStore';
-import { searchAllUSCities } from '@/modules/rooms/utils/locationService';
-import { showMessage } from '@/modules/rooms/utils/notify';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
+import { showMessage } from '@/modules/shared/ui/notify';
 import { TextField } from '@/modules/shared/ui/TextField';
+import { searchAllUSCities } from '@/modules/shared/utils/location/locationService';
 
 const MAX_RESULTS = 35;
 const focusRing = {

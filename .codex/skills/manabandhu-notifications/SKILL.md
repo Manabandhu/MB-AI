@@ -10,7 +10,7 @@ Frontend notification center, preferences, permissions, badges, and deep-link be
 The module owns the foundation-level Notifications screen even when it is linked from the global app shell.
 The first-batch inbox route `/notifications` uses `frontend/src/modules/notifications/screens/NotificationsInboxScreen.tsx` and the authenticated per-user endpoint `GET /api/v1/notifications/inbox`.
 
-1. Read `platform/notifications/MODULE.md` and the AsyncAPI contract.
+1. Read `backend/src/main/java/com/manabandhu/backend/notifications/` and the AsyncAPI contract.
 2. Emit versioned, idempotent notification requests; never call providers from business transactions.
 3. Evaluate authorization, consent, preference, locale, timezone, quiet hours, urgency, deduplication, and rate limits.
 4. Track requested, accepted, delivered, opened, failed, and suppressed states without storing secrets.
@@ -29,7 +29,7 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
 - Repo-Wide Code Review & Defect Remediation: Audited `NotificationsInboxScreen.tsx` for touch targets compliance, verified unread badge cache synchronization, and ensured all icon actions have `accessibilityRole` and `accessibilityLabel`.
 - Pull-to-refresh: `NotificationsInboxScreen` implements `RefreshControl` with query refetching when users swipe down on the notifications list.
 - Security & correctness hardening (2026-10): `GET/PATCH /api/v1/notifications/settings` are per user (stored in `notification_settings`, V31) and require a JWT; unknown keys are ignored. No notification route is public. Marking read checks ownership; creating notifications by hand is admin-only. `NotificationDispatcherService` claims batches of 50 with `FOR UPDATE SKIP LOCKED`, uses 5s/10s HTTP timeouts, and leaves rows undispatched when no push provider is configured instead of silently marking them sent.
-- Real inbox (2026-10 review): `GET /api/v1/notifications/inbox` requires a JWT and returns `NotificationInbox(items)` built from the caller's latest 100 notifications (`NotificationDetail`: `id`, `title`, `body`, `meta`, `read`, `route`, `createdAt`). `GET /api/v1/notifications/{id}` marks the caller's own notification read and returns it. The demo content in `NotificationsContentService` and `DEFAULT_NOTIFICATIONS` in the inbox screen were removed; an empty inbox shows `EmptyState`.
+- Real inbox (2026-10 review): `GET /api/v1/notifications/inbox` requires a JWT and returns `NotificationInbox(items)` built from the caller's latest 100 notifications (`NotificationDetail`: `id`, `title`, `body`, `meta`, `read`, `route`, `createdAt`). `GET /api/v1/notifications/{id}` marks the caller's own notification read and returns it. The demo content in `NotificationSettingsService` and `DEFAULT_NOTIFICATIONS` in the inbox screen were removed; an empty inbox shows `EmptyState`.
 - No fake success (2026-10): `NotificationSettingsScreen` renders toggles only after the user's saved preferences load (loading/error states otherwise); a failed save reverts and says so instead of "Saved locally"; the unsaved delivery-pace picker was removed; the "Push & In-App Enabled" pill shows only when both are on.
 - Push retries (2026-10, V32): failed pushes increment `dispatch_attempts` and set `next_dispatch_at` with 2/4/8/16-minute backoff; `claimUndispatched` skips rows that are backing off or have failed 5 times, so poison rows cannot pin the oldest-first batch.
 - Design-system pass (2026-10): exact design-system hex values in this module were replaced with `palette.*` references and numeric width checks with `breakpoint.*` tokens (desktop layouts now start at `breakpoint.medium` = 600 instead of 768). Remaining literals are listed in `scripts/design-baseline.json`; clear them during this module's review and run `node scripts/verify-design-system.mjs --update`.
@@ -48,10 +48,10 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
     - Referral status change (`ReferralService`, recipient when set).
     - Event RSVP going/interested (`EventsService.attend`, organiser).
     - Job application created/status changed (`JobApplicationService`).
-- **One settings store:** `notification_settings.preferences` jsonb (`NotificationsContentService`).
+- **One settings store:** `notification_settings.preferences` jsonb (`NotificationSettingsService`).
   - Keys: channels (`inApp`, `push`, `email`, `sms`), the categories above, and `quietHours`/`quietStart`/`quietEnd` ("HH:mm")/`timeZone` (IANA).
   - Invalid values are a 400, never silently dropped.
-  - `GET/POST /notifications/preferences` are views over the same channel keys.
+  - Channel switches are edited through `PATCH /notifications/settings` (the legacy `/preferences` views were removed 2026-10-30).
   - The `NotificationPreference` entity was removed; the old `notification_preferences` table is unused.
 - **Inbox:**
   - `GET /inbox?page&size` is paged in SQL (size ≤ 50) and returns `{items, page, hasMore, unreadCount}`.
@@ -93,3 +93,6 @@ The first-batch inbox route `/notifications` uses `frontend/src/modules/notifica
   - Quiet hours stay as validated 24-hour `HH:MM` `TextField`s (with placeholders and a numbers keyboard) because `DateTimeField` has no time-only mode.
   - Web keyboard access: `SettingRow` spreads `keyboardPress` (Enter/Space toggles) with a focus ring; the row's mark-read control is now a 44pt `IconButton`.
 - Visual QA pass (2026-10-14, offline stack, 390/768/1440 light+dark): on web `SettingRow` draws a visual-only track and thumb instead of react-native-web's `Switch`, whose unlabelled `<input>` was a second, nameless Tab stop inside every row (the row is the one `role=switch` control). Native still renders `Switch`.
+- Structure cleanup (2026-10-30): imports use `@/lib/api` (the `@/lib/apiClient` shim was removed) and `@/modules/shared/ui/*` (the old `shared/components` folder and the per-module `utils/notify` re-exports were removed; use `@/modules/shared/ui/notify`). Dates, times and counts go through `@manabandhu/core` (`formatDate`, `formatTime`, `formatNumber`) instead of `toLocale*String`. The module follows the layout in `frontend/src/modules/README.md` (`utils/`, `hooks/`, `stores/`). `push.ts` and `pushRoutes.ts` moved to `notifications/utils/`.
+- One controller (2026-10-30): `NotificationsApiController` was merged into `NotificationsController`. The unused legacy `GET /api/v1/notifications` (newest 50) and `GET`/`POST /api/v1/notifications/preferences` channel endpoints were removed (the app uses `/inbox` and `/settings`); `POST /api/v1/notifications` stays admin-only. `NotificationsContentService` is now `NotificationSettingsService`.
+- Module boundaries (2026-10-30): other modules import this one only through its `index.ts`; `pnpm verify:boundaries` (in `pnpm verify` and the Quality workflow) fails on deep imports and on imports from a higher layer (shared < notifications < onboarding < auth < feature modules < foundation). Public API: `getUnreadNotificationCount`, `notificationKeys`, `updateNotificationSettings`, `requestPermissionAndRegister`, `unregisterThisDevice` (used by onboarding, auth sign-out and the foundation shell).

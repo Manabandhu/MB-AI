@@ -12,7 +12,7 @@ import {
   passwordProblem,
   phoneLastFour,
   toE164,
-} from '../src/modules/auth/authHelpers.ts';
+} from '../src/modules/auth/utils/authHelpers.ts';
 
 test('validates emails', () => {
   assert.equal(isValidEmail(' priya@example.com '), true);

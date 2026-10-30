@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useTheme, XStack, YStack } from 'tamagui';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { deleteUpload, useImageUpload } from '@/modules/shared/hooks/useImageUpload';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon, type AppIconName } from '@/modules/shared/ui/AppIcon';
@@ -12,8 +11,10 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
+import { showError } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { SegmentedControl } from '@/modules/shared/ui/SegmentedControl';
 import { TextField } from '@/modules/shared/ui/TextField';
@@ -36,7 +37,6 @@ import {
   parsePrice,
   TITLE_MAX,
 } from '../utils/listingRules';
-import { showError } from '../utils/notify';
 
 /** A photo in the form: `imageId` is set once it is attached to the listing on the server. */
 type FormPhoto = { url: string; imageId?: string; removing?: boolean };

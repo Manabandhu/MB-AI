@@ -74,7 +74,7 @@ class OnboardingControllerTest {
         );
         when(onboardingService.getProgress(TEST_USER_ID)).thenReturn(expected);
 
-        ResponseEntity<UserOnboardingProgressDto> response = controller.getProgress(jwt, auth);
+        ResponseEntity<UserOnboardingProgressDto> response = controller.getProgress(auth);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isNotNull();
@@ -94,7 +94,7 @@ class OnboardingControllerTest {
         );
         when(onboardingService.saveStep(eq(TEST_USER_ID), eq("goals"), any())).thenReturn(updated);
 
-        ResponseEntity<UserOnboardingProgressDto> response = controller.saveStep(request, jwt, auth);
+        ResponseEntity<UserOnboardingProgressDto> response = controller.saveStep(request, auth);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isNotNull();
@@ -112,7 +112,7 @@ class OnboardingControllerTest {
         );
         when(onboardingService.completeOnboarding(TEST_USER_ID)).thenReturn(completed);
 
-        ResponseEntity<UserOnboardingProgressDto> response = controller.completeOnboarding(jwt, auth);
+        ResponseEntity<UserOnboardingProgressDto> response = controller.completeOnboarding(auth);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isNotNull();

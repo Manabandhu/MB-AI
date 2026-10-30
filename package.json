@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@11.21.0",
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "dev:frontend": "pnpm --filter @manabandhu/frontend start",
@@ -12,11 +12,12 @@
     "lint": "biome check frontend/src packages/core packages/design-system package.json pnpm-workspace.yaml biome.json scripts && pnpm --filter @manabandhu/frontend typecheck && pnpm verify:core",
     "format": "biome format --write .",
     "test": "pnpm test:packages && pnpm --filter @manabandhu/frontend test && ./backend/mvnw -f backend/pom.xml test",
-    "verify": "pnpm lint && pnpm verify:contracts && pnpm verify:skills && pnpm verify:routes && pnpm verify:screens && pnpm verify:design && pnpm verify:secrets",
+    "verify": "pnpm lint && pnpm verify:contracts && pnpm verify:skills && pnpm verify:routes && pnpm verify:screens && pnpm verify:boundaries && pnpm verify:design && pnpm verify:secrets",
     "verify:contracts": "node scripts/verify-contracts.mjs",
     "verify:skills": "node scripts/verify-module-skills.mjs",
     "verify:routes": "node scripts/verify-api-routes.mjs",
     "verify:screens": "node scripts/verify-screen-catalog.mjs",
+    "verify:boundaries": "node scripts/verify-module-boundaries.mjs",
     "verify:secrets": "node scripts/verify-no-secrets.mjs",
     "review:commit": "node scripts/review-commit.mjs",
     "review:history": "node scripts/review-skill-history.mjs",
@@ -26,7 +27,7 @@
     "verify:design": "node scripts/verify-design-system.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.8",
+    "@biomejs/biome": "2.6.4",
     "sharp": "0.35.5"
   }
 }

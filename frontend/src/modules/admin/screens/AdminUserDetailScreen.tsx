@@ -1,12 +1,11 @@
+import { formatDate } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, router } from 'expo-router';
 import { XStack, YStack } from 'tamagui';
-import { isSuspended } from '@/modules/admin/adminAccess';
 import { getAdminUser } from '@/modules/admin/api';
 import { memberRoleLabel, UserStatusBadge } from '@/modules/admin/components/AdminBits';
 import { useUserStatusAction } from '@/modules/admin/hooks';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { isSuspended } from '@/modules/admin/utils/adminAccess';
 import {
   AppButton,
   AppText,
@@ -18,6 +17,8 @@ import {
   SkeletonCard,
   StatusBadge,
 } from '@/modules/shared/ui';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
@@ -118,12 +119,7 @@ export default function AdminUserDetailScreen({ userId }: { userId: string }) {
         <Card>
           <YStack gap="$x3">
             <Field label="Email" value={user.email || 'Not set'} />
-            <Field
-              label="Joined"
-              value={
-                joined && !Number.isNaN(joined.getTime()) ? joined.toLocaleDateString() : 'Unknown'
-              }
-            />
+            <Field label="Joined" value={formatDate(joined) ?? 'Unknown'} />
             <Field label="User ID" value={user.id} />
           </YStack>
         </Card>

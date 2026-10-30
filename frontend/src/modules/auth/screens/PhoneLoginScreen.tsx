@@ -1,10 +1,8 @@
-import { space } from '@manabandhu/design-system';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
+import { XStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
-import { type CountryItem, supportedCountries } from '@/modules/auth/authConstants';
-import { friendlyAuthError, OTP_CODE_LENGTH, parsePhoneInput } from '@/modules/auth/authHelpers';
 import {
   AuthButton,
   AuthField,
@@ -13,7 +11,14 @@ import {
   AuthSwitch,
 } from '@/modules/auth/components/AuthKit';
 import { CountryPickerSheet } from '@/modules/auth/components/CountryPickerSheet';
+import { type CountryItem, supportedCountries } from '@/modules/auth/utils/authConstants';
+import {
+  friendlyAuthError,
+  OTP_CODE_LENGTH,
+  parsePhoneInput,
+} from '@/modules/auth/utils/authHelpers';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { AppText } from '@/modules/shared/ui/AppText';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 export function PhoneLoginScreen() {
@@ -82,11 +87,20 @@ export function PhoneLoginScreen() {
             accessibilityRole="button"
             accessibilityLabel={`Country code ${country.name} ${country.code}. Change`}
             onPress={() => setPickerOpen(true)}
-            style={[styles.countryButton, { borderRightColor: palette.border }]}
           >
-            <Text style={styles.flag}>{country.flag}</Text>
-            <Text style={[styles.dial, { color: palette.ink }]}>{country.code}</Text>
-            <AppIcon name="chevron-down" size={14} color={palette.muted} />
+            <XStack
+              alignItems="center"
+              borderRightColor="$borderColor"
+              borderRightWidth={StyleSheet.hairlineWidth}
+              gap="$x1"
+              marginRight="$x1"
+              minHeight={44}
+              paddingRight="$x2"
+            >
+              <AppText fontSize={20}>{country.flag}</AppText>
+              <AppText variant="bodyStrong">{country.code}</AppText>
+              <AppIcon name="chevron-down" size={14} color={palette.muted} />
+            </XStack>
           </Pressable>
         }
       />
@@ -100,17 +114,3 @@ export function PhoneLoginScreen() {
     </AuthScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  countryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minHeight: 44,
-    paddingRight: space.x2,
-    marginRight: space.x1,
-    borderRightWidth: StyleSheet.hairlineWidth,
-  },
-  flag: { fontSize: 20 },
-  dial: { fontSize: 17, fontWeight: '600' },
-});
