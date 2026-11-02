@@ -55,9 +55,9 @@ public class RideChatService {
         var conversationId = offerService.attachConversation(offerId, locked -> {
             var title = "Ride: " + locked.getOriginArea() + " → " + locked.getDestinationArea();
             var conversation = conversationService.create(locked.getDriverId(), Conversation.ConversationType.RIDE_TEMP, title);
-            // Bookings are pending/confirmed/cancelled; riders with an accepted request join on their own first call.
-            for (var booking : bookingService.findByRideId(offerId)) {
-                if ("confirmed".equalsIgnoreCase(booking.getStatus()) && !booking.getUserId().equals(locked.getDriverId())) {
+            // Confirmed passengers join now; riders with an accepted request join on their own first call.
+            for (var booking : bookingService.findConfirmedByRideId(offerId)) {
+                if (!booking.getUserId().equals(locked.getDriverId())) {
                     participantService.add(conversation.getId(), booking.getUserId(), ConversationParticipant.ParticipantRole.MEMBER);
                 }
             }

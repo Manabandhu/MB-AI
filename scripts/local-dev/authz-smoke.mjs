@@ -2059,6 +2059,11 @@ for (const path of [
     [200, true, ['number', 'size', 'totalElements', 'totalPages'], false],
   );
 }
+expect(
+  'ride search page size is capped at 100',
+  (await call('A', 'GET', '/api/v1/rides/offers?size=500')).body?.page?.size,
+  100,
+);
 
 console.log(`\nPASS=${pass} FAIL=${fail}${skip ? ` SKIPPED_GROUPS=${skip}` : ''}`);
 process.exit(fail > 0 ? 1 : 0);

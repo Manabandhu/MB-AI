@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
 import com.manabandhu.backend.common.catalog.CatalogScreenContent;
 
 import jakarta.validation.Valid;
@@ -72,7 +72,7 @@ public class RidesController {
             Pageable pageable) {
         // Soonest departure first only; a client-chosen sort could name a column that does not exist (500).
         var page = offerService.searchActive(origin, destination, avoidTolls, genderPreference, isRecurring,
-                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+                Paging.bounded(pageable, Paging.SHORT_LIST_CAP));
         var views = rideViews.searchViews(page.getContent(), viewer(authentication));
         return new PageImpl<>(views, page.getPageable(), page.getTotalElements());
     }

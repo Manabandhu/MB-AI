@@ -43,10 +43,10 @@ public class RideBookingService {
         this.participantRepository = participantRepository;
     }
 
-    /** All bookings for internal coordination (for example provisioning the ride chat). */
+    /** Confirmed bookings of one ride, filtered in the database (used to seed the ride chat's members). */
     @Transactional(readOnly = true)
-    public List<RideBooking> findByRideId(UUID rideId) {
-        return repository.findByRideIdOrderByCreatedAtDesc(rideId);
+    public List<RideBooking> findConfirmedByRideId(UUID rideId) {
+        return repository.findConfirmedByRideId(rideId);
     }
 
     /** The driver and admins see every booking; anyone else sees only their own. */

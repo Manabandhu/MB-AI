@@ -1700,7 +1700,7 @@ paths:
     get:
       operationId: listRideOffers
       summary: Search ride offers
-      description: 'Public; a bearer token is optional. Returns active offers that have not departed, soonest departure first; a client-supplied sort is ignored. Page size is capped at 500. Search results treat only the driver and admins as members, so for everyone else driverId, conversationId and routePolyline are null and coordinates are rounded to 2 decimals.'
+      description: 'Public; a bearer token is optional. Returns active offers that have not departed, soonest departure first; a client-supplied sort is ignored. Page size is capped at 100. Search results treat only the driver and admins as members, so for everyone else driverId, conversationId and routePolyline are null and coordinates are rounded to 2 decimals.'
       security: []
       parameters:
         - { name: origin, in: query, required: false, description: Case-insensitive substring of originArea, schema: { type: string } }
@@ -1709,7 +1709,7 @@ paths:
         - { name: genderPreference, in: query, required: false, description: Matches offers with this preference or ANY (or unset), schema: { $ref: '#/components/schemas/RideGenderPreference' } }
         - { name: isRecurring, in: query, required: false, schema: { type: boolean } }
         - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
-        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 500, default: 20 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
         '200':
           description: One page of upcoming active ride offers
@@ -3012,13 +3012,13 @@ paths:
     get:
       operationId: listEvents
       summary: List events
-      description: One page of events; q filters by text. Page size is capped at 500.
+      description: One page of events; q filters by text. Page size is capped at 100.
       parameters:
         - name: q
           in: query
           schema: { type: string }
         - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
-        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 500, default: 20 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
         '200':
           description: One page of events
@@ -3045,13 +3045,13 @@ paths:
     get:
       operationId: searchEvents
       summary: Search events
-      description: Same as GET /events; q filters by text. Page size is capped at 500.
+      description: Same as GET /events; q filters by text. Page size is capped at 100.
       parameters:
         - name: q
           in: query
           schema: { type: string }
         - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
-        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 500, default: 20 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
         '200':
           description: One page of matching events

@@ -18,6 +18,10 @@ interface RideBookingRepository extends JpaRepository<RideBooking, UUID> {
 
     List<RideBooking> findByRideIdOrderByCreatedAtDesc(UUID rideId);
 
+    /** Confirmed passengers of one ride, filtered in SQL (status is stored lowercase; compared case-insensitively). */
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM RideBooking b WHERE b.rideId = :rideId AND LOWER(b.status) = 'confirmed'")
+    List<RideBooking> findConfirmedByRideId(@org.springframework.data.repository.query.Param("rideId") UUID rideId);
+
     List<RideBooking> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
     List<RideBooking> findByRideIdAndUserIdOrderByCreatedAtDesc(UUID rideId, UUID userId);
