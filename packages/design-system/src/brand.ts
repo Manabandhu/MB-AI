@@ -20,8 +20,12 @@ export const brand = {
     onPrimaryMuted: 'rgba(255,255,255,0.78)',
     /** Translucent fill for buttons that sit on the brand gradient. */
     onPrimaryGlass: 'rgba(255,255,255,0.16)',
+    /** Hairline borders and rings for glass controls on the brand gradient or aurora. */
+    onPrimaryHairline: 'rgba(255,255,255,0.24)',
+    /** Faint fill for decorative rings on gradients. */
+    onPrimaryVeil: 'rgba(255,255,255,0.06)',
     themeLight: '#faf8ff',
-    themeDark: '#0f1525',
+    themeDark: '#0b0a14',
   },
   /** Gradient stops used by the logo tile, hero backgrounds, and the app icon (top-left to bottom-right). */
   gradient: ['#7c5cf0', '#431ebe', '#2a0f8a'] as const,

@@ -17,7 +17,7 @@ export default function Root({ children }: PropsWithChildren) {
         <title>{title}</title>
         <meta content={brand.description} name="description" />
         <meta content="#faf8ff" media="(prefers-color-scheme: light)" name="theme-color" />
-        <meta content="#0f1525" media="(prefers-color-scheme: dark)" name="theme-color" />
+        <meta content="#0b0a14" media="(prefers-color-scheme: dark)" name="theme-color" />
         <meta content="light dark" name="color-scheme" />
         <link href="/manifest.webmanifest" rel="manifest" />
         <link href="/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -35,7 +35,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta content="/og-image.png" name="twitter:image" />
         <ScrollViewStyleReset />
         {/* Paint the right background before the bundle loads, so dark-mode users never see a white flash. */}
-        <style>{`html,body{background:#faf8ff}@media (prefers-color-scheme: dark){html,body{background:#0f1525}}`}</style>
+        <style>{`html,body{background:#faf8ff}@media (prefers-color-scheme: dark){html,body{background:#0b0a14}}`}</style>
       </head>
       <body>{children}</body>
     </html>

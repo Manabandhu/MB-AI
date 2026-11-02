@@ -15,6 +15,7 @@ import { Section } from '@/modules/shared/ui/Section';
 import { useAppearanceStore } from '@/theme/themePreferenceStore';
 import { greetingName } from './greetingName';
 import { ASK_CARD_OVERLAP, HomeHeader } from './HomeHeader';
+import { HomePromos } from './HomePromos';
 import { InviteCard } from './InviteCard';
 import { NicknameNudge } from './NicknameNudge';
 import { NicknameSheet } from './NicknameSheet';
@@ -33,24 +34,35 @@ function CommunityPulse() {
       <AppText tone="muted" variant="overline">
         {t('home.communityPulse')}
       </AppText>
-      <XStack flexWrap="wrap" gap="$x2">
+      <XStack flexWrap="wrap" gap="$x3">
         {metrics.map((metric) => (
-          <XStack
-            alignItems="baseline"
+          <YStack
             backgroundColor="$surface"
             borderColor="$borderColor"
-            borderRadius="$pill"
+            borderRadius="$card"
             borderWidth={1}
-            gap="$x1"
+            flexBasis={140}
+            flexGrow={1}
+            gap={2}
             key={metric.label}
-            paddingHorizontal="$x3"
-            paddingVertical="$x1"
+            overflow="hidden"
+            padding="$x4"
+            position="relative"
           >
-            <CountUp tone="primary" value={metric.value} variant="bodyStrong" />
-            <AppText tone="muted" variant="caption">
+            <YStack
+              backgroundColor="$primaryTint"
+              borderRadius="$pill"
+              height={72}
+              position="absolute"
+              right={-18}
+              top={-18}
+              width={72}
+            />
+            <CountUp tone="primary" value={metric.value} variant="h1" />
+            <AppText tone="muted" variant="label">
               {metric.label}
             </AppText>
-          </XStack>
+          </YStack>
         ))}
       </XStack>
     </YStack>
@@ -97,11 +109,14 @@ export function HomeScreen() {
         </Section>
       </FadeIn>
       <FadeIn index={2}>
+        <HomePromos />
+      </FadeIn>
+      <FadeIn index={3}>
         <CommunityPulse />
       </FadeIn>
       <ResponsiveGrid columns={{ compact: 1, medium: 2, expanded: 2, wide: 3 }}>
         {homeWidgets.map(({ id, Component }, index) => (
-          <FadeIn index={index + 3} key={id}>
+          <FadeIn index={index + 4} key={id}>
             <WidgetBoundary name={id}>
               <Component />
             </WidgetBoundary>

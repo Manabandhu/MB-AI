@@ -19,7 +19,10 @@ export { GradientSurface } from './GradientSurface';
 export { IconButton } from './IconButton';
 export { ListRow } from './ListRow';
 export { LoadingState, type LoadingStateProps } from './LoadingState';
+export { AuroraBackground } from './motion/AuroraBackground';
 export { FadeIn } from './motion/FadeIn';
+export { Floating } from './motion/Floating';
+export { PressableScale } from './motion/PressableScale';
 export { NumberStepper } from './NumberStepper';
 export {
   type ConfirmOptions,
@@ -31,6 +34,7 @@ export {
 } from './notify';
 export { OwnerItemCard, type OwnerItemOverflowAction } from './OwnerItemCard';
 export { PersonRow } from './PersonRow';
+export { PromoCarousel } from './PromoCarousel';
 export { RatingInput } from './RatingInput';
 export { ResponsiveGrid } from './ResponsiveGrid';
 export { FORM_MAX_WIDTH, Screen } from './Screen';

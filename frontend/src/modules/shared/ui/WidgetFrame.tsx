@@ -42,8 +42,17 @@ export function WidgetFrame({
   const { palette } = useAppearance();
   return (
     <Card gap="$x3" padding="$x4" variant="elevated">
-      <XStack alignItems="center" gap="$x2">
-        <AppIcon color={palette.primary} name={icon} size={18} />
+      <XStack alignItems="center" gap="$x3">
+        <YStack
+          alignItems="center"
+          backgroundColor="$primaryTint"
+          borderRadius={12}
+          height={36}
+          justifyContent="center"
+          width={36}
+        >
+          <AppIcon color={palette.primary} name={icon} size={18} />
+        </YStack>
         <YStack flex={1}>
           <Heading variant="h4">{title}</Heading>
           {subtitle ? (

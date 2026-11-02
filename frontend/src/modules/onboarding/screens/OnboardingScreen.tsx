@@ -1,9 +1,11 @@
-import { space } from '@manabandhu/design-system';
-import { useMemo } from 'react';
+import { brand, space, spring } from '@manabandhu/design-system';
+import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { GradientSurface } from '@/modules/shared/ui/GradientSurface';
 import { useAppearance } from '@/theme/ThemeProvider';
 import { STEP_VIEWS } from '../components/steps';
 import { useOnboardingFlow } from '../hooks/useOnboardingFlow';
@@ -11,6 +13,27 @@ import { makeStyles } from '../styles';
 import type { OnboardingStepKey } from '../utils/stepMeta';
 
 export type { OnboardingStepKey } from '../utils/stepMeta';
+
+/** Progress fill that springs to the new percentage, drawn with the brand gradient. */
+function ProgressFill({ percent }: { percent: number }) {
+  const { reduceMotion } = useAppearance();
+  const value = useSharedValue(percent);
+  useEffect(() => {
+    value.value = reduceMotion ? percent : withSpring(percent, spring.gentle);
+  }, [percent, reduceMotion, value]);
+  const style = useAnimatedStyle(() => ({ width: `${value.value}%` }));
+  return (
+    <Animated.View style={[{ height: '100%' }, style]}>
+      <GradientSurface
+        colors={[brand.color.accent, brand.color.primaryLight, brand.color.primary]}
+        padding={0}
+        radius={999}
+      >
+        <View style={{ height: '100%', minHeight: 6 }} />
+      </GradientSurface>
+    </Animated.View>
+  );
+}
 
 /**
  * One onboarding step: header with progress, the step view from `onboarding/steps`, and the docked action bar.
@@ -107,7 +130,7 @@ export function OnboardingScreen({ kind }: { kind: OnboardingStepKey }) {
 
           {/* Progress track */}
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+            <ProgressFill percent={progressPercent} />
           </View>
         </View>
 

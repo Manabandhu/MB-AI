@@ -1,11 +1,15 @@
-import { Pressable, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { Platform, Pressable, Text, View } from 'react-native';
+import Animated, { ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
+import { useAppearance } from '@/theme/ThemeProvider';
 import { resolveAppIcon } from '../../utils/stepMeta';
 import type { StepProps } from './types';
 
 /** Step 1: Goals / Reasons */
 export function GoalsStep({ flow, styles, colors }: StepProps) {
   const { selectedReasons, setSelectedReasons, stepConfig } = flow;
+  const { reduceMotion } = useAppearance();
   return (
     <View style={styles.stepContainer}>
       <View style={styles.instructionBanner}>
@@ -24,11 +28,16 @@ export function GoalsStep({ flow, styles, colors }: StepProps) {
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isSelected }}
               onPress={() => {
+                if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => undefined);
                 setSelectedReasons((prev) =>
                   isSelected ? prev.filter((k) => k !== opt.optionKey) : [...prev, opt.optionKey],
                 );
               }}
-              style={[styles.goalCard, isSelected && styles.goalCardSelected]}
+              style={({ pressed }) => [
+                styles.goalCard,
+                isSelected && styles.goalCardSelected,
+                pressed && !reduceMotion && styles.goalCardPressed,
+              ]}
             >
               <View style={[styles.iconBox, isSelected && styles.iconBoxSelected]}>
                 <AppIcon
@@ -44,9 +53,13 @@ export function GoalsStep({ flow, styles, colors }: StepProps) {
                 <Text style={styles.cardDescription}>{opt.description}</Text>
               ) : null}
               {isSelected ? (
-                <View style={styles.checkmarkBadge}>
-                  <AppIcon color={colors.surface} name="check" size={12} />
-                </View>
+                <Animated.View
+                  entering={reduceMotion ? undefined : ZoomIn.springify().damping(12)}
+                  exiting={reduceMotion ? undefined : ZoomOut.duration(120)}
+                  style={styles.checkmarkBadge}
+                >
+                  <AppIcon color={colors.surface} name="check" size={13} strokeWidth={3} />
+                </Animated.View>
               ) : null}
             </Pressable>
           );

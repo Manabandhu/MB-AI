@@ -88,15 +88,10 @@ export const makeStyles = (colors: Palette) =>
     progressTrack: {
       backgroundColor: colors.surfaceContainerHigh,
       borderRadius: 999,
-      height: 5,
+      height: 6,
       marginVertical: space.x2,
       overflow: 'hidden',
       width: '100%',
-    },
-    progressFill: {
-      backgroundColor: colors.primary,
-      borderRadius: 999,
-      height: '100%',
     },
     scrollContent: {
       flexGrow: 1,
@@ -165,7 +160,7 @@ export const makeStyles = (colors: Palette) =>
     goalCard: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
-      borderRadius: 16,
+      borderRadius: 20,
       borderWidth: 1.5,
       padding: space.x4,
       position: 'relative',
@@ -174,6 +169,14 @@ export const makeStyles = (colors: Palette) =>
     goalCardSelected: {
       backgroundColor: colors.primarySoft,
       borderColor: colors.primary,
+      shadowColor: colors.primary,
+      shadowOpacity: 0.25,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 6,
+    },
+    goalCardPressed: {
+      transform: [{ scale: 0.96 }],
     },
     iconBox: {
       alignItems: 'center',
@@ -205,13 +208,13 @@ export const makeStyles = (colors: Palette) =>
     checkmarkBadge: {
       alignItems: 'center',
       backgroundColor: colors.primary,
-      borderRadius: 10,
-      height: 20,
+      borderRadius: 11,
+      height: 22,
       justifyContent: 'center',
       position: 'absolute',
-      right: 8,
-      top: 8,
-      width: 20,
+      right: 10,
+      top: 10,
+      width: 22,
     },
     reassuranceCard: {
       alignItems: 'center',
