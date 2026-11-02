@@ -1,8 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
-import { uploadContentType } from './uploadTypes';
+import { apiFetch, parseJsonOrThrow } from '@/lib/api';
+import { uploadContentType } from '../utils/uploadTypes';
 
 export type UploadBucket = 'avatars' | 'rooms' | 'rides' | 'posts' | 'marketplace' | 'community';
 

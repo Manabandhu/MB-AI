@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
-import { type CountryItem, supportedCountries } from '@/modules/auth/authConstants';
+import { type CountryItem, supportedCountries } from '@/modules/auth/utils/authConstants';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';

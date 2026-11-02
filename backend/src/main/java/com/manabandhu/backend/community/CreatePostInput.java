@@ -1,0 +1,12 @@
+package com.manabandhu.backend.community;
+
+import java.util.UUID;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+public record CreatePostInput(
+        @NotNull UUID communityId,
+        @NotBlank @Size(max = 120) String title,
+        @NotBlank @Size(max = 4000) String body) {}

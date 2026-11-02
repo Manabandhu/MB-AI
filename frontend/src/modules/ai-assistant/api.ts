@@ -1,4 +1,4 @@
-import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { apiFetch, parseJsonOrThrow } from '@/lib/api';
 
 export async function getAssistantMessages(): Promise<AssistantMessage[]> {
   return parseJsonOrThrow(await apiFetch('/api/v1/assistant/messages'), 'Assistant messages');

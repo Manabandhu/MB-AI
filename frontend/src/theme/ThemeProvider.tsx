@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, Platform, useColorScheme } from 'react-native';
 import { TamaguiProvider, Theme } from 'tamagui';
-import { Uniwind } from 'uniwind';
 import { applyLanguage } from '@/i18n';
 import { resolveColorScheme, resolveMotion } from './preferences';
 import config from './tamagui.config';
@@ -54,9 +53,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   const scheme = resolveColorScheme(themePreference, system);
   const motion = resolveMotion(motionPreference, systemReduced);
 
-  // Screens still styled with Uniwind classes follow the same scheme until they move to Tamagui.
   useEffect(() => {
-    Uniwind.setTheme(scheme);
     // Web: keep the page background (overscroll, gaps between frames) in step with an explicit theme choice.
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.documentElement.style.backgroundColor = paletteFor(scheme).background;

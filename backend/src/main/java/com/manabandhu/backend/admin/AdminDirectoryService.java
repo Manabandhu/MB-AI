@@ -7,10 +7,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
-import com.manabandhu.backend.auth.Actor;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.manabandhu.backend.auth.SupabaseAdminClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -19,6 +15,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+
+import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.auth.SupabaseAdminClient;
+import com.manabandhu.backend.common.Paging;
+import com.manabandhu.backend.common.audit.AdminAuditService;
 
 /**
  * Read-only moderation projections across modules, plus account suspension through the Supabase Auth admin API.
@@ -28,10 +32,9 @@ import org.springframework.web.server.ResponseStatusException;
 class AdminDirectoryService {
 
     private static final Logger log = LoggerFactory.getLogger(AdminDirectoryService.class);
-    static final int LIMIT = 200;
     /** Supabase "ban" duration used for suspension (about 100 years); "none" lifts it. */
     private static final String SUSPEND_DURATION = "876000h";
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final JsonMapper JSON = JsonMapper.shared();
 
     record AdminUser(UUID id, String name, String email, String role, String status, Instant createdAt) {}
     record AdminRoom(UUID id, String title, String hostName, String status, boolean reported, Instant createdAt) {}
@@ -61,7 +64,7 @@ class AdminDirectoryService {
                        EXISTS (SELECT 1 FROM public.room_reports r WHERE r.listing_id = l.id AND r.status IN ('open', 'in_review')) AS reported
                 FROM public.room_listings l ORDER BY l.created_at DESC LIMIT ?
                 """, (rs, i) -> new AdminRoom((UUID) rs.getObject("id"), rs.getString("title"),
-                shortId(rs.getObject("owner_id")), rs.getString("status"), rs.getBoolean("reported"), instant(rs, "created_at")), LIMIT);
+                shortId(rs.getObject("owner_id")), rs.getString("status"), rs.getBoolean("reported"), instant(rs, "created_at")), Paging.LIST_CAP);
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +72,7 @@ class AdminDirectoryService {
         return jdbcTemplate.query("""
                 SELECT id, title, company, status, created_at FROM public.job_postings ORDER BY created_at DESC LIMIT ?
                 """, (rs, i) -> new AdminJob((UUID) rs.getObject("id"), rs.getString("title"), rs.getString("company"),
-                rs.getString("status"), false, instant(rs, "created_at")), LIMIT);
+                rs.getString("status"), false, instant(rs, "created_at")), Paging.LIST_CAP);
     }
 
     @Transactional(readOnly = true)
@@ -78,7 +81,7 @@ class AdminDirectoryService {
                 SELECT id, title, organizer_id, start_at, status, created_at FROM public.events ORDER BY created_at DESC LIMIT ?
                 """, (rs, i) -> new AdminEvent((UUID) rs.getObject("id"), rs.getString("title"),
                 shortId(rs.getObject("organizer_id")), instant(rs, "start_at"), rs.getString("status"), false,
-                instant(rs, "created_at")), LIMIT);
+                instant(rs, "created_at")), Paging.LIST_CAP);
     }
 
     @Transactional(readOnly = true)
@@ -90,13 +93,13 @@ class AdminDirectoryService {
                 """, (rs, i) -> new AdminCommunityPost((UUID) rs.getObject("id"),
                 rs.getString("community_name") != null ? rs.getString("community_name") : "General",
                 shortId(rs.getObject("owner_id")), rs.getString("title"), "published", false,
-                instant(rs, "created_at")), LIMIT);
+                instant(rs, "created_at")), Paging.LIST_CAP);
     }
 
     @Transactional(readOnly = true)
     List<AdminUser> users() {
         try {
-            return jdbcTemplate.query(USER_SELECT + " ORDER BY created_at DESC LIMIT ?", this::mapUser, LIMIT);
+            return jdbcTemplate.query(USER_SELECT + " ORDER BY created_at DESC LIMIT ?", this::mapUser, Paging.LIST_CAP);
         } catch (DataAccessException exception) {
             log.warn("User directory query failed: {}", exception.getMostSpecificCause().getMessage());
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "User directory is not available");
@@ -165,7 +168,7 @@ class AdminDirectoryService {
                 } else if (node.isTextual() && !node.asText().isBlank()) {
                     roles = List.of(node.asText());
                 }
-            } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+            } catch (JacksonException exception) {
                 roles = List.of();
             }
         }

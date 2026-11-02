@@ -1,7 +1,5 @@
 package com.manabandhu.backend.chat;
 
-import com.manabandhu.backend.notifications.Notification;
-import com.manabandhu.backend.notifications.NotificationPublisher;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -13,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
+import com.manabandhu.backend.notifications.Notification;
+import com.manabandhu.backend.notifications.NotificationPublisher;
 
 @Service
 public class MessageService {
@@ -37,7 +38,7 @@ public class MessageService {
     @Transactional(readOnly = true)
     public List<Message> listFor(Actor actor, UUID conversationId, Integer limit) {
         participantService.requireParticipant(actor, conversationId);
-        var size = limit == null ? DEFAULT_PAGE_SIZE : Math.max(1, Math.min(limit, MAX_PAGE_SIZE));
+        var size = Paging.clamp(limit, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
         return repository.findByConversationIdOrderByCreatedAtDesc(conversationId, PageRequest.of(0, size));
     }
 

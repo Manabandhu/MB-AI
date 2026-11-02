@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Platform } from 'react-native';
 import { YStack } from 'tamagui';
-import { requestPermissionAndRegister, unregisterThisDevice } from '@/modules/notifications/push';
+import {
+  requestPermissionAndRegister,
+  unregisterThisDevice,
+} from '@/modules/notifications/utils/push';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { SettingRow } from './SettingRow';
 

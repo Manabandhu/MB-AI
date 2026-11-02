@@ -19,6 +19,7 @@ Claude-specific skills, agents, and review rules live in `.claude/` and `REVIEW.
 | Mint a local bearer token | `node scripts/local-dev/auth.mjs mint <uuid> [ADMIN]` |
 | Frontend calls vs backend routes | `pnpm verify:routes` |
 | Screen catalog vs route files | `pnpm verify:screens` |
+| Frontend module boundaries and layers | `pnpm verify:boundaries` |
 | Credential scan of tracked files | `pnpm verify:secrets` |
 
 In cloud sessions `.claude/hooks/session-start.sh` installs pnpm deps, Java 25, and Maven deps. Local and sandbox runs use

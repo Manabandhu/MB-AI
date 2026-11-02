@@ -21,7 +21,6 @@ import { RepeatTripSheet } from '@/modules/rides/components/RepeatTripSheet';
 import { formatDeparture, seatsText } from '@/modules/rides/components/RideCard';
 import { useTimedNotice } from '@/modules/rides/hooks/useTimedNotice';
 import type { Ride, RideBooking, RideSeatRequest } from '@/modules/rides/types';
-import { showError, showMessage } from '@/modules/rides/utils/notify';
 import {
   amountError,
   errorMessage,
@@ -33,15 +32,16 @@ import {
   statusLabel,
   statusTone,
 } from '@/modules/rides/utils/rideFormat';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { NumberStepper } from '@/modules/shared/ui/NumberStepper';
+import { showError, showMessage } from '@/modules/shared/ui/notify';
 import { PersonRow } from '@/modules/shared/ui/PersonRow';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';

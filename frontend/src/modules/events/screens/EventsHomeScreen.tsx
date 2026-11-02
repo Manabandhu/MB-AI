@@ -6,9 +6,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
 import { listEventCategories, listEvents } from '@/modules/events/api';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import {
   AppButton,
   AppIcon,
@@ -25,6 +22,9 @@ import {
   StatusBadge,
   TextField,
 } from '@/modules/shared/ui';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 function MetaLine({ icon, children }: { icon: AppIconName; children: string }) {

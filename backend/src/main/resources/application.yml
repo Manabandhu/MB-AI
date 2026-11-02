@@ -51,7 +51,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics
   endpoint:
     health:
       probes:
@@ -59,6 +59,8 @@ management:
 
 app:
   notifications:
+    # How often the dispatcher drains queued notifications.
+    dispatch-interval-ms: ${NOTIFICATIONS_DISPATCH_INTERVAL_MS:60000}
     push:
       # Expo push delivery. Off by default so local runs and tests never call exp.host; set true where deployed.
       enabled: ${PUSH_NOTIFICATIONS_ENABLED:false}

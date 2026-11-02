@@ -4,10 +4,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-import com.manabandhu.backend.auth.Actor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
 
 @Service
 public class ImmigrationChecklistService {
@@ -18,12 +19,11 @@ public class ImmigrationChecklistService {
         this.repository = repository;
     }
 
-    /** Checklists are personal: callers only ever see their own, newest first, capped at {@link #MAX_RESULTS}. */
-    static final int MAX_RESULTS = 200;
+    /** Checklists are personal: callers only ever see their own, newest first, capped at {@link Paging#LIST_CAP}. */
 
     @Transactional(readOnly = true)
     public List<ImmigrationChecklist> findForOwner(Actor actor, String category) {
-        var page = PageRequest.of(0, MAX_RESULTS);
+        var page = Paging.firstPage();
         return category == null || category.isBlank()
                 ? repository.findByOwnerIdOrderByCreatedAtDesc(actor.id(), page)
                 : repository.findByOwnerIdAndCategoryOrderByCreatedAtDesc(actor.id(), category, page);

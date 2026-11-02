@@ -4,9 +4,9 @@ import { useAuthStore } from '@/lib/authStore';
 import { getRoomForOwner } from '@/modules/rooms/api';
 import { RoomForm } from '@/modules/rooms/components/RoomForm';
 import { errorMessage, isNotFound } from '@/modules/rooms/utils/roomLabels';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { BackButton } from '@/modules/shared/ui/BackButton';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { Screen } from '@/modules/shared/ui/Screen';
 
 /** Loads the owner view of a listing (exact address, amenities) and renders the shared form in edit mode. */

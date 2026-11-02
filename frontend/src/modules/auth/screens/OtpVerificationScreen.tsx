@@ -3,8 +3,12 @@ import { Redirect, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
-import { friendlyAuthError, OTP_CODE_LENGTH, phoneLastFour } from '@/modules/auth/authHelpers';
 import { AuthButton, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
+import {
+  friendlyAuthError,
+  OTP_CODE_LENGTH,
+  phoneLastFour,
+} from '@/modules/auth/utils/authHelpers';
 import { useAppearance } from '@/theme/ThemeProvider';
 
 const CODE_LENGTH = OTP_CODE_LENGTH;

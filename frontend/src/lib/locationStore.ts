@@ -7,7 +7,7 @@ import {
   getNearbyUSCities,
   type NearbyCityResult,
   type SearchCityResult,
-} from '@/modules/rooms/utils/locationService';
+} from '@/modules/shared/utils/location/locationService';
 
 export type AppLocation = SearchCityResult;
 export type { NearbyCityResult };

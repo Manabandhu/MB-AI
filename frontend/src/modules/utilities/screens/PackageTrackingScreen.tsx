@@ -3,17 +3,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { YStack } from 'tamagui';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { DateTimeField } from '@/modules/shared/ui/DateTimeField';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
@@ -24,7 +24,7 @@ import {
   PACKAGE_STATUSES,
   packageStatus,
   trackingNumberError,
-} from '@/modules/utilities/utilitiesFormat';
+} from '@/modules/utilities/utils/utilitiesFormat';
 
 const CARRIERS = ['USPS', 'UPS', 'FedEx', 'Amazon', 'DHL'] as const;
 

@@ -8,7 +8,7 @@ import {
   type ReportReason,
   type ReportTargetType,
   reportCategory,
-} from '@/modules/safety/safetyFormat';
+} from '@/modules/safety/utils/safetyFormat';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';

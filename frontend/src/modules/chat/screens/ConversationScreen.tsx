@@ -1,3 +1,4 @@
+import { formatTime } from '@manabandhu/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,32 +12,31 @@ import {
   type Message,
   sendMessage,
 } from '@/modules/chat/api';
+import { ChatBubble } from '@/modules/chat/components/ChatBubble';
+import { ChatFrame, scrollToNewest } from '@/modules/chat/components/ChatFrame';
+import { Composer } from '@/modules/chat/components/Composer';
+import { useMarkConversationRead } from '@/modules/chat/hooks/useMarkConversationRead';
+import { useRealtimeChat } from '@/modules/chat/hooks/useRealtimeChat';
 import {
   conversationTitle,
   isHttpUrl,
   participantLabel,
   withoutDeliveredPending,
-} from '@/modules/chat/chatFormat';
-import { ChatBubble } from '@/modules/chat/components/ChatBubble';
-import { ChatFrame, scrollToNewest } from '@/modules/chat/components/ChatFrame';
-import { Composer } from '@/modules/chat/components/Composer';
-import { latestServerMessageId } from '@/modules/chat/readState';
-import { useMarkConversationRead } from '@/modules/chat/useMarkConversationRead';
-import { useRealtimeChat } from '@/modules/chat/useRealtimeChat';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
+} from '@/modules/chat/utils/chatFormat';
+import { latestServerMessageId } from '@/modules/chat/utils/readState';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
 import { Card } from '@/modules/shared/ui/Card';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { Screen } from '@/modules/shared/ui/Screen';
 
 /** A message the server has not stored yet: in flight, or failed and waiting for Retry/Discard. */
 type PendingMessage = { tempId: string; body: string; createdAt: string; failed: boolean };
 
-const timeOf = (iso: string) =>
-  new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const timeOf = (iso: string) => formatTime(iso) ?? '';
 
 const byCreatedAt = (a: Message, b: Message) => Date.parse(a.createdAt) - Date.parse(b.createdAt);
 

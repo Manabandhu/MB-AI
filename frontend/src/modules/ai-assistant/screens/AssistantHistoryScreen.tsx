@@ -8,13 +8,13 @@ import {
   getAssistantConversationMessages,
   getAssistantHistory,
 } from '@/modules/ai-assistant/api';
-import { isUserRole, oldestFirst } from '@/modules/ai-assistant/assistantFormat';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { isUserRole, oldestFirst } from '@/modules/ai-assistant/utils/assistantFormat';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 

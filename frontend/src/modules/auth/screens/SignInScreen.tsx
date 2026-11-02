@@ -1,8 +1,7 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, type TextInput, View } from 'react-native';
+import { Pressable, type TextInput, View } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
-import { friendlyAuthError, isValidEmail } from '@/modules/auth/authHelpers';
 import {
   AuthButton,
   AuthDivider,
@@ -12,10 +11,10 @@ import {
   AuthSwitch,
   SocialButtons,
 } from '@/modules/auth/components/AuthKit';
-import { useAppearance } from '@/theme/ThemeProvider';
+import { friendlyAuthError, isValidEmail } from '@/modules/auth/utils/authHelpers';
+import { AppText } from '@/modules/shared/ui/AppText';
 
 export function SignInScreen() {
-  const { palette } = useAppearance();
   const signIn = useAuthStore((s) => s.signIn);
   const signInWithOAuth = useAuthStore((s) => s.signInWithOAuth);
   const passwordRef = useRef<TextInput>(null);
@@ -124,9 +123,11 @@ export function SignInScreen() {
           accessibilityRole="link"
           hitSlop={8}
           onPress={() => router.push('/forgot-password')}
-          style={styles.forgot}
+          style={{ alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' }}
         >
-          <Text style={[styles.forgotText, { color: palette.primary }]}>Forgot password?</Text>
+          <AppText tone="primary" variant="bodyStrong">
+            Forgot password?
+          </AppText>
         </Pressable>
       </View>
       <AuthButton
@@ -137,8 +138,3 @@ export function SignInScreen() {
     </AuthScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  forgot: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
-  forgotText: { fontSize: 15, fontWeight: '600' },
-});

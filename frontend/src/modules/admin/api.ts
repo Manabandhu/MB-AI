@@ -1,4 +1,4 @@
-import { apiFetch, parseJson } from '@/lib/apiClient';
+import { apiFetch, parseJson } from '@/lib/api';
 
 export type AutomationOperation = {
   id: string;

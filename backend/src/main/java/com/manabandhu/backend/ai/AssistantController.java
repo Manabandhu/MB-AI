@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.manabandhu.backend.auth.Actor;
 
 /**
- * Assistant conversations are private to their owner. Replies are a placeholder until the
- * ai-orchestrator service is connected; see {@code services/ai-orchestrator/MODULE.md}.
+ * Assistant conversations are private to their owner. Replies are a placeholder until a model
+ * provider is connected (see the manabandhu-ai skill).
  */
 @RestController
 @RequestMapping("/api/v1/assistant")
@@ -71,7 +71,7 @@ public class AssistantController {
     }
 
     @PostMapping("/conversations")
-    ResponseEntity<AssistantConversation> createConversation(Authentication authentication, @Valid @RequestBody CreateConversationRequest request) {
+    ResponseEntity<AssistantConversation> createConversation(Authentication authentication, @Valid @RequestBody CreateAssistantConversationInput request) {
         var conversation = conversationService.create(Actor.require(authentication).id(), request.title());
         return ResponseEntity.created(URI.create("/api/v1/assistant/conversations/" + conversation.getId())).body(conversation);
     }

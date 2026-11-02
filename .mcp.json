@@ -3,7 +3,7 @@
     "supabase": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--read-only", "--project-ref=${SUPABASE_PROJECT_REF}"],
+      "args": ["-y", "@supabase/mcp-server-supabase@0.15.0", "--read-only", "--project-ref=${SUPABASE_PROJECT_REF}"],
       "env": {
         "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
       }
@@ -11,7 +11,7 @@
     "playwright": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest", "--headless"]
+      "args": ["-y", "@playwright/mcp@0.0.83", "--headless"]
     }
   }
 }

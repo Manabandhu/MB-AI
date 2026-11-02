@@ -13,7 +13,7 @@ class AutomationCatalogTest {
     void catalogIsAllowListedAndUnconfiguredWithoutServerCredentials() {
         var catalog = new AutomationCatalog("", "");
 
-        assertThat(catalog.operations()).hasSize(7).allMatch(operation -> !operation.configured());
+        assertThat(catalog.operations()).hasSize(6).allMatch(operation -> !operation.configured());
         assertThatThrownBy(() -> catalog.require("arbitrary-command"))
                 .isInstanceOf(UnknownAutomationOperationException.class);
     }
@@ -21,7 +21,7 @@ class AutomationCatalogTest {
     @Test
     void criticalOperationsRequireExplicitConfirmationBeforeDispatch() {
         var service = new AutomationService(new AutomationCatalog("token", "owner/repository"), "owner/repository", "token");
-        var request = new ExecuteAutomationRequest("production", "main", "Approved emergency rollback", false);
+        var request = new ExecuteAutomationInput("production", "main", "Approved emergency rollback", false);
 
         assertThatThrownBy(() -> service.execute("rollback-production", request, "operator-id", true))
                 .isInstanceOfSatisfying(ResponseStatusException.class,
@@ -31,7 +31,7 @@ class AutomationCatalogTest {
     @Test
     void productionRequiresSuperAdmin() {
         var service = new AutomationService(new AutomationCatalog("token", "owner/repository"), "owner/repository", "token");
-        var request = new ExecuteAutomationRequest("production", "main", "Approved emergency rollback", true);
+        var request = new ExecuteAutomationInput("production", "main", "Approved emergency rollback", true);
 
         assertThatThrownBy(() -> service.execute("rollback-production", request, "operator-id", false))
                 .isInstanceOfSatisfying(ResponseStatusException.class,
@@ -41,7 +41,7 @@ class AutomationCatalogTest {
     @Test
     void productionOnlyShipsMainOrReleaseTags() {
         var service = new AutomationService(new AutomationCatalog("token", "owner/repository"), "owner/repository", "token");
-        var request = new ExecuteAutomationRequest("production", "feature/untested", "Approved emergency rollback", true);
+        var request = new ExecuteAutomationInput("production", "feature/untested", "Approved emergency rollback", true);
 
         assertThatThrownBy(() -> service.execute("rollback-production", request, "operator-id", true))
                 .isInstanceOfSatisfying(ResponseStatusException.class,

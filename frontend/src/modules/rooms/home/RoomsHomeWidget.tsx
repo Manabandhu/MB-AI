@@ -2,8 +2,8 @@ import { formatMoney } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import { ALL_USA_LOCATION, useLocationStore } from '@/lib/locationStore';
 import { persistMeta } from '@/lib/queryPersistence';
-import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
 import { ListRow } from '@/modules/shared/ui/ListRow';
+import { WidgetFrame } from '@/modules/shared/ui/WidgetFrame';
 import { listRoomListings } from '../api';
 
 /** Newest rooms in the member's chosen city (or nationwide), for the Home screen. */

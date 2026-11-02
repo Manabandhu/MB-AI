@@ -34,7 +34,7 @@ public class NotificationDispatcherService {
     static final String EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 
     private final NotificationService notificationService;
-    private final NotificationsContentService settings;
+    private final NotificationSettingsService settings;
     private final DeviceTokenService devices;
     private final TransactionTemplate transactionTemplate;
     private final RestTemplate restTemplate;
@@ -42,7 +42,7 @@ public class NotificationDispatcherService {
     private final String expoAccessToken;
 
     NotificationDispatcherService(NotificationService notificationService,
-                                  NotificationsContentService settings,
+                                  NotificationSettingsService settings,
                                   DeviceTokenService devices,
                                   TransactionTemplate transactionTemplate,
                                   @Value("${app.notifications.push.enabled:false}") boolean enabled,

@@ -3,8 +3,6 @@ package com.manabandhu.backend.admin;
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -12,6 +10,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.manabandhu.backend.common.Paging;
+import com.manabandhu.backend.common.audit.AdminAuditService;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 
 /** Moderation dashboards for the admin console. The security filter already limits /api/v1/admin/** to admins. */
 @RestController
@@ -76,6 +80,6 @@ public class AdminDirectoryController {
     @GetMapping("/audit-log")
     List<AdminAuditService.AuditLogEntry> auditLog(Authentication authentication) {
         accessPolicy.require(authentication);
-        return audit.recent(AdminDirectoryService.LIMIT);
+        return audit.recent(Paging.LIST_CAP);
     }
 }

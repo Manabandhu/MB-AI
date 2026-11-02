@@ -1,7 +1,5 @@
 package com.manabandhu.backend.events;
 
-import com.manabandhu.backend.notifications.Notification;
-import com.manabandhu.backend.notifications.NotificationPublisher;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
+import com.manabandhu.backend.notifications.Notification;
+import com.manabandhu.backend.notifications.NotificationPublisher;
 
 @Service
 public class EventsService {
@@ -46,13 +47,12 @@ public class EventsService {
     static final java.util.Set<String> ATTENDANCE_STATUSES = java.util.Set.of("going", "interested", "maybe", "saved", "not_going");
     /** Statuses that keep an event on the caller's saved list. */
     static final List<String> SAVED_STATUSES = List.of("going", "interested", "maybe", "saved");
-    static final int MAX_SAVED = 200;
 
     /** Events the caller has RSVPed to or bookmarked; never anyone else's. */
     @Transactional(readOnly = true)
     public List<Event> findSaved(Actor actor) {
         return eventRepository.findSavedByUser(actor.id(), SAVED_STATUSES,
-                org.springframework.data.domain.PageRequest.of(0, MAX_SAVED));
+                Paging.firstPage());
     }
 
     /** Parses an ISO-8601 instant from client input; malformed values are a 400, not a 500. */

@@ -4,13 +4,6 @@ import { Platform, type TextInput } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { supabase } from '@/lib/supabase';
 import {
-  friendlyAuthError,
-  isValidEmail,
-  MIN_PASSWORD_LENGTH,
-  PASSWORD_RULES,
-  passwordProblem,
-} from '@/modules/auth/authHelpers';
-import {
   AuthButton,
   AuthDivider,
   AuthField,
@@ -20,8 +13,15 @@ import {
   SocialButtons,
 } from '@/modules/auth/components/AuthKit';
 import { ConsentCheckbox } from '@/modules/auth/components/ConsentCheckbox';
-import { rememberPendingConsent, takePendingConsent } from '@/modules/auth/consent';
-import { TERMS_VERSION } from '@/modules/foundation/legal/content';
+import { TERMS_VERSION } from '@/modules/auth/legal/content';
+import {
+  friendlyAuthError,
+  isValidEmail,
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_RULES,
+  passwordProblem,
+} from '@/modules/auth/utils/authHelpers';
+import { rememberPendingConsent, takePendingConsent } from '@/modules/auth/utils/consent';
 
 type FieldErrors = { name?: string; email?: string; password?: string };
 

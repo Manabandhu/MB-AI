@@ -1,8 +1,8 @@
 import { formatSalaryRange } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import { persistMeta } from '@/lib/queryPersistence';
-import { WidgetFrame } from '@/modules/shared/components/WidgetFrame';
 import { ListRow } from '@/modules/shared/ui/ListRow';
+import { WidgetFrame } from '@/modules/shared/ui/WidgetFrame';
 import { listJobPostings } from '../api';
 
 /** Newest job postings. */

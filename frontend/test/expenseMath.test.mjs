@@ -8,7 +8,7 @@ import {
   parseAmount,
   settlementStatus,
   sumByCurrency,
-} from '../src/modules/expenses/expenseMath.ts';
+} from '../src/modules/expenses/utils/expenseMath.ts';
 
 test('parseAmount accepts plain and grouped numbers and rounds to cents', () => {
   assert.deepEqual(parseAmount('12'), { value: 12, error: null });
@@ -90,7 +90,7 @@ test('isUuid and localDate', () => {
 
 test('hasOpenBalance and toLocalDateString', async () => {
   const { hasOpenBalance, toLocalDateString } = await import(
-    '../src/modules/expenses/expenseMath.ts'
+    '../src/modules/expenses/utils/expenseMath.ts'
   );
   const rows = [{ fromUserId: 'a', toUserId: 'b', amount: 5 }];
   assert.ok(hasOpenBalance(rows, 'a'));

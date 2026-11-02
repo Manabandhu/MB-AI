@@ -21,7 +21,6 @@ import { RepeatTripSheet } from '@/modules/rides/components/RepeatTripSheet';
 import { formatDeparture, seatsText } from '@/modules/rides/components/RideCard';
 import { type TimedNotice, useTimedNotice } from '@/modules/rides/hooks/useTimedNotice';
 import type { Ride, RideBooking } from '@/modules/rides/types';
-import { showError } from '@/modules/rides/utils/notify';
 import {
   errorMessage,
   isNotFound,
@@ -30,12 +29,13 @@ import {
   statusLabel,
   statusTone,
 } from '@/modules/rides/utils/rideFormat';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
+import { showError } from '@/modules/shared/ui/notify';
 import { OwnerItemCard } from '@/modules/shared/ui/OwnerItemCard';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';

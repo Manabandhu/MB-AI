@@ -5,7 +5,6 @@ import { Platform, StyleSheet } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { ALL_USA_LOCATION } from '@/lib/locationStore';
 import type { RoomListing } from '@/modules/rooms/types';
-import { showMessage } from '@/modules/rooms/utils/notify';
 import {
   type CityFilter,
   hasArea,
@@ -13,13 +12,14 @@ import {
   roomCoordinate,
 } from '@/modules/rooms/utils/roomFilters';
 import { formatRent } from '@/modules/rooms/utils/roomFormat';
-import { UniversalMapView } from '@/modules/shared/components/UniversalMapView';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { UniversalMapView } from '@/modules/shared/ui/map/UniversalMapView';
+import { showMessage } from '@/modules/shared/ui/notify';
 import type { Coordinate } from '@/modules/shared/utils/geoPolygon';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 import { RoomCard } from './RoomCard';

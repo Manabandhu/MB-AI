@@ -9,12 +9,11 @@ node_modules/
 dist/
 target/
 *.class
-org/
 *.iml
 .idea/
 scratch/
-
-
+*.log
+coverage/
 
 # Local dev stack state (signing keys, logs, pids)
 .local-dev/

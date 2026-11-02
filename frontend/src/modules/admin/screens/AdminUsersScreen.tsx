@@ -2,12 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
-import { isSuspended } from '@/modules/admin/adminAccess';
 import { listUsers } from '@/modules/admin/api';
 import { memberRoleLabel, UserStatusBadge } from '@/modules/admin/components/AdminBits';
 import { useUserStatusAction } from '@/modules/admin/hooks';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { isSuspended } from '@/modules/admin/utils/adminAccess';
 import {
   AppButton,
   AppText,
@@ -19,6 +17,8 @@ import {
   StatusBadge,
   TextField,
 } from '@/modules/shared/ui';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 
 /** Member accounts (latest 200) with search, a detail page per member, and confirmed suspend / reactivate. */
 export default function AdminUsersScreen() {

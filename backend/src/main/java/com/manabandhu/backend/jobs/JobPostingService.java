@@ -1,5 +1,7 @@
 package com.manabandhu.backend.jobs;
 
+import static com.manabandhu.backend.common.Strings.blankToNull;
+
 import java.util.Optional;
 import java.util.UUID;
 
@@ -83,10 +85,6 @@ public class JobPostingService {
         }
         posting.updatedAt = java.time.Instant.now();
         return repository.save(posting);
-    }
-
-    private static String blankToNull(String value) {
-        return value.isBlank() ? null : value.trim();
     }
 
     private static String required(String value, String field) {

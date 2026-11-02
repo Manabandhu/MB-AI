@@ -1,16 +1,16 @@
 package com.manabandhu.backend.utilities;
 
-import static com.manabandhu.backend.foundation.CatalogContent.metrics;
+import static com.manabandhu.backend.common.catalog.CatalogContent.metrics;
 
 import java.util.List;
 import java.util.Optional;
 
-import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.foundation.CatalogItem;
-import com.manabandhu.backend.foundation.CatalogScreenContent;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.catalog.CatalogItem;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
 
 /** Utilities home. Directory counts are public; the package count is the signed-in viewer's own. */
 @Service

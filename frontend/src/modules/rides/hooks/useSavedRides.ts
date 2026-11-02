@@ -3,8 +3,8 @@ import { type Href, router } from 'expo-router';
 import { useMemo } from 'react';
 import { useAuthStore } from '@/lib/authStore';
 import { getSavedRides, saveRide, unsaveRide } from '@/modules/rides/api';
-import { showError } from '@/modules/rides/utils/notify';
 import { isJoinedRide } from '@/modules/rides/utils/rideFormat';
+import { showError } from '@/modules/shared/ui/notify';
 
 /**
  * The signed-in user's bookmarks (`GET /rides/saved`) and a heart toggle. Signed-out viewers are sent to sign in.

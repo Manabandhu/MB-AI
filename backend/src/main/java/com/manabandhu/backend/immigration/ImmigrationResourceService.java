@@ -6,6 +6,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.manabandhu.backend.common.Paging;
+
 @Service
 public class ImmigrationResourceService {
 
@@ -35,18 +37,17 @@ public class ImmigrationResourceService {
         return repository.findByCategoryOrderByCreatedAtDesc(category);
     }
 
-    static final int MAX_RESULTS = 200;
 
     /**
      * Published resources for readers: verified ones for everyone, plus the caller's own unreviewed submissions
-     * (admins see everything). Newest first, capped at {@link #MAX_RESULTS}; submitter ids are never returned.
+     * (admins see everything). Newest first, capped at {@link Paging#LIST_CAP}; submitter ids are never returned.
      */
     @Transactional(readOnly = true)
     public java.util.List<ImmigrationResourceView> listVisible(java.util.Optional<com.manabandhu.backend.auth.Actor> caller,
                                                                String category) {
         var callerId = caller.map(com.manabandhu.backend.auth.Actor::id).orElse(null);
         var admin = caller.map(com.manabandhu.backend.auth.Actor::admin).orElse(false);
-        var page = org.springframework.data.domain.PageRequest.of(0, MAX_RESULTS);
+        var page = Paging.firstPage();
         var rows = admin
                 ? (category == null ? repository.findAllByOrderByCreatedAtDesc(page) : repository.findByCategoryOrderByCreatedAtDesc(category, page))
                 : repository.findVisible(callerId, category, page);

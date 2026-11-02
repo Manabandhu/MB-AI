@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.manabandhu.backend.auth.Actor;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +25,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.manabandhu.backend.auth.Actor;
 
 class NotificationPlatformTest {
 
@@ -43,7 +44,7 @@ class NotificationPlatformTest {
     @Test
     void publisherRespectsTheRecipientsCategoryToggle() {
         var service = mock(NotificationService.class);
-        var settings = mock(NotificationsContentService.class);
+        var settings = mock(NotificationSettingsService.class);
         when(settings.allowsInApp(bob, "rideAlerts")).thenReturn(false);
         var publisher = new NotificationPublisher(service, settings, noopTransactions());
 
@@ -55,7 +56,7 @@ class NotificationPlatformTest {
     @Test
     void publisherWritesWhenAllowedAndNeverNotifiesTheActor() {
         var service = mock(NotificationService.class);
-        var settings = mock(NotificationsContentService.class);
+        var settings = mock(NotificationSettingsService.class);
         when(settings.allowsInApp(bob, "chatMessages")).thenReturn(true);
         var publisher = new NotificationPublisher(service, settings, noopTransactions());
 
@@ -68,7 +69,7 @@ class NotificationPlatformTest {
     // --- settings and quiet hours
 
     private static Map<String, Object> quiet(String start, String end, String zone) {
-        var settings = new HashMap<>(NotificationsContentService.DEFAULT_SETTINGS);
+        var settings = new HashMap<>(NotificationSettingsService.DEFAULT_SETTINGS);
         settings.put("quietHours", true);
         settings.put("quietStart", start);
         settings.put("quietEnd", end);
@@ -79,23 +80,23 @@ class NotificationPlatformTest {
     @Test
     void overnightQuietHoursDeferUntilMorning() {
         var at = Instant.parse("2026-10-11T04:30:00Z"); // 23:30 in Chicago (CDT)
-        var until = NotificationsContentService.quietUntil(quiet("22:00", "07:00", "America/Chicago"), at);
+        var until = NotificationSettingsService.quietUntil(quiet("22:00", "07:00", "America/Chicago"), at);
         assertThat(until).isEqualTo(Instant.parse("2026-10-11T12:00:00Z"));
     }
 
     @Test
     void outsideQuietHoursPushesNow() {
         var at = Instant.parse("2026-10-11T18:00:00Z"); // 13:00 in Chicago
-        assertThat(NotificationsContentService.quietUntil(quiet("22:00", "07:00", "America/Chicago"), at)).isNull();
-        var off = new HashMap<>(NotificationsContentService.DEFAULT_SETTINGS);
-        assertThat(NotificationsContentService.quietUntil(off, Instant.parse("2026-10-11T04:30:00Z"))).isNull();
+        assertThat(NotificationSettingsService.quietUntil(quiet("22:00", "07:00", "America/Chicago"), at)).isNull();
+        var off = new HashMap<>(NotificationSettingsService.DEFAULT_SETTINGS);
+        assertThat(NotificationSettingsService.quietUntil(off, Instant.parse("2026-10-11T04:30:00Z"))).isNull();
     }
 
     @Test
     void malformedQuietHoursAreRejectedNotSilentlyDropped() {
         var jdbc = mock(JdbcTemplate.class);
         when(jdbc.queryForList(anyString(), eq(String.class), any(UUID.class))).thenReturn(List.of());
-        var settings = new NotificationsContentService(jdbc);
+        var settings = new NotificationSettingsService(jdbc);
 
         assertThatThrownBy(() -> settings.updateSettings(alice, new NotificationSettings(Map.of("quietStart", "25:00"))))
                 .isInstanceOf(ResponseStatusException.class).hasMessageContaining("400");
@@ -158,7 +159,7 @@ class NotificationPlatformTest {
     @Test
     void dispatcherHonoursPushOffAndQuietHours() {
         var service = mock(NotificationService.class);
-        var settings = mock(NotificationsContentService.class);
+        var settings = mock(NotificationSettingsService.class);
         var devices = mock(DeviceTokenService.class);
         var muted = new Notification(alice, "t", "b", Notification.NotificationType.SYSTEM, null);
         var sleeping = new Notification(bob, "t", "b", Notification.NotificationType.SYSTEM, null);

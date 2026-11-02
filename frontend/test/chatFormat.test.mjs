@@ -7,7 +7,7 @@ import {
   isHttpUrl,
   participantLabel,
   roleLabel,
-} from '../src/modules/chat/chatFormat.ts';
+} from '../src/modules/chat/utils/chatFormat.ts';
 
 test('labels never invent names and compare types case-insensitively', () => {
   assert.equal(participantLabel({ userId: 'abcd1234' }, 'abcd1234'), 'You');
@@ -52,7 +52,7 @@ test('contactsFromParticipants dedupes people and skips the caller', () => {
 });
 
 test('withoutDeliveredPending drops only the first matching own pending message', async () => {
-  const { withoutDeliveredPending } = await import('../src/modules/chat/chatFormat.ts');
+  const { withoutDeliveredPending } = await import('../src/modules/chat/utils/chatFormat.ts');
   const pending = [
     { tempId: 't1', body: 'hi' },
     { tempId: 't2', body: 'hi' },

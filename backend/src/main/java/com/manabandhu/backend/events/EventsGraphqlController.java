@@ -1,10 +1,8 @@
 package com.manabandhu.backend.events;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.validation.Valid;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -13,6 +11,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
+
+import jakarta.validation.Valid;
 
 @Controller
 public class EventsGraphqlController {
@@ -25,7 +26,7 @@ public class EventsGraphqlController {
 
     @QueryMapping
     List<Event> events() {
-        return service.findAll(org.springframework.data.domain.PageRequest.of(0, 100)).getContent();
+        return service.findAll(Paging.firstPage(Paging.SHORT_LIST_CAP)).getContent();
     }
 
     @QueryMapping

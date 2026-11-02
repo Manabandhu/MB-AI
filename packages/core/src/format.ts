@@ -30,6 +30,12 @@ const dateStyles = {
     minute: '2-digit',
   },
   dateTime: { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' },
+  /** "Sat, Oct 18" */
+  weekdayDate: { weekday: 'short', month: 'short', day: 'numeric' },
+  /** "Saturday, Oct 18" */
+  weekdayLongDate: { weekday: 'long', month: 'short', day: 'numeric' },
+  /** "6 PM" */
+  hour: { hour: 'numeric' },
 } as const satisfies Record<string, Intl.DateTimeFormatOptions>;
 
 export type DateStyle = keyof typeof dateStyles;
@@ -178,6 +184,11 @@ export function formatSalaryRange(
   if (min) return `From ${fmt(min)}${suffix}`;
   if (max) return `Up to ${fmt(max)}${suffix}`;
   return null;
+}
+
+/** 1234 → "1,234" in the active locale. */
+export function formatNumber(value: number): string {
+  return value.toLocaleString(activeLocale);
 }
 
 /** 1234 → "1.2K". */

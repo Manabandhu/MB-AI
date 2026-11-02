@@ -4,5 +4,5 @@ export { type Conversation, listConversations } from './api';
 export { ChatBubble } from './components/ChatBubble';
 export { ChatFrame, scrollToNewest } from './components/ChatFrame';
 export { Composer } from './components/Composer';
-export { type ChatContact, listChatContacts, useChatContacts } from './contacts';
+export { type ChatContact, listChatContacts, useChatContacts } from './hooks/useContacts';
 export { moduleMeta } from './module';

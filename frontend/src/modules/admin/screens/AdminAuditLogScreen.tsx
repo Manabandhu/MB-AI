@@ -1,3 +1,4 @@
+import { formatDate } from '@manabandhu/core';
 import { type AuditLogEntry, listAuditLog } from '@/modules/admin/api';
 import { AdminModerationList } from '@/modules/admin/components/AdminModerationList';
 import { AppText, Card } from '@/modules/shared/ui';
@@ -18,7 +19,7 @@ export default function AdminAuditLogScreen() {
             Actor: {l.actor} · Target: {l.targetType}:{l.targetId}
           </AppText>
           <AppText tone="primary" variant="label">
-            {new Date(l.createdAt).toLocaleString()}
+            {formatDate(l.createdAt, 'dateTime') ?? ''}
           </AppText>
         </Card>
       )}

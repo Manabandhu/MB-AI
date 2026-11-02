@@ -13,11 +13,11 @@ import {
 } from '@/modules/rooms/utils/roomFilters';
 import { formatAmount } from '@/modules/rooms/utils/roomFormat';
 import { errorMessage, ROOM_TYPES } from '@/modules/rooms/utils/roomLabels';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 
 /**
  * Every room filter and the sort order in one scrollable sheet. Choices apply immediately to the shared filter state

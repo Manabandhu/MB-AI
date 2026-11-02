@@ -7,7 +7,7 @@ import {
   isOpenReport,
   isSuspended,
   statusLabel,
-} from '../src/modules/admin/adminAccess.ts';
+} from '../src/modules/admin/utils/adminAccess.ts';
 
 test('admin role comes from the identity or signed app_metadata roles', () => {
   assert.equal(adminRoleOf('SUPER_ADMIN', null), 'SUPER_ADMIN');

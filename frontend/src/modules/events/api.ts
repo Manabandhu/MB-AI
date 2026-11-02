@@ -1,4 +1,4 @@
-import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/apiClient';
+import { apiFetch, parseJson, parseJsonOrThrow } from '@/lib/api';
 import { type RawPage, toPage } from '@/lib/springPage';
 
 export type Event = {

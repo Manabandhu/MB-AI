@@ -22,7 +22,6 @@ class AutomationCatalog {
         register("deploy-backend", "Deploy backend", "Deployment", "high", true, "deploy-backend.yml", configured);
         register("release-mobile", "Build native release", "Deployment", "high", true, "release-mobile.yml", configured);
         register("apply-migrations", "Apply database migrations", "Database", "critical", true, "migrate.yml", configured);
-        register("run-ai-evaluations", "Run AI safety evaluations", "AI", "medium", false, "ai-evaluations.yml", configured);
         register("rollback-production", "Rollback production", "Recovery", "critical", true, "rollback.yml", configured);
     }
 

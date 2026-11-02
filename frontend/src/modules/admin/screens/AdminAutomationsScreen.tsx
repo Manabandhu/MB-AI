@@ -7,7 +7,6 @@ import {
   executeAutomation,
   listAutomationOperations,
 } from '@/modules/admin/api';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import {
   AppButton,
   AppText,
@@ -24,6 +23,7 @@ import {
   TextField,
   useConfirm,
 } from '@/modules/shared/ui';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 
 type Environment = 'development' | 'staging' | 'production';
@@ -34,7 +34,7 @@ const ENVIRONMENTS = [
   { value: 'production', label: 'Production' },
 ] as const;
 
-/** Mirrors `ExecuteAutomationRequest`: the server rejects anything else. */
+/** Mirrors `ExecuteAutomationInput`: the server rejects anything else. */
 const REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 const MIN_REASON = 10;
 const MAX_REASON = 500;

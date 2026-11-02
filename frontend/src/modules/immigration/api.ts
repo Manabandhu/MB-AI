@@ -1,4 +1,4 @@
-import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
+import { apiFetch, parseJsonOrThrow } from '@/lib/api';
 
 /** Mirrors backend `ImmigrationGuide`. */
 export type ImmigrationGuide = {

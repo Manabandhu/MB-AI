@@ -2,7 +2,6 @@ package com.manabandhu.backend.admin;
 
 import java.util.List;
 
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.audit.AdminAuditService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/admin/automations")
@@ -43,7 +45,7 @@ public class SuperAdminController {
     @PostMapping("/{operationId}/executions")
     ResponseEntity<AutomationExecution> execute(
             @PathVariable String operationId,
-            @Valid @RequestBody ExecuteAutomationRequest input,
+            @Valid @RequestBody ExecuteAutomationInput input,
             Authentication authentication) {
         accessPolicy.require(authentication);
         var execution = service.execute(operationId, input, accessPolicy.actorId(authentication),

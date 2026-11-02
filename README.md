@@ -5,7 +5,7 @@ ManaBandhu is an adaptive community platform built as a governed monorepo. Its c
 ## Stack
 
 - Mobile: Expo SDK 57, React Native 0.86, React 19.2, Expo Router 57, TypeScript 6.0
-- Client data: TanStack Query, GraphQL Request, Zod, Zustand, React Hook Form
+- UI and client data: Tamagui, TanStack Query, Zod, Zustand, React Hook Form
 - Authentication: Supabase Auth with sessions stored in Expo Secure Store
 - Backend: Java 25, Spring Boot 4.1.0, Spring Security, Spring Data JPA
 - APIs: versioned REST under `/api/v1` and GraphQL at `/graphql`
@@ -13,17 +13,17 @@ ManaBandhu is an adaptive community platform built as a governed monorepo. Its c
 - Quality: pnpm workspaces, Biome, TypeScript strict mode, Maven tests
 - Operations: role-gated Super Admin control plane and protected GitHub Actions workflows
 
-## Platform modules
+## Repository layout
 
-- `services/ai-orchestrator`: AI assistant/chatbot, model routing, tools, safety, evaluations, and cost boundaries
-- `services/chat-realtime`: human, group, support, and bot conversations
-- `services/notification-worker`: in-app, push, web push, email, and SMS delivery boundary
-- `services/analytics-pipeline`: privacy-aware event validation and delivery
-- `packages/api-contracts`: canonical OpenAPI, GraphQL, and AsyncAPI contracts
+- `frontend`: the Expo workspace (`frontend/src/app` routes, `frontend/src/modules/<feature>` business capabilities,
+  `frontend/src/modules/shared/ui` shared primitives)
+- `backend`: Spring Boot REST + GraphQL API, package-by-feature under `com.manabandhu.backend`, cross-cutting helpers in
+  `com.manabandhu.backend.common`
+- `packages/core`: platform-free TypeScript shared by every client (HTTP client, formatters, module metadata)
 - `packages/design-system`: cross-platform tokens and adaptive breakpoints
-- `infra/deployments`: separate native, web, and backend delivery boundaries
-- `infra/observability`: logs, metrics, traces, SLOs, alerts, and runbook boundary
-- `frontend`: the Expo workspace, with business capabilities separated under `frontend/src/modules`
+- `packages/api-contracts`: canonical OpenAPI, GraphQL, and AsyncAPI contracts
+- `scripts`: verification, review, and local-dev tooling
+- `.github/workflows`: CI pipelines and audited deploy/migrate/release workflows
 
 Architecture is documented in `docs/architecture/platform.md` and its ADRs.
 
@@ -37,7 +37,8 @@ Every governed module has a repo-local skill under `.codex/skills`. Root `AGENTS
 
 ## Requirements
 
-- Node.js 22.13 or newer
+- Node.js 22.18 or newer (see `.nvmrc`)
+- Java 25 (see `.tool-versions`)
 - pnpm 11.21
 - Java 25
 - Maven is optional because the Maven wrapper is included
@@ -124,4 +125,3 @@ pnpm review:history
 
 Pull requests run independently named CI pipelines for Frontend, Backend, API Contracts, Governance, Dependency Review, Security Analysis, and Workflow Validation. Path filters avoid unrelated builds; security analysis also runs weekly.
 
-The Stitch source screens and catalog remain under `stitch/` for implementation reference.

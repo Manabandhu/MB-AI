@@ -42,10 +42,10 @@ public class NotificationPublisher {
     }
 
     private final NotificationService notificationService;
-    private final NotificationsContentService settings;
+    private final NotificationSettingsService settings;
     private final TransactionTemplate newTransaction;
 
-    NotificationPublisher(NotificationService notificationService, NotificationsContentService settings,
+    NotificationPublisher(NotificationService notificationService, NotificationSettingsService settings,
                           PlatformTransactionManager transactionManager) {
         this.notificationService = notificationService;
         this.settings = settings;

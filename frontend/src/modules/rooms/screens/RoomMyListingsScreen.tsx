@@ -12,9 +12,7 @@ import {
   pauseRoomListing,
   publishRoomListing,
 } from '@/modules/rooms/api';
-import { roomSaveNoticeText } from '@/modules/rooms/saveNotice';
 import { type OwnerRoomListing, statusIs } from '@/modules/rooms/types';
-import { showError } from '@/modules/rooms/utils/notify';
 import { formatRent } from '@/modules/rooms/utils/roomFormat';
 import {
   ARCHIVE_CONFIRM,
@@ -22,13 +20,15 @@ import {
   statusLabel,
   statusTone,
 } from '@/modules/rooms/utils/roomLabels';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
+import { roomSaveNoticeText } from '@/modules/rooms/utils/saveNotice';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
+import { showError } from '@/modules/shared/ui/notify';
 import { OwnerItemCard, type OwnerItemOverflowAction } from '@/modules/shared/ui/OwnerItemCard';
 import { ResponsiveGrid } from '@/modules/shared/ui/ResponsiveGrid';
 import { Screen } from '@/modules/shared/ui/Screen';

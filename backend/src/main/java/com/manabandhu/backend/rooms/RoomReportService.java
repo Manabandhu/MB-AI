@@ -5,20 +5,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.manabandhu.backend.admin.AdminAuditService;
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
+import com.manabandhu.backend.common.audit.AdminAuditService;
 
 @Service
 public class RoomReportService {
 
     static final Set<String> STATUSES = Set.of("open", "in_review", "resolved", "dismissed");
-    static final int LIST_CAP = 200;
 
     private final RoomReportRepository repository;
     private final RoomListingService listingService;
@@ -34,12 +33,12 @@ public class RoomReportService {
     public List<RoomReport> findReviewQueue(Actor actor, String status) {
         requireModerator(actor);
         return repository.findByStatusOrderByCreatedAtDesc(requireStatus(status == null ? "open" : status),
-                PageRequest.of(0, LIST_CAP));
+                Paging.firstPage());
     }
 
     @Transactional(readOnly = true)
     public List<RoomReport> findByReporter(Actor actor) {
-        return repository.findByReporterIdOrderByCreatedAtDesc(actor.id(), PageRequest.of(0, LIST_CAP));
+        return repository.findByReporterIdOrderByCreatedAtDesc(actor.id(), Paging.firstPage());
     }
 
     /** Anyone signed in can report a listing they can see, except their own; one open report per listing. */

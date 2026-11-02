@@ -4,15 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
 import { useAuthStore } from '@/lib/authStore';
 import { supabase } from '@/lib/supabase';
+import { AuthButton, AuthField, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
 import {
   friendlyAuthError,
   MIN_PASSWORD_LENGTH,
   PASSWORD_RULES,
   parseAuthRedirect,
   passwordProblem,
-} from '@/modules/auth/authHelpers';
-import { AuthButton, AuthField, AuthNotice, AuthScreen } from '@/modules/auth/components/AuthKit';
-import { routeAfterAuth } from '@/modules/auth/postAuth';
+} from '@/modules/auth/utils/authHelpers';
+import { routeAfterAuth } from '@/modules/auth/utils/postAuth';
 
 export function ResetPasswordScreen() {
   const status = useAuthStore((s) => s.status);

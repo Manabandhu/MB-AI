@@ -9,14 +9,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.chat.ContactOwnerService;
 import com.manabandhu.backend.chat.Conversation;
-import com.manabandhu.backend.chat.ConversationParticipant;
 import com.manabandhu.backend.chat.ConversationParticipantService;
-import com.manabandhu.backend.chat.ConversationService;
-import com.manabandhu.backend.chat.Message;
-import com.manabandhu.backend.chat.MessageService;
 import com.manabandhu.backend.notifications.Notification;
-import com.manabandhu.backend.notifications.NotificationPublisher;
 
 /**
  * "Chat with seller": opens a direct chat between the buyer and the seller about one listing, or returns the one
@@ -29,20 +25,15 @@ public class ListingContactService {
 
     private final JdbcTemplate jdbc;
     private final ListingService listingService;
-    private final ConversationService conversations;
     private final ConversationParticipantService participants;
-    private final MessageService messages;
-    private final NotificationPublisher notifications;
+    private final ContactOwnerService contacts;
 
-    ListingContactService(JdbcTemplate jdbc, ListingService listingService, ConversationService conversations,
-                          ConversationParticipantService participants, MessageService messages,
-                          NotificationPublisher notifications) {
+    ListingContactService(JdbcTemplate jdbc, ListingService listingService,
+                          ConversationParticipantService participants, ContactOwnerService contacts) {
         this.jdbc = jdbc;
         this.listingService = listingService;
-        this.conversations = conversations;
         this.participants = participants;
-        this.messages = messages;
-        this.notifications = notifications;
+        this.contacts = contacts;
     }
 
     @Transactional
@@ -60,18 +51,16 @@ public class ListingContactService {
         if (!"active".equals(listing.getStatus()) && !"reserved".equals(listing.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This item is no longer available");
         }
-        var conversation = conversations.create(actor.id(), Conversation.ConversationType.DIRECT,
-                "Marketplace: " + listing.getTitle());
-        participants.add(conversation.getId(), listing.getOwnerId(), ConversationParticipant.ParticipantRole.MEMBER);
-        messages.send(conversation.getId(), actor.id(),
-                "Hi! I'm interested in \"" + listing.getTitle() + "\". Is it still available?", Message.MessageType.TEXT);
+        var conversationId = contacts.open(new ContactOwnerService.Contact(
+                actor.id(), listing.getOwnerId(), Conversation.ConversationType.DIRECT,
+                "Marketplace: " + listing.getTitle(),
+                "Hi! I'm interested in \"" + listing.getTitle() + "\". Is it still available?",
+                Notification.NotificationType.CHAT, "New message about your listing",
+                "Someone asked about \"" + listing.getTitle() + "\"."));
         jdbc.update("""
                 INSERT INTO public.listing_conversations (listing_id, buyer_id, conversation_id) VALUES (?, ?, ?)
                 ON CONFLICT (listing_id, buyer_id) DO UPDATE SET conversation_id = EXCLUDED.conversation_id
-                """, listingId, actor.id(), conversation.getId());
-        notifications.publish(listing.getOwnerId(), actor.id(), Notification.NotificationType.CHAT,
-                "New message about your listing", "Someone asked about \"" + listing.getTitle() + "\".",
-                "/chat/" + conversation.getId());
-        return new ListingContactResponse(conversation.getId(), true);
+                """, listingId, actor.id(), conversationId);
+        return new ListingContactResponse(conversationId, true);
     }
 }

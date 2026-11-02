@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { latestServerMessageId, withUnreadCount } from '../src/modules/chat/readState.ts';
+import { latestServerMessageId, withUnreadCount } from '../src/modules/chat/utils/readState.ts';
 
 test('latestServerMessageId picks the newest stored message and skips optimistic ones', () => {
   assert.equal(latestServerMessageId([]), undefined);

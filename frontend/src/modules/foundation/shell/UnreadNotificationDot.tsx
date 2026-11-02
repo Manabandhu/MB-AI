@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { YStack } from 'tamagui';
 import { useAuthStore } from '@/lib/authStore';
-import { getUnreadNotificationCount, notificationKeys } from '@/modules/notifications/api';
+import { getUnreadNotificationCount, notificationKeys } from '@/modules/notifications';
 
 /** Shows a dot only when the server reports unread notifications; nothing while loading, signed out, or on error. */
 export function UnreadNotificationDot() {

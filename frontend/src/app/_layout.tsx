@@ -3,15 +3,12 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { type Href, router, Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useState } from 'react';
-import '../../global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaListener } from 'react-native-safe-area-context';
-import { Uniwind } from 'uniwind';
 import '@/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { persistOptions, queryPersister } from '@/lib/queryPersistence';
-import { useTermsGate } from '@/modules/auth/useTermsGate';
-import { useOpenPushTaps } from '@/modules/notifications/push';
+import { useTermsGate } from '@/modules/auth/hooks/useTermsGate';
+import { useOpenPushTaps } from '@/modules/notifications/utils/push';
 import { ConfirmProvider } from '@/modules/shared/ui/ConfirmSheet';
 import { AppThemeProvider } from '@/theme/ThemeProvider';
 
@@ -52,20 +49,14 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SafeAreaListener
-      onChange={({ insets }) => {
-        Uniwind.updateInsets(insets);
-      }}
-    >
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <AppThemeProvider>
-          <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-            <ConfirmProvider>
-              <Stack screenOptions={{ headerShown: false }} />
-            </ConfirmProvider>
-          </PersistQueryClientProvider>
-        </AppThemeProvider>
-      </GestureHandlerRootView>
-    </SafeAreaListener>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppThemeProvider>
+        <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+          <ConfirmProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </ConfirmProvider>
+        </PersistQueryClientProvider>
+      </AppThemeProvider>
+    </GestureHandlerRootView>
   );
 }

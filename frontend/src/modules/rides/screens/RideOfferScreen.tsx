@@ -10,11 +10,7 @@ import { formatDeparture } from '@/modules/rides/components/RideCard';
 import { RideFormScreen, useFormScroll } from '@/modules/rides/components/RideFormScreen';
 import { RideLocationPicker } from '@/modules/rides/components/RideLocationPicker';
 import { useTimedNotice } from '@/modules/rides/hooks/useTimedNotice';
-import {
-  fetchGoogleRoute,
-  geocodeAddress,
-  type RouteInfo,
-} from '@/modules/rides/services/googleMapsService';
+import { fetchGoogleRoute, geocodeAddress, type RouteInfo } from '@/modules/rides/mapsApi';
 import type {
   GenderPreference,
   LuggageCapacity,
@@ -23,7 +19,6 @@ import type {
   TollPreference,
   WeekDay,
 } from '@/modules/rides/types';
-import { showError } from '@/modules/rides/utils/notify';
 import {
   amountError,
   contributionText,
@@ -40,6 +35,7 @@ import { Chip } from '@/modules/shared/ui/Chip';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { NumberStepper } from '@/modules/shared/ui/NumberStepper';
+import { showError } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
 import { TextField } from '@/modules/shared/ui/TextField';

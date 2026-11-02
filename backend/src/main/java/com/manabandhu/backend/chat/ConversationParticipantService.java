@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.manabandhu.backend.admin.AdminAuditService;
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.audit.AdminAuditService;
 
 /** Conversation membership. Only active participants (and admins) can read or write a conversation. */
 @Service

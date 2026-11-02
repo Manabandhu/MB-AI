@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { type ReactNode, useMemo, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
 import {
   type AppIconName,
   IconButton,
@@ -14,7 +12,9 @@ import {
   type StatusTone,
   TextField,
 } from '@/modules/shared/ui';
-import { statusLabel } from '../adminAccess';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { statusLabel } from '../utils/adminAccess';
 
 type AdminModerationListProps<T extends { id: string }> = {
   title: string;

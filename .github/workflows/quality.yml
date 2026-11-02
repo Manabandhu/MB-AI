@@ -27,7 +27,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
       - name: Verify module skills
         run: node scripts/verify-module-skills.mjs
       - name: Audit skill updates by commit
@@ -38,5 +38,9 @@ jobs:
         run: node scripts/verify-api-routes.mjs
       - name: Verify design-system ratchet
         run: node scripts/verify-design-system.mjs
+      - name: Verify screen catalog matches route files
+        run: node scripts/verify-screen-catalog.mjs
+      - name: Verify frontend module boundaries
+        run: node scripts/verify-module-boundaries.mjs
       - name: Scan tracked files for credentials
         run: node scripts/verify-no-secrets.mjs

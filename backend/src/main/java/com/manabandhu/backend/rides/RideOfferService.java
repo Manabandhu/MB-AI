@@ -7,13 +7,16 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.Paging;
 
 @Service
 public class RideOfferService {
@@ -21,7 +24,6 @@ public class RideOfferService {
     static final java.util.Set<String> OFFER_STATUSES =
             java.util.Set.of("draft", "active", "in_progress", "completed", "cancelled");
 
-    static final int LIST_CAP = 200;
 
     private final RideOfferRepository repository;
     private final RideAccess access;
@@ -49,8 +51,8 @@ public class RideOfferService {
 
     @Transactional(readOnly = true)
     public List<RideOffer> findAllForAdmin() {
-        return repository.findAll(org.springframework.data.domain.PageRequest.of(0, 500,
-                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")))
+        return repository.findAll(PageRequest.of(0, 500,
+                Sort.by(Sort.Direction.DESC, "createdAt")))
                 .getContent();
     }
 
@@ -63,14 +65,14 @@ public class RideOfferService {
     @Transactional(readOnly = true)
     public List<RideOffer> findByDriver(UUID driverId) {
         return repository.findByDriverIdOrderByCreatedAtDesc(driverId,
-                org.springframework.data.domain.PageRequest.of(0, LIST_CAP));
+                Paging.firstPage());
     }
 
     /** Finished, cancelled, or departed rides the user drove or rode on. */
     @Transactional(readOnly = true)
     public List<RideOffer> findHistory(UUID userId) {
         return repository.findHistoryFor(userId, Instant.now(),
-                org.springframework.data.domain.PageRequest.of(0, LIST_CAP));
+                Paging.firstPage());
     }
 
     @Transactional(readOnly = true)

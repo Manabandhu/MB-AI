@@ -1,13 +1,12 @@
+import { formatDate } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import type { Href } from 'expo-router';
 import { XStack, YStack } from 'tamagui';
-import { isOpenReport } from '@/modules/admin/adminAccess';
 import { listReports } from '@/modules/admin/api';
 import { ReportStatusBadge } from '@/modules/admin/components/AdminBits';
 import { useResolveReportAction } from '@/modules/admin/hooks';
 import { reportTypeLabel } from '@/modules/admin/screens/AdminReportsScreen';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { isOpenReport } from '@/modules/admin/utils/adminAccess';
 import {
   AppButton,
   AppText,
@@ -17,6 +16,8 @@ import {
   Section,
   SkeletonCard,
 } from '@/modules/shared/ui';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
@@ -95,10 +96,7 @@ export default function AdminReportDetailScreen({ reportId }: { reportId: string
         <Card>
           <YStack gap="$x3">
             <Field label="Reported by" value={report.reporterName} />
-            <Field
-              label="Reported on"
-              value={Number.isNaN(created.getTime()) ? 'Unknown' : created.toLocaleString()}
-            />
+            <Field label="Reported on" value={formatDate(created, 'dateTime') ?? 'Unknown'} />
             <Field label="Reported content type" value={report.targetType} />
             <Field label="Reported content ID" value={report.targetId} />
           </YStack>

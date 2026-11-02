@@ -1,3 +1,4 @@
+import { formatNumber } from '@manabandhu/core';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { XStack, YStack } from 'tamagui';
@@ -5,12 +6,12 @@ import { useAuthStore } from '@/lib/authStore';
 import { FEED_LIMIT, getCommunity, listPosts } from '@/modules/community/api';
 import { PostCard } from '@/modules/community/components/PostCard';
 import { useMembershipToggle } from '@/modules/community/hooks';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText, Heading } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 import { errorText } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { ScreenHeader } from '@/modules/shared/ui/ScreenHeader';
@@ -61,7 +62,7 @@ export function CommunityDetailsScreen() {
   const community = communityQuery.data;
   const posts = postsQuery.data ?? [];
   const createPostRoute = `/community/create-post?communityId=${community.id}` as Href;
-  const members = `${community.memberCount.toLocaleString()} ${community.memberCount === 1 ? 'member' : 'members'}`;
+  const members = `${formatNumber(community.memberCount)} ${community.memberCount === 1 ? 'member' : 'members'}`;
 
   const onToggle = () => {
     if (!signedIn) {

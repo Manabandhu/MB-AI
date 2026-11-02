@@ -19,7 +19,6 @@ import {
 } from '@/modules/rooms/api';
 import { useRoomSave } from '@/modules/rooms/hooks/useRoomSave';
 import { type RoomListing, statusIs } from '@/modules/rooms/types';
-import { showError } from '@/modules/rooms/utils/notify';
 import { formatAmount, formatRent } from '@/modules/rooms/utils/roomFormat';
 import {
   ARCHIVE_CONFIRM,
@@ -34,8 +33,6 @@ import {
   statusLabel,
   statusTone,
 } from '@/modules/rooms/utils/roomLabels';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { ACTION_BAR_SPACE, ActionBar } from '@/modules/shared/ui/ActionBar';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
@@ -45,7 +42,10 @@ import { BottomSheet } from '@/modules/shared/ui/BottomSheet';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
 import { useConfirm } from '@/modules/shared/ui/ConfirmSheet';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
+import { showError } from '@/modules/shared/ui/notify';
 import { Screen } from '@/modules/shared/ui/Screen';
 import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 import { TextField } from '@/modules/shared/ui/TextField';

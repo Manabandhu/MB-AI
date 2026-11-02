@@ -12,7 +12,6 @@ final class MarketplaceRules {
     static final String NOT_BLANK = "(?s).*\\S.*";
     static final Set<String> PUBLIC_STATUSES = Set.of("active", "reserved", "sold");
     static final int MAX_IMAGES = 10;
-    static final int LIST_CAP = 200;
 
     /** Owners move between active, reserved and sold; only moderators remove or restore. */
     static final Map<String, List<String>> OWNER_TRANSITIONS = Map.of(

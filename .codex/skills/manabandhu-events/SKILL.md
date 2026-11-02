@@ -68,7 +68,7 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - Uses `useQuery` and `useMutation` from `@tanstack/react-query`
 - Forms use `react-hook-form` + `zod` + `@hookform/resolvers`
 - Events store instants in UTC and render locale-aware dates
-- Styling uses `StyleSheet` + Tailwind utilities via `uniwind`
+- Styling uses Tamagui primitives from `@/modules/shared/ui` with design-system tokens (Uniwind/Tailwind were removed 2026-10-30)
 
 ## Accessibility and Responsive Behavior Rules
 
@@ -99,3 +99,5 @@ Owns event discovery, search, details, creation, saves, user events, attendance,
 - Review fixes (2026-10-14): `EventDetailsScreen` shows a retry in the RSVP bar when the attendance query fails and refuses to change an RSVP it has not loaded. Create-event quick dates are labelled with their real date ("Sat, Oct 24 · 6 PM", "Tomorrow · 11 AM"), so a Saturday evening never offers "This Saturday" for next week.
 - Phase 2 visual rebuild (2026-10-14): `EventsHomeScreen` is on `Screen` + `ScreenHeader` (back to `/home`, saved-events `IconButton`, one primary "Host" action), a search `TextField`, a radio `FilterChipRow` of categories, shared loading/error/empty states, a tinted spotlight `Card`, and a `ResponsiveGrid` of pressable event `Card`s; emoji are `AppIcon`s and the local palette is gone. Filtering, sorting, the sign-in redirect for hosting and the API calls are unchanged.
 - Organizer ids (2026-10-14): event reads are public, so `Event` responses (REST and GraphQL) no longer expose `organizerId`; they carry `mine` (true only for the signed-in organizer). `EventDetailsScreen` uses `event.mine === true` and keys the detail query by viewer (`['events', id, 'detail', userId]`). `PagedResponseShapeWebTest` and the smoke suite pin it.
+- Structure cleanup (2026-10-30): imports use `@/lib/api` (the `@/lib/apiClient` shim was removed) and `@/modules/shared/ui/*` (the old `shared/components` folder and the per-module `utils/notify` re-exports were removed; use `@/modules/shared/ui/notify`). Dates, times and counts go through `@manabandhu/core` (`formatDate`, `formatTime`, `formatNumber`) instead of `toLocale*String`. The module follows the layout in `frontend/src/modules/README.md` (`utils/`, `hooks/`, `stores/`). `CreateEventScreen` presets use `formatDate` styles `weekdayDate` and `hour`.
+- Module boundaries (2026-10-30): other modules import this one only through its `index.ts`; `pnpm verify:boundaries` (in `pnpm verify` and the Quality workflow) fails on deep imports and on imports from a higher layer (shared < notifications < onboarding < auth < feature modules < foundation). Public API adds `listEvents`, `listSavedEvents`, `Event` (foundation search and saved).

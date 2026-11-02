@@ -4,7 +4,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +12,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/safety")
@@ -32,7 +35,7 @@ public class SafetyController {
     }
 
     @GetMapping("/center")
-    com.manabandhu.backend.foundation.CatalogScreenContent center(Authentication authentication) {
+    com.manabandhu.backend.common.catalog.CatalogScreenContent center(Authentication authentication) {
         return contentService.center(Actor.from(authentication));
     }
 

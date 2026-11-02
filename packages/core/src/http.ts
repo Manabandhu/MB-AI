@@ -76,13 +76,13 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
   return { fetch: request, authorizationHeaders };
 }
 
-/** Pulls a human-readable message out of an error response (JSON `message`/`error`, else raw text). */
+/** Pulls a human-readable message out of an error response (problem+json `message`/`error`/`detail`, else raw text). */
 export async function readErrorDetail(response: Response): Promise<string> {
   const text = await response.text().catch(() => '');
   if (!text) return '';
   try {
-    const data = JSON.parse(text) as { message?: unknown; error?: unknown };
-    const detail = data.message ?? data.error;
+    const data = JSON.parse(text) as { message?: unknown; error?: unknown; detail?: unknown };
+    const detail = data.message ?? data.error ?? data.detail;
     return typeof detail === 'string' ? detail : text;
   } catch {
     return text;

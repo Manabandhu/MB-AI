@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { uploadContentType } from '../src/modules/shared/hooks/uploadTypes.ts';
+import { uploadContentType } from '../src/modules/shared/utils/uploadTypes.ts';
 
 test('known image types pass through', () => {
   assert.equal(uploadContentType('image/png', 'file:///a.png'), 'image/png');

@@ -1,7 +1,10 @@
 import type { Href } from 'expo-router';
 import { router } from 'expo-router';
 import { XStack, YStack } from 'tamagui';
-import { useRankedModules, useUserActivityStore } from '@/modules/foundation/userActivityStore';
+import {
+  useRankedModules,
+  useUserActivityStore,
+} from '@/modules/foundation/stores/userActivityStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';

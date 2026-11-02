@@ -7,7 +7,7 @@ description: Maintain ManaBandhu AI assistant and chatbot capabilities, includin
 
 ## Module Purpose and Ownership
 
-Owns user-facing assistant and bot experiences, streaming UI, consent, safety feedback, citations, and typed integration with the AI orchestrator. Orchestration and evaluation infrastructure remain under `services/ai-orchestrator` and `platform/ai`.
+Owns user-facing assistant and bot experiences, streaming UI, consent, safety feedback, citations, and typed integration with a model provider. Backend ownership is `backend/src/main/java/com/manabandhu/backend/ai/`; replies stay a placeholder until a provider and an evaluation suite exist (the old `ai-evaluations` workflow and `services/ai-orchestrator` placeholder were removed on 2026-10-30).
 
 ## Route Inventory
 
@@ -22,7 +22,7 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - `AssistantScreen` - chat's `ChatFrame`/`ChatBubble`/`Composer` (imported from `@/modules/chat`); messages oldest first; honest subtitle ("not connected to an AI model yet"); pending question bubble + "Assistant is replying…"; a failed send restores the question into the input and shows an inline alert; header icon buttons for History and Citations; back falls back to `/`
 - `AssistantHistoryScreen` - `Screen`/`ScreenHeader`; each conversation `Card` expands to load and show its messages
 - `AssistantCitationsScreen` - citation `Card`s open their http(s) URL with `Linking` (other schemes are ignored)
-- Pure helpers: `ai-assistant/assistantFormat.ts` (`oldestFirst`, `isUserRole`, `safeExternalUrl`), tested in `frontend/test/safetyUtilities.test.mjs`
+- Pure helpers: `ai-assistant/utils/assistantFormat.ts` (`oldestFirst`, `isUserRole`, `safeExternalUrl`), tested in `frontend/test/safetyUtilities.test.mjs`
 
 ## API Surface
 
@@ -89,3 +89,4 @@ Owns user-facing assistant and bot experiences, streaming UI, consent, safety fe
 - P0/P1 pass (2026-10-13): fixed reversed message order, removed the false "Offline… disabled" banner, kept the question on failed sends, honest "not connected to an AI model yet" subtitle (matches `AssistantController`), thinking indicator, auto-scroll, keyboard-avoiding composer, back button, send icon (`arrow-right`), tappable history rows (per-conversation messages) and citation links. Screens moved off `SafeAreaView`/`StyleSheet` onto shared primitives.
 - `AssistantEntry` keyboard access (2026-10-14): the ask field and the search square spread `keyboardPress` and have a focus ring, so Tab + Enter/Space work on web.
 - Visual QA pass (2026-10-14, offline stack, 390/768/1440 light+dark): the assistant subtitle is shorter ("Preview: no AI model connected, so it can't answer yet.") so the honest notice fits two lines on phones instead of ending in an ellipsis.
+- `CreateConversationRequest` is now `CreateAssistantConversationInput` (the chat module already owns `CreateConversationInput`) (2026-11-02).

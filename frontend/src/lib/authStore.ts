@@ -7,9 +7,9 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { getIdentity } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
-import { parseAuthRedirect } from '@/modules/auth/authHelpers';
-import { routeAfterAuth } from '@/modules/auth/postAuth';
-import { clearSavedRooms } from '@/modules/rooms/savedRoomsStore';
+import { parseAuthRedirect } from '@/modules/auth/utils/authHelpers';
+import { routeAfterAuth } from '@/modules/auth/utils/postAuth';
+import { clearSavedRooms } from '@/modules/rooms/stores/savedRoomsStore';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 

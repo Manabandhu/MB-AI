@@ -1,5 +1,5 @@
-import { apiFetch, parseJsonOrThrow } from '@/lib/apiClient';
-import type { CatalogScreenContent } from '@/modules/foundation/screenDataTypes';
+import type { CatalogScreenContent } from '@manabandhu/core';
+import { apiFetch, parseJsonOrThrow } from '@/lib/api';
 
 // Types mirror the backend entities serialized by UtilitiesController (PackageTracking, NearbyPlace,
 // EmergencyResource). Errors propagate so screens show an error state, never sample data.

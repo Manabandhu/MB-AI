@@ -1,8 +1,8 @@
 package com.manabandhu.backend.marketplace;
 
-import static com.manabandhu.backend.foundation.CatalogContent.item;
-import static com.manabandhu.backend.foundation.CatalogContent.metric;
-import static com.manabandhu.backend.foundation.CatalogContent.personal;
+import static com.manabandhu.backend.common.catalog.CatalogContent.item;
+import static com.manabandhu.backend.common.catalog.CatalogContent.metric;
+import static com.manabandhu.backend.common.catalog.CatalogContent.personal;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,13 +10,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.manabandhu.backend.auth.Actor;
-import com.manabandhu.backend.foundation.CatalogItem;
-import com.manabandhu.backend.foundation.CatalogScreenContent;
-import com.manabandhu.backend.foundation.UnknownCatalogScreenException;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.manabandhu.backend.auth.Actor;
+import com.manabandhu.backend.common.catalog.CatalogItem;
+import com.manabandhu.backend.common.catalog.CatalogScreenContent;
+import com.manabandhu.backend.common.catalog.UnknownCatalogScreenException;
 
 /**
  * Marketplace screens. Listing and category counts come from COUNT queries; saved and own-listing counts are

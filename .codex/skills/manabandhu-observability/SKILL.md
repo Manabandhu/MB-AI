@@ -5,7 +5,7 @@ description: Maintain ManaBandhu observability across structured logs, OpenTelem
 
 # Observability
 
-1. Read `platform/observability/MODULE.md` and `infra/observability/MODULE.md`.
+1. Current surface: `backend/.../health/HealthController`, Spring Boot Actuator (`health`, `info`, `metrics`; Prometheus is not exposed because no scraper is configured), and structured `log.info` audit lines. The `platform/observability` and `infra/observability` placeholders were removed on 2026-10-30.
 2. Propagate trace and correlation IDs across REST, GraphQL, events, workers, notifications, chat, and AI calls.
 3. Define SLIs/SLOs for user journeys, not only infrastructure.
 4. Use structured events and bounded labels. Redact tokens, secrets, message bodies, prompts, and sensitive profile values at source.

@@ -16,12 +16,12 @@ import {
   resultSummary,
 } from '@/modules/foundation/launcher/exploreFilters';
 import { type LauncherModule, launcherModules } from '@/modules/foundation/launcher/moduleRegistry';
-import { useUserActivityStore } from '@/modules/foundation/userActivityStore';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
+import { useUserActivityStore } from '@/modules/foundation/stores/userActivityStore';
 import { AppIcon } from '@/modules/shared/ui/AppIcon';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { Chip } from '@/modules/shared/ui/Chip';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
 import { FilterChipRow } from '@/modules/shared/ui/FilterChipRow';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { FadeIn } from '@/modules/shared/ui/motion/FadeIn';

@@ -1,3 +1,4 @@
+import { formatDate } from '@manabandhu/core';
 import { type Href, router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';
@@ -19,15 +20,7 @@ import { IconButton } from '@/modules/shared/ui/IconButton';
 import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 
 export function formatDeparture(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return 'Departure not set';
-  return d.toLocaleString([], {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return formatDate(iso, 'weekdayTime') ?? 'Departure not set';
 }
 
 export function seatsText(ride: Pick<Ride, 'seatsAvailable' | 'seatsTotal'>) {

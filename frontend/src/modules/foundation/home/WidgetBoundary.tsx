@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 
 type State = { failed: boolean };
 

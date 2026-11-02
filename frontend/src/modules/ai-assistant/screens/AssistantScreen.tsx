@@ -1,20 +1,20 @@
+import { formatTime } from '@manabandhu/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import type { ScrollView } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { getAssistantMessages, sendAssistantMessage } from '@/modules/ai-assistant/api';
-import { isUserRole, oldestFirst } from '@/modules/ai-assistant/assistantFormat';
+import { isUserRole, oldestFirst } from '@/modules/ai-assistant/utils/assistantFormat';
 import { ChatBubble, ChatFrame, Composer, scrollToNewest } from '@/modules/chat';
-import { EmptyState } from '@/modules/shared/components/EmptyState';
-import { ErrorState } from '@/modules/shared/components/ErrorState';
-import { LoadingState } from '@/modules/shared/components/LoadingState';
 import { AppText } from '@/modules/shared/ui/AppText';
 import { BackButton } from '@/modules/shared/ui/BackButton';
+import { EmptyState } from '@/modules/shared/ui/EmptyState';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { IconButton } from '@/modules/shared/ui/IconButton';
+import { LoadingState } from '@/modules/shared/ui/LoadingState';
 
-const timeOf = (iso: string) =>
-  iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+const timeOf = (iso: string) => formatTime(iso) ?? '';
 
 /**
  * The assistant conversation, oldest message first. The backend stores each question and currently answers with a
