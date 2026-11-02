@@ -1,11 +1,11 @@
-package com.manabandhu.backend.foundation;
+package com.manabandhu.backend.onboarding;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public record UserOnboardingProgressDto(
+public record OnboardingProgressView(
         UUID userId,
         String currentStep,
         boolean isCompleted,

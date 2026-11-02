@@ -8,7 +8,7 @@ import {
   markNotificationRead,
   notificationKeys,
 } from '@/modules/notifications/api';
-import { notificationVisual } from '@/modules/notifications/components/notificationVisuals';
+import { notificationVisual } from '@/modules/notifications/utils/notificationVisuals';
 import { routeForPushData } from '@/modules/notifications/utils/pushRoutes';
 import { AppButton } from '@/modules/shared/ui/AppButton';
 import { AppText } from '@/modules/shared/ui/AppText';

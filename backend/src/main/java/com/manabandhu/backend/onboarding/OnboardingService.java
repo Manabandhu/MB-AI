@@ -1,4 +1,4 @@
-package com.manabandhu.backend.foundation;
+package com.manabandhu.backend.onboarding;
 
 import java.sql.Array;
 import java.sql.ResultSet;
@@ -51,7 +51,7 @@ public class OnboardingService {
         String optionsSql = "SELECT id, step_key, option_key, label, description, icon_name, category, sort_order, metadata " +
                 "FROM public.onboarding_options WHERE is_active = true ORDER BY step_key, sort_order ASC";
 
-        Map<String, List<OnboardingOptionDto>> optionsByStep = new HashMap<>();
+        Map<String, List<OnboardingOptionView>> optionsByStep = new HashMap<>();
         jdbcTemplate.query(optionsSql, rs -> {
             String stepKey = rs.getString("step_key");
             UUID id = (UUID) rs.getObject("id");
@@ -63,11 +63,11 @@ public class OnboardingService {
             int sortOrder = rs.getInt("sort_order");
             Map<String, Object> metadata = parseJson(rs.getString("metadata"));
 
-            var optionDto = new OnboardingOptionDto(id, stepKey, optionKey, label, description, iconName, category, sortOrder, metadata);
+            var optionDto = new OnboardingOptionView(id, stepKey, optionKey, label, description, iconName, category, sortOrder, metadata);
             optionsByStep.computeIfAbsent(stepKey, k -> new ArrayList<>()).add(optionDto);
         });
 
-        List<OnboardingStepDto> steps = stepRows.stream().map(step -> new OnboardingStepDto(
+        List<OnboardingStepView> steps = stepRows.stream().map(step -> new OnboardingStepView(
                 step.stepKey(),
                 step.stepOrder(),
                 step.title(),
@@ -81,13 +81,13 @@ public class OnboardingService {
     }
 
     @Transactional
-    public UserOnboardingProgressDto getProgress(UUID userId) {
+    public OnboardingProgressView getProgress(UUID userId) {
         String selectSql = "SELECT user_id, current_step, is_completed, selected_reasons, metro_location, zip_code, " +
                 "university_campus, primary_language, secondary_languages, interest_tags, avatar_url, bio, " +
                 "notification_preferences, safety_pledge_accepted, completed_at, updated_at " +
                 "FROM public.user_onboarding_progress WHERE user_id = ?";
 
-        List<UserOnboardingProgressDto> list = jdbcTemplate.query(selectSql, (rs, rowNum) -> mapProgressRow(rs), userId);
+        List<OnboardingProgressView> list = jdbcTemplate.query(selectSql, (rs, rowNum) -> mapProgressRow(rs), userId);
 
         if (!list.isEmpty()) {
             return list.get(0);
@@ -99,7 +99,7 @@ public class OnboardingService {
                 "ON CONFLICT (user_id) DO NOTHING";
         jdbcTemplate.update(insertSql, userId);
 
-        return new UserOnboardingProgressDto(
+        return new OnboardingProgressView(
                 userId,
                 "goals",
                 false,
@@ -120,7 +120,7 @@ public class OnboardingService {
     }
 
     @Transactional
-    public UserOnboardingProgressDto saveStep(UUID userId, String rawStepKey, Map<String, Object> payload) {
+    public OnboardingProgressView saveStep(UUID userId, String rawStepKey, Map<String, Object> payload) {
         if (payload == null) {
             payload = Map.of();
         }
@@ -218,7 +218,7 @@ public class OnboardingService {
     }
 
     @Transactional
-    public UserOnboardingProgressDto completeOnboarding(UUID userId) {
+    public OnboardingProgressView completeOnboarding(UUID userId) {
         String sql = "UPDATE public.user_onboarding_progress SET " +
                 "is_completed = true, " +
                 "current_step = 'complete', " +
@@ -242,7 +242,7 @@ public class OnboardingService {
         };
     }
 
-    private UserOnboardingProgressDto mapProgressRow(ResultSet rs) throws SQLException {
+    private OnboardingProgressView mapProgressRow(ResultSet rs) throws SQLException {
         UUID userId = (UUID) rs.getObject("user_id");
         String currentStep = rs.getString("current_step");
         boolean isCompleted = rs.getBoolean("is_completed");
@@ -265,7 +265,7 @@ public class OnboardingService {
         Timestamp updatedAtTs = rs.getTimestamp("updated_at");
         Instant updatedAt = updatedAtTs != null ? updatedAtTs.toInstant() : Instant.now();
 
-        return new UserOnboardingProgressDto(
+        return new OnboardingProgressView(
                 userId,
                 currentStep,
                 isCompleted,

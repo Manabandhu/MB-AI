@@ -16,7 +16,7 @@ permission and device registration, and push-tap deep links.
   Each change saves at once and is restored if the server refuses it.
 
 ## Components
-- `NotificationRow`, `notificationVisuals` (icon/tone per type), `SettingRow`, `PushSection`, `QuietHoursSection`.
+- `NotificationRow`, `utils/notificationVisuals` (icon/tone per type), `SettingRow`, `PushSection`, `QuietHoursSection`.
 
 ## Push
 - `push.ts`: `requestPermissionAndRegister()` (OS prompt + `POST /devices`), `unregisterThisDevice()`,

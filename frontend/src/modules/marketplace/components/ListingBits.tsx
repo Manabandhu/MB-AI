@@ -6,7 +6,7 @@ import { Card } from '@/modules/shared/ui/Card';
 import { keyboardPress } from '@/modules/shared/ui/keyboardPress';
 import { StatusBadge } from '@/modules/shared/ui/StatusBadge';
 import type { MarketplaceListing } from '../types';
-import { formatListingPrice } from '../utils/format';
+import { formatListingPrice } from '../utils/listingFormat';
 import { statusIs, statusLabel } from '../utils/listingRules';
 
 /** Reserved / Sold / Removed status on the shared `StatusBadge`. Renders nothing for active listings unless `showActive`. */

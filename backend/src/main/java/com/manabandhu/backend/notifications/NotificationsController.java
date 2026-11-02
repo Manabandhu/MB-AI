@@ -70,7 +70,7 @@ public class NotificationsController {
 
     /** Notifications are produced by the system; only admins may create one by hand (for example to test push). */
     @PostMapping
-    ResponseEntity<Notification> create(Authentication authentication, @Valid @RequestBody CreateNotificationRequest request) {
+    ResponseEntity<Notification> create(Authentication authentication, @Valid @RequestBody CreateNotificationInput request) {
         var actor = Actor.require(authentication);
         actor.requireAdmin();
         var type = Notification.NotificationType.valueOf(request.type());

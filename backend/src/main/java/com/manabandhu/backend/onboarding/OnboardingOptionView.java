@@ -1,9 +1,9 @@
-package com.manabandhu.backend.foundation;
+package com.manabandhu.backend.onboarding;
 
 import java.util.Map;
 import java.util.UUID;
 
-public record OnboardingOptionDto(
+public record OnboardingOptionView(
         UUID id,
         String stepKey,
         String optionKey,

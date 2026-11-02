@@ -45,7 +45,7 @@ public class SuperAdminController {
     @PostMapping("/{operationId}/executions")
     ResponseEntity<AutomationExecution> execute(
             @PathVariable String operationId,
-            @Valid @RequestBody ExecuteAutomationRequest input,
+            @Valid @RequestBody ExecuteAutomationInput input,
             Authentication authentication) {
         accessPolicy.require(authentication);
         var execution = service.execute(operationId, input, accessPolicy.actorId(authentication),

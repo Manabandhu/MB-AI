@@ -71,7 +71,7 @@ public class AssistantController {
     }
 
     @PostMapping("/conversations")
-    ResponseEntity<AssistantConversation> createConversation(Authentication authentication, @Valid @RequestBody CreateConversationRequest request) {
+    ResponseEntity<AssistantConversation> createConversation(Authentication authentication, @Valid @RequestBody CreateAssistantConversationInput request) {
         var conversation = conversationService.create(Actor.require(authentication).id(), request.title());
         return ResponseEntity.created(URI.create("/api/v1/assistant/conversations/" + conversation.getId())).body(conversation);
     }

@@ -44,7 +44,7 @@ class AutomationService {
         this.token = token;
     }
 
-    AutomationExecution execute(String operationId, ExecuteAutomationRequest input, String actorId, boolean superAdmin) {
+    AutomationExecution execute(String operationId, ExecuteAutomationInput input, String actorId, boolean superAdmin) {
         var definition = catalog.require(operationId);
         if ("production".equals(input.environment())) {
             // Production changes are reserved for SUPER_ADMIN and must ship reviewed code: main or a release tag.
@@ -77,7 +77,7 @@ class AutomationService {
 
     private void dispatch(
             String workflow,
-            ExecuteAutomationRequest input,
+            ExecuteAutomationInput input,
             String actorId,
             UUID executionId) {
         var body = writePayload(input, actorId, executionId);
@@ -103,7 +103,7 @@ class AutomationService {
         }
     }
 
-    private String writePayload(ExecuteAutomationRequest input, String actorId, UUID executionId) {
+    private String writePayload(ExecuteAutomationInput input, String actorId, UUID executionId) {
         try {
             var payload = Map.of(
                     "ref", input.ref(),

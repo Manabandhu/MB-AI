@@ -27,7 +27,7 @@ import {
   updateListing,
 } from '../api';
 import type { MarketplaceListing } from '../types';
-import { formatListingPrice } from '../utils/format';
+import { formatListingPrice } from '../utils/listingFormat';
 import {
   CONDITIONS,
   DESCRIPTION_MAX,

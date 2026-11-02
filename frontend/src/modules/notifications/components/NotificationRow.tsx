@@ -8,7 +8,7 @@ import { AppText } from '@/modules/shared/ui/AppText';
 import { Card } from '@/modules/shared/ui/Card';
 import { IconButton } from '@/modules/shared/ui/IconButton';
 import { useAppearance } from '@/theme/ThemeProvider';
-import { notificationVisual, toneBackground, toneColorKey } from './notificationVisuals';
+import { notificationVisual, toneBackground, toneColorKey } from '../utils/notificationVisuals';
 
 type Props = {
   item: NotificationItem;

@@ -34,7 +34,7 @@ const ENVIRONMENTS = [
   { value: 'production', label: 'Production' },
 ] as const;
 
-/** Mirrors `ExecuteAutomationRequest`: the server rejects anything else. */
+/** Mirrors `ExecuteAutomationInput`: the server rejects anything else. */
 const REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 const MIN_REASON = 10;
 const MAX_REASON = 500;

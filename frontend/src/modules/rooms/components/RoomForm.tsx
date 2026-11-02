@@ -54,14 +54,14 @@ import {
 } from '@/modules/shared/utils/location/locationService';
 import { useAdaptiveLayout } from '@/platform/adaptive';
 import { useAppearance } from '@/theme/ThemeProvider';
-import { ChipGroup, FieldPair, FormSection, ToggleRow, UploadStatus } from './room-form/FormParts';
+import { ChipGroup, FieldPair, FormSection, ToggleRow, UploadStatus } from './roomForm/FormParts';
 import {
   MAX_AMENITIES,
   MAX_PHOTOS,
   optionalNumber,
   type RoomFormValues,
   roomFormSchema,
-} from './room-form/schema';
+} from './roomForm/schema';
 
 type RoomFormProps = {
   mode: 'create' | 'edit';

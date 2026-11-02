@@ -1,4 +1,4 @@
-package com.manabandhu.backend.foundation;
+package com.manabandhu.backend.onboarding;
 
 import java.util.UUID;
 
@@ -28,7 +28,7 @@ public class OnboardingController {
     }
 
     @GetMapping("/progress")
-    public ResponseEntity<UserOnboardingProgressDto> getProgress(
+    public ResponseEntity<OnboardingProgressView> getProgress(
             Authentication authentication
     ) {
         UUID userId = Actor.require(authentication).id();
@@ -36,8 +36,8 @@ public class OnboardingController {
     }
 
     @PostMapping("/step")
-    public ResponseEntity<UserOnboardingProgressDto> saveStep(
-            @RequestBody SaveStepRequest request,
+    public ResponseEntity<OnboardingProgressView> saveStep(
+            @RequestBody SaveOnboardingStepInput request,
             Authentication authentication
     ) {
         UUID userId = Actor.require(authentication).id();
@@ -45,7 +45,7 @@ public class OnboardingController {
     }
 
     @PostMapping("/complete")
-    public ResponseEntity<UserOnboardingProgressDto> completeOnboarding(
+    public ResponseEntity<OnboardingProgressView> completeOnboarding(
             Authentication authentication
     ) {
         UUID userId = Actor.require(authentication).id();

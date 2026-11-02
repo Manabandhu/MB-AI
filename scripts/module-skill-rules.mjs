@@ -5,6 +5,7 @@ export const moduleSkillRules = [
     [
       'frontend/src/modules/foundation/',
       'frontend/src/modules/onboarding/',
+      'backend/src/main/java/com/manabandhu/backend/onboarding/',
       'frontend/src/modules/screen-catalog.ts',
     ],
   ],

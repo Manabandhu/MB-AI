@@ -1,4 +1,4 @@
-package com.manabandhu.backend.foundation;
+package com.manabandhu.backend.onboarding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,10 +45,10 @@ class OnboardingControllerTest {
 
     @Test
     void testGetConfig() {
-        var options = List.of(new OnboardingOptionDto(
+        var options = List.of(new OnboardingOptionView(
                 UUID.randomUUID(), "goals", "housing", "Find Housing", "Browse rooms", "home", "housing", 1, Map.of()
         ));
-        var step = new OnboardingStepDto("goals", 1, "What brings you?", "Select one", true, true, options);
+        var step = new OnboardingStepView("goals", 1, "What brings you?", "Select one", true, true, options);
         when(onboardingService.getConfig()).thenReturn(new OnboardingConfigResponse(List.of(step)));
 
         ResponseEntity<OnboardingConfigResponse> response = controller.getConfig();
@@ -65,7 +65,7 @@ class OnboardingControllerTest {
         var jwt = jwtWith(TEST_USER_ID.toString());
         var auth = authWith(jwt);
 
-        var expected = new UserOnboardingProgressDto(
+        var expected = new OnboardingProgressView(
                 TEST_USER_ID, "goals", false, List.of("housing"),
                 "DFW", "75019", "UT Dallas", "telugu",
                 List.of("english"), List.of("sublease_alerts"),
@@ -74,7 +74,7 @@ class OnboardingControllerTest {
         );
         when(onboardingService.getProgress(TEST_USER_ID)).thenReturn(expected);
 
-        ResponseEntity<UserOnboardingProgressDto> response = controller.getProgress(auth);
+        ResponseEntity<OnboardingProgressView> response = controller.getProgress(auth);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isNotNull();
@@ -87,14 +87,14 @@ class OnboardingControllerTest {
         var jwt = jwtWith(TEST_USER_ID.toString());
         var auth = authWith(jwt);
 
-        var request = new SaveStepRequest("goals", Map.of("selectedReasons", List.of("housing", "rides")));
-        var updated = new UserOnboardingProgressDto(
+        var request = new SaveOnboardingStepInput("goals", Map.of("selectedReasons", List.of("housing", "rides")));
+        var updated = new OnboardingProgressView(
                 TEST_USER_ID, "goals", false, List.of("housing", "rides"),
                 null, null, null, null, List.of(), List.of(), null, null, Map.of(), false, null, Instant.now()
         );
         when(onboardingService.saveStep(eq(TEST_USER_ID), eq("goals"), any())).thenReturn(updated);
 
-        ResponseEntity<UserOnboardingProgressDto> response = controller.saveStep(request, auth);
+        ResponseEntity<OnboardingProgressView> response = controller.saveStep(request, auth);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isNotNull();
@@ -106,13 +106,13 @@ class OnboardingControllerTest {
         var jwt = jwtWith(TEST_USER_ID.toString());
         var auth = authWith(jwt);
 
-        var completed = new UserOnboardingProgressDto(
+        var completed = new OnboardingProgressView(
                 TEST_USER_ID, "complete", true, List.of("housing"),
                 "DFW", null, null, "telugu", List.of(), List.of(), null, null, Map.of(), true, Instant.now(), Instant.now()
         );
         when(onboardingService.completeOnboarding(TEST_USER_ID)).thenReturn(completed);
 
-        ResponseEntity<UserOnboardingProgressDto> response = controller.completeOnboarding(auth);
+        ResponseEntity<OnboardingProgressView> response = controller.completeOnboarding(auth);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isNotNull();

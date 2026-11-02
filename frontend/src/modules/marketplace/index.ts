@@ -3,4 +3,4 @@
 export { listMarketplaceListings } from './api';
 export { moduleMeta } from './module';
 export type { MarketplaceListing } from './types';
-export { formatListingPrice } from './utils/format';
+export { formatListingPrice } from './utils/listingFormat';

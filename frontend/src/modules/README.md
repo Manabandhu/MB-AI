@@ -41,6 +41,14 @@ Every module uses the same folders; create one only when it has a file.
 | `module.ts` / `index.ts` | Launcher metadata and the public API |
 | `MODULE.md` | Ownership notes |
 
+## Naming
+
+- Components and screens: `PascalCase.tsx` (screens end in `Screen`; route screens live in `screens/`, except in
+  foundation, which groups each screen with its sub-feature).
+- Hooks: `useThing.ts` in `hooks/`; only hooks go there.
+- Everything else (`api.ts`, `types.ts`, helpers, stores): `camelCase.ts`; formatters are `<module>Format.ts` in `utils/`.
+- Folders: lowercase or camelCase, never kebab-case.
+
 Format dates, times, numbers, and money with `@manabandhu/core` (`formatDate`, `formatTime`, `formatNumber`, `formatMoney`, …) so the user's language applies; do not call `toLocale*String` directly. Show messages and confirmations with `@/modules/shared/ui/notify`.
 
 `screen-catalog.ts` is the canonical product screen inventory. Current business folders are foundation, auth, notifications, rooms, rides, jobs, referrals, community, chat, immigration, expenses, events, marketplace, utilities, safety, ai-assistant, onboarding, and admin.

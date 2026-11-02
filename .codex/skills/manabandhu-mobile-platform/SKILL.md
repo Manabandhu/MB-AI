@@ -168,7 +168,7 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
   - `/terms` and `/privacy` (public).
   - `/settings/account` (sign-in required); its data export uses the RN `Share` sheet on native and a Blob download on web, with no new dependency.
 - Uploads (2026-10-11):
-  - `shared/hooks/useImageUpload(bucket)` picks one image (expo-image-picker), checks type and size (`uploadTypes.ts`, tested), gets a signed URL, and uploads with XHR progress.
+  - `shared/hooks/useImageUpload(bucket)` picks one image (expo-image-picker), checks type and size (`shared/utils/uploadTypes.ts`, tested), gets a signed URL, and uploads with XHR progress.
   - Its state is `idle | picking | uploading(progress) | done(url) | error(message)`, with cancel. `deleteUpload` removes a replaced file.
   - First consumer: the onboarding avatar, which replaced the stock Unsplash photo and saves `avatar_url` via `authStore.updateProfile`.
   - Rooms listing photos use it (`RoomForm`, up to 10 photos, attached after create/update; removed photos are deleted from storage). Marketplace, community and chat still need wiring.
@@ -195,3 +195,4 @@ description: Maintain ManaBandhu's Expo and React Native client across iOS, Andr
 - Viewer flags (2026-10-14): jobs and events no longer receive owner/organizer ids; `JobPosting.mine` and `Event.mine` replace the `ownerId === userId` checks, and their detail query keys include the viewer id. The public referral list has no `ownerId`.
 - Structure cleanup (2026-10-30): imports use `@/lib/api` (the `@/lib/apiClient` shim was removed) and `@/modules/shared/ui/*` (the old `shared/components` folder and the per-module `utils/notify` re-exports were removed; use `@/modules/shared/ui/notify`). Dates, times and counts go through `@manabandhu/core` (`formatDate`, `formatTime`, `formatNumber`) instead of `toLocale*String`. The module follows the layout in `frontend/src/modules/README.md` (`utils/`, `hooks/`, `stores/`). Map views live in `shared/ui/map/`: `mapTypes.ts` holds the props and marker types both platforms share (previously duplicated), `web/mapKitTypes.ts` the MapKit JS typings, and `web/mapHtml.ts` the marker/control HTML helpers.
 - Module boundaries (2026-10-30): other modules import this one only through its `index.ts`; `pnpm verify:boundaries` (in `pnpm verify` and the Quality workflow) fails on deep imports and on imports from a higher layer (shared < notifications < onboarding < auth < feature modules < foundation). `frontend/src/modules/README.md` documents the layers; route files in `src/app` stay thin and may import a module's screen file directly.
+- `shared/hooks/uploadTypes.ts` moved to `shared/utils/uploadTypes.ts` (2026-11-02): `hooks/` only holds `use*` hooks.

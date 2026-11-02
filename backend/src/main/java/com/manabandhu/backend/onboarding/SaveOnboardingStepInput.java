@@ -1,8 +1,8 @@
-package com.manabandhu.backend.foundation;
+package com.manabandhu.backend.onboarding;
 
 import java.util.Map;
 
-public record SaveStepRequest(
+public record SaveOnboardingStepInput(
         String stepKey,
         Map<String, Object> payload
 ) {}
