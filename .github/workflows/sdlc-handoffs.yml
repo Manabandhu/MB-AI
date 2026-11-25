@@ -2,7 +2,7 @@ name: CI · SDLC Handoffs
 
 on:
   pull_request:
-    branches: [main]
+    branches: [feat/sdlc-handoffs]
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
   pull_request_review:
     types: [submitted, dismissed]
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   handoffs:
     name: QA and Product sign-off
-    if: github.event.pull_request.base.ref == 'main'
+    if: github.event.pull_request.base.ref == 'feat/sdlc-handoffs'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

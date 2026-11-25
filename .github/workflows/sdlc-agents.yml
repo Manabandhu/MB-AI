@@ -4,7 +4,7 @@ on:
   issues:
     types: [labeled]
   pull_request_target:
-    branches: [main]
+    branches: [feat/sdlc-handoffs]
     types: [ready_for_review, labeled]
   workflow_dispatch:
     inputs:
@@ -23,12 +23,13 @@ permissions:
 jobs:
   agent:
     if: >-
-      github.ref_name == 'main' && vars.SDLC_AGENTS_ENABLED == 'true' &&
+      vars.SDLC_AGENTS_ENABLED == 'true' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'issues' &&
         (github.event.label.name == 'sdlc:ba' || github.event.label.name == 'sdlc:developer')) ||
        (github.event_name == 'pull_request_target' && github.event.label.name == 'sdlc:product') ||
-       (github.event_name == 'pull_request_target' && github.event.action == 'ready_for_review'
+       (github.event_name == 'pull_request_target' && (github.event.action == 'ready_for_review' || github.event.label.name == 'sdlc:qa')
+        && !github.event.pull_request.draft
         && github.event.pull_request.head.repo.full_name == github.repository &&
         contains(github.event.pull_request.labels.*.name, 'sdlc:qa')))
     runs-on: ubuntu-latest
@@ -40,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.sha }}
+          ref: feat/sdlc-handoffs
           persist-credentials: false
       - name: Prepare role prompt
         id: prompt
