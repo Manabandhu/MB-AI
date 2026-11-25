@@ -9,7 +9,7 @@ type CommunityPost {
 
 type Community {
   id: ID!
-  # Null for seeded hubs that have no individual owner.
+  "Not exposed; always null."
   ownerId: ID
   name: String!
   description: String

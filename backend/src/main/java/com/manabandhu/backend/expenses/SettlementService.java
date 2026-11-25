@@ -51,7 +51,7 @@ public class SettlementService {
      */
     @Transactional
     public Settlement create(Actor actor, UUID groupId, CreateSettlementInput input) {
-        var group = access.requireMember(actor, groupId);
+        var group = access.requireMemberForUpdate(actor, groupId);
         var fromUserId = input.fromUserId() != null ? input.fromUserId() : actor.id();
         if (fromUserId.equals(input.toUserId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A settlement needs two different people");
@@ -84,6 +84,9 @@ public class SettlementService {
     @Transactional
     public Settlement updateStatus(Actor actor, UUID settlementId, String rawStatus) {
         var status = rawStatus == null ? "" : rawStatus.trim().toLowerCase(java.util.Locale.ROOT);
+        var groupId = repository.findGroupIdById(settlementId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Settlement not found"));
+        access.requireGroupForUpdate(groupId);
         var settlement = repository.findByIdForUpdate(settlementId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Settlement not found"));
         actor.requireAnyOf("Not authorized to update this settlement", settlement.getFromUserId(), settlement.getToUserId());

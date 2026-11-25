@@ -51,3 +51,5 @@ description: Maintain ManaBandhu's canonical OpenAPI, GraphQL, and AsyncAPI cont
 - Contract cleanup (2026-10-30): `ApiError` now documents the problem+json body every error uses (`type`, `title`, `status`, `detail`, plus `error` and `message`). Removed `GET /notifications` (list), `/notifications/preferences` and the `NotificationPreference`/`SetPreferenceRequest` schemas.
 - Schema names (2026-11-02): `CreateNotificationRequest`→`CreateNotificationInput`, `CreateConversationRequest`→`CreateAssistantConversationInput` (chat already has `CreateConversationInput`), matching the Java records and the `*Input` convention.
 - `/rides/offers` `size` maximum is 100 (2026-11-02), matching the backend cap.
+
+- Expense creation accepts only EQUAL splits; deleting a group with financial records returns 409. GraphQL Community.ownerId always resolves to null.

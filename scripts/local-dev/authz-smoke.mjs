@@ -683,11 +683,32 @@ console.log('== rides production rules');
   );
 }
 
+{
+  const response = await call('A', 'POST', '/graphql', { query: '{ communities { ownerId } }' });
+  expect('GraphQL communities hide owner ids', response.status === 200 &&
+    !response.body?.errors && response.body?.data?.communities?.every((community) => community.ownerId === null), true);
+}
+
 console.log('== expenses');
 const group = await status('owner creates a group', 201, 'A', 'POST', '/api/v1/expenses/groups', {
   name: 'Smoke test flat',
   groupType: 'APARTMENT',
 });
+{
+  const raceGroup = await status('create group for membership race', 201, 'A', 'POST', '/api/v1/expenses/groups', {
+    name: 'Concurrent expense',
+  });
+  await status('add race member', 200, 'A', 'POST', `/api/v1/expenses/groups/${raceGroup?.id}/members`, { userId: B });
+  const [expense, leaving] = await Promise.all([
+    call('A', 'POST', `/api/v1/expenses/groups/${raceGroup?.id}/expenses`, { amount: 10, title: 'Race' }),
+    call('B', 'DELETE', `/api/v1/expenses/groups/${raceGroup?.id}/members/${B}`),
+  ]);
+  expect('concurrent expense succeeds', expense.status, 201);
+  const balances = await call('A', 'GET', `/api/v1/expenses/groups/${raceGroup?.id}/balances`);
+  expect('member cannot leave with a concurrent debt',
+    leaving.status === 409 || (leaving.status === 204 && balances.status === 200 &&
+      !balances.body.some((balance) => balance.fromUserId === B || balance.toUserId === B)), true);
+}
 await status(
   'stranger cannot read the group',
   403,
@@ -720,12 +741,27 @@ await status(
   { userId: '99999999-9999-4999-8999-999999999999' },
 );
 await status(
+  'unsupported expense split is rejected',
+  400,
+  'A',
+  'POST',
+  `/api/v1/expenses/groups/${group?.id}/expenses`,
+  { amount: 10, title: 'Invalid split', splitType: 'EXACT' },
+);
+await status(
   'owner records 100.01',
   201,
   'A',
   'POST',
   `/api/v1/expenses/groups/${group?.id}/expenses`,
   { amount: 100.01, title: 'Groceries' },
+);
+await status(
+  'financial records prevent group deletion',
+  409,
+  'A',
+  'DELETE',
+  `/api/v1/expenses/groups/${group?.id}`,
 );
 const owed = (await call('B', 'GET', `/api/v1/expenses/groups/${group?.id}/balances`)).body;
 expect('member owes their equal share', owed?.[0]?.amount, 50);

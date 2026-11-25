@@ -17,13 +17,15 @@ public class ExpenseGroupService {
 
     private final ExpenseGroupRepository repository;
     private final ExpenseRepository expenseRepository;
+    private final SettlementRepository settlementRepository;
     private final ExpenseAccess access;
     private final ExpenseBalanceService balanceService;
 
-    ExpenseGroupService(ExpenseGroupRepository repository, ExpenseRepository expenseRepository, ExpenseAccess access,
+    ExpenseGroupService(ExpenseGroupRepository repository, ExpenseRepository expenseRepository, SettlementRepository settlementRepository, ExpenseAccess access,
                         ExpenseBalanceService balanceService) {
         this.repository = repository;
         this.expenseRepository = expenseRepository;
+        this.settlementRepository = settlementRepository;
         this.access = access;
         this.balanceService = balanceService;
     }
@@ -64,8 +66,11 @@ public class ExpenseGroupService {
 
     @Transactional
     public void delete(Actor actor, UUID id) {
-        var group = access.requireGroup(id);
+        var group = access.requireGroupForUpdate(id);
         actor.requireOwner(group.getOwnerId(), "Only the group owner can delete this group");
+        if (expenseRepository.existsByGroupId(id) || settlementRepository.existsByGroupId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Groups with financial records cannot be deleted");
+        }
         repository.delete(group);
     }
 
@@ -77,7 +82,7 @@ public class ExpenseGroupService {
 
     @Transactional
     public List<UUID> addMember(Actor actor, UUID groupId, UUID userId) {
-        var group = access.requireGroup(groupId);
+        var group = access.requireGroupForUpdate(groupId);
         actor.requireOwner(group.getOwnerId(), "Only the group owner can add members");
         if (!access.userExists(userId)) {
             // Expense splits reference auth.users, so a member id that matches no account would break every later expense.
@@ -93,7 +98,7 @@ public class ExpenseGroupService {
      */
     @Transactional
     public void removeMember(Actor actor, UUID groupId, UUID userId) {
-        var group = access.requireGroup(groupId);
+        var group = access.requireGroupForUpdate(groupId);
         if (group.getOwnerId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "The owner cannot leave; delete the group instead");
         }

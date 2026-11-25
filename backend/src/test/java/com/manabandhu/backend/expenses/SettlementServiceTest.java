@@ -36,7 +36,7 @@ class SettlementServiceTest {
         var group = mock(ExpenseGroup.class);
         lenient().when(group.getOwnerId()).thenReturn(creditorId);
         lenient().when(group.getCurrency()).thenReturn("USD");
-        lenient().when(access.requireMember(any(), any())).thenReturn(group);
+        lenient().when(access.requireMemberForUpdate(any(), any())).thenReturn(group);
         lenient().when(access.isMember(any(), any())).thenReturn(true);
         lenient().when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
@@ -78,6 +78,7 @@ class SettlementServiceTest {
 
     private Settlement stored(String status) {
         var settlement = new Settlement(groupId, debtorId, creditorId, new BigDecimal("25.00"), "USD", status, null);
+        when(repository.findGroupIdById(settlement.getId())).thenReturn(Optional.of(groupId));
         when(repository.findByIdForUpdate(settlement.getId())).thenReturn(Optional.of(settlement));
         return settlement;
     }
