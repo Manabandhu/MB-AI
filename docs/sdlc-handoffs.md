@@ -20,11 +20,11 @@ Once the agent workflow is available on the GitHub default branch, store a proje
 
 | Role | Trigger | Artifact |
 | --- | --- | --- |
-| BA | Apply `sdlc:ba` to an issue | Scope and acceptance criteria |
-| Developer | Apply `sdlc:developer` after the requirements handoff | Proposed patch and verification notes |
-| QA | Mark a same-repository PR labeled `sdlc:qa` ready for review, or apply the label to an already-ready PR | Findings and proposed tests for the captured commit |
-| Product | Apply `sdlc:product` after QA or dispatch manually | Draft acceptance decision |
+| BA | A repository collaborator opens a Product enhancement issue | Scope and acceptance criteria |
+| Developer | BA run completes on that issue | Proposed patch and verification notes, using the BA output |
+| QA | A same-repository PR targeting the pilot opens ready, becomes ready, reopens, or receives a new commit | Findings and proposed tests for the captured commit |
+| Product | An authorized QA reviewer approves the current PR commit with the QA marker | Draft acceptance decision |
 
 Runs use the trusted pilot branch checkout. Reviews receive the PR diff as data. Results are available in the Actions run artifacts for seven days. Apply developer patches on a feature branch after review. QA and Product artifacts support the authenticated reviews required by the sign-off workflow.
 
-The pilot integration branch is `feat/sdlc-handoffs`. Keep GitHub’s existing default branch unless explicitly changing repository settings. GitHub requires the agent workflow on the default branch for issue-label and manual-dispatch triggers. A default-branch bootstrap can contain the agent workflow while feature PRs continue targeting the pilot branch. Protect the pilot branch because agent jobs check out its code.
+The pilot integration branch is `feat/sdlc-handoffs`. Keep GitHub’s existing default branch unless explicitly changing repository settings. GitHub requires the agent workflow on the default branch for issue-opened and manual-dispatch triggers. A default-branch bootstrap can contain the agent workflow while feature PRs continue targeting the pilot branch. Protect the pilot branch because agent jobs check out its code.
