@@ -33,3 +33,7 @@ Use the narrowest applicable skills:
 Run `pnpm verify:skills` before handing off changes. Contract changes must also run `pnpm verify:contracts`.
 
 Current client targets are native phone/tablet/foldable, mobile browser, tablet browser, and desktop web. Watch and TV are future targets: preserve boundaries, but do not add runtime dependencies for them yet.
+
+## SDLC command routing
+
+For messages beginning with `/mb-`, read [ManaBandhu SDLC commands](docs/sdlc-commands.md), then execute the requested role using the repository's existing module guidance. For a sprint, carry the same issue, PR, and reviewed commit through the handoffs. Use `feat/sdlc-handoffs` as the pilot integration branch.
