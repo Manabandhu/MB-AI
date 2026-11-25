@@ -1,0 +1,26 @@
+name: Product enhancement
+description: Record a product idea and define the developer handoff.
+title: "[Enhancement] "
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User problem and desired outcome
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable outcomes QA can verify.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and dependencies
+  - type: input
+    id: owner
+    attributes:
+      label: BA or Product Owner
+      placeholder: "@github-login"

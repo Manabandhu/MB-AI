@@ -1,0 +1,104 @@
+name: CI · SDLC Handoffs
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdlc-handoffs-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  handoffs:
+    name: QA and Product sign-off
+    if: github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      QA_REVIEWERS: ${{ vars.SDLC_QA_REVIEWERS }}
+      PRODUCT_REVIEWERS: ${{ vars.SDLC_PRODUCT_REVIEWERS }}
+    steps:
+      - name: Evaluate handoffs for the current PR commit
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          from datetime import datetime
+
+          def github(*args):
+              return json.loads(subprocess.check_output(["gh", "api", *args], text=True))
+
+          def reviewers(variable):
+              return set(os.environ[variable].lower().replace(",", " ").split())
+
+          def approval(reviews, allowed, marker, head):
+              return sorted(
+                  (review for login, review in reviews.items()
+                   if login in allowed and review["state"] == "APPROVED"
+                   and review["commit_id"] == head
+                   and marker in (review.get("body") or "").splitlines()),
+                  key=lambda review: (datetime.fromisoformat(review["submitted_at"]), review["id"]),
+              )
+
+          with open(os.environ["GITHUB_EVENT_PATH"]) as event_file:
+              event = json.load(event_file)
+          endpoint = f"repos/{os.environ['GITHUB_REPOSITORY']}/pulls/{event['pull_request']['number']}"
+          pull = github(endpoint)
+          head = pull["head"]["sha"]
+          author = pull["user"]["login"].lower()
+          qa_reviewers = reviewers("QA_REVIEWERS") - {author}
+          product_reviewers = reviewers("PRODUCT_REVIEWERS") - {author}
+          pages = github("--paginate", "--slurp", f"{endpoint}/reviews?per_page=100")
+          latest = {}
+          for review in sorted(
+              (review for page in pages for review in page if review.get("submitted_at")),
+              key=lambda review: (datetime.fromisoformat(review["submitted_at"]), review["id"]),
+          ):
+              if review["state"] in {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}:
+                  latest[review["user"]["login"].lower()] = review
+
+          qa = approval(latest, qa_reviewers, "SDLC: QA", head)
+          product = approval(latest, product_reviewers, "SDLC: PRODUCT", head)
+          signed_off = any(
+              product_review["user"]["id"] != qa_review["user"]["id"]
+              and (datetime.fromisoformat(product_review["submitted_at"]), product_review["id"])
+              > (datetime.fromisoformat(qa_review["submitted_at"]), qa_review["id"])
+              for product_review in product for qa_review in qa
+          )
+          blocking_review = any(
+              review["state"] == "CHANGES_REQUESTED"
+              for login, review in latest.items()
+              if login in qa_reviewers | product_reviewers
+          )
+
+          if pull["draft"]:
+              stage = "Development · mark the PR ready when the developer handoff is complete"
+          elif blocking_review:
+              stage = "Development · address requested changes"
+          elif not qa:
+              stage = "QA · submit approval with test evidence for the current commit"
+          elif not signed_off:
+              stage = "Product sign-off · a separate reviewer approves after QA"
+          else:
+              stage = "Ready for merge review · QA and Product approved this commit"
+
+          configured = bool(reviewers("QA_REVIEWERS") and reviewers("PRODUCT_REVIEWERS"))
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(f"## SDLC handoff\n\n**Current stage:** {stage}\n\n")
+              summary.write(f"**Commit:** `{head}`\n\n")
+              if not configured:
+                  summary.write("Configure both reviewer variables before requiring this check.\n")
+
+          if configured and (pull["draft"] or blocking_review or not signed_off):
+              raise SystemExit(stage)
+          PY
