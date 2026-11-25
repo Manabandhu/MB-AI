@@ -56,7 +56,10 @@ public class ExpenseService {
 
     @Transactional
     public Expense create(Actor actor, UUID groupId, CreateExpenseInput input) {
-        var group = access.requireMember(actor, groupId);
+        if (input.splitType() != null && !"EQUAL".equals(input.splitType())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only equal splits are supported");
+        }
+        var group = access.requireMemberForUpdate(actor, groupId);
         var currency = ExpenseAccess.groupCurrency(group, input.currency());
         var title = input.title() != null && !input.title().isBlank() ? input.title().trim() : input.description();
         var expense = repository.save(new Expense(groupId, actor.id(), input.amount(), currency, title,

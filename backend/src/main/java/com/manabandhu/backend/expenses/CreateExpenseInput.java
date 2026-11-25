@@ -16,5 +16,5 @@ public record CreateExpenseInput(
         @Size(max = 150) String title,
         @Size(max = 4000) String description,
         @Size(max = 50) String category,
-        @Pattern(regexp = "^(EQUAL|EXACT|PERCENTAGE)$") String splitType,
+        @Pattern(regexp = "^EQUAL$") String splitType,
         LocalDate expenseDate) {}

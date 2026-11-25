@@ -3226,6 +3226,17 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExpenseGroup' }
+  /expenses/groups/{groupId}:
+    delete:
+      operationId: deleteExpenseGroup
+      summary: Delete an empty expense group
+      description: Only the owner can delete a group; groups containing expenses or settlements are retained.
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Group deleted }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Group contains financial records }
   /expenses/groups/{groupId}/members:
     get:
       operationId: listExpenseGroupMembers
@@ -3284,8 +3295,8 @@ paths:
       operationId: createExpense
       summary: Create expense
       description: >-
-        Members only. The caller pays; the amount is split equally across members to the cent (splitType is stored
-        but EXACT and PERCENTAGE are not applied yet).
+        Members only. The caller pays; the amount is split equally across members to the cent.
+        Only EQUAL is supported; other split types are rejected.
       parameters:
         - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -3301,7 +3312,7 @@ paths:
                 description: { type: string, maxLength: 4000 }
                 category: { type: string, maxLength: 50, description: Defaults to GENERAL }
                 currency: { type: string, pattern: '^[A-Z]{3}$', description: 'Defaults to the group currency; any other currency is a 400' }
-                splitType: { type: string, enum: [EQUAL, EXACT, PERCENTAGE], default: EQUAL }
+                splitType: { type: string, enum: [EQUAL], default: EQUAL }
                 expenseDate: { type: string, format: date, description: 'Defaults to today; past dates are allowed' }
       responses:
         '201':
@@ -3309,7 +3320,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Expense' }
-        '400': { description: 'Validation failed, or the currency is not the group currency' }
+        '400': { description: 'Validation failed, the split type is unsupported, or the currency is not the group currency' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Not a member of the group }
         '404': { description: Expense group not found }

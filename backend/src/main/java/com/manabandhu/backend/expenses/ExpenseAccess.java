@@ -27,6 +27,18 @@ class ExpenseAccess {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense group not found"));
     }
 
+    // Financial writes and membership changes take this lock before reading membership or balances.
+    ExpenseGroup requireGroupForUpdate(UUID groupId) {
+        return groupRepository.findByIdForUpdate(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense group not found"));
+    }
+
+    ExpenseGroup requireMemberForUpdate(Actor actor, UUID groupId) {
+        var group = requireGroupForUpdate(groupId);
+        requireMembership(actor, groupId, group);
+        return group;
+    }
+
     boolean isMember(UUID groupId, UUID userId) {
         var count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM public.expense_group_members WHERE group_id = ? AND user_id = ?",
@@ -37,10 +49,14 @@ class ExpenseAccess {
     /** Fails with 404 for unknown groups and 403 for non-members; returns the group otherwise. */
     ExpenseGroup requireMember(Actor actor, UUID groupId) {
         var group = requireGroup(groupId);
+        requireMembership(actor, groupId, group);
+        return group;
+    }
+
+    private void requireMembership(Actor actor, UUID groupId, ExpenseGroup group) {
         if (!actor.admin() && !actor.is(group.getOwnerId()) && !isMember(groupId, actor.id())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this expense group");
         }
-        return group;
     }
 
     /** True when the id belongs to a real account; split rows reference {@code auth.users}, so unknown ids break inserts. */

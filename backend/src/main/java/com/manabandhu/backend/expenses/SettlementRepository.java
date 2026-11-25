@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 interface SettlementRepository extends JpaRepository<Settlement, UUID> {
+    boolean existsByGroupId(UUID groupId);
+
     List<Settlement> findByGroupIdOrderByCreatedAtDesc(UUID groupId);
 
     List<Settlement> findByGroupIdIn(List<UUID> groupIds);
@@ -18,6 +20,9 @@ interface SettlementRepository extends JpaRepository<Settlement, UUID> {
     List<Settlement> findByFromUserIdOrToUserIdOrderByCreatedAtDesc(UUID fromUserId, UUID toUserId);
 
     Optional<Settlement> findById(UUID id);
+
+    @Query("SELECT s.groupId FROM Settlement s WHERE s.id = :id")
+    Optional<UUID> findGroupIdById(@Param("id") UUID id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Settlement s WHERE s.id = :id")

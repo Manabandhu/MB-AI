@@ -118,7 +118,7 @@ export async function createExpense(input: {
   title: string;
   amount: number;
   category: ExpenseCategory;
-  splitType?: 'EQUAL' | 'EXACT';
+  splitType?: 'EQUAL';
   /** Local calendar date `YYYY-MM-DD`; the server's default (UTC today) can be a different day. */
   expenseDate?: string;
 }): Promise<Expense> {

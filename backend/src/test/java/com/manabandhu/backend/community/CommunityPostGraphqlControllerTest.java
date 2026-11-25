@@ -15,6 +15,7 @@ class CommunityPostGraphqlControllerTest {
 
     @Test
     void userIdFieldsResolveToNull() {
+        assertThat(controller.communityOwnerId(new Community(UUID.randomUUID(), "Community", null))).isNull();
         assertThat(controller.postOwnerId(new CommunityPost(UUID.randomUUID(), UUID.randomUUID(), "T", "B"))).isNull();
         assertThat(controller.commentAuthorId(mock(PostComment.class))).isNull();
         assertThat(controller.reactionUserId(mock(PostReaction.class))).isNull();

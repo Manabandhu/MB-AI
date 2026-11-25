@@ -23,9 +23,10 @@ class ExpenseGroupServiceTest {
 
     private final ExpenseGroupRepository repository = mock(ExpenseGroupRepository.class);
     private final ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+    private final SettlementRepository settlements = mock(SettlementRepository.class);
     private final ExpenseAccess access = mock(ExpenseAccess.class);
     private final ExpenseBalanceService balances = mock(ExpenseBalanceService.class);
-    private final ExpenseGroupService service = new ExpenseGroupService(repository, expenseRepository, access, balances);
+    private final ExpenseGroupService service = new ExpenseGroupService(repository, expenseRepository, settlements, access, balances);
     private final UUID groupId = UUID.randomUUID();
     private final UUID ownerId = UUID.randomUUID();
     private final UUID memberId = UUID.randomUUID();
@@ -37,13 +38,33 @@ class ExpenseGroupServiceTest {
         var group = mock(ExpenseGroup.class);
         lenient().when(group.getId()).thenReturn(groupId);
         lenient().when(group.getOwnerId()).thenReturn(ownerId);
-        lenient().when(access.requireGroup(groupId)).thenReturn(group);
+        lenient().when(access.requireGroupForUpdate(groupId)).thenReturn(group);
         lenient().when(access.memberIds(groupId)).thenReturn(List.of(ownerId, memberId));
         lenient().when(balances.openBalancesOf(any(), any())).thenReturn(List.of());
     }
 
     private static HttpStatus status(Throwable error) {
         return HttpStatus.valueOf(((ResponseStatusException) error).getStatusCode().value());
+    }
+
+    @Test
+    void groupsWithFinancialRecordsCannotBeDeleted() {
+        when(expenseRepository.existsByGroupId(groupId)).thenReturn(true);
+        assertThatThrownBy(() -> service.delete(owner, groupId))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
+        when(expenseRepository.existsByGroupId(groupId)).thenReturn(false);
+        when(settlements.existsByGroupId(groupId)).thenReturn(true);
+        assertThatThrownBy(() -> service.delete(owner, groupId))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.CONFLICT));
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    void emptyGroupCanBeDeletedOnlyByOwner() {
+        assertThatThrownBy(() -> service.delete(member, groupId))
+                .satisfies(e -> assertThat(status(e)).isEqualTo(HttpStatus.FORBIDDEN));
+        service.delete(owner, groupId);
+        verify(repository).delete(any());
     }
 
     @Test

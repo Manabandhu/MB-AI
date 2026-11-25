@@ -64,6 +64,11 @@ public class CommunityPostGraphqlController {
 
     // User ids stay private, as in the REST PostView/CommentView read models.
 
+    @SchemaMapping(typeName = "Community", field = "ownerId")
+    UUID communityOwnerId(Community community) {
+        return null;
+    }
+
     @SchemaMapping(typeName = "CommunityPost", field = "ownerId")
     UUID postOwnerId(CommunityPost post) {
         return null;

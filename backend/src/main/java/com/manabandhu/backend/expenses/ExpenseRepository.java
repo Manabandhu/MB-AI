@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 interface ExpenseRepository extends JpaRepository<Expense, UUID> {
+    boolean existsByGroupId(UUID groupId);
+
     List<Expense> findByGroupIdOrderByExpenseDateDesc(UUID groupId);
 
     List<Expense> findByGroupIdIn(List<UUID> groupIds);
